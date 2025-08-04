@@ -76,9 +76,12 @@ impl<T> ResponseHandler for Client<T> {
 }
 
 impl Client<Unauthenticated> {
-    pub fn new(base_url: BaseUrl) -> Self {
+    pub fn new(base_url: BaseUrl, validate_server_certificate: bool) -> Self {
         Client {
-            http_client: reqwest::blocking::Client::new(),
+            http_client: reqwest::blocking::Client::builder()
+                .danger_accept_invalid_certs(!validate_server_certificate)
+                .build()
+                .unwrap(),
             base_url,
             state: Unauthenticated,
         }
@@ -485,6 +488,18 @@ impl GetID for Class {
     }
 }
 
+impl GetID for ClassRelation {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+impl GetID for ObjectRelation {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
 #[derive(Clone, Tabled, Serialize)]
 pub struct Handle<T>
 where
@@ -590,7 +605,7 @@ mod test {
 
     fn test_build_url(server: &str, endpoint: Endpoint) {
         let base_url = BaseUrl::from_str(server).unwrap();
-        let client = Client::new(base_url.clone());
+        let client = Client::new(base_url.clone(), false);
 
         assert_eq!(
             client.build_url(&endpoint, UrlParams::default()),

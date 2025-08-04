@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use api_resource_derive::ApiResource;
 
 use crate::{
-    client::sync::{one_or_err, EmptyPostParams, Handle},
+    client::sync::{one_or_err, Handle},
     endpoints::Endpoint,
     ApiError, ApiResource, FilterOperator, Object, QueryFilter,
 };
@@ -85,12 +85,12 @@ impl Handle<Class> {
 
     pub fn delete(&self) -> Result<(), ApiError> {
         let url_params = vec![(Cow::Borrowed("id"), self.id().to_string().into())];
-        self.client().request_with_endpoint::<EmptyPostParams, ()>(
+        self.client().request_with_endpoint::<i32, ()>(
             reqwest::Method::DELETE,
             &Endpoint::Classes,
             url_params,
             vec![],
-            EmptyPostParams {},
+            self.id(),
         )?;
         Ok(())
     }
