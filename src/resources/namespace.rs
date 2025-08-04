@@ -5,6 +5,7 @@ use api_resource_derive::ApiResource;
 use crate::{
     client::sync::{EmptyPostParams, Handle},
     endpoints::Endpoint,
+    types::NamespacePermissionsGrantParams,
     ApiError, GroupPermissionsResult,
 };
 
@@ -45,5 +46,29 @@ impl Handle<Namespace> {
             None => Ok(vec![]),
             Some(users) => Ok(users),
         }
+    }
+
+    pub fn grant_permissions(
+        &self,
+        group_id: i32,
+        permissions: Vec<String>,
+    ) -> Result<(), ApiError> {
+        let url_params = vec![
+            (
+                Cow::Borrowed("namespace_id"),
+                self.resource().id.to_string().into(),
+            ),
+            (Cow::Borrowed("group_id"), group_id.to_string().into()),
+        ];
+
+        self.client()
+            .request_with_endpoint::<NamespacePermissionsGrantParams, ()>(
+                reqwest::Method::POST,
+                &Endpoint::NamespacePermissionsGrant,
+                url_params,
+                vec![],
+                NamespacePermissionsGrantParams::from_strings(permissions)?,
+            )?;
+        Ok(())
     }
 }

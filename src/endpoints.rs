@@ -10,6 +10,7 @@ pub enum Endpoint {
     Classes,
     Namespaces,
     NamespacePermissions,
+    NamespacePermissionsGrant,
     Objects,
 
     ClassRelations,
@@ -29,6 +30,9 @@ impl Endpoint {
             Endpoint::Namespaces => "/api/v1/namespaces/",
 
             Endpoint::NamespacePermissions => "/api/v1/namespaces/{namespace_id}/permissions",
+            Endpoint::NamespacePermissionsGrant => {
+                "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}"
+            }
 
             Endpoint::Objects => "/api/v1/classes/{class_id}/",
 

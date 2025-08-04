@@ -47,4 +47,7 @@ pub enum ApiError {
 
     #[error("Missing URL identifier")]
     MissingUrlIdentifier,
+
+    #[error("Unknown permission `{0}`")]
+    UnknownPermission(#[from] strum::ParseError),
 }
