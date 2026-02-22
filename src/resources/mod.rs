@@ -127,3 +127,10 @@ pub struct PermissionResult {
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct UserToken {
+    pub token: String,
+    pub user_id: i32,
+    pub issued: HubuumDateTime,
+}

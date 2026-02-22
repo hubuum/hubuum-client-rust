@@ -4,12 +4,12 @@ use api_resource_derive::ApiResource;
 
 use crate::{
     client::{
-        r#async::Handle as AsyncHandle,
+        r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle},
         sync::{one_or_err, EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
     },
     endpoints::Endpoint,
     types::HubuumDateTime,
-    ApiError, FilterOperator, Object, QueryFilter,
+    ApiError, FilterOperator, GroupPermissionsResult, Object, QueryFilter,
 };
 
 use super::Namespace;
@@ -93,6 +93,21 @@ impl SyncHandle<Class> {
             )?;
         Ok(())
     }
+
+    pub fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
+        let url_params = vec![(Cow::Borrowed("class_id"), self.id().to_string().into())];
+        let res = self
+            .client()
+            .request_with_endpoint::<SyncEmptyPostParams, Vec<GroupPermissionsResult>>(
+                reqwest::Method::GET,
+                &Endpoint::ClassPermissions,
+                url_params,
+                vec![],
+                SyncEmptyPostParams {},
+            )?;
+
+        Ok(res.unwrap_or_default())
+    }
 }
 
 impl AsyncHandle<Class> {
@@ -117,5 +132,21 @@ impl AsyncHandle<Class> {
 
     pub async fn delete(&self) -> Result<(), ApiError> {
         self.client().classes().delete(self.id()).await
+    }
+
+    pub async fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
+        let url_params = vec![(Cow::Borrowed("class_id"), self.id().to_string().into())];
+        let res = self
+            .client()
+            .request_with_endpoint::<AsyncEmptyPostParams, Vec<GroupPermissionsResult>>(
+                reqwest::Method::GET,
+                &Endpoint::ClassPermissions,
+                url_params,
+                vec![],
+                AsyncEmptyPostParams {},
+            )
+            .await?;
+
+        Ok(res.unwrap_or_default())
     }
 }

@@ -157,10 +157,9 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/groups/")
-            .query_param("id__equals", GROUP_ID.to_string())
+            .path("/api/v1/iam/groups/10")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(200).json_body(json!([group_json()]));
+        then.status(200).json_body(json!(group_json()));
     });
 
     server.mock(|when, then| {

@@ -490,9 +490,41 @@ pub type Handle<T> = shared::Handle<Client<Authenticated>, T>;
 
 impl<T> Resource<T>
 where
-    T: ApiResource<GetOutput = T> + Tabled + Display + GetID + Default + 'static,
+    T: ApiResource<GetOutput = T> + DeserializeOwned + Tabled + Display + GetID + Default + 'static,
 {
     pub async fn select(&self, id: i32) -> Result<Handle<T>, ApiError> {
+        match T::default().endpoint() {
+            Endpoint::Users => {
+                let resource = self
+                    .client
+                    .request_with_endpoint::<EmptyPostParams, T>(
+                        reqwest::Method::GET,
+                        &Endpoint::UsersById,
+                        vec![(Cow::Borrowed("user_id"), id.to_string().into())],
+                        vec![],
+                        EmptyPostParams,
+                    )
+                    .await?
+                    .ok_or(ApiError::EmptyResult("User not found".into()))?;
+                return Ok(Handle::new(self.client.clone(), resource));
+            }
+            Endpoint::Groups => {
+                let resource = self
+                    .client
+                    .request_with_endpoint::<EmptyPostParams, T>(
+                        reqwest::Method::GET,
+                        &Endpoint::GroupsById,
+                        vec![(Cow::Borrowed("group_id"), id.to_string().into())],
+                        vec![],
+                        EmptyPostParams,
+                    )
+                    .await?
+                    .ok_or(ApiError::EmptyResult("Group not found".into()))?;
+                return Ok(Handle::new(self.client.clone(), resource));
+            }
+            _ => {}
+        }
+
         let (url_params, filters) = shared::select_id_lookup_params(id);
         let raw: Vec<<T as ApiResource>::GetOutput> =
             self.client.get(T::default(), url_params, filters).await?;

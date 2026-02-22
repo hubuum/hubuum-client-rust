@@ -155,14 +155,24 @@ mod parity_contract {
             let _ = $module::Handle::<Class>::objects;
             let _ = $module::Handle::<Class>::object_by_name;
             let _ = $module::Handle::<Class>::delete;
+            let _ = $module::Handle::<Class>::permissions;
+
+            let _ = $module::Handle::<User>::groups;
+            let _ = $module::Handle::<User>::tokens;
 
             let _ = $module::Handle::<Group>::add_user;
             let _ = $module::Handle::<Group>::remove_user;
             let _ = $module::Handle::<Group>::members;
 
             let _ = $module::Handle::<Namespace>::permissions;
+            let _ = $module::Handle::<Namespace>::group_permissions;
             let _ = $module::Handle::<Namespace>::replace_permissions;
             let _ = $module::Handle::<Namespace>::grant_permissions;
+            let _ = $module::Handle::<Namespace>::revoke_permissions;
+            let _ = $module::Handle::<Namespace>::has_group_permission;
+            let _ = $module::Handle::<Namespace>::grant_permission;
+            let _ = $module::Handle::<Namespace>::revoke_permission;
+            let _ = $module::Handle::<Namespace>::user_permissions;
         };
     }
 

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use httpmock::prelude::*;
-use hubuum_client::{ApiError, AsyncClient, BaseUrl, Credentials, SyncClient};
+use hubuum_client::{types::Permissions, ApiError, AsyncClient, BaseUrl, Credentials, SyncClient};
 use serde_json::json;
 
 const USERNAME: &str = "tester";
@@ -28,6 +28,73 @@ fn class_json(name: &str) -> serde_json::Value {
         "validate_schema": null,
         "created_at": ts(),
         "updated_at": ts()
+    })
+}
+
+fn group_json(group_id: i32, groupname: &str) -> serde_json::Value {
+    json!({
+        "id": group_id,
+        "groupname": groupname,
+        "description": "Group",
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn user_json(user_id: i32, username: &str) -> serde_json::Value {
+    json!({
+        "id": user_id,
+        "username": username,
+        "email": format!("{username}@example.com"),
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn namespace_json(namespace_id: i32, name: &str) -> serde_json::Value {
+    json!({
+        "id": namespace_id,
+        "name": name,
+        "description": "Namespace",
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn permission_json(namespace_id: i32, group_id: i32) -> serde_json::Value {
+    json!({
+        "id": 77,
+        "namespace_id": namespace_id,
+        "group_id": group_id,
+        "has_read_namespace": true,
+        "has_update_namespace": false,
+        "has_delete_namespace": false,
+        "has_delegate_namespace": false,
+        "has_create_class": false,
+        "has_read_class": false,
+        "has_update_class": false,
+        "has_delete_class": false,
+        "has_create_object": false,
+        "has_read_object": false,
+        "has_update_object": false,
+        "has_delete_object": false,
+        "has_create_class_relation": false,
+        "has_read_class_relation": false,
+        "has_update_class_relation": false,
+        "has_delete_class_relation": false,
+        "has_create_object_relation": false,
+        "has_read_object_relation": false,
+        "has_update_object_relation": false,
+        "has_delete_object_relation": false,
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn group_permission_json(namespace_id: i32, group_id: i32, groupname: &str) -> serde_json::Value {
+    json!({
+        "group": group_json(group_id, groupname),
+        "permission": permission_json(namespace_id, group_id)
     })
 }
 
@@ -445,4 +512,456 @@ async fn async_supports_meta_endpoints() {
 
     counts.assert_calls(1);
     db.assert_calls(1);
+}
+
+#[test]
+fn sync_supports_user_group_and_token_endpoints() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let user_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(user_json(11, "alice")));
+    });
+
+    let user_groups = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11/groups")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_json(10, "admins")]));
+    });
+
+    let user_tokens = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11/tokens")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([{
+                "issued": "2024-01-01T00:00:00Z",
+                "token": "api-token-1",
+                "user_id": 11
+            }]));
+    });
+
+    let group_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/groups/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(group_json(10, "admins")));
+    });
+
+    let client = sync_client(&server);
+
+    let user = client
+        .users()
+        .select(11)
+        .expect("user by id request should succeed");
+    assert_eq!(user.resource().id, 11);
+
+    let groups = user.groups().expect("user groups request should succeed");
+    assert_eq!(groups.len(), 1);
+    assert_eq!(groups[0].resource().id, 10);
+
+    let tokens = user.tokens().expect("user tokens request should succeed");
+    assert_eq!(tokens.len(), 1);
+    assert_eq!(tokens[0].user_id, 11);
+    assert_eq!(tokens[0].token, "api-token-1");
+
+    let group = client
+        .groups()
+        .select(10)
+        .expect("group by id request should succeed");
+    assert_eq!(group.resource().id, 10);
+    assert_eq!(group.resource().groupname, "admins");
+
+    user_by_id.assert_calls(1);
+    user_groups.assert_calls(1);
+    user_tokens.assert_calls(1);
+    group_by_id.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_supports_user_group_and_token_endpoints() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let user_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(user_json(11, "alice")));
+    });
+
+    let user_groups = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11/groups")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_json(10, "admins")]));
+    });
+
+    let user_tokens = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11/tokens")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([{
+                "issued": "2024-01-01T00:00:00Z",
+                "token": "api-token-1",
+                "user_id": 11
+            }]));
+    });
+
+    let group_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/groups/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(group_json(10, "admins")));
+    });
+
+    let client = async_client(&server).await;
+
+    let user = client
+        .users()
+        .select(11)
+        .await
+        .expect("user by id request should succeed");
+    assert_eq!(user.resource().id, 11);
+
+    let groups = user
+        .groups()
+        .await
+        .expect("user groups request should succeed");
+    assert_eq!(groups.len(), 1);
+    assert_eq!(groups[0].resource().id, 10);
+
+    let tokens = user
+        .tokens()
+        .await
+        .expect("user tokens request should succeed");
+    assert_eq!(tokens.len(), 1);
+    assert_eq!(tokens[0].user_id, 11);
+    assert_eq!(tokens[0].token, "api-token-1");
+
+    let group = client
+        .groups()
+        .select(10)
+        .await
+        .expect("group by id request should succeed");
+    assert_eq!(group.resource().id, 10);
+    assert_eq!(group.resource().groupname, "admins");
+
+    user_by_id.assert_calls(1);
+    user_groups.assert_calls(1);
+    user_tokens.assert_calls(1);
+    group_by_id.assert_calls(1);
+}
+
+#[test]
+fn sync_supports_class_and_namespace_permission_endpoints() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let class_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/")
+            .query_param("id__equals", "42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("class-42")]));
+    });
+
+    let class_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/permissions")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let namespace_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/")
+            .query_param("id__equals", "7")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([namespace_json(7, "namespace-1")]));
+    });
+
+    let namespace_group_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/group/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(permission_json(7, 10)));
+    });
+
+    let namespace_revoke_permissions = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/namespaces/7/permissions/group/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
+    let has_read_permission = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
+    let has_delete_permission = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/group/10/DeleteCollection")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(404)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "missing permission" }));
+    });
+
+    let grant_permission = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201);
+    });
+
+    let revoke_permission = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
+    let user_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/user/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let client = sync_client(&server);
+
+    let class = client
+        .classes()
+        .select(42)
+        .expect("class lookup should succeed");
+    let class_permission_rows = class
+        .permissions()
+        .expect("class permissions should succeed");
+    assert_eq!(class_permission_rows.len(), 1);
+    assert_eq!(class_permission_rows[0].permission.group_id, 10);
+
+    let namespace = client
+        .namespaces()
+        .select(7)
+        .expect("namespace lookup should succeed");
+    let group_permission = namespace
+        .group_permissions(10)
+        .expect("namespace group permissions should succeed");
+    assert_eq!(group_permission.group_id, 10);
+    namespace
+        .revoke_permissions(10)
+        .expect("revoke_permissions should succeed");
+    assert!(namespace
+        .has_group_permission(10, Permissions::ReadCollection)
+        .expect("has_group_permission should succeed"));
+    assert!(!namespace
+        .has_group_permission(10, Permissions::DeleteCollection)
+        .expect("has_group_permission should map 404 to false"));
+    namespace
+        .grant_permission(10, Permissions::ReadCollection)
+        .expect("grant_permission should succeed");
+    namespace
+        .revoke_permission(10, Permissions::ReadCollection)
+        .expect("revoke_permission should succeed");
+    let user_permissions_rows = namespace
+        .user_permissions(11)
+        .expect("user_permissions should succeed");
+    assert_eq!(user_permissions_rows.len(), 1);
+    assert_eq!(user_permissions_rows[0].permission.group_id, 10);
+
+    class_by_id.assert_calls(1);
+    class_permissions.assert_calls(1);
+    namespace_by_id.assert_calls(1);
+    namespace_group_permissions.assert_calls(1);
+    namespace_revoke_permissions.assert_calls(1);
+    has_read_permission.assert_calls(1);
+    has_delete_permission.assert_calls(1);
+    grant_permission.assert_calls(1);
+    revoke_permission.assert_calls(1);
+    user_permissions.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_supports_class_and_namespace_permission_endpoints() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let class_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/")
+            .query_param("id__equals", "42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("class-42")]));
+    });
+
+    let class_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/permissions")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let namespace_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/")
+            .query_param("id__equals", "7")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([namespace_json(7, "namespace-1")]));
+    });
+
+    let namespace_group_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/group/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(permission_json(7, 10)));
+    });
+
+    let namespace_revoke_permissions = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/namespaces/7/permissions/group/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
+    let has_read_permission = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
+    let has_delete_permission = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/group/10/DeleteCollection")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(404)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "missing permission" }));
+    });
+
+    let grant_permission = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201);
+    });
+
+    let revoke_permission = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
+    let user_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/user/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let client = async_client(&server).await;
+
+    let class = client
+        .classes()
+        .select(42)
+        .await
+        .expect("class lookup should succeed");
+    let class_permission_rows = class
+        .permissions()
+        .await
+        .expect("class permissions should succeed");
+    assert_eq!(class_permission_rows.len(), 1);
+    assert_eq!(class_permission_rows[0].permission.group_id, 10);
+
+    let namespace = client
+        .namespaces()
+        .select(7)
+        .await
+        .expect("namespace lookup should succeed");
+    let group_permission = namespace
+        .group_permissions(10)
+        .await
+        .expect("namespace group permissions should succeed");
+    assert_eq!(group_permission.group_id, 10);
+    namespace
+        .revoke_permissions(10)
+        .await
+        .expect("revoke_permissions should succeed");
+    assert!(namespace
+        .has_group_permission(10, Permissions::ReadCollection)
+        .await
+        .expect("has_group_permission should succeed"));
+    assert!(!namespace
+        .has_group_permission(10, Permissions::DeleteCollection)
+        .await
+        .expect("has_group_permission should map 404 to false"));
+    namespace
+        .grant_permission(10, Permissions::ReadCollection)
+        .await
+        .expect("grant_permission should succeed");
+    namespace
+        .revoke_permission(10, Permissions::ReadCollection)
+        .await
+        .expect("revoke_permission should succeed");
+    let user_permissions_rows = namespace
+        .user_permissions(11)
+        .await
+        .expect("user_permissions should succeed");
+    assert_eq!(user_permissions_rows.len(), 1);
+    assert_eq!(user_permissions_rows[0].permission.group_id, 10);
+
+    class_by_id.assert_calls(1);
+    class_permissions.assert_calls(1);
+    namespace_by_id.assert_calls(1);
+    namespace_group_permissions.assert_calls(1);
+    namespace_revoke_permissions.assert_calls(1);
+    has_read_permission.assert_calls(1);
+    has_delete_permission.assert_calls(1);
+    grant_permission.assert_calls(1);
+    revoke_permission.assert_calls(1);
+    user_permissions.assert_calls(1);
 }
