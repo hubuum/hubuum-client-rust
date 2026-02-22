@@ -67,7 +67,7 @@ where
     }
 }
 
-pub fn tabled_display<'a, T>(value: &'a T) -> String
+pub fn tabled_display<T>(value: &T) -> String
 where
     T: Display + 'static,
 {

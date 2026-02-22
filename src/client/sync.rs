@@ -1,15 +1,14 @@
-use log::{debug, error, trace};
+use log::{debug, trace};
 use reqwest::blocking::Response;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::Value;
-use std::any::type_name;
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::marker::PhantomData;
-use std::vec;
 use tabled::Tabled;
 
-use super::{Authenticated, ClientCore, IntoResourceFilter, Unauthenticated, UrlParams};
+use super::{
+    shared, Authenticated, ClientCore, GetID, IntoResourceFilter, Unauthenticated, UrlParams,
+};
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{ApiResource, Class, ClassRelation, Group, Namespace, Object, User};
@@ -37,16 +36,7 @@ pub struct Client<S> {
 
 impl<S> ClientCore for Client<S> {
     fn build_url(&self, endpoint: &Endpoint, url_params: UrlParams) -> String {
-        let mut url = format!(
-            "{}{}",
-            self.base_url.with_trailing_slash(),
-            endpoint.trim_start_matches('/')
-        );
-
-        for (key, value) in url_params {
-            url = url.replace(&format!("{{{}}}", key), value.as_ref());
-        }
-        url
+        shared::build_url(&self.base_url, endpoint, url_params)
     }
 }
 
@@ -59,13 +49,7 @@ impl<T> ResponseHandler for Client<T> {
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text()?;
-            let error_message = match serde_json::from_str::<Value>(&body) {
-                Ok(json) => json["message"]
-                    .as_str()
-                    .unwrap_or("Error without message.")
-                    .to_string(),
-                Err(_) => body,
-            };
+            let error_message = shared::parse_http_error_message(&body);
             return Err(ApiError::HttpWithBody {
                 status,
                 message: error_message,
@@ -76,7 +60,18 @@ impl<T> ResponseHandler for Client<T> {
 }
 
 impl Client<Unauthenticated> {
-    pub fn new(base_url: BaseUrl, validate_server_certificate: bool) -> Self {
+    pub fn new(base_url: BaseUrl) -> Self {
+        Self::new_with_certificate_validation(base_url, true)
+    }
+
+    pub fn new_without_certificate_validation(base_url: BaseUrl) -> Self {
+        Self::new_with_certificate_validation(base_url, false)
+    }
+
+    pub fn new_with_certificate_validation(
+        base_url: BaseUrl,
+        validate_server_certificate: bool,
+    ) -> Self {
         Client {
             http_client: reqwest::blocking::Client::builder()
                 .danger_accept_invalid_certs(!validate_server_certificate)
@@ -92,7 +87,7 @@ impl Client<Unauthenticated> {
     pub fn login(self, credentials: Credentials) -> Result<Client<Authenticated>, ApiError> {
         let token: Token = self
             .http_client
-            .post(&self.build_url(&Endpoint::Login, UrlParams::default()))
+            .post(self.build_url(&Endpoint::Login, UrlParams::default()))
             .json(&credentials)
             .send()?
             .error_for_status()?
@@ -137,40 +132,23 @@ impl Client<Authenticated> {
         query_params: Vec<QueryFilter>,
         post_params: T,
     ) -> Result<Option<U>, ApiError> {
-        let url = self.build_url(&endpoint, url_params.clone());
+        let base_url = self.build_url(endpoint, url_params.clone());
+        let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
 
-        let request = match method {
-            reqwest::Method::GET => {
-                use crate::types::IntoQueryTuples;
-                let query = query_params.into_query_string();
-                let url = if !query.is_empty() {
-                    format!("{}?{}", url, query)
-                } else {
-                    url
-                };
-                debug!("GET {}", url);
-                self.http_client.get(&url)
-            }
-            reqwest::Method::POST => {
-                debug!("POST {} with {:?}", &url, post_params);
-                self.http_client.post(&url).json(&post_params)
-            }
-            reqwest::Method::PATCH => {
-                let id = url_params
-                    .iter()
-                    .find(|(k, _)| k == "patch_id")
-                    .map(|(_, v)| v)
-                    .ok_or(ApiError::MissingUrlIdentifier)?;
-                let url = format!("{}{}", url, id);
-                debug!("PATCH {} with {:?}", &url, post_params);
-                self.http_client.patch(&url).json(&post_params)
-            }
-            reqwest::Method::DELETE => {
-                let url = format!("{}{:?}", url, post_params);
-                debug!("DELETE {}", &url);
-                self.http_client.delete(&url)
-            }
-            _ => return Err(ApiError::UnsupportedHttpOperation(method.to_string())),
+        let request = if method == reqwest::Method::GET {
+            debug!("GET {}", request_url);
+            self.http_client.get(&request_url)
+        } else if method == reqwest::Method::POST {
+            debug!("POST {} with {:?}", &request_url, post_params);
+            self.http_client.post(&request_url).json(&post_params)
+        } else if method == reqwest::Method::PATCH {
+            debug!("PATCH {} with {:?}", &request_url, post_params);
+            self.http_client.patch(&request_url).json(&post_params)
+        } else if method == reqwest::Method::DELETE {
+            debug!("DELETE {}", &request_url);
+            self.http_client.delete(&request_url)
+        } else {
+            return Err(ApiError::UnsupportedHttpOperation(method.to_string()));
         }
         .header("Authorization", format!("Bearer {}", self.state.token));
 
@@ -180,32 +158,7 @@ impl Client<Authenticated> {
         let response_code = response.status();
         let response_text = self.check_success(response)?.text()?;
         debug!("Response: {}", response_text);
-
-        if method == reqwest::Method::DELETE {
-            if response_text.is_empty() {
-                return Ok(None);
-            } else {
-                error!("Expected empty response, got: {}", response_text);
-                return Err(ApiError::DeserializationError(response_text));
-            }
-        }
-
-        if response_code == reqwest::StatusCode::NO_CONTENT {
-            return Ok(None);
-        }
-
-        let obj: U = match serde_json::from_str(&response_text) {
-            Ok(obj) => obj,
-            Err(err) => {
-                error!(
-                    "Failed to deserialize response: {} Response text: {}",
-                    err, response_text
-                );
-                return Err(ApiError::DeserializationError(response_text));
-            }
-        };
-
-        Ok(Some(obj))
+        shared::parse_response(&method, response_code, response_text)
     }
 
     pub fn request<R: ApiResource, T: Serialize + std::fmt::Debug, U: DeserializeOwned>(
@@ -225,19 +178,18 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn get<R: ApiResource>(
+    pub fn get<R: ApiResource, F: IntoResourceFilter<R>>(
         &self,
         resource: R,
         url_params: UrlParams,
-        query_params: Vec<QueryFilter>,
-        params: R::GetParams,
+        filter: F,
     ) -> Result<Vec<R::GetOutput>, ApiError> {
         self.request(
             reqwest::Method::GET,
             resource,
             url_params,
-            query_params,
-            params,
+            filter.into_resource_filter(),
+            EmptyPostParams,
         )
         .and_then(|opt| opt.ok_or(ApiError::EmptyResult("GET returned empty result".into())))
     }
@@ -287,12 +239,14 @@ impl Client<Authenticated> {
         id: i32,
         url_params: UrlParams,
     ) -> Result<(), ApiError> {
+        let mut url_params = url_params;
+        url_params.push(("delete_id".into(), id.to_string().into()));
         self.request::<_, _, DeleteResponse>(
             reqwest::Method::DELETE,
             resource,
             url_params,
             vec![],
-            id,
+            EmptyPostParams,
         )
         .map(|_| ())
     }
@@ -389,16 +343,14 @@ impl<T: ApiResource> Resource<T> {
         K: Into<Cow<'static, str>>,
         V: Into<Cow<'static, str>>,
     {
-        let resource = Resource {
+        Resource {
             client,
             url_params: url_params
                 .into_iter()
                 .map(|(k, v)| (k.into(), v.into()))
                 .collect(),
             _phantom: PhantomData,
-        };
-
-        resource
+        }
     }
 
     pub fn find(&self) -> FilterBuilder<T> {
@@ -441,122 +393,24 @@ impl<T: ApiResource> Resource<T> {
     }
 }
 
-pub fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
-    let name = type_name::<T>();
-    let name = name.rsplit("::").next().unwrap_or(name);
-
-    if v.len() == 1 {
-        Ok(v.pop().unwrap())
-    } else if v.is_empty() {
-        Err(ApiError::EmptyResult(format!("{} not found", name)))
-    } else {
-        Err(ApiError::TooManyResults(format!(
-            "Type: {}, Count: {} (expected 1)",
-            name,
-            v.len()
-        )))
-    }
+pub fn one_or_err<T>(v: Vec<T>) -> Result<T, ApiError> {
+    shared::one_or_err(v)
 }
 
-pub trait GetID {
-    fn id(&self) -> i32;
-}
-
-impl GetID for Group {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-impl GetID for Namespace {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-impl GetID for User {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-impl GetID for Object {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-impl GetID for Class {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl GetID for ClassRelation {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl GetID for ObjectRelation {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-#[derive(Clone, Tabled, Serialize)]
-pub struct Handle<T>
-where
-    T: Tabled + Display,
-{
-    #[tabled(skip)]
-    #[serde(skip)]
-    client: Client<Authenticated>,
-    #[tabled(inline)]
-    #[serde(flatten)]
-    resource: T,
-}
-
-impl<T> Handle<T>
-where
-    T: ApiResource + Tabled + GetID + Display + Default,
-{
-    pub fn new(client: Client<Authenticated>, resource: T) -> Self {
-        Handle { client, resource }
-    }
-
-    pub fn resource(&self) -> &T {
-        &self.resource
-    }
-
-    pub fn id(&self) -> i32 {
-        self.resource.id()
-    }
-
-    pub fn client(&self) -> &Client<Authenticated> {
-        &self.client
-    }
-}
+pub type Handle<T> = shared::Handle<Client<Authenticated>, T>;
 
 impl<T> Resource<T>
 where
     T: ApiResource<GetOutput = T> + Tabled + Display + GetID + Default + 'static,
 {
     pub fn select(&self, id: i32) -> Result<Handle<T>, ApiError> {
-        let url_params = vec![(Cow::Borrowed("id"), id.to_string().into())];
-        let raw: Vec<<T as ApiResource>::GetOutput> = self.client.get(
-            T::default(),
-            url_params,
-            vec![QueryFilter {
-                key: "id".to_string(),
-                value: id.to_string(),
-                operator: FilterOperator::Equals { is_negated: false },
-            }],
-            T::GetParams::default(),
-        )?;
+        let (url_params, filters) = shared::select_id_lookup_params(id);
+        let raw: Vec<<T as ApiResource>::GetOutput> =
+            self.client.get(T::default(), url_params, filters)?;
 
         let got = one_or_err(raw)?;
-        let resource: T = got.into();
-        Ok(Handle {
-            client: self.client.clone(),
-            resource,
-        })
+        let resource: T = got;
+        Ok(Handle::new(self.client.clone(), resource))
     }
 
     /// Select a resource by its name.
@@ -566,54 +420,12 @@ where
     ///   - User: username
     ///   - Everything else: name
     pub fn select_by_name(&self, name: &str) -> Result<Handle<T>, ApiError> {
-        let url_params = vec![(Cow::Borrowed(T::NAME_FIELD), name.to_string().into())];
-        let raw: Vec<<T as ApiResource>::GetOutput> = self.client.get(
-            T::default(),
-            url_params,
-            vec![QueryFilter {
-                key: T::NAME_FIELD.to_string(),
-                value: name.to_string(),
-                operator: FilterOperator::Equals { is_negated: false },
-            }],
-            T::GetParams::default(),
-        )?;
+        let (url_params, filters) = shared::select_name_lookup_params::<T>(name);
+        let raw: Vec<<T as ApiResource>::GetOutput> =
+            self.client.get(T::default(), url_params, filters)?;
 
         let got = one_or_err(raw)?;
-        let resource: T = got.into();
-        Ok(Handle {
-            client: self.client.clone(),
-            resource,
-        })
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use std::str::FromStr;
-    use yare::parameterized;
-
-    #[parameterized(
-        login_foo = { "https://foo.bar.com", Endpoint::Login },
-        get_user_foo = { "https://foo.bar.com", Endpoint::Users },
-        get_class_foo = { "https://foo.bar.com", Endpoint::Classes },
-        login_bar = { "https://bar.baz.com", Endpoint::Login },
-        get_user_bar = { "https://bar.baz.com", Endpoint::Users },
-        get_class_bar = { "https://bar.baz.com", Endpoint::Classes }
-
-    )]
-
-    fn test_build_url(server: &str, endpoint: Endpoint) {
-        let base_url = BaseUrl::from_str(server).unwrap();
-        let client = Client::new(base_url.clone(), false);
-
-        assert_eq!(
-            client.build_url(&endpoint, UrlParams::default()),
-            format!(
-                "{}{}",
-                base_url.with_trailing_slash(),
-                endpoint.trim_start_matches('/')
-            )
-        );
+        let resource: T = got;
+        Ok(Handle::new(self.client.clone(), resource))
     }
 }

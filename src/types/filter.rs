@@ -151,8 +151,8 @@ impl std::fmt::Display for FilterOperator {
 }
 
 pub trait IntoQueryTuples {
-    fn into_tuples(&self) -> Vec<(String, String, String)>;
-    fn into_query_string(&self) -> String;
+    fn into_tuples(self) -> Vec<(String, String, String)>;
+    fn into_query_string(self) -> String;
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -169,24 +169,53 @@ impl std::fmt::Display for QueryFilter {
 }
 
 impl QueryFilter {
-    pub fn into_tuples(&self) -> (String, String, String) {
+    pub fn as_query_tuple(&self) -> (String, String, String) {
         let encoded_value = self.value.clone().replace(" ", "%20");
         (self.key.clone(), self.operator.to_string(), encoded_value)
     }
 }
 
 impl IntoQueryTuples for Vec<QueryFilter> {
-    fn into_tuples(&self) -> Vec<(String, String, String)> {
-        self.iter().map(|filter| filter.into_tuples()).collect()
+    fn into_tuples(self) -> Vec<(String, String, String)> {
+        self.iter().map(|filter| filter.as_query_tuple()).collect()
     }
 
-    fn into_query_string(&self) -> String {
+    fn into_query_string(self) -> String {
         let tuples = self.into_tuples();
-        let query_string = tuples
+        tuples
             .iter()
             .map(|(key, operator, value)| format!("{}__{}={}", key, operator, value))
             .collect::<Vec<String>>()
-            .join("&");
-        query_string
+            .join("&")
+    }
+}
+
+impl IntoQueryTuples for &Vec<QueryFilter> {
+    fn into_tuples(self) -> Vec<(String, String, String)> {
+        self.iter().map(|filter| filter.as_query_tuple()).collect()
+    }
+
+    fn into_query_string(self) -> String {
+        let tuples = self.into_tuples();
+        tuples
+            .iter()
+            .map(|(key, operator, value)| format!("{}__{}={}", key, operator, value))
+            .collect::<Vec<String>>()
+            .join("&")
+    }
+}
+
+impl IntoQueryTuples for &[QueryFilter] {
+    fn into_tuples(self) -> Vec<(String, String, String)> {
+        self.iter().map(|filter| filter.as_query_tuple()).collect()
+    }
+
+    fn into_query_string(self) -> String {
+        let tuples = self.into_tuples();
+        tuples
+            .iter()
+            .map(|(key, operator, value)| format!("{}__{}={}", key, operator, value))
+            .collect::<Vec<String>>()
+            .join("&")
     }
 }

@@ -3,9 +3,12 @@ use std::borrow::Cow;
 use api_resource_derive::ApiResource;
 
 use crate::{
-    client::sync::{one_or_err, Handle},
+    client::{
+        r#async::Handle as AsyncHandle,
+        sync::{one_or_err, EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
+    },
     endpoints::Endpoint,
-    ApiError, ApiResource, FilterOperator, Object, QueryFilter,
+    ApiError, FilterOperator, Object, QueryFilter,
 };
 
 use super::Namespace;
@@ -46,23 +49,18 @@ pub struct ClassRelationResource {
     pub updated_at: chrono::NaiveDateTime,
 }
 
-impl Handle<Class> {
-    pub fn objects(&self) -> Result<Vec<Handle<Object>>, ApiError> {
+impl SyncHandle<Class> {
+    pub fn objects(&self) -> Result<Vec<SyncHandle<Object>>, ApiError> {
         let url_params = vec![(Cow::Borrowed("class_id"), self.id().to_string().into())];
-        let raw: Vec<Object> = self.client().get(
-            Object::default(),
-            url_params,
-            vec![],
-            <Object as ApiResource>::GetParams::default(),
-        )?;
+        let raw: Vec<Object> = self.client().get(Object::default(), url_params, vec![])?;
 
         Ok(raw
             .into_iter()
-            .map(|obj| Handle::new(self.client().clone(), obj))
+            .map(|obj| SyncHandle::new(self.client().clone(), obj))
             .collect())
     }
 
-    pub fn object_by_name(&self, name: &str) -> Result<Handle<Object>, ApiError> {
+    pub fn object_by_name(&self, name: &str) -> Result<SyncHandle<Object>, ApiError> {
         let url_params = vec![
             (Cow::Borrowed("class_id"), self.id().to_string().into()),
             (Cow::Borrowed("name"), name.to_string().into()),
@@ -75,23 +73,48 @@ impl Handle<Class> {
                 value: name.to_string(),
                 operator: FilterOperator::Equals { is_negated: false },
             }],
-            <Object as ApiResource>::GetParams::default(),
         )?;
 
         let got = one_or_err(raw)?;
-        let resource: Object = got.into();
-        Ok(Handle::new(self.client().clone(), resource))
+        let resource: Object = got;
+        Ok(SyncHandle::new(self.client().clone(), resource))
     }
 
     pub fn delete(&self) -> Result<(), ApiError> {
-        let url_params = vec![(Cow::Borrowed("id"), self.id().to_string().into())];
-        self.client().request_with_endpoint::<i32, ()>(
-            reqwest::Method::DELETE,
-            &Endpoint::Classes,
-            url_params,
-            vec![],
-            self.id(),
-        )?;
+        let url_params = vec![(Cow::Borrowed("delete_id"), self.id().to_string().into())];
+        self.client()
+            .request_with_endpoint::<SyncEmptyPostParams, ()>(
+                reqwest::Method::DELETE,
+                &Endpoint::Classes,
+                url_params,
+                vec![],
+                SyncEmptyPostParams {},
+            )?;
         Ok(())
+    }
+}
+
+impl AsyncHandle<Class> {
+    pub async fn objects(&self) -> Result<Vec<AsyncHandle<Object>>, ApiError> {
+        let raw: Vec<Object> = self.client().objects(self.id()).find().execute().await?;
+        Ok(raw
+            .into_iter()
+            .map(|obj| AsyncHandle::new(self.client().clone(), obj))
+            .collect())
+    }
+
+    pub async fn object_by_name(&self, name: &str) -> Result<AsyncHandle<Object>, ApiError> {
+        let resource = self
+            .client()
+            .objects(self.id())
+            .find()
+            .add_filter_equals("name", name)
+            .execute_expecting_single_result()
+            .await?;
+        Ok(AsyncHandle::new(self.client().clone(), resource))
+    }
+
+    pub async fn delete(&self) -> Result<(), ApiError> {
+        self.client().classes().delete(self.id()).await
     }
 }
