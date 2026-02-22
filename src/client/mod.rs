@@ -149,6 +149,7 @@ mod parity_contract {
             let _ = $module::Handle::<Group>::members;
 
             let _ = $module::Handle::<Namespace>::permissions;
+            let _ = $module::Handle::<Namespace>::replace_permissions;
             let _ = $module::Handle::<Namespace>::grant_permissions;
         };
     }

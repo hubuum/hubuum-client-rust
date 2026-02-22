@@ -203,11 +203,19 @@ fn setup_scenario_mocks(server: &MockServer) {
     });
 
     server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1/namespaces/3/permissions/group/10")
+            .json_body(json!(["ReadCollection"]))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200);
+    });
+
+    server.mock(|when, then| {
         when.method(POST)
             .path("/api/v1/namespaces/3/permissions/group/10")
             .json_body(json!(["ReadCollection"]))
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(204);
+        then.status(201);
     });
 }
 
@@ -240,6 +248,10 @@ fn run_shared_scenario_sync(client: &SyncClient<Authenticated>) -> Result<(), Ap
             .len(),
         1
     );
+    client
+        .namespaces()
+        .select(NAMESPACE_ID)?
+        .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])?;
     client
         .namespaces()
         .select(NAMESPACE_ID)?
@@ -312,6 +324,12 @@ async fn run_shared_scenario_async(client: &AsyncClient<Authenticated>) -> Resul
             .len(),
         1
     );
+    client
+        .namespaces()
+        .select(NAMESPACE_ID)
+        .await?
+        .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])
+        .await?;
     client
         .namespaces()
         .select(NAMESPACE_ID)

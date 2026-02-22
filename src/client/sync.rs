@@ -141,6 +141,9 @@ impl Client<Authenticated> {
         } else if method == reqwest::Method::POST {
             debug!("POST {} with {:?}", &request_url, post_params);
             self.http_client.post(&request_url).json(&post_params)
+        } else if method == reqwest::Method::PUT {
+            debug!("PUT {} with {:?}", &request_url, post_params);
+            self.http_client.put(&request_url).json(&post_params)
         } else if method == reqwest::Method::PATCH {
             debug!("PATCH {} with {:?}", &request_url, post_params);
             self.http_client.patch(&request_url).json(&post_params)

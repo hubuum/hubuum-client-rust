@@ -51,6 +51,30 @@ impl SyncHandle<Namespace> {
         }
     }
 
+    pub fn replace_permissions(
+        &self,
+        group_id: i32,
+        permissions: Vec<String>,
+    ) -> Result<(), ApiError> {
+        let url_params = vec![
+            (
+                Cow::Borrowed("namespace_id"),
+                self.resource().id.to_string().into(),
+            ),
+            (Cow::Borrowed("group_id"), group_id.to_string().into()),
+        ];
+
+        self.client()
+            .request_with_endpoint::<NamespacePermissionsGrantParams, ()>(
+                reqwest::Method::PUT,
+                &Endpoint::NamespacePermissionsGrant,
+                url_params,
+                vec![],
+                NamespacePermissionsGrantParams::from_strings(permissions)?,
+            )?;
+        Ok(())
+    }
+
     pub fn grant_permissions(
         &self,
         group_id: i32,
@@ -97,6 +121,31 @@ impl AsyncHandle<Namespace> {
             None => Ok(vec![]),
             Some(users) => Ok(users),
         }
+    }
+
+    pub async fn replace_permissions(
+        &self,
+        group_id: i32,
+        permissions: Vec<String>,
+    ) -> Result<(), ApiError> {
+        let url_params = vec![
+            (
+                Cow::Borrowed("namespace_id"),
+                self.resource().id.to_string().into(),
+            ),
+            (Cow::Borrowed("group_id"), group_id.to_string().into()),
+        ];
+
+        self.client()
+            .request_with_endpoint::<NamespacePermissionsGrantParams, ()>(
+                reqwest::Method::PUT,
+                &Endpoint::NamespacePermissionsGrant,
+                url_params,
+                vec![],
+                NamespacePermissionsGrantParams::from_strings(permissions)?,
+            )
+            .await?;
+        Ok(())
     }
 
     pub async fn grant_permissions(
