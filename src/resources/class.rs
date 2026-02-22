@@ -8,6 +8,7 @@ use crate::{
         sync::{one_or_err, EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
     },
     endpoints::Endpoint,
+    types::HubuumDateTime,
     ApiError, FilterOperator, Object, QueryFilter,
 };
 
@@ -29,9 +30,9 @@ pub struct ClassResource {
     #[api(optional, table_rename = "Validate")]
     pub validate_schema: bool,
     #[api(read_only, table_rename = "Created")]
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: HubuumDateTime,
     #[api(read_only, table_rename = "Updated")]
-    pub updated_at: chrono::NaiveDateTime,
+    pub updated_at: HubuumDateTime,
 }
 
 #[allow(dead_code)]
@@ -44,9 +45,9 @@ pub struct ClassRelationResource {
     #[api(table_rename = "ToClass")]
     pub to_hubuum_class_id: i32,
     #[api(read_only, table_rename = "Created")]
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: HubuumDateTime,
     #[api(read_only, table_rename = "Updated")]
-    pub updated_at: chrono::NaiveDateTime,
+    pub updated_at: HubuumDateTime,
 }
 
 impl SyncHandle<Class> {

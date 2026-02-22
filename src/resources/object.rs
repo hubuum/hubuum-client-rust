@@ -1,5 +1,7 @@
 use api_resource_derive::ApiResource;
 
+use crate::types::HubuumDateTime;
+
 #[allow(dead_code)]
 #[derive(ApiResource)]
 pub struct ObjectResource {
@@ -16,9 +18,9 @@ pub struct ObjectResource {
     #[api(optional, table_rename = "Data")]
     pub data: serde_json::Value,
     #[api(read_only, table_rename = "Created")]
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: HubuumDateTime,
     #[api(read_only, table_rename = "Updated")]
-    pub updated_at: chrono::NaiveDateTime,
+    pub updated_at: HubuumDateTime,
 }
 
 #[allow(dead_code)]
@@ -33,7 +35,7 @@ pub struct ObjectRelationResource {
     #[api(table_rename = "Relation")]
     pub class_relation_id: i32,
     #[api(read_only, table_rename = "Created")]
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: HubuumDateTime,
     #[api(read_only, table_rename = "Updated")]
-    pub updated_at: chrono::NaiveDateTime,
+    pub updated_at: HubuumDateTime,
 }

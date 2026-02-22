@@ -8,7 +8,7 @@ use crate::{
         sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
     },
     endpoints::Endpoint,
-    types::NamespacePermissionsGrantParams,
+    types::{HubuumDateTime, NamespacePermissionsGrantParams},
     ApiError, GroupPermissionsResult,
 };
 
@@ -24,9 +24,9 @@ pub struct NamespaceResource {
     #[api(post_only, table_rename = "Group")]
     pub group_id: i32, // This is the group that the namespace belongs to and is set on creation.
     #[api(read_only, table_rename = "Created")]
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: HubuumDateTime,
     #[api(read_only, table_rename = "Updated")]
-    pub updated_at: chrono::NaiveDateTime,
+    pub updated_at: HubuumDateTime,
 }
 
 impl SyncHandle<Namespace> {

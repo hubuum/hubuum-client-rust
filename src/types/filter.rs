@@ -171,7 +171,11 @@ impl std::fmt::Display for QueryFilter {
 
 impl QueryFilter {
     pub fn as_query_tuple(&self) -> (String, String, String) {
-        (self.key.clone(), self.operator.to_string(), self.value.clone())
+        (
+            self.key.clone(),
+            self.operator.to_string(),
+            self.value.clone(),
+        )
     }
 }
 

@@ -8,6 +8,7 @@ use crate::{
         sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
     },
     endpoints::Endpoint,
+    types::HubuumDateTime,
     ApiError, User,
 };
 
@@ -21,9 +22,9 @@ pub struct GroupResource {
     #[api(table_rename = "Description")]
     pub description: String,
     #[api(read_only, table_rename = "Created")]
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: HubuumDateTime,
     #[api(read_only, table_rename = "Updated")]
-    pub updated_at: chrono::NaiveDateTime,
+    pub updated_at: HubuumDateTime,
 }
 
 impl SyncHandle<Group> {

@@ -19,7 +19,7 @@ pub use self::object::{
     ObjectRelationPatch, ObjectRelationPost,
 };
 pub use self::user::{User, UserGet, UserPatch, UserPost};
-pub use crate::types::{FilterOperator, QueryFilter};
+pub use crate::types::{FilterOperator, HubuumDateTime, QueryFilter};
 
 use crate::endpoints::Endpoint;
 
@@ -71,6 +71,12 @@ pub fn tabled_display<T>(value: &T) -> String
 where
     T: Display + 'static,
 {
+    if let Some(date_time) =
+        (value as &dyn std::any::Any).downcast_ref::<crate::types::HubuumDateTime>()
+    {
+        return date_time.to_string();
+    }
+
     if let Some(date_time) = (value as &dyn std::any::Any).downcast_ref::<chrono::NaiveDateTime>() {
         return date_time.format("%Y-%m-%d %H:%M:%S").to_string();
     }
@@ -89,8 +95,8 @@ pub struct GroupResult {
     pub id: i32,
     pub groupname: String,
     pub description: String,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+    pub created_at: HubuumDateTime,
+    pub updated_at: HubuumDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -118,6 +124,6 @@ pub struct PermissionResult {
     pub has_read_object_relation: bool,
     pub has_update_object_relation: bool,
     pub has_delete_object_relation: bool,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+    pub created_at: HubuumDateTime,
+    pub updated_at: HubuumDateTime,
 }
