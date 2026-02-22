@@ -27,6 +27,9 @@ pub enum ApiError {
     #[error("URL serialization error: {0}")]
     UrlSerialize(#[from] serde_urlencoded::ser::Error),
 
+    #[error("Query encoding error: {0}")]
+    QueryEncoding(String),
+
     #[error("Missing location header for: {0}")]
     MissingLocationHeader(String),
 

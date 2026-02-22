@@ -36,7 +36,7 @@ pub(crate) fn build_request_url(
     query_params: Vec<QueryFilter>,
 ) -> Result<String, ApiError> {
     if *method == reqwest::Method::GET {
-        let query = query_params.into_query_string();
+        let query = query_params.into_query_string()?;
         if query.is_empty() {
             Ok(url)
         } else {

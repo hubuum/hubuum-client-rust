@@ -1,5 +1,6 @@
-// use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
+
+use crate::ApiError;
 
 // FilterOperator enum
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -152,7 +153,7 @@ impl std::fmt::Display for FilterOperator {
 
 pub trait IntoQueryTuples {
     fn into_tuples(self) -> Vec<(String, String, String)>;
-    fn into_query_string(self) -> String;
+    fn into_query_string(self) -> Result<String, ApiError>;
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -170,9 +171,17 @@ impl std::fmt::Display for QueryFilter {
 
 impl QueryFilter {
     pub fn as_query_tuple(&self) -> (String, String, String) {
-        let encoded_value = self.value.clone().replace(" ", "%20");
-        (self.key.clone(), self.operator.to_string(), encoded_value)
+        (self.key.clone(), self.operator.to_string(), self.value.clone())
     }
+}
+
+fn tuples_to_query_string(tuples: Vec<(String, String, String)>) -> Result<String, ApiError> {
+    let params: Vec<(String, String)> = tuples
+        .into_iter()
+        .map(|(key, operator, value)| (format!("{key}__{operator}"), value))
+        .collect();
+
+    serde_urlencoded::to_string(params).map_err(|err| ApiError::QueryEncoding(err.to_string()))
 }
 
 impl IntoQueryTuples for Vec<QueryFilter> {
@@ -180,13 +189,8 @@ impl IntoQueryTuples for Vec<QueryFilter> {
         self.iter().map(|filter| filter.as_query_tuple()).collect()
     }
 
-    fn into_query_string(self) -> String {
-        let tuples = self.into_tuples();
-        tuples
-            .iter()
-            .map(|(key, operator, value)| format!("{}__{}={}", key, operator, value))
-            .collect::<Vec<String>>()
-            .join("&")
+    fn into_query_string(self) -> Result<String, ApiError> {
+        tuples_to_query_string(self.into_tuples())
     }
 }
 
@@ -195,13 +199,8 @@ impl IntoQueryTuples for &Vec<QueryFilter> {
         self.iter().map(|filter| filter.as_query_tuple()).collect()
     }
 
-    fn into_query_string(self) -> String {
-        let tuples = self.into_tuples();
-        tuples
-            .iter()
-            .map(|(key, operator, value)| format!("{}__{}={}", key, operator, value))
-            .collect::<Vec<String>>()
-            .join("&")
+    fn into_query_string(self) -> Result<String, ApiError> {
+        tuples_to_query_string(self.into_tuples())
     }
 }
 
@@ -210,12 +209,56 @@ impl IntoQueryTuples for &[QueryFilter] {
         self.iter().map(|filter| filter.as_query_tuple()).collect()
     }
 
-    fn into_query_string(self) -> String {
-        let tuples = self.into_tuples();
-        tuples
-            .iter()
-            .map(|(key, operator, value)| format!("{}__{}={}", key, operator, value))
-            .collect::<Vec<String>>()
-            .join("&")
+    fn into_query_string(self) -> Result<String, ApiError> {
+        tuples_to_query_string(self.into_tuples())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FilterOperator, IntoQueryTuples, QueryFilter};
+
+    #[test]
+    fn into_query_string_encodes_reserved_characters() {
+        let filters = vec![QueryFilter {
+            key: "name".to_string(),
+            value: "A&B = C/D?".to_string(),
+            operator: FilterOperator::Equals { is_negated: false },
+        }];
+
+        let got = filters.into_query_string();
+        assert!(got.is_ok());
+        assert_eq!(
+            got.unwrap_or_default(),
+            "name__equals=A%26B+%3D+C%2FD%3F".to_string()
+        );
+    }
+
+    #[test]
+    fn into_query_string_is_consistent_across_vec_and_slice() {
+        let filters = vec![
+            QueryFilter {
+                key: "name".to_string(),
+                value: "alpha beta".to_string(),
+                operator: FilterOperator::Equals { is_negated: false },
+            },
+            QueryFilter {
+                key: "description".to_string(),
+                value: "x&y".to_string(),
+                operator: FilterOperator::Contains { is_negated: false },
+            },
+        ];
+
+        let expected = "name__equals=alpha+beta&description__contains=x%26y";
+        let from_vec = filters.clone().into_query_string();
+        let from_ref_vec = (&filters).into_query_string();
+        let from_slice = filters.as_slice().into_query_string();
+
+        assert!(from_vec.is_ok());
+        assert!(from_ref_vec.is_ok());
+        assert!(from_slice.is_ok());
+        assert_eq!(from_vec.unwrap_or_default(), expected.to_string());
+        assert_eq!(from_ref_vec.unwrap_or_default(), expected.to_string());
+        assert_eq!(from_slice.unwrap_or_default(), expected.to_string());
     }
 }
