@@ -21,4 +21,4 @@ strum = { version = "0.27.2", features = ["derive", "strum_macros"] }
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 yare = "3"
-httpmock = "0.7"
+httpmock = "0.8"
