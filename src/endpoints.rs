@@ -3,6 +3,10 @@ use crate::types::BaseUrl;
 pub enum Endpoint {
     Login,
     LoginWithToken,
+    Logout,
+    LogoutToken,
+    LogoutUser,
+    LogoutAll,
     Users,
     Groups,
     GroupMembers,
@@ -22,6 +26,10 @@ impl Endpoint {
         match self {
             Endpoint::Login => "/api/v0/auth/login",
             Endpoint::LoginWithToken => "/api/v0/auth/validate",
+            Endpoint::Logout => "/api/v0/auth/logout",
+            Endpoint::LogoutToken => "/api/v0/auth/logout/token/{token}",
+            Endpoint::LogoutUser => "/api/v0/auth/logout/uid/{user_id}",
+            Endpoint::LogoutAll => "/api/v0/auth/logout_all",
             Endpoint::Users => "/api/v1/iam/users/",
             Endpoint::Groups => "/api/v1/iam/groups/",
             Endpoint::GroupMembers => "/api/v1/iam/groups/{group_id}/members",
@@ -62,6 +70,10 @@ mod test {
 
     #[parameterized(
         login = { Endpoint::Login, "/api/v0/auth/login" },
+        logout = { Endpoint::Logout, "/api/v0/auth/logout" },
+        logout_token = { Endpoint::LogoutToken, "/api/v0/auth/logout/token/{token}" },
+        logout_user = { Endpoint::LogoutUser, "/api/v0/auth/logout/uid/{user_id}" },
+        logout_all = { Endpoint::LogoutAll, "/api/v0/auth/logout_all" },
         get_user = { Endpoint::Users, "/api/v1/iam/users/" },
         get_class = { Endpoint::Classes, "/api/v1/classes/" }
     )]
@@ -71,6 +83,10 @@ mod test {
 
     #[parameterized(
         login = { Endpoint::Login, '/', "api/v0/auth/login" },
+        logout = { Endpoint::Logout, '/', "api/v0/auth/logout" },
+        logout_token = { Endpoint::LogoutToken, '/', "api/v0/auth/logout/token/{token}" },
+        logout_user = { Endpoint::LogoutUser, '/', "api/v0/auth/logout/uid/{user_id}" },
+        logout_all = { Endpoint::LogoutAll, '/', "api/v0/auth/logout_all" },
         get_user = { Endpoint::Users, '/', "api/v1/iam/users/" },
         get_class = { Endpoint::Classes, '/', "api/v1/classes/" }
     )]
@@ -80,6 +96,8 @@ mod test {
 
     #[parameterized(
         api_login = { Endpoint::Login, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/login" },
+        api_logout = { Endpoint::Logout, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/logout" },
+        api_logout_all = { Endpoint::LogoutAll, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/logout_all" },
         api_get_user = { Endpoint::Users, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/iam/users/" },
         foo_login_with_token = { Endpoint::LoginWithToken, BaseUrl::from_str("https://foo.bar.com").unwrap(), "https://foo.bar.com/api/v0/auth/validate" },
     )]

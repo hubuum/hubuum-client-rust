@@ -122,6 +122,54 @@ impl Client<Authenticated> {
         &self.state.token
     }
 
+    pub async fn logout(&self) -> Result<(), ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+            reqwest::Method::GET,
+            &Endpoint::Logout,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .await
+        .map(|_| ())
+    }
+
+    pub async fn logout_token(&self, token: &str) -> Result<(), ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+            reqwest::Method::GET,
+            &Endpoint::LogoutToken,
+            vec![(Cow::Borrowed("token"), token.to_string().into())],
+            vec![],
+            EmptyPostParams,
+        )
+        .await
+        .map(|_| ())
+    }
+
+    pub async fn logout_user(&self, user_id: i32) -> Result<(), ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+            reqwest::Method::GET,
+            &Endpoint::LogoutUser,
+            vec![(Cow::Borrowed("user_id"), user_id.to_string().into())],
+            vec![],
+            EmptyPostParams,
+        )
+        .await
+        .map(|_| ())
+    }
+
+    pub async fn logout_all(&self) -> Result<(), ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+            reqwest::Method::GET,
+            &Endpoint::LogoutAll,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .await
+        .map(|_| ())
+    }
+
     pub async fn request_with_endpoint<T: Serialize + std::fmt::Debug, U: DeserializeOwned>(
         &self,
         method: reqwest::Method,

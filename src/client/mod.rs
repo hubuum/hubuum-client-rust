@@ -107,6 +107,16 @@ mod parity_contract {
         };
     }
 
+    macro_rules! assert_authenticated_client_auth_surface {
+        ($module:ident) => {
+            let _ = $module::Client::<Authenticated>::get_token;
+            let _ = $module::Client::<Authenticated>::logout;
+            let _ = $module::Client::<Authenticated>::logout_token;
+            let _ = $module::Client::<Authenticated>::logout_user;
+            let _ = $module::Client::<Authenticated>::logout_all;
+        };
+    }
+
     macro_rules! assert_filter_builder_surface {
         ($module:ident) => {
             let _ = $module::FilterBuilder::<Class>::add_filter::<i32>;
@@ -161,6 +171,8 @@ mod parity_contract {
 
         assert_client_resource_accessors!(sync_client);
         assert_client_resource_accessors!(async_client);
+        assert_authenticated_client_auth_surface!(sync_client);
+        assert_authenticated_client_auth_surface!(async_client);
 
         assert_filter_builder_surface!(sync_client);
         assert_filter_builder_surface!(async_client);

@@ -203,3 +203,120 @@ async fn async_select_by_name_applies_name_filter() {
         .expect("class lookup should succeed");
     assert_eq!(class.resource().name, class_name);
 }
+
+#[test]
+fn sync_supports_all_auth_logout_endpoints() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let logout = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/auth/logout")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "logged out" }));
+    });
+
+    let logout_token = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/auth/logout/token/revoked-token")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "token revoked" }));
+    });
+
+    let logout_user = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/auth/logout/uid/99")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "user tokens revoked" }));
+    });
+
+    let logout_all = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/auth/logout_all")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "all revoked" }));
+    });
+
+    let client = sync_client(&server);
+    client.logout().expect("logout should succeed");
+    client
+        .logout_token("revoked-token")
+        .expect("logout_token should succeed");
+    client.logout_user(99).expect("logout_user should succeed");
+    client.logout_all().expect("logout_all should succeed");
+
+    logout.assert_calls(1);
+    logout_token.assert_calls(1);
+    logout_user.assert_calls(1);
+    logout_all.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_supports_all_auth_logout_endpoints() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let logout = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/auth/logout")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "logged out" }));
+    });
+
+    let logout_token = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/auth/logout/token/revoked-token")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "token revoked" }));
+    });
+
+    let logout_user = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/auth/logout/uid/99")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "user tokens revoked" }));
+    });
+
+    let logout_all = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/auth/logout_all")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "all revoked" }));
+    });
+
+    let client = async_client(&server).await;
+    client.logout().await.expect("logout should succeed");
+    client
+        .logout_token("revoked-token")
+        .await
+        .expect("logout_token should succeed");
+    client
+        .logout_user(99)
+        .await
+        .expect("logout_user should succeed");
+    client
+        .logout_all()
+        .await
+        .expect("logout_all should succeed");
+
+    logout.assert_calls(1);
+    logout_token.assert_calls(1);
+    logout_user.assert_calls(1);
+    logout_all.assert_calls(1);
+}
