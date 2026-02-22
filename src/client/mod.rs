@@ -114,6 +114,8 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::logout_token;
             let _ = $module::Client::<Authenticated>::logout_user;
             let _ = $module::Client::<Authenticated>::logout_all;
+            let _ = $module::Client::<Authenticated>::meta_counts;
+            let _ = $module::Client::<Authenticated>::meta_db;
         };
     }
 

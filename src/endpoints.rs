@@ -7,6 +7,8 @@ pub enum Endpoint {
     LogoutToken,
     LogoutUser,
     LogoutAll,
+    MetaCounts,
+    MetaDb,
     Users,
     Groups,
     GroupMembers,
@@ -30,6 +32,8 @@ impl Endpoint {
             Endpoint::LogoutToken => "/api/v0/auth/logout/token/{token}",
             Endpoint::LogoutUser => "/api/v0/auth/logout/uid/{user_id}",
             Endpoint::LogoutAll => "/api/v0/auth/logout_all",
+            Endpoint::MetaCounts => "/api/v0/meta/counts",
+            Endpoint::MetaDb => "/api/v0/meta/db",
             Endpoint::Users => "/api/v1/iam/users/",
             Endpoint::Groups => "/api/v1/iam/groups/",
             Endpoint::GroupMembers => "/api/v1/iam/groups/{group_id}/members",
@@ -74,6 +78,8 @@ mod test {
         logout_token = { Endpoint::LogoutToken, "/api/v0/auth/logout/token/{token}" },
         logout_user = { Endpoint::LogoutUser, "/api/v0/auth/logout/uid/{user_id}" },
         logout_all = { Endpoint::LogoutAll, "/api/v0/auth/logout_all" },
+        meta_counts = { Endpoint::MetaCounts, "/api/v0/meta/counts" },
+        meta_db = { Endpoint::MetaDb, "/api/v0/meta/db" },
         get_user = { Endpoint::Users, "/api/v1/iam/users/" },
         get_class = { Endpoint::Classes, "/api/v1/classes/" }
     )]
@@ -87,6 +93,8 @@ mod test {
         logout_token = { Endpoint::LogoutToken, '/', "api/v0/auth/logout/token/{token}" },
         logout_user = { Endpoint::LogoutUser, '/', "api/v0/auth/logout/uid/{user_id}" },
         logout_all = { Endpoint::LogoutAll, '/', "api/v0/auth/logout_all" },
+        meta_counts = { Endpoint::MetaCounts, '/', "api/v0/meta/counts" },
+        meta_db = { Endpoint::MetaDb, '/', "api/v0/meta/db" },
         get_user = { Endpoint::Users, '/', "api/v1/iam/users/" },
         get_class = { Endpoint::Classes, '/', "api/v1/classes/" }
     )]
@@ -98,6 +106,8 @@ mod test {
         api_login = { Endpoint::Login, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/login" },
         api_logout = { Endpoint::Logout, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/logout" },
         api_logout_all = { Endpoint::LogoutAll, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/logout_all" },
+        api_meta_counts = { Endpoint::MetaCounts, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/counts" },
+        api_meta_db = { Endpoint::MetaDb, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/db" },
         api_get_user = { Endpoint::Users, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/iam/users/" },
         foo_login_with_token = { Endpoint::LoginWithToken, BaseUrl::from_str("https://foo.bar.com").unwrap(), "https://foo.bar.com/api/v0/auth/validate" },
     )]

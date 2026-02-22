@@ -320,3 +320,129 @@ async fn async_supports_all_auth_logout_endpoints() {
     logout_user.assert_calls(1);
     logout_all.assert_calls(1);
 }
+
+#[test]
+fn sync_supports_meta_endpoints() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let counts = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/meta/counts")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "total_objects": 12,
+                "total_classes": 3,
+                "total_namespaces": 2,
+                "objects_per_class": [
+                    { "hubuum_class_id": 10, "count": 5 },
+                    { "hubuum_class_id": 20, "count": 7 }
+                ]
+            }));
+    });
+
+    let db = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/meta/db")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "available_connections": 18,
+                "idle_connections": 6,
+                "active_connections": 12,
+                "db_size": 1024,
+                "last_vacuum_time": "2024-01-01T00:00:00Z"
+            }));
+    });
+
+    let client = sync_client(&server);
+    let counts_response = client
+        .meta_counts()
+        .expect("meta_counts request should succeed");
+    assert_eq!(counts_response.total_objects, 12);
+    assert_eq!(counts_response.total_classes, 3);
+    assert_eq!(counts_response.total_namespaces, 2);
+    assert_eq!(counts_response.objects_per_class.len(), 2);
+    assert_eq!(counts_response.objects_per_class[0].hubuum_class_id, 10);
+    assert_eq!(counts_response.objects_per_class[0].count, 5);
+    assert_eq!(counts_response.objects_per_class[1].hubuum_class_id, 20);
+    assert_eq!(counts_response.objects_per_class[1].count, 7);
+
+    let db_response = client.meta_db().expect("meta_db request should succeed");
+    assert_eq!(db_response.available_connections, 18);
+    assert_eq!(db_response.idle_connections, 6);
+    assert_eq!(db_response.active_connections, 12);
+    assert_eq!(db_response.db_size, 1024);
+    assert!(db_response.last_vacuum_time.is_some());
+
+    counts.assert_calls(1);
+    db.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_supports_meta_endpoints() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let counts = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/meta/counts")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "total_objects": 12,
+                "total_classes": 3,
+                "total_namespaces": 2,
+                "objects_per_class": [
+                    { "hubuum_class_id": 10, "count": 5 },
+                    { "hubuum_class_id": 20, "count": 7 }
+                ]
+            }));
+    });
+
+    let db = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/meta/db")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "available_connections": 18,
+                "idle_connections": 6,
+                "active_connections": 12,
+                "db_size": 1024,
+                "last_vacuum_time": "2024-01-01T00:00:00Z"
+            }));
+    });
+
+    let client = async_client(&server).await;
+    let counts_response = client
+        .meta_counts()
+        .await
+        .expect("meta_counts request should succeed");
+    assert_eq!(counts_response.total_objects, 12);
+    assert_eq!(counts_response.total_classes, 3);
+    assert_eq!(counts_response.total_namespaces, 2);
+    assert_eq!(counts_response.objects_per_class.len(), 2);
+    assert_eq!(counts_response.objects_per_class[0].hubuum_class_id, 10);
+    assert_eq!(counts_response.objects_per_class[0].count, 5);
+    assert_eq!(counts_response.objects_per_class[1].hubuum_class_id, 20);
+    assert_eq!(counts_response.objects_per_class[1].count, 7);
+
+    let db_response = client
+        .meta_db()
+        .await
+        .expect("meta_db request should succeed");
+    assert_eq!(db_response.available_connections, 18);
+    assert_eq!(db_response.idle_connections, 6);
+    assert_eq!(db_response.active_connections, 12);
+    assert_eq!(db_response.db_size, 1024);
+    assert!(db_response.last_vacuum_time.is_some());
+
+    counts.assert_calls(1);
+    db.assert_calls(1);
+}

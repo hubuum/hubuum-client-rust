@@ -12,7 +12,7 @@ use super::{
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{ApiResource, Class, ClassRelation, Group, Namespace, Object, User};
-use crate::types::{BaseUrl, Credentials, FilterOperator, Token};
+use crate::types::{BaseUrl, CountsResponse, Credentials, DbStateResponse, FilterOperator, Token};
 use crate::{ObjectRelation, QueryFilter};
 
 #[derive(Deserialize, Debug)]
@@ -168,6 +168,38 @@ impl Client<Authenticated> {
         )
         .await
         .map(|_| ())
+    }
+
+    pub async fn meta_counts(&self) -> Result<CountsResponse, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, CountsResponse>(
+            reqwest::Method::GET,
+            &Endpoint::MetaCounts,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .await
+        .and_then(|opt| {
+            opt.ok_or(ApiError::EmptyResult(
+                "META counts returned empty result".into(),
+            ))
+        })
+    }
+
+    pub async fn meta_db(&self) -> Result<DbStateResponse, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, DbStateResponse>(
+            reqwest::Method::GET,
+            &Endpoint::MetaDb,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .await
+        .and_then(|opt| {
+            opt.ok_or(ApiError::EmptyResult(
+                "META db state returned empty result".into(),
+            ))
+        })
     }
 
     pub async fn request_with_endpoint<T: Serialize + std::fmt::Debug, U: DeserializeOwned>(

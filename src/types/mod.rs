@@ -2,6 +2,7 @@ mod auth;
 mod baseurl;
 mod datetime;
 mod filter;
+mod meta;
 mod params;
 
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,7 @@ pub use auth::{Credentials, Token};
 pub use baseurl::BaseUrl;
 pub use datetime::HubuumDateTime;
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter};
+pub use meta::{CountsResponse, DbStateResponse, ObjectsByClass};
 pub use params::{ClassParams, NamespacePermissionsGrantParams, UserParams};
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumIter, EnumString, Display)]
