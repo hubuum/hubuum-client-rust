@@ -495,7 +495,7 @@ where
     pub async fn select(&self, id: i32) -> Result<Handle<T>, ApiError> {
         match T::default().endpoint() {
             Endpoint::Users => {
-                let resource = self
+                match self
                     .client
                     .request_with_endpoint::<EmptyPostParams, T>(
                         reqwest::Method::GET,
@@ -504,12 +504,17 @@ where
                         vec![],
                         EmptyPostParams,
                     )
-                    .await?
-                    .ok_or(ApiError::EmptyResult("User not found".into()))?;
-                return Ok(Handle::new(self.client.clone(), resource));
+                    .await
+                {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
             }
             Endpoint::Groups => {
-                let resource = self
+                match self
                     .client
                     .request_with_endpoint::<EmptyPostParams, T>(
                         reqwest::Method::GET,
@@ -518,9 +523,14 @@ where
                         vec![],
                         EmptyPostParams,
                     )
-                    .await?
-                    .ok_or(ApiError::EmptyResult("Group not found".into()))?;
-                return Ok(Handle::new(self.client.clone(), resource));
+                    .await
+                {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
             }
             _ => {}
         }

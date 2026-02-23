@@ -139,6 +139,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 As one can see, the interface is very similar to the synchronous client.
 
+## Integration Tests (Real Server)
+
+The repository includes an opt-in Docker-backed integration test suite in
+`tests/container_integration.rs`.
+
+It starts:
+- a PostgreSQL container
+- a Hubuum server container (default image: `ghcr.io/hubuum/hubuum-server:no-tls-main`)
+
+Run it with:
+
+```bash
+cargo test --features integration-tests --test container_integration -- --ignored --nocapture
+```
+
+Mutating integration tests use unique `itest-<case>-<ts>` resource name prefixes, so they are safe
+to run with default parallel test threads.
+
+Optional environment variables:
+- `HUBUUM_INTEGRATION_SERVER_IMAGE` to override the server image
+- `HUBUUM_INTEGRATION_DB_IMAGE` to override the database image
+- `HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS` to override stack startup timeout (default: `300`)
+- `HUBUUM_INTEGRATION_KEEP_CONTAINERS=1` to keep containers running for debugging
+
+If the server image is private in your environment, authenticate first:
+
+```bash
+docker login ghcr.io
+```
+
 ## Contributing
 
 Contributions are welcome! If you find issues or have suggestions for improvements, please open an issue or submit a pull request on GitHub.

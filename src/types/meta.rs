@@ -12,7 +12,9 @@ pub struct ObjectsByClass {
 pub struct CountsResponse {
     pub total_objects: i64,
     pub total_classes: i64,
+    #[serde(default)]
     pub total_namespaces: i64,
+    #[serde(default)]
     pub objects_per_class: Vec<ObjectsByClass>,
 }
 

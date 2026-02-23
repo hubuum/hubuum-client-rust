@@ -483,30 +483,34 @@ where
     pub fn select(&self, id: i32) -> Result<Handle<T>, ApiError> {
         match T::default().endpoint() {
             Endpoint::Users => {
-                let resource = self
-                    .client
-                    .request_with_endpoint::<EmptyPostParams, T>(
-                        reqwest::Method::GET,
-                        &Endpoint::UsersById,
-                        vec![(Cow::Borrowed("user_id"), id.to_string().into())],
-                        vec![],
-                        EmptyPostParams,
-                    )?
-                    .ok_or(ApiError::EmptyResult("User not found".into()))?;
-                return Ok(Handle::new(self.client.clone(), resource));
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::UsersById,
+                    vec![(Cow::Borrowed("user_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
             }
             Endpoint::Groups => {
-                let resource = self
-                    .client
-                    .request_with_endpoint::<EmptyPostParams, T>(
-                        reqwest::Method::GET,
-                        &Endpoint::GroupsById,
-                        vec![(Cow::Borrowed("group_id"), id.to_string().into())],
-                        vec![],
-                        EmptyPostParams,
-                    )?
-                    .ok_or(ApiError::EmptyResult("Group not found".into()))?;
-                return Ok(Handle::new(self.client.clone(), resource));
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::GroupsById,
+                    vec![(Cow::Borrowed("group_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
             }
             _ => {}
         }

@@ -3,6 +3,9 @@ name = "hubuum_client"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+integration-tests = []
+
 [dependencies]
 api_resource_derive = { path = "./api_resource_derive" }
 reqwest = { version = "0", features = ["json", "blocking"] }
@@ -22,3 +25,4 @@ strum = { version = "0.27.2", features = ["derive", "strum_macros"] }
 tokio = { version = "1", features = ["full"] }
 yare = "3"
 httpmock = "0.8"
+rstest = "0.25"
