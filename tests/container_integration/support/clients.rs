@@ -1,8 +1,8 @@
 use std::future::Future;
 
 use hubuum_client::{
-    ApiError, AsyncClient, Authenticated, BaseUrl, ClassPost, Credentials, NamespacePost,
-    SyncClient,
+    ApiError, AsyncClient, Authenticated, BaseUrl, ClassPost, Credentials, GroupPost,
+    NamespacePost, ObjectPost, SyncClient, UserPost,
 };
 
 use crate::support::naming::unique_case_prefix;
@@ -110,6 +110,35 @@ pub(crate) fn sync_admin_context(
     Ok((admin_id, admin_group_id))
 }
 
+pub(crate) fn create_sync_user(
+    client: &SyncClient<Authenticated>,
+    case: &str,
+) -> Result<(String, i32), ApiError> {
+    let prefix = unique_case_prefix(case);
+    let username = format!("{prefix}-user");
+    let user = client.users().create(UserPost {
+        username: username.clone(),
+        password: format!("{prefix}-Passw0rd!"),
+        email: Some(format!("{prefix}@example.test")),
+    })?;
+
+    Ok((username, user.id))
+}
+
+pub(crate) fn create_sync_group(
+    client: &SyncClient<Authenticated>,
+    case: &str,
+) -> Result<(String, i32), ApiError> {
+    let prefix = unique_case_prefix(case);
+    let groupname = format!("{prefix}-group");
+    let group = client.groups().create(GroupPost {
+        groupname: groupname.clone(),
+        description: "integration group".to_string(),
+    })?;
+
+    Ok((groupname, group.id))
+}
+
 pub(crate) async fn async_admin_context(
     client: &AsyncClient<Authenticated>,
 ) -> Result<(i32, i32), ApiError> {
@@ -131,6 +160,41 @@ pub(crate) async fn async_admin_context(
     };
 
     Ok((admin_id, admin_group_id))
+}
+
+pub(crate) async fn create_async_user(
+    client: &AsyncClient<Authenticated>,
+    case: &str,
+) -> Result<(String, i32), ApiError> {
+    let prefix = unique_case_prefix(case);
+    let username = format!("{prefix}-user");
+    let user = client
+        .users()
+        .create(UserPost {
+            username: username.clone(),
+            password: format!("{prefix}-Passw0rd!"),
+            email: Some(format!("{prefix}@example.test")),
+        })
+        .await?;
+
+    Ok((username, user.id))
+}
+
+pub(crate) async fn create_async_group(
+    client: &AsyncClient<Authenticated>,
+    case: &str,
+) -> Result<(String, i32), ApiError> {
+    let prefix = unique_case_prefix(case);
+    let groupname = format!("{prefix}-group");
+    let group = client
+        .groups()
+        .create(GroupPost {
+            groupname: groupname.clone(),
+            description: "integration group".to_string(),
+        })
+        .await?;
+
+    Ok((groupname, group.id))
 }
 
 pub(crate) fn create_sync_permission_sandbox(
@@ -155,6 +219,25 @@ pub(crate) fn create_sync_permission_sandbox(
     })?;
 
     Ok((namespace.id, class.id))
+}
+
+pub(crate) fn create_sync_object(
+    client: &SyncClient<Authenticated>,
+    namespace_id: i32,
+    class_id: i32,
+    case: &str,
+) -> Result<(String, i32), ApiError> {
+    let prefix = unique_case_prefix(case);
+    let name = format!("{prefix}-object");
+    let object = client.objects(class_id).create(ObjectPost {
+        name: name.clone(),
+        namespace_id,
+        hubuum_class_id: class_id,
+        description: "integration object".to_string(),
+        data: None,
+    })?;
+
+    Ok((name, object.id))
 }
 
 pub(crate) async fn create_async_permission_sandbox(
@@ -185,4 +268,26 @@ pub(crate) async fn create_async_permission_sandbox(
         .await?;
 
     Ok((namespace.id, class.id))
+}
+
+pub(crate) async fn create_async_object(
+    client: &AsyncClient<Authenticated>,
+    namespace_id: i32,
+    class_id: i32,
+    case: &str,
+) -> Result<(String, i32), ApiError> {
+    let prefix = unique_case_prefix(case);
+    let name = format!("{prefix}-object");
+    let object = client
+        .objects(class_id)
+        .create(ObjectPost {
+            name: name.clone(),
+            namespace_id,
+            hubuum_class_id: class_id,
+            description: "integration object".to_string(),
+            data: None,
+        })
+        .await?;
+
+    Ok((name, object.id))
 }
