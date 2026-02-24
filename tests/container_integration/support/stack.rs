@@ -1,4 +1,5 @@
 use std::process::Command;
+use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
@@ -12,6 +13,13 @@ const DB_NAME: &str = "hubuum";
 const DB_IMAGE_DEFAULT: &str = "postgres:15";
 const SERVER_IMAGE_DEFAULT: &str = "ghcr.io/hubuum/hubuum-server:no-tls-main";
 const STACK_TIMEOUT_DEFAULT_SECS: u64 = 300;
+const EXTERNAL_BASE_URL_ENV: &str = "HUBUUM_INTEGRATION_BASE_URL";
+const EXTERNAL_ADMIN_PASSWORD_ENV: &str = "HUBUUM_INTEGRATION_ADMIN_PASSWORD";
+
+fn shared_stack_slot() -> &'static Mutex<Weak<StackInner>> {
+    static SHARED_STACK: OnceLock<Mutex<Weak<StackInner>>> = OnceLock::new();
+    SHARED_STACK.get_or_init(|| Mutex::new(Weak::new()))
+}
 
 fn docker(args: &[String]) -> Result<String, String> {
     let output = Command::new("docker")
@@ -158,16 +166,44 @@ fn collect_stack_diagnostics(
     )
 }
 
-pub(crate) struct IntegrationStack {
+fn collect_db_startup_diagnostics(db_container_name: &str) -> String {
+    let db_status = docker(&[
+        "inspect".to_string(),
+        "-f".to_string(),
+        "{{.State.Status}}".to_string(),
+        db_container_name.to_string(),
+    ])
+    .unwrap_or_else(|err| format!("inspect-error: {err}"));
+
+    let db_health = docker(&[
+        "inspect".to_string(),
+        "-f".to_string(),
+        "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}".to_string(),
+        db_container_name.to_string(),
+    ])
+    .unwrap_or_else(|err| format!("inspect-error: {err}"));
+
+    let db_logs = docker(&[
+        "logs".to_string(),
+        "--tail".to_string(),
+        "80".to_string(),
+        db_container_name.to_string(),
+    ])
+    .unwrap_or_else(|err| format!("logs-error: {err}"));
+
+    format!("db_status={db_status}\ndb_health={db_health}\ndb_logs_tail:\n{db_logs}")
+}
+
+struct StackInner {
     network_name: String,
     db_container_name: String,
     server_container_name: String,
-    pub(crate) base_url: String,
-    pub(crate) admin_password: String,
+    base_url: String,
+    admin_password: String,
 }
 
-impl IntegrationStack {
-    pub(crate) fn start() -> Result<Self, String> {
+impl StackInner {
+    fn start_new() -> Result<Self, String> {
         let suffix = unique_suffix();
         let timeout = stack_timeout();
         let network_name = format!("hubuum-it-net-{suffix}");
@@ -224,8 +260,9 @@ impl IntegrationStack {
         })
         .map_err(|err| format!("database container did not become healthy: {err}"))
         {
+            let diagnostics = collect_db_startup_diagnostics(&db_container_name);
             cleanup_stack_resources(&network_name, &db_container_name, &server_container_name);
-            return Err(err);
+            return Err(format!("{err}\n{diagnostics}"));
         }
 
         if let Err(err) = docker(&[
@@ -328,7 +365,7 @@ impl IntegrationStack {
     }
 }
 
-impl Drop for IntegrationStack {
+impl Drop for StackInner {
     fn drop(&mut self) {
         if keep_containers() {
             eprintln!(
@@ -343,5 +380,64 @@ impl Drop for IntegrationStack {
             &self.db_container_name,
             &self.server_container_name,
         );
+    }
+}
+
+pub(crate) struct IntegrationStack {
+    _inner: Option<Arc<StackInner>>,
+    pub(crate) base_url: String,
+    pub(crate) admin_password: String,
+}
+
+impl IntegrationStack {
+    fn from_external_env() -> Result<Option<Self>, String> {
+        let base_url = std::env::var(EXTERNAL_BASE_URL_ENV)
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+        let admin_password = std::env::var(EXTERNAL_ADMIN_PASSWORD_ENV)
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+
+        match (base_url, admin_password) {
+            (Some(base_url), Some(admin_password)) => Ok(Some(Self {
+                _inner: None,
+                base_url,
+                admin_password,
+            })),
+            (None, None) => Ok(None),
+            _ => Err(format!(
+                "set both {EXTERNAL_BASE_URL_ENV} and {EXTERNAL_ADMIN_PASSWORD_ENV} to use an external integration stack"
+            )),
+        }
+    }
+
+    pub(crate) fn start() -> Result<Self, String> {
+        if let Some(external) = Self::from_external_env()? {
+            return Ok(external);
+        }
+
+        let slot = shared_stack_slot();
+        let mut weak = slot
+            .lock()
+            .map_err(|_| "shared integration stack mutex poisoned".to_string())?;
+
+        if let Some(inner) = weak.upgrade() {
+            return Ok(Self {
+                base_url: inner.base_url.clone(),
+                admin_password: inner.admin_password.clone(),
+                _inner: Some(inner),
+            });
+        }
+
+        let inner = Arc::new(StackInner::start_new()?);
+        *weak = Arc::downgrade(&inner);
+
+        Ok(Self {
+            base_url: inner.base_url.clone(),
+            admin_password: inner.admin_password.clone(),
+            _inner: Some(inner),
+        })
     }
 }

@@ -55,4 +55,4 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Run Integration Test Suite
-        run: cargo test --features integration-tests --test container_integration -- --ignored --nocapture
+        run: ./scripts/run-integration-tests.sh

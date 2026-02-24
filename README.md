@@ -67,18 +67,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Once authenticated, you can perform operations against the API. For example, to create a new class resource:
 
 ```rust
-use hubuum_client::ClassPost;
-
-let result = client.classes().create(ClassPost {
-    name: "example-class".to_string(),
-    namespace_id: 1,
-    description: "Example class".to_string(),
-    json_schema: None,
-    validate_schema: None,
-})?;
+let result = client
+    .classes()
+    .create()
+    .name("example-class")
+    .namespace_id(1)
+    .description("Example class")
+    .send()?;
 ```
 
-Each endpoint has a corresponding method in the client, and each `POST` request is represented by a struct named `TypePost` that implements `Serialize`. The client handles serialization and deserialization automatically.
+The fluent API works across create/update/query flows. If needed, you can still pass raw structs through `create_raw`, `update_raw`, and `query().params(...)`.
 
 #### Searching Resources
 
@@ -88,9 +86,9 @@ The client’s API is designed with a fluent query interface. For example, to se
 let name = "example-class";
 let class = client
     .classes()
-    .find()
-    .add_filter_name_exact(name)
-    .execute_expecting_single_result()?;
+    .query()
+    .name_eq(name)
+    .one()?;
 ```
 
 Or, to find a relation between classes:
@@ -100,10 +98,10 @@ let from_class_id = 1;
 let to_class_id = 2;
 let relation = client
         .class_relation()
-        .find()
+        .query()
         .add_filter_equals("from_hubuum_class_id", from_class_id)
         .add_filter_equals("to_hubuum_class_id", to_class_id)
-        .execute_expecting_single_result()?;
+        .one()?;
 ```
 
 ### Asynchronous Client
@@ -144,24 +142,36 @@ As one can see, the interface is very similar to the synchronous client.
 The repository includes an opt-in Docker-backed integration test suite in
 `tests/container_integration.rs`.
 
-It starts:
-- a PostgreSQL container
-- a Hubuum server container (default image: `ghcr.io/hubuum/hubuum-server:no-tls-main`)
-
-Run it with:
+Recommended entrypoint:
 
 ```bash
-cargo test --features integration-tests --test container_integration -- --ignored --nocapture
+./scripts/run-integration-tests.sh
 ```
+
+The script starts one PostgreSQL container and one Hubuum server container, waits for readiness,
+optionally applies SQL seed data, runs integration tests, and tears everything down in a shell
+`trap` (unless keep mode is enabled).
 
 Mutating integration tests use unique `itest-<case>-<ts>` resource name prefixes, so they are safe
 to run with default parallel test threads.
 
+Seed behavior:
+- default seed file: `tests/container_integration/seed/init.sql`
+- custom seed file: `./scripts/run-integration-tests.sh --seed path/to/seed.sql`
+- disable seeding: `./scripts/run-integration-tests.sh --skip-seed`
+
+External stack mode:
+- tests can reuse an externally managed stack when both env vars are set:
+  - `HUBUUM_INTEGRATION_BASE_URL`
+  - `HUBUUM_INTEGRATION_ADMIN_PASSWORD`
+- this is what the wrapper script exports internally before running tests.
+
 Optional environment variables:
 - `HUBUUM_INTEGRATION_SERVER_IMAGE` to override the server image
 - `HUBUUM_INTEGRATION_DB_IMAGE` to override the database image
-- `HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS` to override stack startup timeout (default: `300`)
+- `HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS` to override startup timeout (default: `300`)
 - `HUBUUM_INTEGRATION_KEEP_CONTAINERS=1` to keep containers running for debugging
+- `HUBUUM_INTEGRATION_SEED_SQL` to override the default seed SQL file
 
 If the server image is private in your environment, authenticate first:
 

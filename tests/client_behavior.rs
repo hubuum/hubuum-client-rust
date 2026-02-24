@@ -1,7 +1,8 @@
 use std::str::FromStr;
 
 use httpmock::prelude::*;
-use hubuum_client::{types::Permissions, ApiError, AsyncClient, BaseUrl, Credentials, SyncClient};
+use hubuum_client::types::{FilterOperator, Permissions, SortDirection};
+use hubuum_client::{ApiError, AsyncClient, BaseUrl, ClassGet, Credentials, SyncClient};
 use serde_json::json;
 
 const USERNAME: &str = "tester";
@@ -269,6 +270,226 @@ async fn async_select_by_name_applies_name_filter() {
         .await
         .expect("class lookup should succeed");
     assert_eq!(class.resource().name, class_name);
+}
+
+#[test]
+fn sync_class_create_fluent_builder_posts_resource() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/classes/")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(class_json("fluent-class"));
+    });
+    let client = sync_client(&server);
+
+    let class = client
+        .classes()
+        .create()
+        .name("fluent-class")
+        .description("Fluent class")
+        .namespace_id(7)
+        .send()
+        .expect("create fluent builder should succeed");
+
+    assert_eq!(class.name, "fluent-class");
+}
+
+#[tokio::test]
+async fn async_class_update_fluent_builder_patches_resource() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(PATCH)
+            .path("/api/v1/classes/42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("updated-class"));
+    });
+    let client = async_client(&server).await;
+
+    let class = client
+        .classes()
+        .update(42)
+        .name("updated-class")
+        .description("Updated class")
+        .namespace_id(7)
+        .send()
+        .await
+        .expect("update fluent builder should succeed");
+
+    assert_eq!(class.name, "updated-class");
+}
+
+#[test]
+fn sync_class_query_builder_supports_eq_contains_and_get_params() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let by_eq = "query-by-eq";
+    let by_eq_contains = "query-by-eq-contains";
+    let by_params = "query-by-params";
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/")
+            .query_param("name__equals", by_eq)
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json(by_eq)]));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/")
+            .query_param("name__equals", by_eq_contains)
+            .query_param("description__contains", "Clas")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json(by_eq_contains)]));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/")
+            .query_param("name__equals", by_params)
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json(by_params)]));
+    });
+
+    let client = sync_client(&server);
+    let class_by_eq = client
+        .classes()
+        .query()
+        .name_eq(by_eq)
+        .one()
+        .expect("query().name_eq().one() should succeed");
+    assert_eq!(class_by_eq.name, by_eq);
+
+    let class_by_eq_contains = client
+        .classes()
+        .query()
+        .name_eq(by_eq_contains)
+        .description_contains("Clas")
+        .one()
+        .expect("query().name_eq().description_contains().one() should succeed");
+    assert_eq!(class_by_eq_contains.name, by_eq_contains);
+
+    let class_by_params = client
+        .classes()
+        .query()
+        .params(ClassGet {
+            name: Some(by_params.to_string()),
+            ..Default::default()
+        })
+        .one()
+        .expect("query().params().one() should succeed");
+    assert_eq!(class_by_params.name, by_params);
+}
+
+#[tokio::test]
+async fn async_class_query_builder_supports_contains() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let by_eq_contains = "async-query-by-eq-contains";
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/")
+            .query_param("name__equals", by_eq_contains)
+            .query_param("description__contains", "Clas")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json(by_eq_contains)]));
+    });
+
+    let client = async_client(&server).await;
+    let class_by_eq_contains = client
+        .classes()
+        .query()
+        .name_eq(by_eq_contains)
+        .description_contains("Clas")
+        .one()
+        .await
+        .expect("async query().name_eq().description_contains().one() should succeed");
+    assert_eq!(class_by_eq_contains.name, by_eq_contains);
+}
+
+#[test]
+fn sync_class_query_builder_supports_sort_and_limit() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let starts_with = "sort-limit";
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/")
+            .query_param("name__startswith", starts_with)
+            .query_param("sort", "name.asc,created_at.desc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("sort-limit-a")]));
+    });
+
+    let client = sync_client(&server);
+    let one = client
+        .classes()
+        .query()
+        .add_filter_startswith("name", starts_with)
+        .sort_by_fields(vec![
+            ("name", SortDirection::Asc),
+            ("created_at", SortDirection::Desc),
+        ])
+        .limit(1)
+        .one()
+        .expect("query with sort+limit should succeed");
+    assert_eq!(one.name, "sort-limit-a");
+}
+
+#[tokio::test]
+async fn async_class_query_builder_supports_json_path_and_order_by_alias() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let path_filter_value = "properties,latitude,minimum=0";
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/")
+            .query_param("name__not_iequals", "legacy")
+            .query_param("json_schema__lt", path_filter_value)
+            .query_param("order_by", "name.desc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("geo-class")]));
+    });
+
+    let client = async_client(&server).await;
+    let one = client
+        .classes()
+        .query()
+        .add_filter_not_iequals("name", "legacy")
+        .add_json_path_filter(
+            "json_schema",
+            vec!["properties", "latitude", "minimum"],
+            FilterOperator::Lt { is_negated: false },
+            0,
+        )
+        .order_by("name.desc")
+        .limit(1)
+        .one()
+        .await
+        .expect("query with json path and order_by alias should succeed");
+    assert_eq!(one.name, "geo-class");
 }
 
 #[test]

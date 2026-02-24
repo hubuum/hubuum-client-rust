@@ -19,6 +19,16 @@ pub(crate) fn login_sync(
     ))
 }
 
+pub(crate) fn is_unsupported_query_operator(err: &ApiError, operator: &str) -> bool {
+    matches!(
+        err,
+        ApiError::HttpWithBody { status, message }
+            if *status == reqwest::StatusCode::BAD_REQUEST
+                && message.contains("not implemented")
+                && message.contains(operator)
+    )
+}
+
 pub(crate) async fn login_async(
     base_url: BaseUrl,
     admin_password: &str,
@@ -116,7 +126,7 @@ pub(crate) fn create_sync_user(
 ) -> Result<(String, i32), ApiError> {
     let prefix = unique_case_prefix(case);
     let username = format!("{prefix}-user");
-    let user = client.users().create(UserPost {
+    let user = client.users().create_raw(UserPost {
         username: username.clone(),
         password: format!("{prefix}-Passw0rd!"),
         email: Some(format!("{prefix}@example.test")),
@@ -131,7 +141,7 @@ pub(crate) fn create_sync_group(
 ) -> Result<(String, i32), ApiError> {
     let prefix = unique_case_prefix(case);
     let groupname = format!("{prefix}-group");
-    let group = client.groups().create(GroupPost {
+    let group = client.groups().create_raw(GroupPost {
         groupname: groupname.clone(),
         description: "integration group".to_string(),
     })?;
@@ -170,7 +180,7 @@ pub(crate) async fn create_async_user(
     let username = format!("{prefix}-user");
     let user = client
         .users()
-        .create(UserPost {
+        .create_raw(UserPost {
             username: username.clone(),
             password: format!("{prefix}-Passw0rd!"),
             email: Some(format!("{prefix}@example.test")),
@@ -188,7 +198,7 @@ pub(crate) async fn create_async_group(
     let groupname = format!("{prefix}-group");
     let group = client
         .groups()
-        .create(GroupPost {
+        .create_raw(GroupPost {
             groupname: groupname.clone(),
             description: "integration group".to_string(),
         })
@@ -204,13 +214,13 @@ pub(crate) fn create_sync_permission_sandbox(
 ) -> Result<(i32, i32), ApiError> {
     let prefix = unique_case_prefix(case);
 
-    let namespace = client.namespaces().create(NamespacePost {
+    let namespace = client.namespaces().create_raw(NamespacePost {
         name: format!("{prefix}-namespace"),
         description: "integration namespace".to_string(),
         group_id: admin_group_id,
     })?;
 
-    let class = client.classes().create(ClassPost {
+    let class = client.classes().create_raw(ClassPost {
         name: format!("{prefix}-class"),
         namespace_id: namespace.id,
         description: "integration class".to_string(),
@@ -229,7 +239,7 @@ pub(crate) fn create_sync_object(
 ) -> Result<(String, i32), ApiError> {
     let prefix = unique_case_prefix(case);
     let name = format!("{prefix}-object");
-    let object = client.objects(class_id).create(ObjectPost {
+    let object = client.objects(class_id).create_raw(ObjectPost {
         name: name.clone(),
         namespace_id,
         hubuum_class_id: class_id,
@@ -249,7 +259,7 @@ pub(crate) async fn create_async_permission_sandbox(
 
     let namespace = client
         .namespaces()
-        .create(NamespacePost {
+        .create_raw(NamespacePost {
             name: format!("{prefix}-namespace"),
             description: "integration namespace".to_string(),
             group_id: admin_group_id,
@@ -258,7 +268,7 @@ pub(crate) async fn create_async_permission_sandbox(
 
     let class = client
         .classes()
-        .create(ClassPost {
+        .create_raw(ClassPost {
             name: format!("{prefix}-class"),
             namespace_id: namespace.id,
             description: "integration class".to_string(),
@@ -280,7 +290,7 @@ pub(crate) async fn create_async_object(
     let name = format!("{prefix}-object");
     let object = client
         .objects(class_id)
-        .create(ObjectPost {
+        .create_raw(ObjectPost {
             name: name.clone(),
             namespace_id,
             hubuum_class_id: class_id,

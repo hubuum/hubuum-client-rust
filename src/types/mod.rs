@@ -11,7 +11,7 @@ use strum::{Display, EnumIter, EnumString};
 pub use auth::{Credentials, Token};
 pub use baseurl::BaseUrl;
 pub use datetime::HubuumDateTime;
-pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter};
+pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
 pub use meta::{CountsResponse, DbStateResponse, ObjectsByClass};
 pub use params::{ClassParams, NamespacePermissionsGrantParams, UserParams};
 

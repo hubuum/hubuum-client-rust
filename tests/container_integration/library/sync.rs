@@ -1,14 +1,14 @@
 use hubuum_client::{
-    types::{FilterOperator, Permissions},
-    ApiError, BaseUrl, ClassPost, ClassRelationPost, GroupPatch, NamespacePatch, ObjectPatch,
-    ObjectRelationPost, QueryFilter, SyncClient, Token, UserPatch,
+    types::{FilterOperator, Permissions, SortDirection},
+    ApiError, BaseUrl, ClassPost, ClassRelationPost, GroupPatch, NamespacePatch, NamespacePost,
+    ObjectPatch, ObjectRelationPost, QueryFilter, SyncClient, Token, UserPatch,
 };
 use rstest::rstest;
 use serde_json::json;
 
 use crate::support::clients::{
     create_sync_group, create_sync_object, create_sync_permission_sandbox, create_sync_user,
-    login_sync, sync_admin_context, SyncHarness,
+    is_unsupported_query_operator, login_sync, sync_admin_context, SyncHarness,
 };
 use crate::support::naming::unique_case_prefix;
 use crate::support::probe::ADMIN_USERNAME;
@@ -417,14 +417,14 @@ fn sync_users_update_changes_fields() {
     let updated = harness
         .client
         .users()
-        .update(
+        .update_raw(
             user_id,
             UserPatch {
                 username: Some(updated_username.clone()),
                 email: Some(updated_email.clone()),
             },
         )
-        .expect("sync users().update() failed");
+        .expect("sync users().update_raw() failed");
 
     assert_eq!(updated.id, user_id);
     assert_eq!(updated.username, updated_username);
@@ -480,14 +480,14 @@ fn sync_groups_update_changes_fields() {
     let updated = harness
         .client
         .groups()
-        .update(
+        .update_raw(
             group_id,
             GroupPatch {
                 groupname: Some(updated_groupname.clone()),
                 description: Some(updated_description.clone()),
             },
         )
-        .expect("sync groups().update() failed");
+        .expect("sync groups().update_raw() failed");
 
     assert_eq!(updated.id, group_id);
     assert_eq!(updated.groupname, updated_groupname);
@@ -561,14 +561,14 @@ fn sync_namespace_update_changes_fields() {
     let updated = harness
         .client
         .namespaces()
-        .update(
+        .update_raw(
             namespace_id,
             NamespacePatch {
                 name: Some(updated_name.clone()),
                 description: Some(updated_description.clone()),
             },
         )
-        .expect("sync namespaces().update() failed");
+        .expect("sync namespaces().update_raw() failed");
 
     assert_eq!(updated.id, namespace_id);
     assert_eq!(updated.name, updated_name.clone());
@@ -689,7 +689,7 @@ fn sync_object_update_changes_fields() {
     let updated = harness
         .client
         .objects(class_id)
-        .update(
+        .update_raw(
             object_id,
             ObjectPatch {
                 name: Some(updated_name.clone()),
@@ -699,7 +699,7 @@ fn sync_object_update_changes_fields() {
                 data: Some(updated_data.clone()),
             },
         )
-        .expect("sync objects().update() failed");
+        .expect("sync objects().update_raw() failed");
 
     assert_eq!(updated.id, object_id);
     assert_eq!(updated.name, updated_name);
@@ -749,7 +749,7 @@ fn sync_class_relation_create_delete_roundtrip() {
     let class_b = harness
         .client
         .classes()
-        .create(ClassPost {
+        .create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("sync-class-relation")),
             description: "integration class relation target".to_string(),
             namespace_id,
@@ -761,11 +761,11 @@ fn sync_class_relation_create_delete_roundtrip() {
     let relation = harness
         .client
         .class_relation()
-        .create(ClassRelationPost {
+        .create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
             to_hubuum_class_id: class_b.id,
         })
-        .expect("sync class_relation().create() failed");
+        .expect("sync class_relation().create_raw() failed");
 
     let selected = harness
         .client
@@ -801,7 +801,7 @@ fn sync_object_relation_create_delete_roundtrip() {
     let class_b = harness
         .client
         .classes()
-        .create(ClassPost {
+        .create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("sync-object-relation")),
             description: "integration object relation class target".to_string(),
             namespace_id,
@@ -826,7 +826,7 @@ fn sync_object_relation_create_delete_roundtrip() {
     let class_relation = harness
         .client
         .class_relation()
-        .create(ClassRelationPost {
+        .create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
             to_hubuum_class_id: class_b.id,
         })
@@ -835,12 +835,12 @@ fn sync_object_relation_create_delete_roundtrip() {
     let relation = harness
         .client
         .object_relation()
-        .create(ObjectRelationPost {
+        .create_raw(ObjectRelationPost {
             from_hubuum_object_id: object_a_id,
             to_hubuum_object_id: object_b_id,
             class_relation_id: class_relation.id,
         })
-        .expect("sync object_relation().create() failed");
+        .expect("sync object_relation().create_raw() failed");
 
     let selected = harness
         .client
@@ -895,4 +895,142 @@ fn sync_groups_filter_helpers_return_expected_group() {
         .execute_expecting_single_result()
         .expect("sync groups().find().add_filter_name_exact() failed");
     assert_eq!(found.id, group_id);
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn sync_query_iequals_supports_case_insensitive_match() {
+    let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
+    let (username, user_id) =
+        create_sync_user(&harness.client, "sync-query-iequals").expect("user creation failed");
+
+    let found = harness
+        .client
+        .users()
+        .query()
+        .add_filter_iequals("username", username.to_uppercase())
+        .one();
+
+    let found = match found {
+        Ok(found) => found,
+        Err(err) if is_unsupported_query_operator(&err, "IEquals") => {
+            eprintln!("skipping: server does not support iequals for username ({err})");
+            return;
+        }
+        Err(err) => panic!("sync users().query().add_filter_iequals().one() failed: {err}"),
+    };
+
+    assert_eq!(found.id, user_id);
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn sync_query_sort_and_limit_returns_expected_class() {
+    let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
+    let (_, admin_group_id) =
+        sync_admin_context(&harness.client).expect("sync admin context lookup failed");
+    let prefix = unique_case_prefix("sync-query-sort-limit");
+    let namespace = harness
+        .client
+        .namespaces()
+        .create_raw(NamespacePost {
+            name: format!("{prefix}-namespace"),
+            description: "query sort namespace".to_string(),
+            group_id: admin_group_id,
+        })
+        .expect("failed to create namespace for sort/limit test");
+    let class_a = harness
+        .client
+        .classes()
+        .create_raw(ClassPost {
+            name: format!("{prefix}-sort-a"),
+            description: "query sort class a".to_string(),
+            namespace_id: namespace.id,
+            json_schema: None,
+            validate_schema: None,
+        })
+        .expect("failed to create class A");
+    harness
+        .client
+        .classes()
+        .create_raw(ClassPost {
+            name: format!("{prefix}-sort-b"),
+            description: "query sort class b".to_string(),
+            namespace_id: namespace.id,
+            json_schema: None,
+            validate_schema: None,
+        })
+        .expect("failed to create class B");
+
+    let first = harness
+        .client
+        .classes()
+        .query()
+        .add_filter_startswith("name", format!("{prefix}-sort-"))
+        .sort_by_fields(vec![("name", SortDirection::Asc)])
+        .limit(1)
+        .one()
+        .expect("sync classes().query().sort_by_fields().limit().one() failed");
+
+    assert_eq!(first.id, class_a.id);
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn sync_query_json_path_lt_filters_json_schema() {
+    let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
+    let (_, admin_group_id) =
+        sync_admin_context(&harness.client).expect("sync admin context lookup failed");
+    let prefix = unique_case_prefix("sync-query-json");
+    let namespace = harness
+        .client
+        .namespaces()
+        .create_raw(NamespacePost {
+            name: format!("{prefix}-namespace"),
+            description: "query json namespace".to_string(),
+            group_id: admin_group_id,
+        })
+        .expect("failed to create namespace for json query test");
+    let south = harness
+        .client
+        .classes()
+        .create_raw(ClassPost {
+            name: format!("{prefix}-geo-south"),
+            description: "geo south".to_string(),
+            namespace_id: namespace.id,
+            json_schema: Some(json!({
+                "properties": {
+                    "latitude": { "minimum": -90 }
+                }
+            })),
+            validate_schema: None,
+        })
+        .expect("failed to create south class");
+    let north = harness
+        .client
+        .classes()
+        .create_raw(ClassPost {
+            name: format!("{prefix}-geo-north"),
+            description: "geo north".to_string(),
+            namespace_id: namespace.id,
+            json_schema: Some(json!({
+                "properties": {
+                    "latitude": { "minimum": 10 }
+                }
+            })),
+            validate_schema: None,
+        })
+        .expect("failed to create north class");
+
+    let matched = harness
+        .client
+        .classes()
+        .query()
+        .add_filter_startswith("name", format!("{prefix}-geo-"))
+        .add_json_path_lt("json_schema", vec!["properties", "latitude", "minimum"], 0)
+        .list()
+        .expect("sync classes().query().add_json_path_lt().list() failed");
+
+    assert!(matched.iter().any(|class| class.id == south.id));
+    assert!(!matched.iter().any(|class| class.id == north.id));
 }

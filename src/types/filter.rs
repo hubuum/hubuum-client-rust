@@ -5,21 +5,53 @@ use crate::ApiError;
 // FilterOperator enum
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum FilterOperator {
-    Equals { is_negated: bool },
-    IEquals { is_negated: bool },
-    Contains { is_negated: bool },
-    IContains { is_negated: bool },
-    StartsWith { is_negated: bool },
-    IStartsWith { is_negated: bool },
-    EndsWith { is_negated: bool },
-    IEndsWith { is_negated: bool },
-    Like { is_negated: bool },
-    Regex { is_negated: bool },
-    Gt { is_negated: bool },
-    Gte { is_negated: bool },
-    Lt { is_negated: bool },
-    Lte { is_negated: bool },
-    Between { is_negated: bool },
+    Equals {
+        is_negated: bool,
+    },
+    IEquals {
+        is_negated: bool,
+    },
+    Contains {
+        is_negated: bool,
+    },
+    IContains {
+        is_negated: bool,
+    },
+    StartsWith {
+        is_negated: bool,
+    },
+    IStartsWith {
+        is_negated: bool,
+    },
+    EndsWith {
+        is_negated: bool,
+    },
+    IEndsWith {
+        is_negated: bool,
+    },
+    Like {
+        is_negated: bool,
+    },
+    Regex {
+        is_negated: bool,
+    },
+    Gt {
+        is_negated: bool,
+    },
+    Gte {
+        is_negated: bool,
+    },
+    Lt {
+        is_negated: bool,
+    },
+    Lte {
+        is_negated: bool,
+    },
+    Between {
+        is_negated: bool,
+    },
+    /// Represents raw query parameters without an operator suffix, e.g. `sort=name.asc`.
+    Raw,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -28,6 +60,21 @@ pub enum DataType {
     NumericOrDate,
     Boolean,
     Array,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum SortDirection {
+    Asc,
+    Desc,
+}
+
+impl std::fmt::Display for SortDirection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SortDirection::Asc => write!(f, "asc"),
+            SortDirection::Desc => write!(f, "desc"),
+        }
+    }
 }
 
 impl FilterOperator {
@@ -44,6 +91,7 @@ impl FilterOperator {
             SO::Contains { .. } => {
                 matches!(data_type, DataType::String) || matches!(data_type, DataType::Array)
             }
+            SO::Raw => true,
             _ => {
                 matches!(data_type, DataType::String)
             }
@@ -147,6 +195,7 @@ impl std::fmt::Display for FilterOperator {
                     "between"
                 }
             ),
+            FilterOperator::Raw => write!(f, ""),
         }
     }
 }
@@ -165,11 +214,36 @@ pub struct QueryFilter {
 
 impl std::fmt::Display for QueryFilter {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}__{}={}", self.key, self.operator, self.value)
+        let operator = self.operator.to_string();
+        if operator.is_empty() {
+            write!(f, "{}={}", self.key, self.value)
+        } else {
+            write!(f, "{}__{}={}", self.key, operator, self.value)
+        }
     }
 }
 
 impl QueryFilter {
+    pub fn filter<K: Into<String>, V: Into<String>>(
+        key: K,
+        operator: FilterOperator,
+        value: V,
+    ) -> Self {
+        Self {
+            key: key.into(),
+            value: value.into(),
+            operator,
+        }
+    }
+
+    pub fn raw<K: Into<String>, V: Into<String>>(key: K, value: V) -> Self {
+        Self {
+            key: key.into(),
+            value: value.into(),
+            operator: FilterOperator::Raw,
+        }
+    }
+
     pub fn as_query_tuple(&self) -> (String, String, String) {
         (
             self.key.clone(),
@@ -182,7 +256,13 @@ impl QueryFilter {
 fn tuples_to_query_string(tuples: Vec<(String, String, String)>) -> Result<String, ApiError> {
     let params: Vec<(String, String)> = tuples
         .into_iter()
-        .map(|(key, operator, value)| (format!("{key}__{operator}"), value))
+        .map(|(key, operator, value)| {
+            if operator.is_empty() {
+                (key, value)
+            } else {
+                (format!("{key}__{operator}"), value)
+            }
+        })
         .collect();
 
     serde_urlencoded::to_string(params).map_err(|err| ApiError::QueryEncoding(err.to_string()))
@@ -221,6 +301,71 @@ impl IntoQueryTuples for &[QueryFilter] {
 #[cfg(test)]
 mod tests {
     use super::{FilterOperator, IntoQueryTuples, QueryFilter};
+
+    #[test]
+    fn filter_operator_display_includes_all_supported_operators() {
+        let cases = [
+            (FilterOperator::Equals { is_negated: false }, "equals"),
+            (FilterOperator::Equals { is_negated: true }, "not_equals"),
+            (FilterOperator::IEquals { is_negated: false }, "iequals"),
+            (FilterOperator::IEquals { is_negated: true }, "not_iequals"),
+            (FilterOperator::Contains { is_negated: false }, "contains"),
+            (
+                FilterOperator::Contains { is_negated: true },
+                "not_contains",
+            ),
+            (FilterOperator::IContains { is_negated: false }, "icontains"),
+            (
+                FilterOperator::IContains { is_negated: true },
+                "not_icontains",
+            ),
+            (
+                FilterOperator::StartsWith { is_negated: false },
+                "startswith",
+            ),
+            (
+                FilterOperator::StartsWith { is_negated: true },
+                "not_startswith",
+            ),
+            (
+                FilterOperator::IStartsWith { is_negated: false },
+                "istartswith",
+            ),
+            (
+                FilterOperator::IStartsWith { is_negated: true },
+                "not_istartswith",
+            ),
+            (FilterOperator::EndsWith { is_negated: false }, "endswith"),
+            (
+                FilterOperator::EndsWith { is_negated: true },
+                "not_endswith",
+            ),
+            (FilterOperator::IEndsWith { is_negated: false }, "iendswith"),
+            (
+                FilterOperator::IEndsWith { is_negated: true },
+                "not_iendswith",
+            ),
+            (FilterOperator::Like { is_negated: false }, "like"),
+            (FilterOperator::Like { is_negated: true }, "not_like"),
+            (FilterOperator::Regex { is_negated: false }, "regex"),
+            (FilterOperator::Regex { is_negated: true }, "not_regex"),
+            (FilterOperator::Gt { is_negated: false }, "gt"),
+            (FilterOperator::Gt { is_negated: true }, "not_gt"),
+            (FilterOperator::Gte { is_negated: false }, "gte"),
+            (FilterOperator::Gte { is_negated: true }, "not_gte"),
+            (FilterOperator::Lt { is_negated: false }, "lt"),
+            (FilterOperator::Lt { is_negated: true }, "not_lt"),
+            (FilterOperator::Lte { is_negated: false }, "lte"),
+            (FilterOperator::Lte { is_negated: true }, "not_lte"),
+            (FilterOperator::Between { is_negated: false }, "between"),
+            (FilterOperator::Between { is_negated: true }, "not_between"),
+            (FilterOperator::Raw, ""),
+        ];
+
+        for (operator, expected) in cases {
+            assert_eq!(operator.to_string(), expected);
+        }
+    }
 
     #[test]
     fn into_query_string_encodes_reserved_characters() {
@@ -264,5 +409,20 @@ mod tests {
         assert_eq!(from_vec.unwrap_or_default(), expected.to_string());
         assert_eq!(from_ref_vec.unwrap_or_default(), expected.to_string());
         assert_eq!(from_slice.unwrap_or_default(), expected.to_string());
+    }
+
+    #[test]
+    fn into_query_string_supports_raw_query_parameters() {
+        let filters = vec![
+            QueryFilter::raw("sort", "name.asc,created_at.desc"),
+            QueryFilter::raw("limit", "10"),
+        ];
+
+        let got = filters.into_query_string();
+        assert!(got.is_ok());
+        assert_eq!(
+            got.unwrap_or_default(),
+            "sort=name.asc%2Ccreated_at.desc&limit=10".to_string()
+        );
     }
 }

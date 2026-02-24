@@ -112,7 +112,7 @@ impl SyncHandle<Class> {
 
 impl AsyncHandle<Class> {
     pub async fn objects(&self) -> Result<Vec<AsyncHandle<Object>>, ApiError> {
-        let raw: Vec<Object> = self.client().objects(self.id()).find().execute().await?;
+        let raw: Vec<Object> = self.client().objects(self.id()).query().list().await?;
         Ok(raw
             .into_iter()
             .map(|obj| AsyncHandle::new(self.client().clone(), obj))
@@ -123,9 +123,9 @@ impl AsyncHandle<Class> {
         let resource = self
             .client()
             .objects(self.id())
-            .find()
+            .query()
             .add_filter_equals("name", name)
-            .execute_expecting_single_result()
+            .one()
             .await?;
         Ok(AsyncHandle::new(self.client().clone(), resource))
     }
