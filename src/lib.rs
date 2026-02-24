@@ -37,4 +37,6 @@ mod endpoints;
 pub use client::{AsyncClient, Authenticated, IntoResourceFilter, SyncClient, Unauthenticated};
 pub use errors::ApiError;
 pub use resources::*;
-pub use types::{BaseUrl, ClassParams, Credentials, Token, UserParams};
+pub use types::{
+    BaseUrl, ClassParams, CountsResponse, Credentials, DbStateResponse, Token, UserParams,
+};

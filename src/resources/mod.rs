@@ -27,9 +27,9 @@ use crate::endpoints::Endpoint;
 pub trait ApiResource: Default {
     type GetParams: Serialize + Debug + Default;
     type GetOutput: DeserializeOwned + Debug;
-    type PostParams: Serialize + Debug;
+    type PostParams: Serialize + Debug + Default;
     type PostOutput: DeserializeOwned + Debug;
-    type PatchParams: Serialize + Debug;
+    type PatchParams: Serialize + Debug + Default;
     type PatchOutput: DeserializeOwned + Debug;
     type DeleteParams: Serialize + Debug;
     type DeleteOutput: DeserializeOwned + Debug;
@@ -38,6 +38,7 @@ pub trait ApiResource: Default {
 
     fn endpoint(&self) -> Endpoint;
     fn build_params(filters: Vec<(String, FilterOperator, String)>) -> Vec<QueryFilter>;
+    fn filters_from_get(params: Self::GetParams) -> Vec<QueryFilter>;
 }
 
 pub fn tabled_display_option<T>(o: &Option<T>) -> String
@@ -126,4 +127,11 @@ pub struct PermissionResult {
     pub has_delete_object_relation: bool,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct UserToken {
+    pub token: String,
+    pub user_id: i32,
+    pub issued: HubuumDateTime,
 }

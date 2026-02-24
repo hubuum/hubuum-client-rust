@@ -42,7 +42,7 @@ pub(crate) fn build_request_url(
         } else {
             Ok(format!("{url}?{query}"))
         }
-    } else if *method == reqwest::Method::POST {
+    } else if *method == reqwest::Method::POST || *method == reqwest::Method::PUT {
         Ok(url)
     } else if *method == reqwest::Method::PATCH {
         let id = url_param(url_params, "patch_id").ok_or(ApiError::MissingUrlIdentifier)?;
@@ -80,7 +80,7 @@ pub(crate) fn parse_response<U: DeserializeOwned>(
     response_text: String,
 ) -> Result<Option<U>, ApiError> {
     if *method == reqwest::Method::DELETE {
-        if response_text.is_empty() {
+        if response_text.trim().is_empty() {
             return Ok(None);
         } else {
             error!("Expected empty response, got: {response_text}");
@@ -88,7 +88,7 @@ pub(crate) fn parse_response<U: DeserializeOwned>(
         }
     }
 
-    if response_code == StatusCode::NO_CONTENT {
+    if response_code == StatusCode::NO_CONTENT || response_text.trim().is_empty() {
         return Ok(None);
     }
 
@@ -227,6 +227,22 @@ mod test {
     }
 
     #[test]
+    fn build_request_url_for_put_keeps_base_url() {
+        let url = build_request_url(
+            &reqwest::Method::PUT,
+            "https://api.example.com/api/v1/namespaces/1/permissions/group/2".to_string(),
+            &vec![],
+            vec![],
+        )
+        .expect("PUT URL should build");
+
+        assert_eq!(
+            url,
+            "https://api.example.com/api/v1/namespaces/1/permissions/group/2"
+        );
+    }
+
+    #[test]
     fn parse_http_error_message_uses_message_field_when_available() {
         let message = parse_http_error_message(r#"{"message":"invalid credentials"}"#);
         assert_eq!(message, "invalid credentials");
@@ -252,6 +268,30 @@ mod test {
             String::new(),
         )
         .expect("NO_CONTENT should return None");
+
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn parse_response_returns_none_for_empty_success_body() {
+        let result = parse_response::<serde_json::Value>(
+            &reqwest::Method::POST,
+            StatusCode::CREATED,
+            String::new(),
+        )
+        .expect("Empty successful body should return None");
+
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn parse_response_returns_none_for_whitespace_success_body() {
+        let result = parse_response::<serde_json::Value>(
+            &reqwest::Method::PUT,
+            StatusCode::OK,
+            "   \n".to_string(),
+        )
+        .expect("Whitespace successful body should return None");
 
         assert!(result.is_none());
     }
