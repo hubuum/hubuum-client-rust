@@ -1,8 +1,13 @@
 use std::str::FromStr;
 
 use httpmock::prelude::*;
-use hubuum_client::types::{FilterOperator, Permissions, SortDirection};
-use hubuum_client::{ApiError, AsyncClient, BaseUrl, ClassGet, Credentials, SyncClient};
+use hubuum_client::types::{
+    FilterOperator, ImportGraph, ImportRequest, Permissions, ReportContentType, ReportRequest,
+    ReportScope, ReportScopeKind, SortDirection,
+};
+use hubuum_client::{
+    ApiError, AsyncClient, BaseUrl, ClassGet, Credentials, ReportResult, SyncClient,
+};
 use serde_json::json;
 
 const USERNAME: &str = "tester";
@@ -62,6 +67,19 @@ fn namespace_json(namespace_id: i32, name: &str) -> serde_json::Value {
     })
 }
 
+fn object_json(object_id: i32, class_id: i32, name: &str) -> serde_json::Value {
+    json!({
+        "id": object_id,
+        "name": name,
+        "namespace_id": 7,
+        "hubuum_class_id": class_id,
+        "description": "Object",
+        "data": { "owner": "infra" },
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
 fn permission_json(namespace_id: i32, group_id: i32) -> serde_json::Value {
     json!({
         "id": 77,
@@ -99,6 +117,177 @@ fn group_permission_json(namespace_id: i32, group_id: i32, groupname: &str) -> s
     })
 }
 
+fn report_template_json(template_id: i32, name: &str) -> serde_json::Value {
+    json!({
+        "id": template_id,
+        "namespace_id": 7,
+        "name": name,
+        "description": "Template",
+        "content_type": "text/plain",
+        "template": "{{name}}",
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn report_request() -> ReportRequest {
+    ReportRequest {
+        limits: None,
+        missing_data_policy: None,
+        output: None,
+        query: Some("name__icontains=server".to_string()),
+        scope: ReportScope {
+            class_id: Some(42),
+            kind: ReportScopeKind::ObjectsInClass,
+            object_id: None,
+        },
+    }
+}
+
+fn import_request() -> ImportRequest {
+    ImportRequest {
+        version: 1,
+        dry_run: Some(true),
+        mode: None,
+        graph: ImportGraph::default(),
+    }
+}
+
+fn task_response_json(task_id: i32, status: &str) -> serde_json::Value {
+    json!({
+        "id": task_id,
+        "kind": "import",
+        "status": status,
+        "submitted_by": 7,
+        "created_at": ts(),
+        "started_at": null,
+        "finished_at": null,
+        "progress": {
+            "total_items": 1,
+            "processed_items": 0,
+            "success_items": 0,
+            "failed_items": 0
+        },
+        "summary": null,
+        "request_redacted_at": null,
+        "links": {
+            "task": format!("/api/v1/tasks/{task_id}"),
+            "events": format!("/api/v1/tasks/{task_id}/events"),
+            "import": format!("/api/v1/imports/{task_id}"),
+            "import_results": format!("/api/v1/imports/{task_id}/results")
+        },
+        "details": {
+            "import": {
+                "results_url": format!("/api/v1/imports/{task_id}/results")
+            }
+        }
+    })
+}
+
+fn task_event_json(event_id: i32) -> serde_json::Value {
+    json!({
+        "id": event_id,
+        "task_id": 12,
+        "event_type": "queued",
+        "message": "Task queued",
+        "data": null,
+        "created_at": ts()
+    })
+}
+
+fn import_result_json(result_id: i32) -> serde_json::Value {
+    json!({
+        "id": result_id,
+        "task_id": 12,
+        "item_ref": "ns:infra",
+        "entity_kind": "namespace",
+        "action": "create",
+        "identifier": "infra",
+        "outcome": "succeeded",
+        "error": null,
+        "details": null,
+        "created_at": ts()
+    })
+}
+
+fn task_queue_json() -> serde_json::Value {
+    json!({
+        "actix_workers": 4,
+        "configured_task_workers": 2,
+        "task_poll_interval_ms": 1000,
+        "total_tasks": 10,
+        "queued_tasks": 3,
+        "validating_tasks": 1,
+        "running_tasks": 1,
+        "active_tasks": 2,
+        "succeeded_tasks": 5,
+        "failed_tasks": 1,
+        "partially_succeeded_tasks": 0,
+        "cancelled_tasks": 0,
+        "import_tasks": 9,
+        "report_tasks": 1,
+        "export_tasks": 0,
+        "reindex_tasks": 0,
+        "total_task_events": 12,
+        "total_import_result_rows": 7,
+        "oldest_queued_at": "2024-01-01T00:00:00",
+        "oldest_active_at": "2024-01-01T00:00:00"
+    })
+}
+
+fn transitive_relation_json() -> serde_json::Value {
+    json!({
+        "ancestor_class_id": 42,
+        "descendant_class_id": 88,
+        "depth": 2,
+        "path": [42, 77, 88]
+    })
+}
+
+fn class_relation_json(
+    relation_id: i32,
+    from_class_id: i32,
+    to_class_id: i32,
+) -> serde_json::Value {
+    json!({
+        "id": relation_id,
+        "from_hubuum_class_id": from_class_id,
+        "to_hubuum_class_id": to_class_id,
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn object_relation_json(
+    relation_id: i32,
+    from_object_id: i32,
+    to_object_id: i32,
+    class_relation_id: i32,
+) -> serde_json::Value {
+    json!({
+        "id": relation_id,
+        "from_hubuum_object_id": from_object_id,
+        "to_hubuum_object_id": to_object_id,
+        "class_relation_id": class_relation_id,
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn object_with_path_json(object_id: i32, class_id: i32, path: &[i32]) -> serde_json::Value {
+    json!({
+        "id": object_id,
+        "name": format!("object-{object_id}"),
+        "namespace_id": 7,
+        "hubuum_class_id": class_id,
+        "description": "Object",
+        "data": { "owner": "infra" },
+        "created_at": ts(),
+        "updated_at": ts(),
+        "path": path
+    })
+}
+
 fn mock_login(server: &MockServer) {
     server.mock(|when, then| {
         when.method(POST)
@@ -130,7 +319,7 @@ fn sync_returns_http_error_with_message_from_json_body() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(GET).path("/api/v1/classes/");
+        when.method(GET).path("/api/v1/classes");
         then.status(400)
             .header("content-type", "application/json")
             .json_body(json!({ "message": "bad request from server" }));
@@ -155,7 +344,7 @@ async fn async_returns_http_error_with_message_from_json_body() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(GET).path("/api/v1/classes/");
+        when.method(GET).path("/api/v1/classes");
         then.status(400)
             .header("content-type", "application/json")
             .json_body(json!({ "message": "bad request from server" }));
@@ -232,7 +421,7 @@ fn sync_select_by_name_applies_name_filter() {
     let class_name = "class-name-1";
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .query_param("name__equals", class_name)
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -255,7 +444,7 @@ async fn async_select_by_name_applies_name_filter() {
     let class_name = "class-name-1";
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .query_param("name__equals", class_name)
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -278,7 +467,7 @@ fn sync_class_create_fluent_builder_posts_resource() {
     mock_login(&server);
     server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201)
             .header("content-type", "application/json")
@@ -335,7 +524,7 @@ fn sync_class_query_builder_supports_eq_contains_and_get_params() {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .query_param("name__equals", by_eq)
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -344,7 +533,7 @@ fn sync_class_query_builder_supports_eq_contains_and_get_params() {
     });
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .query_param("name__equals", by_eq_contains)
             .query_param("description__contains", "Clas")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -354,7 +543,7 @@ fn sync_class_query_builder_supports_eq_contains_and_get_params() {
     });
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .query_param("name__equals", by_params)
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -400,7 +589,7 @@ async fn async_class_query_builder_supports_contains() {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .query_param("name__equals", by_eq_contains)
             .query_param("description__contains", "Clas")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -429,7 +618,7 @@ fn sync_class_query_builder_supports_sort_and_limit() {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .query_param("name__startswith", starts_with)
             .query_param("sort", "name.asc,created_at.desc")
             .query_param("limit", "1")
@@ -462,7 +651,7 @@ async fn async_class_query_builder_supports_json_path_and_order_by_alias() {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .query_param("name__not_iequals", "legacy")
             .query_param("json_schema__lt", path_filter_value)
             .query_param("order_by", "name.desc")
@@ -900,12 +1089,11 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     let class_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
-            .query_param("id__equals", "42")
+            .path("/api/v1/classes/42")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([class_json("class-42")]));
+            .json_body(class_json("class-42"));
     });
 
     let class_permissions = server.mock(|when, then| {
@@ -919,12 +1107,11 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     let namespace_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/")
-            .query_param("id__equals", "7")
+            .path("/api/v1/namespaces/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([namespace_json(7, "namespace-1")]));
+            .json_body(namespace_json(7, "namespace-1"));
     });
 
     let namespace_group_permissions = server.mock(|when, then| {
@@ -1042,12 +1229,11 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     let class_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
-            .query_param("id__equals", "42")
+            .path("/api/v1/classes/42")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([class_json("class-42")]));
+            .json_body(class_json("class-42"));
     });
 
     let class_permissions = server.mock(|when, then| {
@@ -1061,12 +1247,11 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     let namespace_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/")
-            .query_param("id__equals", "7")
+            .path("/api/v1/namespaces/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([namespace_json(7, "namespace-1")]));
+            .json_body(namespace_json(7, "namespace-1"));
     });
 
     let namespace_group_permissions = server.mock(|when, then| {
@@ -1185,4 +1370,615 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
     grant_permission.assert_calls(1);
     revoke_permission.assert_calls(1);
     user_permissions.assert_calls(1);
+}
+
+#[test]
+fn sync_reports_and_templates_cover_new_server_surface() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let report_json = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/reports")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "items": [{ "id": 1, "name": "srv-01" }],
+                "meta": {
+                    "content_type": "application/json",
+                    "count": 1,
+                    "scope": {
+                        "class_id": 42,
+                        "kind": "objects_in_class",
+                        "object_id": null
+                    },
+                    "truncated": false
+                },
+                "warnings": []
+            }));
+    });
+
+    let templates_page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/templates")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "cursor-2")
+            .json_body(json!([report_template_json(1, "owners")]));
+    });
+
+    let template_get = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/templates/1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(report_template_json(1, "owners"));
+    });
+
+    let template_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/templates")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(report_template_json(2, "created-template"));
+    });
+
+    let template_patch = server.mock(|when, then| {
+        when.method(PATCH)
+            .path("/api/v1/templates/2")
+            .json_body(json!({
+                "namespace_id": null,
+                "name": "updated-template",
+                "description": null,
+                "template": null
+            }))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(report_template_json(2, "updated-template"));
+    });
+
+    let template_delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/templates/2")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
+    let client = sync_client(&server);
+    let report = client
+        .reports()
+        .run(report_request())
+        .expect("JSON report should succeed");
+    match report {
+        ReportResult::Json(report) => assert_eq!(report.items.len(), 1),
+        other => panic!("expected JSON report, got {other:?}"),
+    }
+
+    let page = client
+        .templates()
+        .query()
+        .limit(1)
+        .page()
+        .expect("template page should succeed");
+    assert_eq!(page.items.len(), 1);
+    assert_eq!(page.next_cursor.as_deref(), Some("cursor-2"));
+
+    let selected = client
+        .templates()
+        .select(1)
+        .expect("template select should succeed");
+    assert_eq!(selected.resource().id, 1);
+
+    let created = client
+        .templates()
+        .create()
+        .namespace_id(7)
+        .name("created-template")
+        .description("Template")
+        .content_type(ReportContentType::TextPlain)
+        .template("{{name}}")
+        .send()
+        .expect("template create should succeed");
+    assert_eq!(created.id, 2);
+
+    let updated = client
+        .templates()
+        .update(2)
+        .name("updated-template")
+        .send()
+        .expect("template update should succeed");
+    assert_eq!(updated.name, "updated-template");
+
+    client
+        .templates()
+        .delete(2)
+        .expect("template delete should succeed");
+
+    report_json.assert_calls(1);
+    templates_page.assert_calls(1);
+    template_get.assert_calls(1);
+    template_create.assert_calls(1);
+    template_patch.assert_calls(1);
+    template_delete.assert_calls(1);
+}
+
+#[test]
+fn report_template_patch_omits_content_type() {
+    let patch = hubuum_client::ReportTemplatePatch {
+        namespace_id: None,
+        name: Some("updated-template".to_string()),
+        description: None,
+        template: None,
+    };
+
+    let body = serde_json::to_value(&patch).expect("patch should serialize");
+    assert_eq!(
+        body,
+        json!({
+            "namespace_id": null,
+            "name": "updated-template",
+            "description": null,
+            "template": null
+        })
+    );
+}
+
+#[tokio::test]
+async fn async_reports_support_rendered_outputs() {
+    for (expected_type, expected_body) in [
+        (ReportContentType::TextPlain, "plain report"),
+        (ReportContentType::TextHtml, "<p>html report</p>"),
+        (ReportContentType::TextCsv, "name\nsrv-01\n"),
+    ] {
+        let server = MockServer::start();
+        mock_login(&server);
+        let report = server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/v1/reports")
+                .header("authorization", format!("Bearer {}", TOKEN));
+            then.status(200)
+                .header("content-type", expected_type.to_string())
+                .body(expected_body);
+        });
+
+        let client = async_client(&server).await;
+        let result = client
+            .reports()
+            .run(report_request())
+            .await
+            .expect("rendered report should succeed");
+        match result {
+            ReportResult::Rendered { content_type, body } => {
+                assert_eq!(content_type, expected_type);
+                assert_eq!(body, expected_body);
+            }
+            other => panic!("expected rendered report, got {other:?}"),
+        }
+        report.assert_calls(1);
+    }
+}
+
+#[test]
+fn sync_meta_tasks_and_cursor_helpers_work() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let meta_tasks = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/meta/tasks")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(task_queue_json());
+    });
+
+    let namespace_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(namespace_json(7, "namespace-1"));
+    });
+
+    let groups_with_permission = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/has_permissions/ReadTemplate")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "group-cursor")
+            .json_body(json!([group_json(10, "admins")]));
+    });
+
+    let class_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("class-42"));
+    });
+
+    let transitive = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/relations/transitive/")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "rel-cursor")
+            .json_body(json!([transitive_relation_json()]));
+    });
+
+    let client = sync_client(&server);
+    let meta = client.meta_tasks().expect("meta_tasks should succeed");
+    assert_eq!(meta.total_import_result_rows, 7);
+
+    let namespace = client
+        .namespaces()
+        .select(7)
+        .expect("namespace select should succeed");
+    let group_page = namespace
+        .groups_with_permission(Permissions::ReadTemplate)
+        .limit(1)
+        .page()
+        .expect("groups_with_permission should succeed");
+    assert_eq!(group_page.items.len(), 1);
+    assert_eq!(group_page.next_cursor.as_deref(), Some("group-cursor"));
+
+    let class = client
+        .classes()
+        .select(42)
+        .expect("class select should succeed");
+    let relation_page = class
+        .transitive_relations()
+        .limit(1)
+        .page()
+        .expect("transitive_relations should succeed");
+    assert_eq!(relation_page.items[0].depth, 2);
+    assert_eq!(relation_page.next_cursor.as_deref(), Some("rel-cursor"));
+
+    meta_tasks.assert_calls(1);
+    namespace_by_id.assert_calls(1);
+    groups_with_permission.assert_calls(1);
+    class_by_id.assert_calls(1);
+    transitive.assert_calls(1);
+}
+
+#[test]
+fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let class_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("class-42"));
+    });
+
+    let class_relations = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/relations")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "class-rel-next")
+            .json_body(json!([class_relation_json(55, 42, 77)]));
+    });
+
+    let class_relation_get = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/relations/classes/55")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_relation_json(55, 42, 77));
+    });
+
+    let class_relation_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/classes/42/relations")
+            .json_body(json!({ "to_hubuum_class_id": 77 }))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(class_relation_json(56, 42, 77));
+    });
+
+    let class_relation_delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/classes/42/relations/55")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
+    let object_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/9")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(object_json(9, 42, "object-9"));
+    });
+
+    let related_objects = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/9/relations")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "related-next")
+            .json_body(json!([object_with_path_json(10, 77, &[9, 10])]));
+    });
+
+    let object_relation_get = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/9/relations/77/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(object_relation_json(66, 9, 10, 55));
+    });
+
+    let object_relation_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/classes/42/9/relations/77/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(object_relation_json(67, 9, 10, 55));
+    });
+
+    let object_relation_delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/classes/42/9/relations/77/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
+    let class_relation_select = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/relations/classes/56")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_relation_json(56, 42, 77));
+    });
+
+    let object_relation_select = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/relations/objects/66")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(object_relation_json(66, 9, 10, 55));
+    });
+
+    let client = sync_client(&server);
+
+    let class = client
+        .classes()
+        .select(42)
+        .expect("class select should use by-id endpoint");
+    let class_relation_page = class
+        .relations()
+        .limit(1)
+        .page()
+        .expect("class scoped relations should succeed");
+    assert_eq!(class_relation_page.items[0].id, 55);
+    assert_eq!(
+        class_relation_page.next_cursor.as_deref(),
+        Some("class-rel-next")
+    );
+
+    let class_relation = class
+        .relation(55)
+        .expect("class relation lookup should succeed");
+    assert_eq!(class_relation.id(), 55);
+
+    let created_class_relation = class
+        .create_relation(77)
+        .expect("class relation create should succeed");
+    assert_eq!(created_class_relation.id, 56);
+
+    class
+        .delete_relation(55)
+        .expect("class relation delete should succeed");
+
+    let object = client
+        .objects(42)
+        .select(9)
+        .expect("object select should use by-id endpoint");
+    let related_page = object
+        .related_objects()
+        .limit(1)
+        .page()
+        .expect("related objects should succeed");
+    assert_eq!(related_page.items[0].path, vec![9, 10]);
+    assert_eq!(related_page.next_cursor.as_deref(), Some("related-next"));
+
+    let scoped_object_relation = object
+        .relation_to(77, 10)
+        .expect("scoped object relation get should succeed");
+    assert_eq!(scoped_object_relation.id(), 66);
+
+    let created_object_relation = object
+        .create_relation_to(77, 10)
+        .expect("scoped object relation create should succeed");
+    assert_eq!(created_object_relation.id, 67);
+
+    object
+        .delete_relation_to(77, 10)
+        .expect("scoped object relation delete should succeed");
+
+    let selected_class_relation = client
+        .class_relation()
+        .select(56)
+        .expect("class relation select should use direct endpoint");
+    assert_eq!(selected_class_relation.id(), 56);
+
+    let selected_object_relation = client
+        .object_relation()
+        .select(66)
+        .expect("object relation select should use direct endpoint");
+    assert_eq!(selected_object_relation.id(), 66);
+
+    class_by_id.assert_calls(1);
+    class_relations.assert_calls(1);
+    class_relation_get.assert_calls(1);
+    class_relation_create.assert_calls(1);
+    class_relation_delete.assert_calls(1);
+    object_by_id.assert_calls(1);
+    related_objects.assert_calls(1);
+    object_relation_get.assert_calls(1);
+    object_relation_create.assert_calls(1);
+    object_relation_delete.assert_calls(1);
+    class_relation_select.assert_calls(1);
+    object_relation_select.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_imports_and_tasks_support_submission_and_cursor_results() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let import_submit = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/imports")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .header("idempotency-key", "import-123");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(task_response_json(12, "queued"));
+    });
+
+    let import_get = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/imports/12")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(task_response_json(12, "running"));
+    });
+
+    let import_results = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/imports/12/results")
+            .query_param("limit", "1")
+            .query_param("cursor", "cursor-1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "cursor-2")
+            .json_body(json!([import_result_json(101)]));
+    });
+
+    let task_get = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/tasks/12")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(task_response_json(12, "succeeded"));
+    });
+
+    let task_events = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/tasks/12/events")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "event-cursor")
+            .json_body(json!([task_event_json(1)]));
+    });
+
+    let client = async_client(&server).await;
+    let submitted = client
+        .imports()
+        .submit(import_request())
+        .idempotency_key("import-123")
+        .send()
+        .await
+        .expect("import submit should succeed");
+    assert_eq!(submitted.id, 12);
+
+    let imported = client
+        .imports()
+        .get(12)
+        .await
+        .expect("import get should succeed");
+    assert_eq!(imported.id, 12);
+
+    let result_page = client
+        .imports()
+        .results(12)
+        .limit(1)
+        .cursor("cursor-1")
+        .page()
+        .await
+        .expect("import results page should succeed");
+    assert_eq!(result_page.items.len(), 1);
+    assert_eq!(result_page.next_cursor.as_deref(), Some("cursor-2"));
+
+    let task = client
+        .tasks()
+        .get(12)
+        .await
+        .expect("task get should succeed");
+    assert_eq!(task.id, 12);
+
+    let event_page = client
+        .tasks()
+        .events(12)
+        .limit(1)
+        .page()
+        .await
+        .expect("task events page should succeed");
+    assert_eq!(event_page.items.len(), 1);
+    assert_eq!(event_page.next_cursor.as_deref(), Some("event-cursor"));
+
+    import_submit.assert_calls(1);
+    import_get.assert_calls(1);
+    import_results.assert_calls(1);
+    task_get.assert_calls(1);
+    task_events.assert_calls(1);
+}
+
+#[test]
+fn sync_import_submit_without_idempotency_key_succeeds() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let import_submit = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/imports")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(task_response_json(13, "queued"));
+    });
+
+    let client = sync_client(&server);
+    let task = client
+        .imports()
+        .submit(import_request())
+        .send()
+        .expect("import submit without idempotency key should succeed");
+    assert_eq!(task.id, 13);
+
+    import_submit.assert_calls(1);
 }

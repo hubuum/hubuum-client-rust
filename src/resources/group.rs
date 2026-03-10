@@ -17,13 +17,11 @@ use crate::{
 pub struct GroupResource {
     #[api(read_only)]
     pub id: i32,
-    #[api(table_rename = "Name")]
     pub groupname: String,
-    #[api(table_rename = "Description")]
     pub description: String,
-    #[api(read_only, table_rename = "Created")]
+    #[api(read_only)]
     pub created_at: HubuumDateTime,
-    #[api(read_only, table_rename = "Updated")]
+    #[api(read_only)]
     pub updated_at: HubuumDateTime,
 }
 

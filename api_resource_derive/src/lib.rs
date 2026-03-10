@@ -79,6 +79,7 @@ pub fn api_resource_derive(input: TokenStream) -> TokenStream {
         let is_post_only = has_attribute(field, "post_only");
         let is_optional = has_attribute(field, "optional");
         let is_as_id = has_attribute(field, "as_id");
+        let skip_patch = has_attribute(field, "skip_patch");
 
         let post_patch_field_ident = if is_as_id {
             format_ident!("{}_id", field_name)
@@ -163,7 +164,7 @@ pub fn api_resource_derive(input: TokenStream) -> TokenStream {
             });
         }
 
-        if !is_post_only && !is_read_only {
+        if !is_post_only && !is_read_only && !skip_patch {
             let patch_field_ty = if is_as_id {
                 if is_optional {
                     quote!(Option<i32>)
@@ -220,7 +221,7 @@ pub fn api_resource_derive(input: TokenStream) -> TokenStream {
     };
 
     let expanded = quote! {
-        #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, tabled::Tabled)]
+        #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
         pub struct #name {
             #main_fields
         }
@@ -328,32 +329,6 @@ fn has_attribute(field: &syn::Field, attr_name: &str) -> bool {
     })
 }
 
-fn get_rename_value(field: &syn::Field) -> Option<String> {
-    field.attrs.iter().find_map(|attr| {
-        if attr.path().is_ident("api") {
-            if let Meta::List(list) = &attr.meta {
-                if let Ok(nested) =
-                    list.parse_args_with(Punctuated::<Meta, syn::Token![,]>::parse_terminated)
-                {
-                    return nested.iter().find_map(|meta| {
-                        if let Meta::NameValue(name_value) = meta {
-                            if name_value.path.is_ident("table_rename") {
-                                if let syn::Expr::Lit(expr_lit) = &name_value.value {
-                                    if let syn::Lit::Str(lit) = &expr_lit.lit {
-                                        return Some(lit.value());
-                                    }
-                                }
-                            }
-                        }
-                        None
-                    });
-                }
-            }
-        }
-        None
-    })
-}
-
 fn option_inner_type(ty: &Type) -> Option<&Type> {
     let Type::Path(type_path) = ty else {
         return None;
@@ -425,8 +400,7 @@ fn process_fields(
         let is_post_only = has_attribute(field, "post_only");
         let is_optional = has_attribute(field, "optional");
         let is_as_id = has_attribute(field, "as_id");
-
-        let rename = get_rename_value(field).unwrap_or_else(|| fieldname.clone());
+        let skip_patch = has_attribute(field, "skip_patch");
 
         let id_field_name = if is_as_id {
             format!("{}_id", fieldname)
@@ -436,20 +410,13 @@ fn process_fields(
         let id_field_ident = syn::Ident::new(&id_field_name, proc_macro2::Span::call_site());
 
         if !is_post_only {
-            let tabled_attr = if is_optional {
-                quote!(
-                    #[tabled(display = "crate::resources::tabled_display_option", rename = #rename)]
-                    pub #name: Option<#ty>,
-                )
+            let main_field_ty = if is_optional {
+                quote!(Option<#ty>)
             } else {
-                quote!(
-                    #[tabled(display = "crate::resources::tabled_display", rename = #rename)]
-                    pub #name: #ty,
-                )
+                quote!(#ty)
             };
-
             main_fields.extend(quote! {
-                #tabled_attr
+                pub #name: #main_field_ty,
             });
 
             let get_type = if is_as_id {
@@ -469,10 +436,14 @@ fn process_fields(
                 } else {
                     quote!(i32)
                 };
-                patch_fields.extend(quote! { pub #id_field_ident: #id_type, });
+                if !skip_patch {
+                    patch_fields.extend(quote! { pub #id_field_ident: #id_type, });
+                }
                 post_fields.extend(quote! { pub #id_field_ident: #id_type, });
             } else {
-                patch_fields.extend(quote! { pub #id_field_ident: Option<#ty>, });
+                if !skip_patch {
+                    patch_fields.extend(quote! { pub #id_field_ident: Option<#ty>, });
+                }
                 let post_type = if is_optional {
                     quote!(Option<#ty>)
                 } else {

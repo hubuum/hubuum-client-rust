@@ -4,8 +4,14 @@ use api_resource_derive::ApiResource;
 
 use crate::{
     client::{
-        r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle},
-        sync::{one_or_err, EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
+        r#async::{
+            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+            Handle as AsyncHandle,
+        },
+        sync::{
+            one_or_err, CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+            Handle as SyncHandle,
+        },
     },
     endpoints::Endpoint,
     types::HubuumDateTime,
@@ -14,24 +20,27 @@ use crate::{
 
 use super::Namespace;
 
+#[derive(Debug, Clone, serde::Serialize)]
+struct NewClassRelationFromClassParams {
+    to_hubuum_class_id: i32,
+}
+
 #[allow(dead_code)]
 #[derive(ApiResource)]
 pub struct ClassResource {
     #[api(read_only)]
     pub id: i32,
-    #[api(table_rename = "Name")]
     pub name: String,
-    #[api(table_rename = "Description")]
     pub description: String,
-    #[api(as_id, table_rename = "Namespace")]
+    #[api(as_id)]
     pub namespace: Namespace,
-    #[api(optional, table_rename = "Schema")]
+    #[api(optional)]
     pub json_schema: serde_json::Value,
-    #[api(optional, table_rename = "Validate")]
+    #[api(optional)]
     pub validate_schema: bool,
-    #[api(read_only, table_rename = "Created")]
+    #[api(read_only)]
     pub created_at: HubuumDateTime,
-    #[api(read_only, table_rename = "Updated")]
+    #[api(read_only)]
     pub updated_at: HubuumDateTime,
 }
 
@@ -40,14 +49,20 @@ pub struct ClassResource {
 pub struct ClassRelationResource {
     #[api(read_only)]
     pub id: i32,
-    #[api(table_rename = "FromClass")]
     pub from_hubuum_class_id: i32,
-    #[api(table_rename = "ToClass")]
     pub to_hubuum_class_id: i32,
-    #[api(read_only, table_rename = "Created")]
+    #[api(read_only)]
     pub created_at: HubuumDateTime,
-    #[api(read_only, table_rename = "Updated")]
+    #[api(read_only)]
     pub updated_at: HubuumDateTime,
+}
+
+#[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
+pub struct ClassRelationTransitive {
+    pub ancestor_class_id: i32,
+    pub descendant_class_id: i32,
+    pub depth: i32,
+    pub path: Vec<Option<i32>>,
 }
 
 impl SyncHandle<Class> {
@@ -108,6 +123,84 @@ impl SyncHandle<Class> {
 
         Ok(res.unwrap_or_default())
     }
+
+    pub fn relations(&self) -> SyncCursorRequest<ClassRelation> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassScopedRelations,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
+    }
+
+    pub fn relation(&self, relation_id: i32) -> Result<SyncHandle<ClassRelation>, ApiError> {
+        let relation = self
+            .client()
+            .request_with_endpoint::<SyncEmptyPostParams, ClassRelation>(
+                reqwest::Method::GET,
+                &Endpoint::ClassRelationsById,
+                vec![(Cow::Borrowed("relation_id"), relation_id.to_string().into())],
+                vec![],
+                SyncEmptyPostParams {},
+            )?
+            .ok_or(ApiError::EmptyResult(
+                "Class relation returned empty result".into(),
+            ))?;
+
+        Ok(SyncHandle::new(self.client().clone(), relation))
+    }
+
+    pub fn create_relation(&self, to_class_id: i32) -> Result<ClassRelation, ApiError> {
+        self.client()
+            .request_with_endpoint::<NewClassRelationFromClassParams, ClassRelation>(
+                reqwest::Method::POST,
+                &Endpoint::ClassScopedRelations,
+                vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+                vec![],
+                NewClassRelationFromClassParams {
+                    to_hubuum_class_id: to_class_id,
+                },
+            )?
+            .ok_or(ApiError::EmptyResult(
+                "Creating class relation returned empty result".into(),
+            ))
+    }
+
+    pub fn delete_relation(&self, relation_id: i32) -> Result<(), ApiError> {
+        self.client()
+            .request_with_endpoint::<SyncEmptyPostParams, ()>(
+                reqwest::Method::DELETE,
+                &Endpoint::ClassScopedRelationById,
+                vec![
+                    (Cow::Borrowed("class_id"), self.id().to_string().into()),
+                    (Cow::Borrowed("relation_id"), relation_id.to_string().into()),
+                ],
+                vec![],
+                SyncEmptyPostParams {},
+            )?;
+        Ok(())
+    }
+
+    pub fn transitive_relations(&self) -> SyncCursorRequest<ClassRelationTransitive> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassRelationsTransitive,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
+    }
+
+    pub fn transitive_relations_to(
+        &self,
+        class_id: i32,
+    ) -> SyncCursorRequest<ClassRelationTransitive> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassRelationsTransitiveTo,
+            vec![
+                (Cow::Borrowed("class_id"), self.id().to_string().into()),
+                (Cow::Borrowed("class_id_to"), class_id.to_string().into()),
+            ],
+        )
+    }
 }
 
 impl AsyncHandle<Class> {
@@ -148,5 +241,86 @@ impl AsyncHandle<Class> {
             .await?;
 
         Ok(res.unwrap_or_default())
+    }
+
+    pub fn relations(&self) -> AsyncCursorRequest<ClassRelation> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassScopedRelations,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
+    }
+
+    pub async fn relation(&self, relation_id: i32) -> Result<AsyncHandle<ClassRelation>, ApiError> {
+        let relation = self
+            .client()
+            .request_with_endpoint::<AsyncEmptyPostParams, ClassRelation>(
+                reqwest::Method::GET,
+                &Endpoint::ClassRelationsById,
+                vec![(Cow::Borrowed("relation_id"), relation_id.to_string().into())],
+                vec![],
+                AsyncEmptyPostParams {},
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Class relation returned empty result".into(),
+            ))?;
+
+        Ok(AsyncHandle::new(self.client().clone(), relation))
+    }
+
+    pub async fn create_relation(&self, to_class_id: i32) -> Result<ClassRelation, ApiError> {
+        self.client()
+            .request_with_endpoint::<NewClassRelationFromClassParams, ClassRelation>(
+                reqwest::Method::POST,
+                &Endpoint::ClassScopedRelations,
+                vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+                vec![],
+                NewClassRelationFromClassParams {
+                    to_hubuum_class_id: to_class_id,
+                },
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Creating class relation returned empty result".into(),
+            ))
+    }
+
+    pub async fn delete_relation(&self, relation_id: i32) -> Result<(), ApiError> {
+        self.client()
+            .request_with_endpoint::<AsyncEmptyPostParams, ()>(
+                reqwest::Method::DELETE,
+                &Endpoint::ClassScopedRelationById,
+                vec![
+                    (Cow::Borrowed("class_id"), self.id().to_string().into()),
+                    (Cow::Borrowed("relation_id"), relation_id.to_string().into()),
+                ],
+                vec![],
+                AsyncEmptyPostParams {},
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub fn transitive_relations(&self) -> AsyncCursorRequest<ClassRelationTransitive> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassRelationsTransitive,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
+    }
+
+    pub fn transitive_relations_to(
+        &self,
+        class_id: i32,
+    ) -> AsyncCursorRequest<ClassRelationTransitive> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassRelationsTransitiveTo,
+            vec![
+                (Cow::Borrowed("class_id"), self.id().to_string().into()),
+                (Cow::Borrowed("class_id_to"), class_id.to_string().into()),
+            ],
+        )
     }
 }

@@ -4,12 +4,18 @@ use api_resource_derive::ApiResource;
 
 use crate::{
     client::{
-        r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle},
-        sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
+        r#async::{
+            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+            Handle as AsyncHandle,
+        },
+        sync::{
+            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+            Handle as SyncHandle,
+        },
     },
     endpoints::Endpoint,
     types::{HubuumDateTime, NamespacePermissionsGrantParams, Permissions},
-    ApiError, GroupPermissionsResult, PermissionResult,
+    ApiError, Group, GroupPermissionsResult, PermissionResult,
 };
 
 #[allow(dead_code)]
@@ -17,15 +23,13 @@ use crate::{
 pub struct NamespaceResource {
     #[api(read_only)]
     pub id: i32,
-    #[api(table_rename = "Name")]
     pub name: String,
-    #[api(table_rename = "Description")]
     pub description: String,
-    #[api(post_only, table_rename = "Group")]
+    #[api(post_only)]
     pub group_id: i32, // This is the group that the namespace belongs to and is set on creation.
-    #[api(read_only, table_rename = "Created")]
+    #[api(read_only)]
     pub created_at: HubuumDateTime,
-    #[api(read_only, table_rename = "Updated")]
+    #[api(read_only)]
     pub updated_at: HubuumDateTime,
 }
 
@@ -242,6 +246,20 @@ impl SyncHandle<Namespace> {
             )?;
 
         Ok(res.unwrap_or_default())
+    }
+
+    pub fn groups_with_permission(&self, permission: Permissions) -> SyncCursorRequest<Group> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::NamespaceHasPermissions,
+            vec![
+                (
+                    Cow::Borrowed("namespace_id"),
+                    self.resource().id.to_string().into(),
+                ),
+                (Cow::Borrowed("permission"), permission.to_string().into()),
+            ],
+        )
     }
 }
 
@@ -475,5 +493,19 @@ impl AsyncHandle<Namespace> {
             .await?;
 
         Ok(res.unwrap_or_default())
+    }
+
+    pub fn groups_with_permission(&self, permission: Permissions) -> AsyncCursorRequest<Group> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::NamespaceHasPermissions,
+            vec![
+                (
+                    Cow::Borrowed("namespace_id"),
+                    self.resource().id.to_string().into(),
+                ),
+                (Cow::Borrowed("permission"), permission.to_string().into()),
+            ],
+        )
     }
 }

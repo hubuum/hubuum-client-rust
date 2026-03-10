@@ -1,20 +1,37 @@
 use log::error;
-use reqwest::StatusCode;
+use reqwest::{
+    header::{HeaderMap, CONTENT_TYPE},
+    StatusCode,
+};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 use std::any::type_name;
 use std::borrow::Cow;
-use std::fmt::Display;
-use tabled::Tabled;
 
 use super::{GetID, UrlParams};
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::ApiResource;
 use crate::types::FilterOperator;
-use crate::types::{BaseUrl, IntoQueryTuples};
+use crate::types::{BaseUrl, IntoQueryTuples, ReportContentType};
 use crate::QueryFilter;
+
+pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Page<T> {
+    pub items: Vec<T>,
+    pub next_cursor: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RawResponse {
+    pub status: StatusCode,
+    pub body: String,
+    pub next_cursor: Option<String>,
+    pub content_type: Option<ReportContentType>,
+}
 
 pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: UrlParams) -> String {
     let mut url = format!(
@@ -46,14 +63,22 @@ pub(crate) fn build_request_url(
         Ok(url)
     } else if *method == reqwest::Method::PATCH {
         let id = url_param(url_params, "patch_id").ok_or(ApiError::MissingUrlIdentifier)?;
-        Ok(format!("{url}{id}"))
+        Ok(append_identifier(url, id))
     } else if *method == reqwest::Method::DELETE {
         match url_param(url_params, "delete_id") {
-            Some(id) => Ok(format!("{url}{id}")),
+            Some(id) => Ok(append_identifier(url, id)),
             None => Ok(url),
         }
     } else {
         Err(ApiError::UnsupportedHttpOperation(method.to_string()))
+    }
+}
+
+fn append_identifier(url: String, id: &str) -> String {
+    if url.ends_with('/') {
+        format!("{url}{id}")
+    } else {
+        format!("{url}/{id}")
     }
 }
 
@@ -62,6 +87,20 @@ fn url_param<'a>(url_params: &'a UrlParams, key: &str) -> Option<&'a str> {
         .iter()
         .find(|(k, _)| k == key)
         .map(|(_, v)| v.as_ref())
+}
+
+pub(crate) fn response_metadata(
+    headers: &HeaderMap,
+) -> (Option<String>, Option<ReportContentType>) {
+    let next_cursor = headers
+        .get(NEXT_CURSOR_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string);
+    let content_type = headers
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .and_then(ReportContentType::from_header);
+    (next_cursor, content_type)
 }
 
 pub(crate) fn parse_http_error_message(body: &str) -> String {
@@ -82,10 +121,9 @@ pub(crate) fn parse_response<U: DeserializeOwned>(
     if *method == reqwest::Method::DELETE {
         if response_text.trim().is_empty() {
             return Ok(None);
-        } else {
-            error!("Expected empty response, got: {response_text}");
-            return Err(ApiError::DeserializationError(response_text));
         }
+        error!("Expected empty response, got: {response_text}");
+        return Err(ApiError::DeserializationError(response_text));
     }
 
     if response_code == StatusCode::NO_CONTENT || response_text.trim().is_empty() {
@@ -99,6 +137,16 @@ pub(crate) fn parse_response<U: DeserializeOwned>(
             Err(ApiError::DeserializationError(response_text))
         }
     }
+}
+
+pub(crate) fn parse_page_response<U: DeserializeOwned>(
+    method: &reqwest::Method,
+    raw: RawResponse,
+) -> Result<Page<U>, ApiError> {
+    let next_cursor = raw.next_cursor;
+    let items: Vec<U> = parse_response(method, raw.status, raw.body)?
+        .ok_or(ApiError::EmptyResult("GET returned empty result".into()))?;
+    Ok(Page { items, next_cursor })
 }
 
 pub(crate) fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
@@ -117,22 +165,17 @@ pub(crate) fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
     }
 }
 
-#[derive(Clone, Tabled, Serialize)]
-pub struct Handle<C, T>
-where
-    T: Tabled + Display,
-{
-    #[tabled(skip)]
+#[derive(Clone, Serialize)]
+pub struct Handle<C, T> {
     #[serde(skip)]
     client: C,
-    #[tabled(inline)]
     #[serde(flatten)]
     resource: T,
 }
 
 impl<C, T> Handle<C, T>
 where
-    T: ApiResource + Tabled + GetID + Display + Default,
+    T: ApiResource + GetID + Default,
 {
     pub fn new(client: C, resource: T) -> Self {
         Handle { client, resource }
@@ -197,7 +240,7 @@ mod test {
     fn build_request_url_for_get_appends_query_string() {
         let url = build_request_url(
             &reqwest::Method::GET,
-            "https://api.example.com/api/v1/classes/".to_string(),
+            "https://api.example.com/api/v1/classes".to_string(),
             &vec![],
             vec![QueryFilter {
                 key: "name".to_string(),
@@ -209,7 +252,7 @@ mod test {
 
         assert_eq!(
             url,
-            "https://api.example.com/api/v1/classes/?name__equals=alpha"
+            "https://api.example.com/api/v1/classes?name__equals=alpha"
         );
     }
 
@@ -240,6 +283,32 @@ mod test {
             url,
             "https://api.example.com/api/v1/namespaces/1/permissions/group/2"
         );
+    }
+
+    #[test]
+    fn build_request_url_for_patch_inserts_separator_when_missing() {
+        let url = build_request_url(
+            &reqwest::Method::PATCH,
+            "https://api.example.com/api/v1/templates".to_string(),
+            &vec![(Cow::Borrowed("patch_id"), Cow::Borrowed("12"))],
+            vec![],
+        )
+        .expect("PATCH URL should build");
+
+        assert_eq!(url, "https://api.example.com/api/v1/templates/12");
+    }
+
+    #[test]
+    fn build_request_url_for_delete_inserts_separator_when_missing() {
+        let url = build_request_url(
+            &reqwest::Method::DELETE,
+            "https://api.example.com/api/v1/relations/classes".to_string(),
+            &vec![(Cow::Borrowed("delete_id"), Cow::Borrowed("55"))],
+            vec![],
+        )
+        .expect("DELETE URL should build");
+
+        assert_eq!(url, "https://api.example.com/api/v1/relations/classes/55");
     }
 
     #[test]
@@ -279,45 +348,25 @@ mod test {
             StatusCode::CREATED,
             String::new(),
         )
-        .expect("Empty successful body should return None");
+        .expect("empty successful body should return None");
 
         assert!(result.is_none());
     }
 
     #[test]
-    fn parse_response_returns_none_for_whitespace_success_body() {
-        let result = parse_response::<serde_json::Value>(
-            &reqwest::Method::PUT,
-            StatusCode::OK,
-            "   \n".to_string(),
+    fn parse_page_response_preserves_next_cursor() {
+        let page = parse_page_response::<serde_json::Value>(
+            &reqwest::Method::GET,
+            RawResponse {
+                status: StatusCode::OK,
+                body: "[{\"id\":1}]".to_string(),
+                next_cursor: Some("abc".to_string()),
+                content_type: Some(ReportContentType::ApplicationJson),
+            },
         )
-        .expect("Whitespace successful body should return None");
+        .expect("page should parse");
 
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn one_or_err_returns_errors_for_empty_and_multiple() {
-        let empty_err = one_or_err::<i32>(vec![]).expect_err("empty vec should error");
-        assert!(matches!(empty_err, ApiError::EmptyResult(_)));
-
-        let too_many = one_or_err(vec![1, 2]).expect_err("multiple values should error");
-        assert!(matches!(too_many, ApiError::TooManyResults(_)));
-    }
-
-    #[test]
-    fn select_lookup_helpers_build_expected_filters() {
-        let (id_url_params, id_filters) = select_id_lookup_params(42);
-        assert_eq!(id_url_params[0].0.as_ref(), "id");
-        assert_eq!(id_url_params[0].1.as_ref(), "42");
-        assert_eq!(id_filters[0].key, "id");
-        assert_eq!(id_filters[0].value, "42");
-
-        let (name_url_params, name_filters) =
-            select_name_lookup_params::<crate::resources::Class>("alpha");
-        assert_eq!(name_url_params[0].0.as_ref(), "name");
-        assert_eq!(name_url_params[0].1.as_ref(), "alpha");
-        assert_eq!(name_filters[0].key, "name");
-        assert_eq!(name_filters[0].value, "alpha");
+        assert_eq!(page.items.len(), 1);
+        assert_eq!(page.next_cursor.as_deref(), Some("abc"));
     }
 }

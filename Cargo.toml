@@ -17,7 +17,6 @@ url = "2"
 async-trait = "0"
 serde_urlencoded = "0"
 log = "0"
-tabled = "0.20"
 percent-encoding = "2"
 strum = { version = "0.27.2", features = ["derive", "strum_macros"] }
 

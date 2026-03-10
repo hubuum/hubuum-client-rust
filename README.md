@@ -20,6 +20,14 @@ A Rust client library for interacting with the Hubuum API. The library is design
 
     Easily interact with resources such as classes, class relations, and other Hubuum API endpoints with well-defined method chains for filtering and execution.
 
+- **Reports, Templates, and Imports**:
+
+    Run server-side reports, manage stored report templates, and submit asynchronous imports with typed task polling helpers.
+
+- **No Built-In Table Formatting**:
+
+    Models no longer implement built-in table rendering traits. Consumers that want table support should wrap/newtype the exported models in their own crates.
+
 ## Installation
 
 Add the dependency to your project's Cargo.toml (not yet available from `crates.io`):
@@ -136,6 +144,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 As one can see, the interface is very similar to the synchronous client.
+
+## Reports and Templates
+
+Templates are exposed as a regular resource:
+
+```rust
+let template = client
+    .templates()
+    .create()
+    .namespace_id(7)
+    .name("owner-report")
+    .description("Owner listing")
+    .content_type(hubuum_client::ReportContentType::TextPlain)
+    .template("{{#each items}}{{this.name}}\n{{/each}}")
+    .send()?;
+```
+
+Report execution is exposed through `client.reports()` and returns a typed `ReportResult`:
+
+```rust
+let report = client.reports().run(hubuum_client::ReportRequest {
+    limits: None,
+    missing_data_policy: None,
+    output: None,
+    query: Some("name__icontains=server".to_string()),
+    scope: hubuum_client::ReportScope {
+        class_id: Some(42),
+        kind: hubuum_client::ReportScopeKind::ObjectsInClass,
+        object_id: None,
+    },
+})?;
+
+match report {
+    hubuum_client::ReportResult::Json(body) => println!("{} rows", body.items.len()),
+    hubuum_client::ReportResult::Rendered { body, .. } => println!("{body}"),
+}
+```
+
+## Imports and Tasks
+
+Imports return task-shaped responses and can be polled through `client.imports()` and `client.tasks()`:
+
+```rust
+let task = client
+    .imports()
+    .submit(hubuum_client::ImportRequest {
+        version: hubuum_client::CURRENT_IMPORT_VERSION,
+        dry_run: Some(true),
+        mode: None,
+        graph: hubuum_client::ImportGraph::default(),
+    })
+    .idempotency_key("inventory-import-2026-03-07")
+    .send()?;
+
+let task_state = client.tasks().get(task.id)?;
+let event_page = client.tasks().events(task.id).limit(50).page()?;
+let result_page = client.imports().results(task.id).limit(50).page()?;
+```
+
+Cursor-paged endpoints return `hubuum_client::Page<T>` with `items` and `next_cursor`.
 
 ## Integration Tests (Real Server)
 

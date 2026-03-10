@@ -2,8 +2,11 @@ mod auth;
 mod baseurl;
 mod datetime;
 mod filter;
+mod import;
 mod meta;
 mod params;
+mod report;
+mod task;
 
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
@@ -12,10 +15,24 @@ pub use auth::{Credentials, Token};
 pub use baseurl::BaseUrl;
 pub use datetime::HubuumDateTime;
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
+pub use import::{
+    ClassKey, GroupKey, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
+    ImportCollisionPolicy, ImportGraph, ImportMode, ImportNamespaceInput,
+    ImportNamespacePermissionInput, ImportObjectInput, ImportObjectRelationInput,
+    ImportPermissionPolicy, ImportRequest, NamespaceKey, ObjectKey, CURRENT_IMPORT_VERSION,
+};
 pub use meta::{CountsResponse, DbStateResponse, ObjectsByClass};
 pub use params::{ClassParams, NamespacePermissionsGrantParams, UserParams};
+pub use report::{
+    ReportContentType, ReportJsonResponse, ReportLimits, ReportMeta, ReportMissingDataPolicy,
+    ReportOutputRequest, ReportRequest, ReportResult, ReportScope, ReportScopeKind, ReportWarning,
+};
+pub use task::{
+    ImportTaskDetails, ImportTaskResultResponse, TaskDetails, TaskEventResponse, TaskKind,
+    TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
+};
 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumIter, EnumString, Display)]
+#[derive(Debug, Clone, Serialize, Deserialize, EnumIter, EnumString, Display, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub enum Permissions {
     ReadCollection,
@@ -38,4 +55,8 @@ pub enum Permissions {
     ReadObjectRelation,
     UpdateObjectRelation,
     DeleteObjectRelation,
+    ReadTemplate,
+    CreateTemplate,
+    UpdateTemplate,
+    DeleteTemplate,
 }

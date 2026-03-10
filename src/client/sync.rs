@@ -2,18 +2,20 @@ use log::{debug, trace};
 use reqwest::blocking::Response;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::borrow::Cow;
-use std::fmt::Display;
 use std::marker::PhantomData;
-use tabled::Tabled;
 
 use super::{
     shared, Authenticated, ClientCore, GetID, IntoResourceFilter, Unauthenticated, UrlParams,
 };
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
-use crate::resources::{ApiResource, Class, ClassRelation, Group, Namespace, Object, User};
+use crate::resources::{
+    ApiResource, Class, ClassRelation, Group, Namespace, Object, ReportTemplate, User,
+};
 use crate::types::{
-    BaseUrl, CountsResponse, Credentials, DbStateResponse, FilterOperator, SortDirection, Token,
+    BaseUrl, CountsResponse, Credentials, DbStateResponse, FilterOperator, ImportRequest,
+    ImportTaskResultResponse, ReportContentType, ReportJsonResponse, ReportRequest, ReportResult,
+    SortDirection, TaskEventResponse, TaskQueueStateResponse, TaskResponse, Token,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -200,14 +202,48 @@ impl Client<Authenticated> {
         })
     }
 
-    pub fn request_with_endpoint<T: Serialize + std::fmt::Debug, U: DeserializeOwned>(
+    pub fn meta_tasks(&self) -> Result<TaskQueueStateResponse, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, TaskQueueStateResponse>(
+            reqwest::Method::GET,
+            &Endpoint::MetaTasks,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .and_then(|opt| {
+            opt.ok_or(ApiError::EmptyResult(
+                "META task state returned empty result".into(),
+            ))
+        })
+    }
+
+    pub(crate) fn request_with_endpoint_raw<T: Serialize + std::fmt::Debug>(
         &self,
         method: reqwest::Method,
         endpoint: &Endpoint,
         url_params: UrlParams,
         query_params: Vec<QueryFilter>,
         post_params: T,
-    ) -> Result<Option<U>, ApiError> {
+    ) -> Result<shared::RawResponse, ApiError> {
+        self.request_with_endpoint_raw_with_headers(
+            method,
+            endpoint,
+            url_params,
+            query_params,
+            post_params,
+            &[],
+        )
+    }
+
+    pub(crate) fn request_with_endpoint_raw_with_headers<T: Serialize + std::fmt::Debug>(
+        &self,
+        method: reqwest::Method,
+        endpoint: &Endpoint,
+        url_params: UrlParams,
+        query_params: Vec<QueryFilter>,
+        post_params: T,
+        headers: &[(&str, String)],
+    ) -> Result<shared::RawResponse, ApiError> {
         let base_url = self.build_url(endpoint, url_params.clone());
         let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
 
@@ -228,16 +264,45 @@ impl Client<Authenticated> {
             self.http_client.delete(&request_url)
         } else {
             return Err(ApiError::UnsupportedHttpOperation(method.to_string()));
-        }
-        .header("Authorization", format!("Bearer {}", self.state.token));
+        };
+        let request = headers.iter().fold(
+            request.header("Authorization", format!("Bearer {}", self.state.token)),
+            |request, (name, value)| request.header(*name, value),
+        );
 
         let now = std::time::Instant::now();
         let response = request.send()?;
         trace!("Request took {:?}", now.elapsed());
-        let response_code = response.status();
-        let response_text = self.check_success(response)?.text()?;
-        debug!("Response: {}", response_text);
-        shared::parse_response(&method, response_code, response_text)
+        let response = self.check_success(response)?;
+        let status = response.status();
+        let (next_cursor, content_type) = shared::response_metadata(response.headers());
+        let body = response.text()?;
+        debug!("Response: {}", body);
+
+        Ok(shared::RawResponse {
+            status,
+            body,
+            next_cursor,
+            content_type,
+        })
+    }
+
+    pub fn request_with_endpoint<T: Serialize + std::fmt::Debug, U: DeserializeOwned>(
+        &self,
+        method: reqwest::Method,
+        endpoint: &Endpoint,
+        url_params: UrlParams,
+        query_params: Vec<QueryFilter>,
+        post_params: T,
+    ) -> Result<Option<U>, ApiError> {
+        let raw = self.request_with_endpoint_raw(
+            method.clone(),
+            endpoint,
+            url_params,
+            query_params,
+            post_params,
+        )?;
+        shared::parse_response(&method, raw.status, raw.body)
     }
 
     pub fn request<R: ApiResource, T: Serialize + std::fmt::Debug, U: DeserializeOwned>(
@@ -287,6 +352,22 @@ impl Client<Authenticated> {
             EmptyPostParams,
         )
         .and_then(|opt| opt.ok_or(ApiError::EmptyResult("SEARCH returned empty result".into())))
+    }
+
+    pub fn search_page<R: ApiResource>(
+        &self,
+        resource: R,
+        url_params: UrlParams,
+        query_params: Vec<QueryFilter>,
+    ) -> Result<shared::Page<R::GetOutput>, ApiError> {
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &resource.endpoint(),
+            url_params,
+            query_params,
+            EmptyPostParams,
+        )?;
+        shared::parse_page_response(&reqwest::Method::GET, raw)
     }
 
     pub fn post<R: ApiResource>(
@@ -356,6 +437,167 @@ impl Client<Authenticated> {
 
     pub fn object_relation(&self) -> Resource<ObjectRelation> {
         Resource::new(self.clone(), UrlParams::default())
+    }
+
+    pub fn templates(&self) -> Resource<ReportTemplate> {
+        Resource::new(self.clone(), UrlParams::default())
+    }
+
+    pub fn reports(&self) -> Reports {
+        Reports::new(self.clone())
+    }
+
+    pub fn imports(&self) -> Imports {
+        Imports::new(self.clone())
+    }
+
+    pub fn tasks(&self) -> Tasks {
+        Tasks::new(self.clone())
+    }
+}
+
+pub struct Reports {
+    client: Client<Authenticated>,
+}
+
+impl Reports {
+    fn new(client: Client<Authenticated>) -> Self {
+        Self { client }
+    }
+
+    pub fn run(&self, request: ReportRequest) -> Result<ReportResult, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::Reports,
+            UrlParams::default(),
+            vec![],
+            request,
+        )?;
+        let content_type = raw
+            .content_type
+            .clone()
+            .unwrap_or(ReportContentType::ApplicationJson);
+
+        match content_type {
+            ReportContentType::ApplicationJson => {
+                let body = shared::parse_response::<ReportJsonResponse>(
+                    &reqwest::Method::POST,
+                    raw.status,
+                    raw.body,
+                )?
+                .ok_or(ApiError::EmptyResult("Report returned empty result".into()))?;
+                Ok(ReportResult::Json(body))
+            }
+            _ => Ok(ReportResult::Rendered {
+                content_type,
+                body: raw.body,
+            }),
+        }
+    }
+}
+
+pub struct Imports {
+    client: Client<Authenticated>,
+}
+
+impl Imports {
+    fn new(client: Client<Authenticated>) -> Self {
+        Self { client }
+    }
+
+    pub fn submit(&self, request: ImportRequest) -> ImportSubmitOp {
+        ImportSubmitOp::new(self.client.clone(), request)
+    }
+
+    pub fn get(&self, task_id: i32) -> Result<TaskResponse, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, TaskResponse>(
+                reqwest::Method::GET,
+                &Endpoint::ImportById,
+                vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
+                vec![],
+                EmptyPostParams,
+            )
+            .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Import returned empty result".into())))
+    }
+
+    pub fn results(&self, task_id: i32) -> CursorRequest<ImportTaskResultResponse> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::ImportResults,
+            vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
+        )
+    }
+}
+
+pub struct ImportSubmitOp {
+    client: Client<Authenticated>,
+    request: ImportRequest,
+    idempotency_key: Option<String>,
+}
+
+impl ImportSubmitOp {
+    fn new(client: Client<Authenticated>, request: ImportRequest) -> Self {
+        Self {
+            client,
+            request,
+            idempotency_key: None,
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(idempotency_key.into());
+        self
+    }
+
+    pub fn send(self) -> Result<TaskResponse, ApiError> {
+        let mut headers = Vec::new();
+        if let Some(key) = self.idempotency_key {
+            headers.push(("Idempotency-Key", key));
+        }
+
+        let raw = self.client.request_with_endpoint_raw_with_headers(
+            reqwest::Method::POST,
+            &Endpoint::Imports,
+            UrlParams::default(),
+            vec![],
+            self.request,
+            &headers,
+        )?;
+
+        shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?.ok_or(
+            ApiError::EmptyResult("Import submit returned empty result".into()),
+        )
+    }
+}
+
+pub struct Tasks {
+    client: Client<Authenticated>,
+}
+
+impl Tasks {
+    fn new(client: Client<Authenticated>) -> Self {
+        Self { client }
+    }
+
+    pub fn get(&self, task_id: i32) -> Result<TaskResponse, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, TaskResponse>(
+                reqwest::Method::GET,
+                &Endpoint::TasksById,
+                vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
+                vec![],
+                EmptyPostParams,
+            )
+            .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Task returned empty result".into())))
+    }
+
+    pub fn events(&self, task_id: i32) -> CursorRequest<TaskEventResponse> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::TaskEvents,
+            vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
+        )
     }
 }
 
@@ -687,6 +929,12 @@ impl<T: ApiResource> QueryOp<T> {
         self
     }
 
+    pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("cursor", cursor.to_string()));
+        self
+    }
+
     pub fn execute_expecting_single_result(self) -> Result<T::GetOutput, ApiError> {
         self.one()
     }
@@ -698,6 +946,11 @@ impl<T: ApiResource> QueryOp<T> {
     pub fn list(self) -> Result<Vec<T::GetOutput>, ApiError> {
         self.client
             .search::<T>(T::default(), self.url_params, self.query_params)
+    }
+
+    pub fn page(self) -> Result<shared::Page<T::GetOutput>, ApiError> {
+        self.client
+            .search_page::<T>(T::default(), self.url_params, self.query_params)
     }
 
     pub fn one(self) -> Result<T::GetOutput, ApiError> {
@@ -722,6 +975,83 @@ impl<T: ApiResource> QueryOp<T> {
 }
 
 pub type FilterBuilder<T> = QueryOp<T>;
+
+pub struct CursorRequest<T> {
+    client: Client<Authenticated>,
+    endpoint: Endpoint,
+    query_params: Vec<QueryFilter>,
+    url_params: UrlParams,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> CursorRequest<T> {
+    pub fn new(client: Client<Authenticated>, endpoint: Endpoint, url_params: UrlParams) -> Self {
+        Self {
+            client,
+            endpoint,
+            query_params: Vec::new(),
+            url_params,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn sort_by<V: ToString>(mut self, sort: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("sort", sort.to_string()));
+        self
+    }
+
+    pub fn order_by<V: ToString>(mut self, sort: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("order_by", sort.to_string()));
+        self
+    }
+
+    pub fn sort_by_fields<I, S>(self, fields: I) -> Self
+    where
+        I: IntoIterator<Item = (S, SortDirection)>,
+        S: AsRef<str>,
+    {
+        let sort_spec = fields
+            .into_iter()
+            .map(|(field, direction)| format!("{}.{}", field.as_ref(), direction))
+            .collect::<Vec<_>>()
+            .join(",");
+        self.sort_by(sort_spec)
+    }
+
+    pub fn limit(mut self, limit: usize) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("limit", limit.to_string()));
+        self
+    }
+
+    pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("cursor", cursor.to_string()));
+        self
+    }
+}
+
+impl<T> CursorRequest<T>
+where
+    T: DeserializeOwned,
+{
+    pub fn page(self) -> Result<shared::Page<T>, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &self.endpoint,
+            self.url_params,
+            self.query_params,
+            EmptyPostParams,
+        )?;
+        shared::parse_page_response(&reqwest::Method::GET, raw)
+    }
+
+    pub fn list(self) -> Result<Vec<T>, ApiError> {
+        Ok(self.page()?.items)
+    }
+}
 
 pub struct Resource<T: ApiResource> {
     client: Client<Authenticated>,
@@ -812,7 +1142,7 @@ pub type Handle<T> = shared::Handle<Client<Authenticated>, T>;
 
 impl<T> Resource<T>
 where
-    T: ApiResource<GetOutput = T> + DeserializeOwned + Tabled + Display + GetID + Default + 'static,
+    T: ApiResource<GetOutput = T> + DeserializeOwned + GetID + Default + 'static,
 {
     pub fn select(&self, id: i32) -> Result<Handle<T>, ApiError> {
         match T::default().endpoint() {
@@ -836,6 +1166,98 @@ where
                     reqwest::Method::GET,
                     &Endpoint::GroupsById,
                     vec![(Cow::Borrowed("group_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
+            Endpoint::Classes => {
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::ClassesById,
+                    vec![(Cow::Borrowed("class_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
+            Endpoint::Namespaces => {
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::NamespacesById,
+                    vec![(Cow::Borrowed("namespace_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
+            Endpoint::Objects => {
+                let mut url_params = self.url_params.clone();
+                url_params.push((Cow::Borrowed("object_id"), id.to_string().into()));
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::ObjectsById,
+                    url_params,
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
+            Endpoint::ClassRelations => {
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::ClassRelationsById,
+                    vec![(Cow::Borrowed("relation_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
+            Endpoint::ObjectRelations => {
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::ObjectRelationsById,
+                    vec![(Cow::Borrowed("relation_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
+            Endpoint::ReportTemplates => {
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::ReportTemplatesById,
+                    vec![(Cow::Borrowed("template_id"), id.to_string().into())],
                     vec![],
                     EmptyPostParams,
                 ) {

@@ -10,6 +10,7 @@ pub mod sync;
 mod tests;
 
 pub use self::r#async::Client as AsyncClient;
+pub use self::shared::Page;
 pub use self::sync::Client as SyncClient;
 
 use crate::resources::ApiResource;
@@ -60,7 +61,9 @@ mod parity_contract {
         r#async as async_client, sync as sync_client, Authenticated, IntoResourceFilter,
         Unauthenticated,
     };
-    use crate::resources::{Class, ClassRelation, Group, Namespace, Object, ObjectRelation, User};
+    use crate::resources::{
+        Class, ClassRelation, Group, Namespace, Object, ObjectRelation, ReportTemplate, User,
+    };
     use crate::{types::BaseUrl, QueryFilter};
 
     struct DummyFilter;
@@ -98,12 +101,17 @@ mod parity_contract {
                 $module::Client::<Authenticated>::namespaces;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<Group> =
                 $module::Client::<Authenticated>::groups;
+            let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ReportTemplate> =
+                $module::Client::<Authenticated>::templates;
             let _: fn(&$module::Client<Authenticated>, i32) -> $module::Resource<Object> =
                 $module::Client::<Authenticated>::objects;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ClassRelation> =
                 $module::Client::<Authenticated>::class_relation;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ObjectRelation> =
                 $module::Client::<Authenticated>::object_relation;
+            let _ = $module::Client::<Authenticated>::reports;
+            let _ = $module::Client::<Authenticated>::imports;
+            let _ = $module::Client::<Authenticated>::tasks;
         };
     }
 
@@ -116,6 +124,7 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::logout_all;
             let _ = $module::Client::<Authenticated>::meta_counts;
             let _ = $module::Client::<Authenticated>::meta_db;
+            let _ = $module::Client::<Authenticated>::meta_tasks;
         };
     }
 
@@ -162,7 +171,9 @@ mod parity_contract {
                 &str,
             >;
             let _ = $module::FilterBuilder::<Class>::limit;
+            let _ = $module::FilterBuilder::<Class>::cursor::<&str>;
             let _ = $module::FilterBuilder::<Class>::list;
+            let _ = $module::FilterBuilder::<Class>::page;
             let _ = $module::FilterBuilder::<Class>::one;
             let _ = $module::FilterBuilder::<Class>::optional;
             let _ = $module::FilterBuilder::<Class>::execute;
@@ -196,6 +207,17 @@ mod parity_contract {
             let _ = $module::Handle::<Class>::object_by_name;
             let _ = $module::Handle::<Class>::delete;
             let _ = $module::Handle::<Class>::permissions;
+            let _ = $module::Handle::<Class>::relations;
+            let _ = $module::Handle::<Class>::relation;
+            let _ = $module::Handle::<Class>::create_relation;
+            let _ = $module::Handle::<Class>::delete_relation;
+            let _ = $module::Handle::<Class>::transitive_relations;
+            let _ = $module::Handle::<Class>::transitive_relations_to;
+
+            let _ = $module::Handle::<Object>::related_objects;
+            let _ = $module::Handle::<Object>::relation_to;
+            let _ = $module::Handle::<Object>::create_relation_to;
+            let _ = $module::Handle::<Object>::delete_relation_to;
 
             let _ = $module::Handle::<User>::groups;
             let _ = $module::Handle::<User>::tokens;
@@ -213,6 +235,7 @@ mod parity_contract {
             let _ = $module::Handle::<Namespace>::grant_permission;
             let _ = $module::Handle::<Namespace>::revoke_permission;
             let _ = $module::Handle::<Namespace>::user_permissions;
+            let _ = $module::Handle::<Namespace>::groups_with_permission;
         };
     }
 

@@ -34,9 +34,19 @@ pub mod types;
 mod endpoints;
 
 // Re-export commonly used items
-pub use client::{AsyncClient, Authenticated, IntoResourceFilter, SyncClient, Unauthenticated};
+pub use client::{
+    AsyncClient, Authenticated, IntoResourceFilter, Page, SyncClient, Unauthenticated,
+};
 pub use errors::ApiError;
 pub use resources::*;
 pub use types::{
-    BaseUrl, ClassParams, CountsResponse, Credentials, DbStateResponse, Token, UserParams,
+    BaseUrl, ClassKey, ClassParams, CountsResponse, Credentials, DbStateResponse, GroupKey,
+    ImportAtomicity, ImportClassInput, ImportClassRelationInput, ImportCollisionPolicy,
+    ImportGraph, ImportMode, ImportNamespaceInput, ImportNamespacePermissionInput,
+    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportRequest,
+    ImportTaskDetails, ImportTaskResultResponse, NamespaceKey, ObjectKey, ReportContentType,
+    ReportJsonResponse, ReportLimits, ReportMeta, ReportMissingDataPolicy, ReportOutputRequest,
+    ReportRequest, ReportResult, ReportScope, ReportScopeKind, ReportWarning, TaskDetails,
+    TaskEventResponse, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse,
+    TaskStatus, Token, UserParams, CURRENT_IMPORT_VERSION,
 };
