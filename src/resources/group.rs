@@ -4,8 +4,14 @@ use api_resource_derive::ApiResource;
 
 use crate::{
     client::{
-        r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle},
-        sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
+        r#async::{
+            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+            Handle as AsyncHandle,
+        },
+        sync::{
+            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+            Handle as SyncHandle,
+        },
     },
     endpoints::Endpoint,
     types::HubuumDateTime,
@@ -89,6 +95,17 @@ impl SyncHandle<Group> {
                 .collect()),
         }
     }
+
+    pub fn members_request(&self) -> SyncCursorRequest<User> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::GroupMembers,
+            vec![(
+                Cow::Borrowed("group_id"),
+                self.resource().id.to_string().into(),
+            )],
+        )
+    }
 }
 
 impl AsyncHandle<Group> {
@@ -157,5 +174,16 @@ impl AsyncHandle<Group> {
                 .map(|user| AsyncHandle::new(self.client().clone(), user))
                 .collect()),
         }
+    }
+
+    pub fn members_request(&self) -> AsyncCursorRequest<User> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::GroupMembers,
+            vec![(
+                Cow::Borrowed("group_id"),
+                self.resource().id.to_string().into(),
+            )],
+        )
     }
 }

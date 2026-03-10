@@ -6,11 +6,11 @@ use crate::{
     client::{
         r#async::{
             CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-            Handle as AsyncHandle,
+            Handle as AsyncHandle, QueryOp as AsyncQueryOp,
         },
         sync::{
             one_or_err, CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            Handle as SyncHandle,
+            Handle as SyncHandle, QueryOp as SyncQueryOp,
         },
     },
     endpoints::Endpoint,
@@ -66,9 +66,12 @@ pub struct ClassRelationTransitive {
 }
 
 impl SyncHandle<Class> {
+    pub fn objects_query(&self) -> SyncQueryOp<Object> {
+        self.client().objects(self.id()).query()
+    }
+
     pub fn objects(&self) -> Result<Vec<SyncHandle<Object>>, ApiError> {
-        let url_params = vec![(Cow::Borrowed("class_id"), self.id().to_string().into())];
-        let raw: Vec<Object> = self.client().get(Object::default(), url_params, vec![])?;
+        let raw: Vec<Object> = self.objects_query().list()?;
 
         Ok(raw
             .into_iter()
@@ -122,6 +125,14 @@ impl SyncHandle<Class> {
             )?;
 
         Ok(res.unwrap_or_default())
+    }
+
+    pub fn permissions_request(&self) -> SyncCursorRequest<GroupPermissionsResult> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassPermissions,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
     }
 
     pub fn relations(&self) -> SyncCursorRequest<ClassRelation> {
@@ -204,8 +215,12 @@ impl SyncHandle<Class> {
 }
 
 impl AsyncHandle<Class> {
+    pub fn objects_query(&self) -> AsyncQueryOp<Object> {
+        self.client().objects(self.id()).query()
+    }
+
     pub async fn objects(&self) -> Result<Vec<AsyncHandle<Object>>, ApiError> {
-        let raw: Vec<Object> = self.client().objects(self.id()).query().list().await?;
+        let raw: Vec<Object> = self.objects_query().list().await?;
         Ok(raw
             .into_iter()
             .map(|obj| AsyncHandle::new(self.client().clone(), obj))
@@ -241,6 +256,14 @@ impl AsyncHandle<Class> {
             .await?;
 
         Ok(res.unwrap_or_default())
+    }
+
+    pub fn permissions_request(&self) -> AsyncCursorRequest<GroupPermissionsResult> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassPermissions,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
     }
 
     pub fn relations(&self) -> AsyncCursorRequest<ClassRelation> {

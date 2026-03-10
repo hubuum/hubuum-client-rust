@@ -1083,6 +1083,441 @@ async fn async_supports_user_group_and_token_endpoints() {
 }
 
 #[test]
+fn sync_handle_list_requests_support_sorting() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let user_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(user_json(11, "alice")));
+    });
+
+    let user_groups = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11/groups")
+            .query_param("sort", "groupname.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_json(10, "admins")]));
+    });
+
+    let user_tokens = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11/tokens")
+            .query_param("sort", "issued.desc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([{
+                "issued": "2024-01-01T00:00:00Z",
+                "token": "api-token-1",
+                "user_id": 11
+            }]));
+    });
+
+    let group_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/groups/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(group_json(10, "admins")));
+    });
+
+    let group_members = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/groups/10/members")
+            .query_param("sort", "username.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([user_json(11, "alice")]));
+    });
+
+    let class_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("class-42"));
+    });
+
+    let class_objects = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/")
+            .query_param("sort", "name.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_json(9, 42, "object-9")]));
+    });
+
+    let class_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/permissions")
+            .query_param("sort", "group.groupname.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let namespace_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(namespace_json(7, "namespace-1"));
+    });
+
+    let namespace_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions")
+            .query_param("sort", "group.groupname.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let namespace_user_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/user/11")
+            .query_param("sort", "group.groupname.desc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let client = sync_client(&server);
+
+    let user = client
+        .users()
+        .select(11)
+        .expect("user lookup should succeed");
+    let user_group_page = user
+        .groups_request()
+        .sort("groupname", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .expect("user groups request builder should succeed");
+    assert_eq!(user_group_page.items[0].id, 10);
+
+    let user_token_page = user
+        .tokens_request()
+        .sort("issued", SortDirection::Desc)
+        .limit(1)
+        .page()
+        .expect("user tokens request builder should succeed");
+    assert_eq!(user_token_page.items[0].user_id, 11);
+
+    let group = client
+        .groups()
+        .select(10)
+        .expect("group lookup should succeed");
+    let member_page = group
+        .members_request()
+        .sort("username", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .expect("group members request builder should succeed");
+    assert_eq!(member_page.items[0].id, 11);
+
+    let class = client
+        .classes()
+        .select(42)
+        .expect("class lookup should succeed");
+    let object_page = class
+        .objects_query()
+        .sort("name", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .expect("class objects query should succeed");
+    assert_eq!(object_page.items[0].id, 9);
+
+    let class_permission_page = class
+        .permissions_request()
+        .sort("group.groupname", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .expect("class permissions request builder should succeed");
+    assert_eq!(class_permission_page.items[0].permission.group_id, 10);
+
+    let namespace = client
+        .namespaces()
+        .select(7)
+        .expect("namespace lookup should succeed");
+    let namespace_permission_page = namespace
+        .permissions_request()
+        .sort("group.groupname", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .expect("namespace permissions request builder should succeed");
+    assert_eq!(namespace_permission_page.items[0].permission.group_id, 10);
+
+    let namespace_user_permission_page = namespace
+        .user_permissions_request(11)
+        .sort("group.groupname", SortDirection::Desc)
+        .limit(1)
+        .page()
+        .expect("namespace user permissions request builder should succeed");
+    assert_eq!(
+        namespace_user_permission_page.items[0].permission.group_id,
+        10
+    );
+
+    user_by_id.assert_calls(1);
+    user_groups.assert_calls(1);
+    user_tokens.assert_calls(1);
+    group_by_id.assert_calls(1);
+    group_members.assert_calls(1);
+    class_by_id.assert_calls(1);
+    class_objects.assert_calls(1);
+    class_permissions.assert_calls(1);
+    namespace_by_id.assert_calls(1);
+    namespace_permissions.assert_calls(1);
+    namespace_user_permissions.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_handle_list_requests_support_sorting() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let user_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(user_json(11, "alice")));
+    });
+
+    let user_groups = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11/groups")
+            .query_param("sort", "groupname.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_json(10, "admins")]));
+    });
+
+    let user_tokens = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11/tokens")
+            .query_param("sort", "issued.desc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([{
+                "issued": "2024-01-01T00:00:00Z",
+                "token": "api-token-1",
+                "user_id": 11
+            }]));
+    });
+
+    let group_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/groups/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(group_json(10, "admins")));
+    });
+
+    let group_members = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/groups/10/members")
+            .query_param("sort", "username.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([user_json(11, "alice")]));
+    });
+
+    let class_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("class-42"));
+    });
+
+    let class_objects = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/")
+            .query_param("sort", "name.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_json(9, 42, "object-9")]));
+    });
+
+    let class_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/permissions")
+            .query_param("sort", "group.groupname.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let namespace_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(namespace_json(7, "namespace-1"));
+    });
+
+    let namespace_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions")
+            .query_param("sort", "group.groupname.asc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let namespace_user_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/namespaces/7/permissions/user/11")
+            .query_param("sort", "group.groupname.desc")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+
+    let client = async_client(&server).await;
+
+    let user = client
+        .users()
+        .select(11)
+        .await
+        .expect("user lookup should succeed");
+    let user_group_page = user
+        .groups_request()
+        .sort("groupname", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .await
+        .expect("user groups request builder should succeed");
+    assert_eq!(user_group_page.items[0].id, 10);
+
+    let user_token_page = user
+        .tokens_request()
+        .sort("issued", SortDirection::Desc)
+        .limit(1)
+        .page()
+        .await
+        .expect("user tokens request builder should succeed");
+    assert_eq!(user_token_page.items[0].user_id, 11);
+
+    let group = client
+        .groups()
+        .select(10)
+        .await
+        .expect("group lookup should succeed");
+    let member_page = group
+        .members_request()
+        .sort("username", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .await
+        .expect("group members request builder should succeed");
+    assert_eq!(member_page.items[0].id, 11);
+
+    let class = client
+        .classes()
+        .select(42)
+        .await
+        .expect("class lookup should succeed");
+    let object_page = class
+        .objects_query()
+        .sort("name", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .await
+        .expect("class objects query should succeed");
+    assert_eq!(object_page.items[0].id, 9);
+
+    let class_permission_page = class
+        .permissions_request()
+        .sort("group.groupname", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .await
+        .expect("class permissions request builder should succeed");
+    assert_eq!(class_permission_page.items[0].permission.group_id, 10);
+
+    let namespace = client
+        .namespaces()
+        .select(7)
+        .await
+        .expect("namespace lookup should succeed");
+    let namespace_permission_page = namespace
+        .permissions_request()
+        .sort("group.groupname", SortDirection::Asc)
+        .limit(1)
+        .page()
+        .await
+        .expect("namespace permissions request builder should succeed");
+    assert_eq!(namespace_permission_page.items[0].permission.group_id, 10);
+
+    let namespace_user_permission_page = namespace
+        .user_permissions_request(11)
+        .sort("group.groupname", SortDirection::Desc)
+        .limit(1)
+        .page()
+        .await
+        .expect("namespace user permissions request builder should succeed");
+    assert_eq!(
+        namespace_user_permission_page.items[0].permission.group_id,
+        10
+    );
+
+    user_by_id.assert_calls(1);
+    user_groups.assert_calls(1);
+    user_tokens.assert_calls(1);
+    group_by_id.assert_calls(1);
+    group_members.assert_calls(1);
+    class_by_id.assert_calls(1);
+    class_objects.assert_calls(1);
+    class_permissions.assert_calls(1);
+    namespace_by_id.assert_calls(1);
+    namespace_permissions.assert_calls(1);
+    namespace_user_permissions.assert_calls(1);
+}
+
+#[test]
 fn sync_supports_class_and_namespace_permission_endpoints() {
     let server = MockServer::start();
     mock_login(&server);

@@ -166,6 +166,7 @@ mod parity_contract {
             let _ = $module::FilterBuilder::<Class>::add_json_path_lt::<Vec<&str>, &str, i32>;
             let _ = $module::FilterBuilder::<Class>::sort_by::<&str>;
             let _ = $module::FilterBuilder::<Class>::order_by::<&str>;
+            let _ = $module::FilterBuilder::<Class>::sort::<&str>;
             let _ = $module::FilterBuilder::<Class>::sort_by_fields::<
                 Vec<(&str, crate::types::SortDirection)>,
                 &str,
@@ -204,9 +205,11 @@ mod parity_contract {
     macro_rules! assert_handle_extension_surface {
         ($module:ident) => {
             let _ = $module::Handle::<Class>::objects;
+            let _ = $module::Handle::<Class>::objects_query;
             let _ = $module::Handle::<Class>::object_by_name;
             let _ = $module::Handle::<Class>::delete;
             let _ = $module::Handle::<Class>::permissions;
+            let _ = $module::Handle::<Class>::permissions_request;
             let _ = $module::Handle::<Class>::relations;
             let _ = $module::Handle::<Class>::relation;
             let _ = $module::Handle::<Class>::create_relation;
@@ -220,13 +223,17 @@ mod parity_contract {
             let _ = $module::Handle::<Object>::delete_relation_to;
 
             let _ = $module::Handle::<User>::groups;
+            let _ = $module::Handle::<User>::groups_request;
             let _ = $module::Handle::<User>::tokens;
+            let _ = $module::Handle::<User>::tokens_request;
 
             let _ = $module::Handle::<Group>::add_user;
             let _ = $module::Handle::<Group>::remove_user;
             let _ = $module::Handle::<Group>::members;
+            let _ = $module::Handle::<Group>::members_request;
 
             let _ = $module::Handle::<Namespace>::permissions;
+            let _ = $module::Handle::<Namespace>::permissions_request;
             let _ = $module::Handle::<Namespace>::group_permissions;
             let _ = $module::Handle::<Namespace>::replace_permissions;
             let _ = $module::Handle::<Namespace>::grant_permissions;
@@ -235,6 +242,7 @@ mod parity_contract {
             let _ = $module::Handle::<Namespace>::grant_permission;
             let _ = $module::Handle::<Namespace>::revoke_permission;
             let _ = $module::Handle::<Namespace>::user_permissions;
+            let _ = $module::Handle::<Namespace>::user_permissions_request;
             let _ = $module::Handle::<Namespace>::groups_with_permission;
         };
     }

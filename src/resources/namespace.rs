@@ -34,6 +34,17 @@ pub struct NamespaceResource {
 }
 
 impl SyncHandle<Namespace> {
+    pub fn permissions_request(&self) -> SyncCursorRequest<GroupPermissionsResult> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::NamespacePermissions,
+            vec![(
+                Cow::Borrowed("namespace_id"),
+                self.resource().id.to_string().into(),
+            )],
+        )
+    }
+
     pub fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
         let url_params = vec![(
             Cow::Borrowed("namespace_id"),
@@ -248,6 +259,23 @@ impl SyncHandle<Namespace> {
         Ok(res.unwrap_or_default())
     }
 
+    pub fn user_permissions_request(
+        &self,
+        user_id: i32,
+    ) -> SyncCursorRequest<GroupPermissionsResult> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::NamespaceUserPermissions,
+            vec![
+                (
+                    Cow::Borrowed("namespace_id"),
+                    self.resource().id.to_string().into(),
+                ),
+                (Cow::Borrowed("user_id"), user_id.to_string().into()),
+            ],
+        )
+    }
+
     pub fn groups_with_permission(&self, permission: Permissions) -> SyncCursorRequest<Group> {
         SyncCursorRequest::new(
             self.client().clone(),
@@ -264,6 +292,17 @@ impl SyncHandle<Namespace> {
 }
 
 impl AsyncHandle<Namespace> {
+    pub fn permissions_request(&self) -> AsyncCursorRequest<GroupPermissionsResult> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::NamespacePermissions,
+            vec![(
+                Cow::Borrowed("namespace_id"),
+                self.resource().id.to_string().into(),
+            )],
+        )
+    }
+
     pub async fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
         let url_params = vec![(
             Cow::Borrowed("namespace_id"),
@@ -493,6 +532,23 @@ impl AsyncHandle<Namespace> {
             .await?;
 
         Ok(res.unwrap_or_default())
+    }
+
+    pub fn user_permissions_request(
+        &self,
+        user_id: i32,
+    ) -> AsyncCursorRequest<GroupPermissionsResult> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::NamespaceUserPermissions,
+            vec![
+                (
+                    Cow::Borrowed("namespace_id"),
+                    self.resource().id.to_string().into(),
+                ),
+                (Cow::Borrowed("user_id"), user_id.to_string().into()),
+            ],
+        )
     }
 
     pub fn groups_with_permission(&self, permission: Permissions) -> AsyncCursorRequest<Group> {

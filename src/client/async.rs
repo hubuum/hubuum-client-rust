@@ -932,6 +932,10 @@ impl<T: ApiResource> QueryOp<T> {
         self
     }
 
+    pub fn sort<S: AsRef<str>>(self, field: S, direction: SortDirection) -> Self {
+        self.sort_by(format!("{}.{}", field.as_ref(), direction))
+    }
+
     pub fn sort_by_fields<I, S>(self, fields: I) -> Self
     where
         I: IntoIterator<Item = (S, SortDirection)>,
@@ -1029,6 +1033,10 @@ impl<T> CursorRequest<T> {
         self.query_params
             .push(QueryFilter::raw("order_by", sort.to_string()));
         self
+    }
+
+    pub fn sort<S: AsRef<str>>(self, field: S, direction: SortDirection) -> Self {
+        self.sort_by(format!("{}.{}", field.as_ref(), direction))
     }
 
     pub fn sort_by_fields<I, S>(self, fields: I) -> Self
