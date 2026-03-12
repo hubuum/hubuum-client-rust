@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  verify:
+    name: Verify Release Metadata
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release.outputs.release_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Resolve Release Tag
+        id: release
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            version="$(sed -nE 's/^version = "([^"]+)"/\1/p' Cargo.toml | head -n1)"
+            echo "release_tag=v${version}" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check Release Metadata
+        run: ./scripts/check-release.sh "${{ steps.release.outputs.release_tag }}"
+
+      - name: Check Workspace
+        run: cargo check --workspace --locked
+
+      - name: List hubuum_client_derive Package Contents
+        run: cargo package --list -p hubuum_client_derive
+
+      - name: List hubuum_client Package Contents
+        run: cargo package --list -p hubuum_client
+
+  publish-hubuum-client-derive:
+    name: Publish hubuum_client_derive
+    runs-on: ubuntu-latest
+    needs: verify
+    if: github.event_name == 'push'
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Authenticate to crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Publish hubuum_client_derive
+        run: cargo publish -p hubuum_client_derive --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  publish-hubuum-client:
+    name: Publish hubuum_client
+    runs-on: ubuntu-latest
+    needs: publish-hubuum-client-derive
+    if: github.event_name == 'push'
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Authenticate to crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Wait for hubuum_client_derive to appear in the index
+        run: |
+          version="$(sed -nE 's/^version = "([^"]+)"/\1/p' hubuum_client_derive/Cargo.toml | head -n1)"
+          for attempt in $(seq 1 30); do
+            if cargo search hubuum_client_derive --limit 1 | grep -Fq "hubuum_client_derive = \"${version}\""; then
+              exit 0
+            fi
+            echo "hubuum_client_derive ${version} is not visible yet (attempt ${attempt}/30)"
+            sleep 10
+          done
+          echo "Timed out waiting for hubuum_client_derive ${version} to reach the index" >&2
+          exit 1
+
+      - name: Publish hubuum_client
+        run: cargo publish -p hubuum_client --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

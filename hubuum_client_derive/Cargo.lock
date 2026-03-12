@@ -3,8 +3,8 @@
 version = 4
 
 [[package]]
-name = "api_resource_derive"
-version = "0.1.0"
+name = "hubuum_client_derive"
+version = "0.0.1"
 dependencies = [
  "proc-macro2",
  "quote",

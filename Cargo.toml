@@ -1,13 +1,23 @@
+[workspace]
+members = ["hubuum_client_derive"]
+
 [package]
 name = "hubuum_client"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
+license = "MIT"
+description = "Rust client library for the Hubuum API with synchronous and asynchronous interfaces."
+repository = "https://github.com/terjekv/hubuum-client-rust"
+documentation = "https://docs.rs/hubuum_client"
+readme = "README.md"
+keywords = ["hubuum", "api", "client", "async"]
+categories = ["api-bindings"]
 
 [features]
 integration-tests = []
 
 [dependencies]
-api_resource_derive = { path = "./api_resource_derive" }
+hubuum_client_derive = { version = "0.0.1", path = "./hubuum_client_derive" }
 reqwest = { version = "0", features = ["json", "blocking"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

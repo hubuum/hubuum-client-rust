@@ -32,7 +32,7 @@ fn pluralize(name: &syn::Ident) -> String {
 }
 
 #[proc_macro_derive(ApiResource, attributes(endpoint, api))]
-pub fn api_resource_derive(input: TokenStream) -> TokenStream {
+pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
 

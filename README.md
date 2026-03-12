@@ -30,7 +30,14 @@ A Rust client library for interacting with the Hubuum API. The library is design
 
 ## Installation
 
-Add the dependency to your project's Cargo.toml (not yet available from `crates.io`):
+Add the dependency to your project's `Cargo.toml`:
+
+```toml
+[dependencies]
+hubuum_client = "0.0.1"
+```
+
+If you need unreleased changes, you can still point Cargo at the Git repository:
 
 ```toml
 [dependencies]
@@ -250,6 +257,8 @@ docker login ghcr.io
 ## Contributing
 
 Contributions are welcome! If you find issues or have suggestions for improvements, please open an issue or submit a pull request on GitHub.
+
+Release notes live in `CHANGELOG.md`, and the release procedure for crates.io publishing is documented in `RELEASING.md`.
 
 ## License
 

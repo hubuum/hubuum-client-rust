@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use api_resource_derive::ApiResource;
+use hubuum_client_derive::ApiResource;
 
 use crate::{
     client::{

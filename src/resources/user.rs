@@ -1,4 +1,4 @@
-use api_resource_derive::ApiResource;
+use hubuum_client_derive::ApiResource;
 
 use std::borrow::Cow;
 
