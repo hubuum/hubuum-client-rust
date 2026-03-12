@@ -119,15 +119,14 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
-            .query_param("id__equals", CLASS_ID.to_string())
+            .path("/api/v1/classes/1")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(200).json_body(json!([class_json()]));
+        then.status(200).json_body(json!(class_json()));
     });
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/")
+            .path("/api/v1/classes")
             .query_param("name__equals", CLASS_NAME)
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200).json_body(json!([class_json()]));
@@ -157,10 +156,9 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/groups/")
-            .query_param("id__equals", GROUP_ID.to_string())
+            .path("/api/v1/iam/groups/10")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(200).json_body(json!([group_json()]));
+        then.status(200).json_body(json!(group_json()));
     });
 
     server.mock(|when, then| {
@@ -186,10 +184,9 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/")
-            .query_param("id__equals", NAMESPACE_ID.to_string())
+            .path("/api/v1/namespaces/3")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(200).json_body(json!([namespace_json()]));
+        then.status(200).json_body(json!(namespace_json()));
     });
 
     server.mock(|when, then| {
@@ -203,11 +200,19 @@ fn setup_scenario_mocks(server: &MockServer) {
     });
 
     server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1/namespaces/3/permissions/group/10")
+            .json_body(json!(["ReadCollection"]))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200);
+    });
+
+    server.mock(|when, then| {
         when.method(POST)
             .path("/api/v1/namespaces/3/permissions/group/10")
             .json_body(json!(["ReadCollection"]))
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(204);
+        then.status(201);
     });
 }
 
@@ -240,6 +245,10 @@ fn run_shared_scenario_sync(client: &SyncClient<Authenticated>) -> Result<(), Ap
             .len(),
         1
     );
+    client
+        .namespaces()
+        .select(NAMESPACE_ID)?
+        .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])?;
     client
         .namespaces()
         .select(NAMESPACE_ID)?
@@ -312,6 +321,12 @@ async fn run_shared_scenario_async(client: &AsyncClient<Authenticated>) -> Resul
             .len(),
         1
     );
+    client
+        .namespaces()
+        .select(NAMESPACE_ID)
+        .await?
+        .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])
+        .await?;
     client
         .namespaces()
         .select(NAMESPACE_ID)

@@ -4,8 +4,14 @@ use api_resource_derive::ApiResource;
 
 use crate::{
     client::{
-        r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle},
-        sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
+        r#async::{
+            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+            Handle as AsyncHandle,
+        },
+        sync::{
+            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+            Handle as SyncHandle,
+        },
     },
     endpoints::Endpoint,
     types::HubuumDateTime,
@@ -17,13 +23,11 @@ use crate::{
 pub struct GroupResource {
     #[api(read_only)]
     pub id: i32,
-    #[api(table_rename = "Name")]
     pub groupname: String,
-    #[api(table_rename = "Description")]
     pub description: String,
-    #[api(read_only, table_rename = "Created")]
+    #[api(read_only)]
     pub created_at: HubuumDateTime,
-    #[api(read_only, table_rename = "Updated")]
+    #[api(read_only)]
     pub updated_at: HubuumDateTime,
 }
 
@@ -90,6 +94,17 @@ impl SyncHandle<Group> {
                 .map(|user| SyncHandle::new(self.client().clone(), user))
                 .collect()),
         }
+    }
+
+    pub fn members_request(&self) -> SyncCursorRequest<User> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::GroupMembers,
+            vec![(
+                Cow::Borrowed("group_id"),
+                self.resource().id.to_string().into(),
+            )],
+        )
     }
 }
 
@@ -159,5 +174,16 @@ impl AsyncHandle<Group> {
                 .map(|user| AsyncHandle::new(self.client().clone(), user))
                 .collect()),
         }
+    }
+
+    pub fn members_request(&self) -> AsyncCursorRequest<User> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::GroupMembers,
+            vec![(
+                Cow::Borrowed("group_id"),
+                self.resource().id.to_string().into(),
+            )],
+        )
     }
 }

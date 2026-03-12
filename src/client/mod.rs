@@ -10,6 +10,7 @@ pub mod sync;
 mod tests;
 
 pub use self::r#async::Client as AsyncClient;
+pub use self::shared::Page;
 pub use self::sync::Client as SyncClient;
 
 use crate::resources::ApiResource;
@@ -60,7 +61,9 @@ mod parity_contract {
         r#async as async_client, sync as sync_client, Authenticated, IntoResourceFilter,
         Unauthenticated,
     };
-    use crate::resources::{Class, ClassRelation, Group, Namespace, Object, ObjectRelation, User};
+    use crate::resources::{
+        Class, ClassRelation, Group, Namespace, Object, ObjectRelation, ReportTemplate, User,
+    };
     use crate::{types::BaseUrl, QueryFilter};
 
     struct DummyFilter;
@@ -98,12 +101,30 @@ mod parity_contract {
                 $module::Client::<Authenticated>::namespaces;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<Group> =
                 $module::Client::<Authenticated>::groups;
+            let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ReportTemplate> =
+                $module::Client::<Authenticated>::templates;
             let _: fn(&$module::Client<Authenticated>, i32) -> $module::Resource<Object> =
                 $module::Client::<Authenticated>::objects;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ClassRelation> =
                 $module::Client::<Authenticated>::class_relation;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ObjectRelation> =
                 $module::Client::<Authenticated>::object_relation;
+            let _ = $module::Client::<Authenticated>::reports;
+            let _ = $module::Client::<Authenticated>::imports;
+            let _ = $module::Client::<Authenticated>::tasks;
+        };
+    }
+
+    macro_rules! assert_authenticated_client_auth_surface {
+        ($module:ident) => {
+            let _ = $module::Client::<Authenticated>::get_token;
+            let _ = $module::Client::<Authenticated>::logout;
+            let _ = $module::Client::<Authenticated>::logout_token;
+            let _ = $module::Client::<Authenticated>::logout_user;
+            let _ = $module::Client::<Authenticated>::logout_all;
+            let _ = $module::Client::<Authenticated>::meta_counts;
+            let _ = $module::Client::<Authenticated>::meta_db;
+            let _ = $module::Client::<Authenticated>::meta_tasks;
         };
     }
 
@@ -111,8 +132,51 @@ mod parity_contract {
         ($module:ident) => {
             let _ = $module::FilterBuilder::<Class>::add_filter::<i32>;
             let _ = $module::FilterBuilder::<Class>::add_filter_equals::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_equals::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_iequals::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_iequals::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_contains::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_contains::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_icontains::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_icontains::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_startswith::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_startswith::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_istartswith::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_istartswith::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_endswith::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_endswith::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_iendswith::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_iendswith::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_like::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_like::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_regex::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_regex::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_gt::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_gt::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_gte::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_gte::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_lt::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_lt::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_lte::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_lte::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_between::<i32>;
+            let _ = $module::FilterBuilder::<Class>::add_filter_not_between::<i32>;
             let _ = $module::FilterBuilder::<Class>::add_filter_id::<i32>;
             let _ = $module::FilterBuilder::<Class>::add_filter_name_exact::<&str>;
+            let _ = $module::FilterBuilder::<Class>::add_json_path_lt::<Vec<&str>, &str, i32>;
+            let _ = $module::FilterBuilder::<Class>::sort_by::<&str>;
+            let _ = $module::FilterBuilder::<Class>::order_by::<&str>;
+            let _ = $module::FilterBuilder::<Class>::sort::<&str>;
+            let _ = $module::FilterBuilder::<Class>::sort_by_fields::<
+                Vec<(&str, crate::types::SortDirection)>,
+                &str,
+            >;
+            let _ = $module::FilterBuilder::<Class>::limit;
+            let _ = $module::FilterBuilder::<Class>::cursor::<&str>;
+            let _ = $module::FilterBuilder::<Class>::list;
+            let _ = $module::FilterBuilder::<Class>::page;
+            let _ = $module::FilterBuilder::<Class>::one;
+            let _ = $module::FilterBuilder::<Class>::optional;
             let _ = $module::FilterBuilder::<Class>::execute;
             let _ = $module::FilterBuilder::<Class>::execute_expecting_single_result;
         };
@@ -141,15 +205,45 @@ mod parity_contract {
     macro_rules! assert_handle_extension_surface {
         ($module:ident) => {
             let _ = $module::Handle::<Class>::objects;
+            let _ = $module::Handle::<Class>::objects_query;
             let _ = $module::Handle::<Class>::object_by_name;
             let _ = $module::Handle::<Class>::delete;
+            let _ = $module::Handle::<Class>::permissions;
+            let _ = $module::Handle::<Class>::permissions_request;
+            let _ = $module::Handle::<Class>::relations;
+            let _ = $module::Handle::<Class>::relation;
+            let _ = $module::Handle::<Class>::create_relation;
+            let _ = $module::Handle::<Class>::delete_relation;
+            let _ = $module::Handle::<Class>::transitive_relations;
+            let _ = $module::Handle::<Class>::transitive_relations_to;
+
+            let _ = $module::Handle::<Object>::related_objects;
+            let _ = $module::Handle::<Object>::relation_to;
+            let _ = $module::Handle::<Object>::create_relation_to;
+            let _ = $module::Handle::<Object>::delete_relation_to;
+
+            let _ = $module::Handle::<User>::groups;
+            let _ = $module::Handle::<User>::groups_request;
+            let _ = $module::Handle::<User>::tokens;
+            let _ = $module::Handle::<User>::tokens_request;
 
             let _ = $module::Handle::<Group>::add_user;
             let _ = $module::Handle::<Group>::remove_user;
             let _ = $module::Handle::<Group>::members;
+            let _ = $module::Handle::<Group>::members_request;
 
             let _ = $module::Handle::<Namespace>::permissions;
+            let _ = $module::Handle::<Namespace>::permissions_request;
+            let _ = $module::Handle::<Namespace>::group_permissions;
+            let _ = $module::Handle::<Namespace>::replace_permissions;
             let _ = $module::Handle::<Namespace>::grant_permissions;
+            let _ = $module::Handle::<Namespace>::revoke_permissions;
+            let _ = $module::Handle::<Namespace>::has_group_permission;
+            let _ = $module::Handle::<Namespace>::grant_permission;
+            let _ = $module::Handle::<Namespace>::revoke_permission;
+            let _ = $module::Handle::<Namespace>::user_permissions;
+            let _ = $module::Handle::<Namespace>::user_permissions_request;
+            let _ = $module::Handle::<Namespace>::groups_with_permission;
         };
     }
 
@@ -160,6 +254,8 @@ mod parity_contract {
 
         assert_client_resource_accessors!(sync_client);
         assert_client_resource_accessors!(async_client);
+        assert_authenticated_client_auth_surface!(sync_client);
+        assert_authenticated_client_auth_surface!(async_client);
 
         assert_filter_builder_surface!(sync_client);
         assert_filter_builder_surface!(async_client);
