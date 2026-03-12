@@ -7,8 +7,9 @@ use rstest::rstest;
 use serde_json::json;
 
 use crate::support::clients::{
-    async_admin_context, create_async_group, create_async_object, create_async_permission_sandbox,
-    create_async_user, is_unsupported_query_operator, login_async, AsyncHarness,
+    async_admin_context, create_async_group, create_async_loginable_user, create_async_object,
+    create_async_permission_sandbox, create_async_user, is_unsupported_query_operator, login_async,
+    AsyncHarness,
 };
 use crate::support::naming::unique_case_prefix;
 use crate::support::probe::ADMIN_USERNAME;
@@ -358,8 +359,14 @@ fn async_auth_logout_token_revokes_target_token() {
     let controller = runtime
         .block_on(login_async(base_url.clone(), &stack.admin_password))
         .expect("failed to login controller client");
+    let target = runtime
+        .block_on(create_async_loginable_user(
+            &controller,
+            "async-auth-logout-token-target",
+        ))
+        .expect("failed to create revocation target");
     let revoked = runtime
-        .block_on(login_async(base_url, &stack.admin_password))
+        .block_on(target.login_async(base_url))
         .expect("failed to login revocation target");
 
     runtime
@@ -385,20 +392,23 @@ fn async_auth_logout_user_revokes_user_tokens() {
     let controller = runtime
         .block_on(login_async(base_url.clone(), &stack.admin_password))
         .expect("failed to login controller client");
+    let target = runtime
+        .block_on(create_async_loginable_user(
+            &controller,
+            "async-auth-logout-user-target",
+        ))
+        .expect("failed to create revocation target");
     let revoked = runtime
-        .block_on(login_async(base_url, &stack.admin_password))
+        .block_on(target.login_async(base_url))
         .expect("failed to login revocation target");
-    let (admin_id, _) = runtime
-        .block_on(async_admin_context(&controller))
-        .expect("failed to lookup admin context");
 
     runtime
-        .block_on(controller.logout_user(admin_id))
+        .block_on(controller.logout_user(target.user_id))
         .expect("async logout_user failed");
 
     let err = runtime
         .block_on(revoked.meta_counts())
-        .expect_err("logout_user should revoke existing admin tokens");
+        .expect_err("logout_user should revoke existing user tokens");
     assert_auth_token_revoked(err);
 }
 
@@ -412,11 +422,20 @@ fn async_auth_logout_all_revokes_existing_tokens() {
         .expect("stack base URL should parse as BaseUrl");
     let runtime = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
 
-    let controller = runtime
+    let admin = runtime
         .block_on(login_async(base_url.clone(), &stack.admin_password))
+        .expect("failed to login admin client");
+    let target = runtime
+        .block_on(create_async_loginable_user(
+            &admin,
+            "async-auth-logout-all-target",
+        ))
+        .expect("failed to create revocation target");
+    let controller = runtime
+        .block_on(target.login_async(base_url.clone()))
         .expect("failed to login controller client");
     let revoked = runtime
-        .block_on(login_async(base_url, &stack.admin_password))
+        .block_on(target.login_async(base_url))
         .expect("failed to login revocation target");
 
     runtime

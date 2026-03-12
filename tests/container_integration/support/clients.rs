@@ -9,6 +9,37 @@ use crate::support::naming::unique_case_prefix;
 use crate::support::probe::ADMIN_USERNAME;
 use crate::support::stack::IntegrationStack;
 
+#[derive(Clone)]
+pub(crate) struct TestUserCredentials {
+    pub(crate) user_id: i32,
+    username: String,
+    password: String,
+}
+
+impl TestUserCredentials {
+    pub(crate) fn login_sync(
+        &self,
+        base_url: BaseUrl,
+    ) -> Result<SyncClient<Authenticated>, ApiError> {
+        SyncClient::new(base_url).login(Credentials::new(
+            self.username.clone(),
+            self.password.clone(),
+        ))
+    }
+
+    pub(crate) async fn login_async(
+        &self,
+        base_url: BaseUrl,
+    ) -> Result<AsyncClient<Authenticated>, ApiError> {
+        AsyncClient::new(base_url)
+            .login(Credentials::new(
+                self.username.clone(),
+                self.password.clone(),
+            ))
+            .await
+    }
+}
+
 pub(crate) fn login_sync(
     base_url: BaseUrl,
     admin_password: &str,
@@ -135,6 +166,26 @@ pub(crate) fn create_sync_user(
     Ok((username, user.id))
 }
 
+pub(crate) fn create_sync_loginable_user(
+    client: &SyncClient<Authenticated>,
+    case: &str,
+) -> Result<TestUserCredentials, ApiError> {
+    let prefix = unique_case_prefix(case);
+    let username = format!("{prefix}-user");
+    let password = format!("{prefix}-Passw0rd!");
+    let user = client.users().create_raw(UserPost {
+        username: username.clone(),
+        password: password.clone(),
+        email: Some(format!("{prefix}@example.test")),
+    })?;
+
+    Ok(TestUserCredentials {
+        user_id: user.id,
+        username,
+        password,
+    })
+}
+
 pub(crate) fn create_sync_group(
     client: &SyncClient<Authenticated>,
     case: &str,
@@ -188,6 +239,29 @@ pub(crate) async fn create_async_user(
         .await?;
 
     Ok((username, user.id))
+}
+
+pub(crate) async fn create_async_loginable_user(
+    client: &AsyncClient<Authenticated>,
+    case: &str,
+) -> Result<TestUserCredentials, ApiError> {
+    let prefix = unique_case_prefix(case);
+    let username = format!("{prefix}-user");
+    let password = format!("{prefix}-Passw0rd!");
+    let user = client
+        .users()
+        .create_raw(UserPost {
+            username: username.clone(),
+            password: password.clone(),
+            email: Some(format!("{prefix}@example.test")),
+        })
+        .await?;
+
+    Ok(TestUserCredentials {
+        user_id: user.id,
+        username,
+        password,
+    })
 }
 
 pub(crate) async fn create_async_group(

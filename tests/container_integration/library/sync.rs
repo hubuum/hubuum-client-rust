@@ -7,8 +7,9 @@ use rstest::rstest;
 use serde_json::json;
 
 use crate::support::clients::{
-    create_sync_group, create_sync_object, create_sync_permission_sandbox, create_sync_user,
-    is_unsupported_query_operator, login_sync, sync_admin_context, SyncHarness,
+    create_sync_group, create_sync_loginable_user, create_sync_object,
+    create_sync_permission_sandbox, create_sync_user, is_unsupported_query_operator, login_sync,
+    sync_admin_context, SyncHarness,
 };
 use crate::support::naming::unique_case_prefix;
 use crate::support::probe::ADMIN_USERNAME;
@@ -328,8 +329,11 @@ fn sync_auth_logout_token_revokes_target_token() {
 
     let controller = login_sync(base_url.clone(), &stack.admin_password)
         .expect("failed to login controller client");
-    let revoked =
-        login_sync(base_url, &stack.admin_password).expect("failed to login revocation target");
+    let target = create_sync_loginable_user(&controller, "sync-auth-logout-token-target")
+        .expect("failed to create revocation target");
+    let revoked = target
+        .login_sync(base_url)
+        .expect("failed to login revocation target");
 
     controller
         .logout_token(revoked.get_token())
@@ -352,17 +356,19 @@ fn sync_auth_logout_user_revokes_user_tokens() {
 
     let controller = login_sync(base_url.clone(), &stack.admin_password)
         .expect("failed to login controller client");
-    let revoked =
-        login_sync(base_url, &stack.admin_password).expect("failed to login revocation target");
-    let (admin_id, _) = sync_admin_context(&controller).expect("failed to lookup admin context");
+    let target = create_sync_loginable_user(&controller, "sync-auth-logout-user-target")
+        .expect("failed to create revocation target");
+    let revoked = target
+        .login_sync(base_url)
+        .expect("failed to login revocation target");
 
     controller
-        .logout_user(admin_id)
+        .logout_user(target.user_id)
         .expect("sync logout_user failed");
 
     let err = revoked
         .meta_counts()
-        .expect_err("logout_user should revoke existing admin tokens");
+        .expect_err("logout_user should revoke existing user tokens");
     assert_auth_token_revoked(err);
 }
 
@@ -375,10 +381,16 @@ fn sync_auth_logout_all_revokes_existing_tokens() {
         .parse::<BaseUrl>()
         .expect("stack base URL should parse as BaseUrl");
 
-    let controller = login_sync(base_url.clone(), &stack.admin_password)
+    let admin =
+        login_sync(base_url.clone(), &stack.admin_password).expect("failed to login admin client");
+    let target = create_sync_loginable_user(&admin, "sync-auth-logout-all-target")
+        .expect("failed to create revocation target");
+    let controller = target
+        .login_sync(base_url.clone())
         .expect("failed to login controller client");
-    let revoked =
-        login_sync(base_url, &stack.admin_password).expect("failed to login revocation target");
+    let revoked = target
+        .login_sync(base_url)
+        .expect("failed to login revocation target");
 
     controller.logout_all().expect("sync logout_all failed");
 
