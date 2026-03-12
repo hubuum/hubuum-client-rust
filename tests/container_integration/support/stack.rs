@@ -12,6 +12,7 @@ const DB_PASSWORD: &str = "hubuum_password";
 const DB_NAME: &str = "hubuum";
 const DB_IMAGE_DEFAULT: &str = "postgres:15";
 const SERVER_IMAGE_DEFAULT: &str = "ghcr.io/hubuum/hubuum-server:no-tls-main";
+const CLIENT_ALLOWLIST_DEFAULT: &str = "*";
 const STACK_TIMEOUT_DEFAULT_SECS: u64 = 300;
 const EXTERNAL_BASE_URL_ENV: &str = "HUBUUM_INTEGRATION_BASE_URL";
 const EXTERNAL_ADMIN_PASSWORD_ENV: &str = "HUBUUM_INTEGRATION_ADMIN_PASSWORD";
@@ -77,6 +78,10 @@ fn stack_timeout() -> Duration {
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(STACK_TIMEOUT_DEFAULT_SECS);
     Duration::from_secs(secs)
+}
+
+fn client_allowlist() -> String {
+    std::env::var("HUBUUM_CLIENT_ALLOWLIST").unwrap_or_else(|_| CLIENT_ALLOWLIST_DEFAULT.into())
 }
 
 fn extract_admin_password(logs: &str) -> Option<String> {
@@ -278,6 +283,8 @@ impl StackInner {
             "HUBUUM_BIND_IP=0.0.0.0".to_string(),
             "-e".to_string(),
             "HUBUUM_BIND_PORT=8080".to_string(),
+            "-e".to_string(),
+            format!("HUBUUM_CLIENT_ALLOWLIST={}", client_allowlist()),
             "-e".to_string(),
             "HUBUUM_LOG_LEVEL=debug".to_string(),
             "-e".to_string(),
