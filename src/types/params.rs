@@ -1,6 +1,6 @@
 use crate::{
-    types::{HubuumDateTime, Permissions},
     ApiError,
+    types::{HubuumDateTime, Permissions},
 };
 use serde::{Deserialize, Serialize};
 

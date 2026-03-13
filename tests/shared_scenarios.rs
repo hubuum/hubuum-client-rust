@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use httpmock::prelude::*;
 use hubuum_client::{
-    types::Permissions, ApiError, AsyncClient, Authenticated, BaseUrl, Credentials, SyncClient,
+    ApiError, AsyncClient, Authenticated, BaseUrl, Credentials, SyncClient, types::Permissions,
 };
 use serde_json::json;
 

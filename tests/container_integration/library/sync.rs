@@ -1,15 +1,15 @@
 use hubuum_client::{
-    types::{FilterOperator, Permissions, SortDirection},
     ApiError, BaseUrl, ClassPost, ClassRelationPost, GroupPatch, NamespacePatch, NamespacePost,
     ObjectPatch, ObjectRelationPost, QueryFilter, SyncClient, Token, UserPatch,
+    types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
 use serde_json::json;
 
 use crate::support::clients::{
-    create_sync_group, create_sync_loginable_user, create_sync_object,
+    SyncHarness, create_sync_group, create_sync_loginable_user, create_sync_object,
     create_sync_permission_sandbox, create_sync_user, is_unsupported_query_operator, login_sync,
-    sync_admin_context, SyncHarness,
+    sync_admin_context,
 };
 use crate::support::naming::unique_case_prefix;
 use crate::support::probe::ADMIN_USERNAME;

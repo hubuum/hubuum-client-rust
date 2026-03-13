@@ -1,11 +1,11 @@
 use log::{debug, trace};
 use reqwest::blocking::Response;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::borrow::Cow;
 use std::marker::PhantomData;
 
 use super::{
-    shared, Authenticated, ClientCore, GetID, IntoResourceFilter, Unauthenticated, UrlParams,
+    Authenticated, ClientCore, GetID, IntoResourceFilter, Unauthenticated, UrlParams, shared,
 };
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;

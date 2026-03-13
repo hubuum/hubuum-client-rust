@@ -3,19 +3,19 @@ use std::borrow::Cow;
 use hubuum_client_derive::ApiResource;
 
 use crate::{
+    ApiError, FilterOperator, GroupPermissionsResult, Object, QueryFilter,
     client::{
         r#async::{
             CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
             Handle as AsyncHandle, QueryOp as AsyncQueryOp,
         },
         sync::{
-            one_or_err, CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            Handle as SyncHandle, QueryOp as SyncQueryOp,
+            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+            Handle as SyncHandle, QueryOp as SyncQueryOp, one_or_err,
         },
     },
     endpoints::Endpoint,
     types::HubuumDateTime,
-    ApiError, FilterOperator, GroupPermissionsResult, Object, QueryFilter,
 };
 
 use super::Namespace;

@@ -1,21 +1,21 @@
 use log::error;
 use reqwest::{
-    header::{HeaderMap, CONTENT_TYPE},
     StatusCode,
+    header::{CONTENT_TYPE, HeaderMap},
 };
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::any::type_name;
 use std::borrow::Cow;
 
 use super::{GetID, UrlParams};
+use crate::QueryFilter;
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::ApiResource;
 use crate::types::FilterOperator;
 use crate::types::{BaseUrl, IntoQueryTuples, ReportContentType};
-use crate::QueryFilter;
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 

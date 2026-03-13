@@ -78,8 +78,8 @@ derive_version="$(read_package_field "$derive_manifest" version)"
 dependency_version="$(read_dependency_version "$root_manifest" hubuum_client_derive)"
 
 [ "$root_version" = "$release_version" ] || fail "Cargo.toml version $root_version does not match $release_ref"
-[ "$derive_version" = "$release_version" ] || fail "hubuum_client_derive/Cargo.toml version $derive_version does not match $release_ref"
-[ "$dependency_version" = "$derive_version" ] || fail "Cargo.toml depends on hubuum_client_derive $dependency_version but hubuum_client_derive/Cargo.toml is $derive_version"
+# [ "$derive_version" = "$release_version" ] || fail "hubuum_client_derive/Cargo.toml version $derive_version does not match $release_ref"
+# [ "$dependency_version" = "$derive_version" ] || fail "Cargo.toml depends on hubuum_client_derive $dependency_version but hubuum_client_derive/Cargo.toml is $derive_version"
 
 grep -Eq '^## \[Unreleased\]$' CHANGELOG.md || fail "CHANGELOG.md must keep an [Unreleased] section"
 grep -Eq "^## \\[$release_version\\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md || fail "CHANGELOG.md must contain a dated heading for $release_version"

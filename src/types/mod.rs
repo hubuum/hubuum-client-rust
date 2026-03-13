@@ -16,10 +16,10 @@ pub use baseurl::BaseUrl;
 pub use datetime::HubuumDateTime;
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
 pub use import::{
-    ClassKey, GroupKey, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
-    ImportCollisionPolicy, ImportGraph, ImportMode, ImportNamespaceInput,
+    CURRENT_IMPORT_VERSION, ClassKey, GroupKey, ImportAtomicity, ImportClassInput,
+    ImportClassRelationInput, ImportCollisionPolicy, ImportGraph, ImportMode, ImportNamespaceInput,
     ImportNamespacePermissionInput, ImportObjectInput, ImportObjectRelationInput,
-    ImportPermissionPolicy, ImportRequest, NamespaceKey, ObjectKey, CURRENT_IMPORT_VERSION,
+    ImportPermissionPolicy, ImportRequest, NamespaceKey, ObjectKey,
 };
 pub use meta::{CountsResponse, DbStateResponse, ObjectsByClass};
 pub use params::{ClassParams, NamespacePermissionsGrantParams, UserParams};

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use crate::endpoints::Endpoint;
 use crate::QueryFilter;
+use crate::endpoints::Endpoint;
 
 pub mod r#async;
 mod shared;
@@ -58,13 +58,13 @@ pub struct Authenticated {
 #[cfg(test)]
 mod parity_contract {
     use super::{
-        r#async as async_client, sync as sync_client, Authenticated, IntoResourceFilter,
-        Unauthenticated,
+        Authenticated, IntoResourceFilter, Unauthenticated, r#async as async_client,
+        sync as sync_client,
     };
     use crate::resources::{
         Class, ClassRelation, Group, Namespace, Object, ObjectRelation, ReportTemplate, User,
     };
-    use crate::{types::BaseUrl, QueryFilter};
+    use crate::{QueryFilter, types::BaseUrl};
 
     struct DummyFilter;
 

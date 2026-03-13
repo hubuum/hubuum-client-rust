@@ -4,11 +4,11 @@ use httpmock::prelude::*;
 use serde_json::json;
 use yare::parameterized;
 
-use super::{r#async as async_client, sync as sync_client, ClientCore, UrlParams};
+use super::{ClientCore, UrlParams, r#async as async_client, sync as sync_client};
+use crate::ApiError;
 use crate::client::{Authenticated, Unauthenticated};
 use crate::endpoints::Endpoint;
 use crate::types::{BaseUrl, Credentials};
-use crate::ApiError;
 
 const USERNAME: &str = "tester";
 const PASSWORD: &str = "secret";

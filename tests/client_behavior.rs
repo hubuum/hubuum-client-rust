@@ -1627,12 +1627,16 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
     namespace
         .revoke_permissions(10)
         .expect("revoke_permissions should succeed");
-    assert!(namespace
-        .has_group_permission(10, Permissions::ReadCollection)
-        .expect("has_group_permission should succeed"));
-    assert!(!namespace
-        .has_group_permission(10, Permissions::DeleteCollection)
-        .expect("has_group_permission should map 404 to false"));
+    assert!(
+        namespace
+            .has_group_permission(10, Permissions::ReadCollection)
+            .expect("has_group_permission should succeed")
+    );
+    assert!(
+        !namespace
+            .has_group_permission(10, Permissions::DeleteCollection)
+            .expect("has_group_permission should map 404 to false")
+    );
     namespace
         .grant_permission(10, Permissions::ReadCollection)
         .expect("grant_permission should succeed");
@@ -1772,14 +1776,18 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
         .revoke_permissions(10)
         .await
         .expect("revoke_permissions should succeed");
-    assert!(namespace
-        .has_group_permission(10, Permissions::ReadCollection)
-        .await
-        .expect("has_group_permission should succeed"));
-    assert!(!namespace
-        .has_group_permission(10, Permissions::DeleteCollection)
-        .await
-        .expect("has_group_permission should map 404 to false"));
+    assert!(
+        namespace
+            .has_group_permission(10, Permissions::ReadCollection)
+            .await
+            .expect("has_group_permission should succeed")
+    );
+    assert!(
+        !namespace
+            .has_group_permission(10, Permissions::DeleteCollection)
+            .await
+            .expect("has_group_permission should map 404 to false")
+    );
     namespace
         .grant_permission(10, Permissions::ReadCollection)
         .await

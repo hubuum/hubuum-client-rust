@@ -40,13 +40,13 @@ pub use client::{
 pub use errors::ApiError;
 pub use resources::*;
 pub use types::{
-    BaseUrl, ClassKey, ClassParams, CountsResponse, Credentials, DbStateResponse, GroupKey,
-    ImportAtomicity, ImportClassInput, ImportClassRelationInput, ImportCollisionPolicy,
-    ImportGraph, ImportMode, ImportNamespaceInput, ImportNamespacePermissionInput,
-    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportRequest,
-    ImportTaskDetails, ImportTaskResultResponse, NamespaceKey, ObjectKey, ReportContentType,
-    ReportJsonResponse, ReportLimits, ReportMeta, ReportMissingDataPolicy, ReportOutputRequest,
-    ReportRequest, ReportResult, ReportScope, ReportScopeKind, ReportWarning, TaskDetails,
-    TaskEventResponse, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse,
-    TaskStatus, Token, UserParams, CURRENT_IMPORT_VERSION,
+    BaseUrl, CURRENT_IMPORT_VERSION, ClassKey, ClassParams, CountsResponse, Credentials,
+    DbStateResponse, GroupKey, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
+    ImportCollisionPolicy, ImportGraph, ImportMode, ImportNamespaceInput,
+    ImportNamespacePermissionInput, ImportObjectInput, ImportObjectRelationInput,
+    ImportPermissionPolicy, ImportRequest, ImportTaskDetails, ImportTaskResultResponse,
+    NamespaceKey, ObjectKey, ReportContentType, ReportJsonResponse, ReportLimits, ReportMeta,
+    ReportMissingDataPolicy, ReportOutputRequest, ReportRequest, ReportResult, ReportScope,
+    ReportScopeKind, ReportWarning, TaskDetails, TaskEventResponse, TaskKind, TaskLinks,
+    TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, UserParams,
 };

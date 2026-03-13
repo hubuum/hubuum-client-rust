@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use hubuum_client_derive::ApiResource;
 
 use crate::{
+    ApiError, User,
     client::{
         r#async::{
             CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
@@ -15,7 +16,6 @@ use crate::{
     },
     endpoints::Endpoint,
     types::HubuumDateTime,
-    ApiError, User,
 };
 
 #[allow(dead_code)]

@@ -1,6 +1,6 @@
 use rstest::rstest;
 
-use crate::support::probe::{fetch_admin_ids, login_token, ADMIN_USERNAME};
+use crate::support::probe::{ADMIN_USERNAME, fetch_admin_ids, login_token};
 use crate::support::stack::IntegrationStack;
 
 #[derive(Clone, Copy)]
