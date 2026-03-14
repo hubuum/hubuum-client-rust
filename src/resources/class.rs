@@ -7,11 +7,12 @@ use crate::{
     client::{
         r#async::{
             CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-            Handle as AsyncHandle, QueryOp as AsyncQueryOp,
+            GraphRequest as AsyncGraphRequest, Handle as AsyncHandle, QueryOp as AsyncQueryOp,
         },
         sync::{
             CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            Handle as SyncHandle, QueryOp as SyncQueryOp, one_or_err,
+            GraphRequest as SyncGraphRequest, Handle as SyncHandle, QueryOp as SyncQueryOp,
+            one_or_err,
         },
     },
     endpoints::Endpoint,
@@ -58,11 +59,22 @@ pub struct ClassRelationResource {
 }
 
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-pub struct ClassRelationTransitive {
-    pub ancestor_class_id: i32,
-    pub descendant_class_id: i32,
-    pub depth: i32,
-    pub path: Vec<Option<i32>>,
+pub struct ClassWithPath {
+    pub id: i32,
+    pub name: String,
+    pub namespace_id: i32,
+    pub description: String,
+    pub json_schema: serde_json::Value,
+    pub validate_schema: bool,
+    pub created_at: HubuumDateTime,
+    pub updated_at: HubuumDateTime,
+    pub path: Vec<i32>,
+}
+
+#[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
+pub struct RelatedClassGraph {
+    pub classes: Vec<ClassWithPath>,
+    pub relations: Vec<ClassRelation>,
 }
 
 impl SyncHandle<Class> {
@@ -135,10 +147,26 @@ impl SyncHandle<Class> {
         )
     }
 
-    pub fn relations(&self) -> SyncCursorRequest<ClassRelation> {
+    pub fn related_classes(&self) -> SyncCursorRequest<ClassWithPath> {
         SyncCursorRequest::new(
             self.client().clone(),
-            Endpoint::ClassScopedRelations,
+            Endpoint::ClassRelatedClasses,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
+    }
+
+    pub fn related_relations(&self) -> SyncCursorRequest<ClassRelation> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassRelatedRelations,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
+    }
+
+    pub fn related_graph(&self) -> SyncGraphRequest<RelatedClassGraph> {
+        SyncGraphRequest::new(
+            self.client().clone(),
+            Endpoint::ClassRelatedGraph,
             vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
         )
     }
@@ -164,7 +192,7 @@ impl SyncHandle<Class> {
         self.client()
             .request_with_endpoint::<NewClassRelationFromClassParams, ClassRelation>(
                 reqwest::Method::POST,
-                &Endpoint::ClassScopedRelations,
+                &Endpoint::ClassRelationsFromClass,
                 vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
                 vec![],
                 NewClassRelationFromClassParams {
@@ -180,7 +208,7 @@ impl SyncHandle<Class> {
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,
-                &Endpoint::ClassScopedRelationById,
+                &Endpoint::ClassRelationFromClassById,
                 vec![
                     (Cow::Borrowed("class_id"), self.id().to_string().into()),
                     (Cow::Borrowed("relation_id"), relation_id.to_string().into()),
@@ -189,28 +217,6 @@ impl SyncHandle<Class> {
                 SyncEmptyPostParams {},
             )?;
         Ok(())
-    }
-
-    pub fn transitive_relations(&self) -> SyncCursorRequest<ClassRelationTransitive> {
-        SyncCursorRequest::new(
-            self.client().clone(),
-            Endpoint::ClassRelationsTransitive,
-            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
-        )
-    }
-
-    pub fn transitive_relations_to(
-        &self,
-        class_id: i32,
-    ) -> SyncCursorRequest<ClassRelationTransitive> {
-        SyncCursorRequest::new(
-            self.client().clone(),
-            Endpoint::ClassRelationsTransitiveTo,
-            vec![
-                (Cow::Borrowed("class_id"), self.id().to_string().into()),
-                (Cow::Borrowed("class_id_to"), class_id.to_string().into()),
-            ],
-        )
     }
 }
 
@@ -266,10 +272,26 @@ impl AsyncHandle<Class> {
         )
     }
 
-    pub fn relations(&self) -> AsyncCursorRequest<ClassRelation> {
+    pub fn related_classes(&self) -> AsyncCursorRequest<ClassWithPath> {
         AsyncCursorRequest::new(
             self.client().clone(),
-            Endpoint::ClassScopedRelations,
+            Endpoint::ClassRelatedClasses,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
+    }
+
+    pub fn related_relations(&self) -> AsyncCursorRequest<ClassRelation> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ClassRelatedRelations,
+            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
+        )
+    }
+
+    pub fn related_graph(&self) -> AsyncGraphRequest<RelatedClassGraph> {
+        AsyncGraphRequest::new(
+            self.client().clone(),
+            Endpoint::ClassRelatedGraph,
             vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
         )
     }
@@ -296,7 +318,7 @@ impl AsyncHandle<Class> {
         self.client()
             .request_with_endpoint::<NewClassRelationFromClassParams, ClassRelation>(
                 reqwest::Method::POST,
-                &Endpoint::ClassScopedRelations,
+                &Endpoint::ClassRelationsFromClass,
                 vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
                 vec![],
                 NewClassRelationFromClassParams {
@@ -313,7 +335,7 @@ impl AsyncHandle<Class> {
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,
-                &Endpoint::ClassScopedRelationById,
+                &Endpoint::ClassRelationFromClassById,
                 vec![
                     (Cow::Borrowed("class_id"), self.id().to_string().into()),
                     (Cow::Borrowed("relation_id"), relation_id.to_string().into()),
@@ -323,27 +345,5 @@ impl AsyncHandle<Class> {
             )
             .await?;
         Ok(())
-    }
-
-    pub fn transitive_relations(&self) -> AsyncCursorRequest<ClassRelationTransitive> {
-        AsyncCursorRequest::new(
-            self.client().clone(),
-            Endpoint::ClassRelationsTransitive,
-            vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
-        )
-    }
-
-    pub fn transitive_relations_to(
-        &self,
-        class_id: i32,
-    ) -> AsyncCursorRequest<ClassRelationTransitive> {
-        AsyncCursorRequest::new(
-            self.client().clone(),
-            Endpoint::ClassRelationsTransitiveTo,
-            vec![
-                (Cow::Borrowed("class_id"), self.id().to_string().into()),
-                (Cow::Borrowed("class_id_to"), class_id.to_string().into()),
-            ],
-        )
     }
 }
