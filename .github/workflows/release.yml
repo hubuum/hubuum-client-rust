@@ -104,14 +104,14 @@ jobs:
       - name: Wait for hubuum_client_derive to appear in the index
         run: |
           version="$(sed -nE 's/^version = "([^"]+)"/\1/p' hubuum_client_derive/Cargo.toml | head -n1)"
-          for attempt in $(seq 1 30); do
-            if cargo search hubuum_client_derive --limit 1 | grep -Fq "hubuum_client_derive = \"${version}\""; then
+          for attempt in $(seq 1 60); do
+            if curl -fsS "https://crates.io/api/v1/crates/hubuum_client_derive/${version}" >/dev/null; then
               exit 0
             fi
-            echo "hubuum_client_derive ${version} is not visible yet (attempt ${attempt}/30)"
+            echo "hubuum_client_derive ${version} is not visible yet (attempt ${attempt}/60)"
             sleep 10
           done
-          echo "Timed out waiting for hubuum_client_derive ${version} to reach the index" >&2
+          echo "Timed out waiting for hubuum_client_derive ${version} to reach crates.io" >&2
           exit 1
 
       - name: Publish hubuum_client
