@@ -210,12 +210,12 @@ mod parity_contract {
             let _ = $module::Handle::<Class>::delete;
             let _ = $module::Handle::<Class>::permissions;
             let _ = $module::Handle::<Class>::permissions_request;
-            let _ = $module::Handle::<Class>::relations;
+            let _ = $module::Handle::<Class>::related_classes;
+            let _ = $module::Handle::<Class>::related_relations;
+            let _ = $module::Handle::<Class>::related_graph;
             let _ = $module::Handle::<Class>::relation;
             let _ = $module::Handle::<Class>::create_relation;
             let _ = $module::Handle::<Class>::delete_relation;
-            let _ = $module::Handle::<Class>::transitive_relations;
-            let _ = $module::Handle::<Class>::transitive_relations_to;
 
             let _ = $module::Handle::<Object>::related_objects;
             let _ = $module::Handle::<Object>::related_relations;

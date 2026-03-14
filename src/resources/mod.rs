@@ -11,7 +11,7 @@ mod user;
 
 pub use self::class::{
     Class, ClassGet, ClassPatch, ClassPost, ClassRelation, ClassRelationGet, ClassRelationPatch,
-    ClassRelationPost, ClassRelationTransitive,
+    ClassRelationPost, ClassWithPath, RelatedClassGraph,
 };
 pub use self::group::{Group, GroupGet, GroupPatch, GroupPost};
 pub use self::namespace::{Namespace, NamespaceGet, NamespacePatch, NamespacePost};

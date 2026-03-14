@@ -21,10 +21,11 @@ pub enum Endpoint {
     Classes,
     ClassesById,
     ClassPermissions,
-    ClassScopedRelations,
-    ClassScopedRelationById,
-    ClassRelationsTransitive,
-    ClassRelationsTransitiveTo,
+    ClassRelatedClasses,
+    ClassRelatedRelations,
+    ClassRelatedGraph,
+    ClassRelationsFromClass,
+    ClassRelationFromClassById,
     Namespaces,
     NamespacesById,
     NamespacePermissions,
@@ -78,15 +79,12 @@ impl Endpoint {
             Endpoint::Classes => "/api/v1/classes",
             Endpoint::ClassesById => "/api/v1/classes/{class_id}",
             Endpoint::ClassPermissions => "/api/v1/classes/{class_id}/permissions",
-            Endpoint::ClassScopedRelations => "/api/v1/classes/{class_id}/relations",
-            Endpoint::ClassScopedRelationById => {
+            Endpoint::ClassRelatedClasses => "/api/v1/classes/{class_id}/related/classes",
+            Endpoint::ClassRelatedRelations => "/api/v1/classes/{class_id}/related/relations",
+            Endpoint::ClassRelatedGraph => "/api/v1/classes/{class_id}/related/graph",
+            Endpoint::ClassRelationsFromClass => "/api/v1/classes/{class_id}/relations",
+            Endpoint::ClassRelationFromClassById => {
                 "/api/v1/classes/{class_id}/relations/{relation_id}"
-            }
-            Endpoint::ClassRelationsTransitive => {
-                "/api/v1/classes/{class_id}/relations/transitive/"
-            }
-            Endpoint::ClassRelationsTransitiveTo => {
-                "/api/v1/classes/{class_id}/relations/transitive/class/{class_id_to}"
             }
             Endpoint::Namespaces => "/api/v1/namespaces",
             Endpoint::NamespacesById => "/api/v1/namespaces/{namespace_id}",
@@ -172,10 +170,11 @@ mod test {
         get_group_by_id = { Endpoint::GroupsById, "/api/v1/iam/groups/{group_id}" },
         get_class_permissions = { Endpoint::ClassPermissions, "/api/v1/classes/{class_id}/permissions" },
         get_class_by_id = { Endpoint::ClassesById, "/api/v1/classes/{class_id}" },
-        get_class_scoped_relations = { Endpoint::ClassScopedRelations, "/api/v1/classes/{class_id}/relations" },
-        get_class_scoped_relation_by_id = { Endpoint::ClassScopedRelationById, "/api/v1/classes/{class_id}/relations/{relation_id}" },
-        get_class_transitive = { Endpoint::ClassRelationsTransitive, "/api/v1/classes/{class_id}/relations/transitive/" },
-        get_class_transitive_to = { Endpoint::ClassRelationsTransitiveTo, "/api/v1/classes/{class_id}/relations/transitive/class/{class_id_to}" },
+        get_class_related_classes = { Endpoint::ClassRelatedClasses, "/api/v1/classes/{class_id}/related/classes" },
+        get_class_related_relations = { Endpoint::ClassRelatedRelations, "/api/v1/classes/{class_id}/related/relations" },
+        get_class_related_graph = { Endpoint::ClassRelatedGraph, "/api/v1/classes/{class_id}/related/graph" },
+        class_relations_from_class = { Endpoint::ClassRelationsFromClass, "/api/v1/classes/{class_id}/relations" },
+        class_relation_from_class_by_id = { Endpoint::ClassRelationFromClassById, "/api/v1/classes/{class_id}/relations/{relation_id}" },
         get_namespace_by_id = { Endpoint::NamespacesById, "/api/v1/namespaces/{namespace_id}" },
         get_namespace_permission_grant = { Endpoint::NamespacePermissionsGrant, "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}" },
         get_namespace_single_permission_grant = { Endpoint::NamespacePermissionGrant, "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}" },
@@ -220,10 +219,11 @@ mod test {
         get_group_by_id = { Endpoint::GroupsById, '/', "api/v1/iam/groups/{group_id}" },
         get_class_permissions = { Endpoint::ClassPermissions, '/', "api/v1/classes/{class_id}/permissions" },
         get_class_by_id = { Endpoint::ClassesById, '/', "api/v1/classes/{class_id}" },
-        get_class_scoped_relations = { Endpoint::ClassScopedRelations, '/', "api/v1/classes/{class_id}/relations" },
-        get_class_scoped_relation_by_id = { Endpoint::ClassScopedRelationById, '/', "api/v1/classes/{class_id}/relations/{relation_id}" },
-        get_class_transitive = { Endpoint::ClassRelationsTransitive, '/', "api/v1/classes/{class_id}/relations/transitive/" },
-        get_class_transitive_to = { Endpoint::ClassRelationsTransitiveTo, '/', "api/v1/classes/{class_id}/relations/transitive/class/{class_id_to}" },
+        get_class_related_classes = { Endpoint::ClassRelatedClasses, '/', "api/v1/classes/{class_id}/related/classes" },
+        get_class_related_relations = { Endpoint::ClassRelatedRelations, '/', "api/v1/classes/{class_id}/related/relations" },
+        get_class_related_graph = { Endpoint::ClassRelatedGraph, '/', "api/v1/classes/{class_id}/related/graph" },
+        class_relations_from_class = { Endpoint::ClassRelationsFromClass, '/', "api/v1/classes/{class_id}/relations" },
+        class_relation_from_class_by_id = { Endpoint::ClassRelationFromClassById, '/', "api/v1/classes/{class_id}/relations/{relation_id}" },
         get_namespace_by_id = { Endpoint::NamespacesById, '/', "api/v1/namespaces/{namespace_id}" },
         get_namespace_permission_grant = { Endpoint::NamespacePermissionsGrant, '/', "api/v1/namespaces/{namespace_id}/permissions/group/{group_id}" },
         get_namespace_single_permission_grant = { Endpoint::NamespacePermissionGrant, '/', "api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}" },

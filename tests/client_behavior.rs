@@ -235,12 +235,17 @@ fn task_queue_json() -> serde_json::Value {
     })
 }
 
-fn transitive_relation_json() -> serde_json::Value {
+fn class_with_path_json(class_id: i32, namespace_id: i32, path: &[i32]) -> serde_json::Value {
     json!({
-        "ancestor_class_id": 42,
-        "descendant_class_id": 88,
-        "depth": 2,
-        "path": [42, 77, 88]
+        "id": class_id,
+        "name": format!("class-{class_id}"),
+        "namespace_id": namespace_id,
+        "description": "Class",
+        "json_schema": { "type": "object" },
+        "validate_schema": true,
+        "created_at": ts(),
+        "updated_at": ts(),
+        "path": path
     })
 }
 
@@ -292,6 +297,13 @@ fn related_object_graph_json() -> serde_json::Value {
     json!({
         "objects": [object_with_path_json(10, 77, &[9, 10])],
         "relations": [object_relation_json(66, 9, 10, 55)]
+    })
+}
+
+fn related_class_graph_json() -> serde_json::Value {
+    json!({
+        "classes": [class_with_path_json(77, 7, &[42, 77])],
+        "relations": [class_relation_json(55, 42, 77)]
     })
 }
 
@@ -2073,15 +2085,16 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
             .json_body(class_json("class-42"));
     });
 
-    let transitive = server.mock(|when, then| {
+    let related_classes = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/42/relations/transitive/")
+            .path("/api/v1/classes/42/related/classes")
+            .query_param("path__contains", "42")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .header("x-next-cursor", "rel-cursor")
-            .json_body(json!([transitive_relation_json()]));
+            .json_body(json!([class_with_path_json(77, 7, &[42, 77])]));
     });
 
     let client = sync_client(&server);
@@ -2104,19 +2117,20 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
         .classes()
         .select(42)
         .expect("class select should succeed");
-    let relation_page = class
-        .transitive_relations()
+    let related_page = class
+        .related_classes()
+        .add_filter("path", FilterOperator::Contains { is_negated: false }, "42")
         .limit(1)
         .page()
-        .expect("transitive_relations should succeed");
-    assert_eq!(relation_page.items[0].depth, 2);
-    assert_eq!(relation_page.next_cursor.as_deref(), Some("rel-cursor"));
+        .expect("related_classes should succeed");
+    assert_eq!(related_page.items[0].path, vec![42, 77]);
+    assert_eq!(related_page.next_cursor.as_deref(), Some("rel-cursor"));
 
     meta_tasks.assert_calls(1);
     namespace_by_id.assert_calls(1);
     groups_with_permission.assert_calls(1);
     class_by_id.assert_calls(1);
-    transitive.assert_calls(1);
+    related_classes.assert_calls(1);
 }
 
 #[test]
@@ -2133,15 +2147,36 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
             .json_body(class_json("class-42"));
     });
 
-    let class_relations = server.mock(|when, then| {
+    let related_classes = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/42/relations")
+            .path("/api/v1/classes/42/related/classes")
+            .query_param("from_classes__equals", "42")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .header("x-next-cursor", "class-rel-next")
+            .json_body(json!([class_with_path_json(77, 7, &[42, 77])]));
+    });
+
+    let class_relations = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/related/relations")
+            .query_param("to_classes__equals", "77")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
             .json_body(json!([class_relation_json(55, 42, 77)]));
+    });
+
+    let class_graph_request = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/related/graph")
+            .query_param("path__contains", "42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(related_class_graph_json());
     });
 
     let class_relation_get = server.mock(|when, then| {
@@ -2263,16 +2298,32 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
         .classes()
         .select(42)
         .expect("class select should use by-id endpoint");
-    let class_relation_page = class
-        .relations()
+    let class_related_page = class
+        .related_classes()
+        .add_filter_equals("from_classes", 42)
         .limit(1)
         .page()
-        .expect("class scoped relations should succeed");
-    assert_eq!(class_relation_page.items[0].id, 55);
+        .expect("class related classes should succeed");
+    assert_eq!(class_related_page.items[0].path, vec![42, 77]);
     assert_eq!(
-        class_relation_page.next_cursor.as_deref(),
+        class_related_page.next_cursor.as_deref(),
         Some("class-rel-next")
     );
+
+    let class_relation_page = class
+        .related_relations()
+        .add_filter_equals("to_classes", 77)
+        .page()
+        .expect("class related relations should succeed");
+    assert_eq!(class_relation_page.items[0].id, 55);
+
+    let class_graph = class
+        .related_graph()
+        .add_filter("path", FilterOperator::Contains { is_negated: false }, "42")
+        .fetch()
+        .expect("class related graph should succeed");
+    assert_eq!(class_graph.classes.len(), 1);
+    assert_eq!(class_graph.relations.len(), 1);
 
     let class_relation = class
         .relation(55)
@@ -2346,7 +2397,9 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
     assert_eq!(selected_object_relation.id(), 66);
 
     class_by_id.assert_calls(1);
+    related_classes.assert_calls(1);
     class_relations.assert_calls(1);
+    class_graph_request.assert_calls(1);
     class_relation_get.assert_calls(1);
     class_relation_create.assert_calls(1);
     class_relation_delete.assert_calls(1);
