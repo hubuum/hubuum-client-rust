@@ -109,14 +109,29 @@ let class = client
 Or, to find a relation between classes:
 
 ```rust
-let from_class_id = 1;
-let to_class_id = 2;
 let relation = client
         .class_relation()
         .query()
-        .add_filter_equals("from_hubuum_class_id", from_class_id)
-        .add_filter_equals("to_hubuum_class_id", to_class_id)
+        .add_filter_equals("from_classes", 1)
+        .add_filter_equals("to_classes", 2)
         .one()?;
+```
+
+Related-object traversal now follows the dedicated `related/*` endpoints, including graph fetches and endpoint-specific result filters:
+
+```rust
+let related = object
+    .related_objects()
+    .ignore_classes([42, 99])
+    .ignore_self_class(false)
+    .add_filter_equals("from_classes", 42)
+    .limit(25)
+    .page()?;
+
+let graph = object
+    .related_graph()
+    .add_filter_equals("depth", 2)
+    .fetch()?;
 ```
 
 ### Asynchronous Client
@@ -211,6 +226,31 @@ let result_page = client.imports().results(task.id).limit(50).page()?;
 ```
 
 Cursor-paged endpoints return `hubuum_client::Page<T>` with `items` and `next_cursor`.
+
+## Unified Search
+
+Grouped discovery searches are exposed through `client.search(...)`:
+
+```rust
+let search = client
+    .search("server")
+    .kinds([
+        hubuum_client::UnifiedSearchKind::Namespace,
+        hubuum_client::UnifiedSearchKind::Object,
+    ])
+    .limit_per_kind(5)
+    .search_object_data(true)
+    .execute()?;
+
+for object in search.results.objects {
+    println!("{}", object.name);
+}
+
+let events = client
+    .search("server")
+    .kinds([hubuum_client::UnifiedSearchKind::Object])
+    .stream()?;
+```
 
 ## Integration Tests (Real Server)
 

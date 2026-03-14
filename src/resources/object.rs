@@ -7,11 +7,11 @@ use crate::{
     client::{
         r#async::{
             CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-            Handle as AsyncHandle,
+            GraphRequest as AsyncGraphRequest, Handle as AsyncHandle,
         },
         sync::{
             CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            Handle as SyncHandle,
+            GraphRequest as SyncGraphRequest, Handle as SyncHandle,
         },
     },
     endpoints::Endpoint,
@@ -62,20 +62,51 @@ pub struct ObjectWithPath {
     pub path: Vec<i32>,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Default)]
+pub struct RelatedObjectGraph {
+    pub objects: Vec<ObjectWithPath>,
+    pub relations: Vec<ObjectRelation>,
+}
+
 impl SyncHandle<Object> {
     pub fn related_objects(&self) -> SyncCursorRequest<ObjectWithPath> {
         SyncCursorRequest::new(
             self.client().clone(),
-            Endpoint::ObjectScopedRelations,
+            Endpoint::ObjectRelatedObjects,
             vec![
                 (
                     Cow::Borrowed("class_id"),
                     self.resource().hubuum_class_id.to_string().into(),
                 ),
+                (Cow::Borrowed("object_id"), self.id().to_string().into()),
+            ],
+        )
+    }
+
+    pub fn related_relations(&self) -> SyncCursorRequest<ObjectRelation> {
+        SyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ObjectRelatedRelations,
+            vec![
                 (
-                    Cow::Borrowed("from_object_id"),
-                    self.id().to_string().into(),
+                    Cow::Borrowed("class_id"),
+                    self.resource().hubuum_class_id.to_string().into(),
                 ),
+                (Cow::Borrowed("object_id"), self.id().to_string().into()),
+            ],
+        )
+    }
+
+    pub fn related_graph(&self) -> SyncGraphRequest<RelatedObjectGraph> {
+        SyncGraphRequest::new(
+            self.client().clone(),
+            Endpoint::ObjectRelatedGraph,
+            vec![
+                (
+                    Cow::Borrowed("class_id"),
+                    self.resource().hubuum_class_id.to_string().into(),
+                ),
+                (Cow::Borrowed("object_id"), self.id().to_string().into()),
             ],
         )
     }
@@ -174,20 +205,85 @@ impl SyncHandle<Object> {
     }
 }
 
+impl SyncCursorRequest<ObjectWithPath> {
+    pub fn ignore_classes<I>(self, class_ids: I) -> Self
+    where
+        I: IntoIterator<Item = i32>,
+    {
+        self.query_param(
+            "ignore_classes",
+            class_ids
+                .into_iter()
+                .map(|class_id| class_id.to_string())
+                .collect::<Vec<_>>()
+                .join(","),
+        )
+    }
+
+    pub fn ignore_self_class(self, ignore_self_class: bool) -> Self {
+        self.query_param("ignore_self_class", ignore_self_class)
+    }
+}
+
+impl SyncGraphRequest<RelatedObjectGraph> {
+    pub fn ignore_classes<I>(self, class_ids: I) -> Self
+    where
+        I: IntoIterator<Item = i32>,
+    {
+        self.query_param(
+            "ignore_classes",
+            class_ids
+                .into_iter()
+                .map(|class_id| class_id.to_string())
+                .collect::<Vec<_>>()
+                .join(","),
+        )
+    }
+
+    pub fn ignore_self_class(self, ignore_self_class: bool) -> Self {
+        self.query_param("ignore_self_class", ignore_self_class)
+    }
+}
+
 impl AsyncHandle<Object> {
     pub fn related_objects(&self) -> AsyncCursorRequest<ObjectWithPath> {
         AsyncCursorRequest::new(
             self.client().clone(),
-            Endpoint::ObjectScopedRelations,
+            Endpoint::ObjectRelatedObjects,
             vec![
                 (
                     Cow::Borrowed("class_id"),
                     self.resource().hubuum_class_id.to_string().into(),
                 ),
+                (Cow::Borrowed("object_id"), self.id().to_string().into()),
+            ],
+        )
+    }
+
+    pub fn related_relations(&self) -> AsyncCursorRequest<ObjectRelation> {
+        AsyncCursorRequest::new(
+            self.client().clone(),
+            Endpoint::ObjectRelatedRelations,
+            vec![
                 (
-                    Cow::Borrowed("from_object_id"),
-                    self.id().to_string().into(),
+                    Cow::Borrowed("class_id"),
+                    self.resource().hubuum_class_id.to_string().into(),
                 ),
+                (Cow::Borrowed("object_id"), self.id().to_string().into()),
+            ],
+        )
+    }
+
+    pub fn related_graph(&self) -> AsyncGraphRequest<RelatedObjectGraph> {
+        AsyncGraphRequest::new(
+            self.client().clone(),
+            Endpoint::ObjectRelatedGraph,
+            vec![
+                (
+                    Cow::Borrowed("class_id"),
+                    self.resource().hubuum_class_id.to_string().into(),
+                ),
+                (Cow::Borrowed("object_id"), self.id().to_string().into()),
             ],
         )
     }
@@ -290,5 +386,45 @@ impl AsyncHandle<Object> {
             )
             .await?;
         Ok(())
+    }
+}
+
+impl AsyncCursorRequest<ObjectWithPath> {
+    pub fn ignore_classes<I>(self, class_ids: I) -> Self
+    where
+        I: IntoIterator<Item = i32>,
+    {
+        self.query_param(
+            "ignore_classes",
+            class_ids
+                .into_iter()
+                .map(|class_id| class_id.to_string())
+                .collect::<Vec<_>>()
+                .join(","),
+        )
+    }
+
+    pub fn ignore_self_class(self, ignore_self_class: bool) -> Self {
+        self.query_param("ignore_self_class", ignore_self_class)
+    }
+}
+
+impl AsyncGraphRequest<RelatedObjectGraph> {
+    pub fn ignore_classes<I>(self, class_ids: I) -> Self
+    where
+        I: IntoIterator<Item = i32>,
+    {
+        self.query_param(
+            "ignore_classes",
+            class_ids
+                .into_iter()
+                .map(|class_id| class_id.to_string())
+                .collect::<Vec<_>>()
+                .join(","),
+        )
+    }
+
+    pub fn ignore_self_class(self, ignore_self_class: bool) -> Self {
+        self.query_param("ignore_self_class", ignore_self_class)
     }
 }

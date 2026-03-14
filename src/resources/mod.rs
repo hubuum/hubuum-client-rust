@@ -17,7 +17,7 @@ pub use self::group::{Group, GroupGet, GroupPatch, GroupPost};
 pub use self::namespace::{Namespace, NamespaceGet, NamespacePatch, NamespacePost};
 pub use self::object::{
     Object, ObjectGet, ObjectPatch, ObjectPost, ObjectRelation, ObjectRelationGet,
-    ObjectRelationPatch, ObjectRelationPost, ObjectWithPath,
+    ObjectRelationPatch, ObjectRelationPost, ObjectWithPath, RelatedObjectGraph,
 };
 pub use self::report_template::{
     ReportTemplate, ReportTemplateGet, ReportTemplatePatch, ReportTemplatePost,

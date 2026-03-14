@@ -16,6 +16,7 @@ use crate::types::{
     BaseUrl, CountsResponse, Credentials, DbStateResponse, FilterOperator, ImportRequest,
     ImportTaskResultResponse, ReportContentType, ReportJsonResponse, ReportRequest, ReportResult,
     SortDirection, TaskEventResponse, TaskQueueStateResponse, TaskResponse, Token,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -348,7 +349,7 @@ impl Client<Authenticated> {
         .and_then(|opt| opt.ok_or(ApiError::EmptyResult("GET returned empty result".into())))
     }
 
-    pub async fn search<R: ApiResource>(
+    pub(crate) async fn search_resource<R: ApiResource>(
         &self,
         resource: R,
         url_params: UrlParams,
@@ -365,7 +366,7 @@ impl Client<Authenticated> {
         .and_then(|opt| opt.ok_or(ApiError::EmptyResult("SEARCH returned empty result".into())))
     }
 
-    pub async fn search_page<R: ApiResource>(
+    pub(crate) async fn search_resource_page<R: ApiResource>(
         &self,
         resource: R,
         url_params: UrlParams,
@@ -453,6 +454,10 @@ impl Client<Authenticated> {
 
     pub fn object_relation(&self) -> Resource<ObjectRelation> {
         Resource::new(self.clone(), UrlParams::default())
+    }
+
+    pub fn search(&self, query: impl Into<String>) -> UnifiedSearchRequest {
+        UnifiedSearchRequest::new(self.clone(), query.into())
     }
 
     pub fn templates(&self) -> Resource<ReportTemplate> {
@@ -622,6 +627,110 @@ impl Tasks {
             Endpoint::TaskEvents,
             vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
         )
+    }
+}
+
+pub struct UnifiedSearchRequest {
+    client: Client<Authenticated>,
+    query: String,
+    query_params: Vec<QueryFilter>,
+}
+
+impl UnifiedSearchRequest {
+    fn new(client: Client<Authenticated>, query: String) -> Self {
+        Self {
+            client,
+            query,
+            query_params: Vec::new(),
+        }
+    }
+
+    pub fn kinds<I>(mut self, kinds: I) -> Self
+    where
+        I: IntoIterator<Item = UnifiedSearchKind>,
+    {
+        let joined = kinds
+            .into_iter()
+            .map(|kind| kind.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+
+        if !joined.is_empty() {
+            self.query_params.push(QueryFilter::raw("kinds", joined));
+        }
+        self
+    }
+
+    pub fn limit_per_kind(mut self, limit: usize) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("limit_per_kind", limit.to_string()));
+        self
+    }
+
+    pub fn cursor_namespaces(mut self, cursor: impl Into<String>) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("cursor_namespaces", cursor.into()));
+        self
+    }
+
+    pub fn cursor_classes(mut self, cursor: impl Into<String>) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("cursor_classes", cursor.into()));
+        self
+    }
+
+    pub fn cursor_objects(mut self, cursor: impl Into<String>) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("cursor_objects", cursor.into()));
+        self
+    }
+
+    pub fn search_class_schema(mut self, enabled: bool) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("search_class_schema", enabled.to_string()));
+        self
+    }
+
+    pub fn search_object_data(mut self, enabled: bool) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("search_object_data", enabled.to_string()));
+        self
+    }
+
+    pub async fn execute(self) -> Result<UnifiedSearchResponse, ApiError> {
+        let mut query_params = self.query_params;
+        query_params.push(QueryFilter::raw("q", self.query));
+
+        self.client
+            .request_with_endpoint::<EmptyPostParams, UnifiedSearchResponse>(
+                reqwest::Method::GET,
+                &Endpoint::Search,
+                UrlParams::default(),
+                query_params,
+                EmptyPostParams,
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Unified search returned empty result".into(),
+            ))
+    }
+
+    pub async fn stream(self) -> Result<Vec<UnifiedSearchEvent>, ApiError> {
+        let mut query_params = self.query_params;
+        query_params.push(QueryFilter::raw("q", self.query));
+
+        let raw = self
+            .client
+            .request_with_endpoint_raw(
+                reqwest::Method::GET,
+                &Endpoint::SearchStream,
+                UrlParams::default(),
+                query_params,
+                EmptyPostParams,
+            )
+            .await?;
+
+        UnifiedSearchEvent::parse_sse_stream(&raw.body)
     }
 }
 
@@ -971,13 +1080,13 @@ impl<T: ApiResource> QueryOp<T> {
 
     pub async fn list(self) -> Result<Vec<T::GetOutput>, ApiError> {
         self.client
-            .search::<T>(T::default(), self.url_params, self.query_params)
+            .search_resource::<T>(T::default(), self.url_params, self.query_params)
             .await
     }
 
     pub async fn page(self) -> Result<shared::Page<T::GetOutput>, ApiError> {
         self.client
-            .search_page::<T>(T::default(), self.url_params, self.query_params)
+            .search_resource_page::<T>(T::default(), self.url_params, self.query_params)
             .await
     }
 
@@ -1063,6 +1172,55 @@ impl<T> CursorRequest<T> {
             .push(QueryFilter::raw("cursor", cursor.to_string()));
         self
     }
+
+    pub fn filters<I>(mut self, filters: I) -> Self
+    where
+        I: IntoIterator<Item = QueryFilter>,
+    {
+        self.query_params.extend(filters);
+        self
+    }
+
+    pub fn query_param<V: ToString>(mut self, key: &str, value: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw(key, value.to_string()));
+        self
+    }
+
+    pub fn add_filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
+        self.query_params
+            .push(QueryFilter::filter(field, op, value.to_string()));
+        self
+    }
+
+    pub fn add_filter_equals<V: ToString>(self, field: &str, value: V) -> Self {
+        self.add_filter(field, FilterOperator::Equals { is_negated: false }, value)
+    }
+
+    pub fn add_json_path_filter<I, S, V>(
+        self,
+        field: &str,
+        path: I,
+        op: FilterOperator,
+        value: V,
+    ) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+        V: ToString,
+    {
+        let path = path
+            .into_iter()
+            .map(|segment| segment.as_ref().to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        let value = if path.is_empty() {
+            value.to_string()
+        } else {
+            format!("{path}={}", value.to_string())
+        };
+        self.add_filter(field, op, value)
+    }
 }
 
 impl<T> CursorRequest<T>
@@ -1085,6 +1243,95 @@ where
 
     pub async fn list(self) -> Result<Vec<T>, ApiError> {
         Ok(self.page().await?.items)
+    }
+}
+
+pub struct GraphRequest<T> {
+    client: Client<Authenticated>,
+    endpoint: Endpoint,
+    query_params: Vec<QueryFilter>,
+    url_params: UrlParams,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> GraphRequest<T> {
+    pub fn new(client: Client<Authenticated>, endpoint: Endpoint, url_params: UrlParams) -> Self {
+        Self {
+            client,
+            endpoint,
+            query_params: Vec::new(),
+            url_params,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn filters<I>(mut self, filters: I) -> Self
+    where
+        I: IntoIterator<Item = QueryFilter>,
+    {
+        self.query_params.extend(filters);
+        self
+    }
+
+    pub fn query_param<V: ToString>(mut self, key: &str, value: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw(key, value.to_string()));
+        self
+    }
+
+    pub fn add_filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
+        self.query_params
+            .push(QueryFilter::filter(field, op, value.to_string()));
+        self
+    }
+
+    pub fn add_filter_equals<V: ToString>(self, field: &str, value: V) -> Self {
+        self.add_filter(field, FilterOperator::Equals { is_negated: false }, value)
+    }
+
+    pub fn add_json_path_filter<I, S, V>(
+        self,
+        field: &str,
+        path: I,
+        op: FilterOperator,
+        value: V,
+    ) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+        V: ToString,
+    {
+        let path = path
+            .into_iter()
+            .map(|segment| segment.as_ref().to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        let value = if path.is_empty() {
+            value.to_string()
+        } else {
+            format!("{path}={}", value.to_string())
+        };
+        self.add_filter(field, op, value)
+    }
+}
+
+impl<T> GraphRequest<T>
+where
+    T: DeserializeOwned,
+{
+    pub async fn fetch(self) -> Result<T, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, T>(
+                reqwest::Method::GET,
+                &self.endpoint,
+                self.url_params,
+                self.query_params,
+                EmptyPostParams,
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Graph request returned empty result".into(),
+            ))
     }
 }
 
