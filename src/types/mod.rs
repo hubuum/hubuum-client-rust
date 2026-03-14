@@ -6,6 +6,7 @@ mod import;
 mod meta;
 mod params;
 mod report;
+mod search;
 mod task;
 
 use serde::{Deserialize, Serialize};
@@ -26,6 +27,11 @@ pub use params::{ClassParams, NamespacePermissionsGrantParams, UserParams};
 pub use report::{
     ReportContentType, ReportJsonResponse, ReportLimits, ReportMeta, ReportMissingDataPolicy,
     ReportOutputRequest, ReportRequest, ReportResult, ReportScope, ReportScopeKind, ReportWarning,
+};
+pub use search::{
+    UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
+    UnifiedSearchResults, UnifiedSearchStartedEvent,
 };
 pub use task::{
     ImportTaskDetails, ImportTaskResultResponse, TaskDetails, TaskEventResponse, TaskKind,

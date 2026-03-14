@@ -34,13 +34,17 @@ pub enum Endpoint {
     NamespaceHasPermissions,
     Objects,
     ObjectsById,
-    ObjectScopedRelations,
+    ObjectRelatedObjects,
+    ObjectRelatedRelations,
+    ObjectRelatedGraph,
     ObjectScopedRelationById,
 
     ClassRelations,
     ClassRelationsById,
     ObjectRelations,
     ObjectRelationsById,
+    Search,
+    SearchStream,
     ReportTemplates,
     ReportTemplatesById,
     Reports,
@@ -103,8 +107,14 @@ impl Endpoint {
 
             Endpoint::Objects => "/api/v1/classes/{class_id}/",
             Endpoint::ObjectsById => "/api/v1/classes/{class_id}/{object_id}",
-            Endpoint::ObjectScopedRelations => {
-                "/api/v1/classes/{class_id}/{from_object_id}/relations"
+            Endpoint::ObjectRelatedObjects => {
+                "/api/v1/classes/{class_id}/objects/{object_id}/related/objects"
+            }
+            Endpoint::ObjectRelatedRelations => {
+                "/api/v1/classes/{class_id}/objects/{object_id}/related/relations"
+            }
+            Endpoint::ObjectRelatedGraph => {
+                "/api/v1/classes/{class_id}/objects/{object_id}/related/graph"
             }
             Endpoint::ObjectScopedRelationById => {
                 "/api/v1/classes/{class_id}/{from_object_id}/relations/{to_class_id}/{to_object_id}"
@@ -114,6 +124,8 @@ impl Endpoint {
             Endpoint::ClassRelationsById => "/api/v1/relations/classes/{relation_id}",
             Endpoint::ObjectRelations => "/api/v1/relations/objects",
             Endpoint::ObjectRelationsById => "/api/v1/relations/objects/{relation_id}",
+            Endpoint::Search => "/api/v1/search",
+            Endpoint::SearchStream => "/api/v1/search/stream",
             Endpoint::ReportTemplates => "/api/v1/templates",
             Endpoint::ReportTemplatesById => "/api/v1/templates/{template_id}",
             Endpoint::Reports => "/api/v1/reports",
@@ -171,10 +183,14 @@ mod test {
         get_namespace_has_permissions = { Endpoint::NamespaceHasPermissions, "/api/v1/namespaces/{namespace_id}/has_permissions/{permission}" },
         get_class = { Endpoint::Classes, "/api/v1/classes" },
         get_object_by_id = { Endpoint::ObjectsById, "/api/v1/classes/{class_id}/{object_id}" },
-        get_object_scoped_relations = { Endpoint::ObjectScopedRelations, "/api/v1/classes/{class_id}/{from_object_id}/relations" },
+        get_object_related_objects = { Endpoint::ObjectRelatedObjects, "/api/v1/classes/{class_id}/objects/{object_id}/related/objects" },
+        get_object_related_relations = { Endpoint::ObjectRelatedRelations, "/api/v1/classes/{class_id}/objects/{object_id}/related/relations" },
+        get_object_related_graph = { Endpoint::ObjectRelatedGraph, "/api/v1/classes/{class_id}/objects/{object_id}/related/graph" },
         get_object_scoped_relation_by_id = { Endpoint::ObjectScopedRelationById, "/api/v1/classes/{class_id}/{from_object_id}/relations/{to_class_id}/{to_object_id}" },
         class_relation_by_id = { Endpoint::ClassRelationsById, "/api/v1/relations/classes/{relation_id}" },
         object_relation_by_id = { Endpoint::ObjectRelationsById, "/api/v1/relations/objects/{relation_id}" },
+        search = { Endpoint::Search, "/api/v1/search" },
+        search_stream = { Endpoint::SearchStream, "/api/v1/search/stream" },
         templates = { Endpoint::ReportTemplates, "/api/v1/templates" },
         template_by_id = { Endpoint::ReportTemplatesById, "/api/v1/templates/{template_id}" },
         reports = { Endpoint::Reports, "/api/v1/reports" },
@@ -215,10 +231,14 @@ mod test {
         get_namespace_has_permissions = { Endpoint::NamespaceHasPermissions, '/', "api/v1/namespaces/{namespace_id}/has_permissions/{permission}" },
         get_class = { Endpoint::Classes, '/', "api/v1/classes" },
         get_object_by_id = { Endpoint::ObjectsById, '/', "api/v1/classes/{class_id}/{object_id}" },
-        get_object_scoped_relations = { Endpoint::ObjectScopedRelations, '/', "api/v1/classes/{class_id}/{from_object_id}/relations" },
+        get_object_related_objects = { Endpoint::ObjectRelatedObjects, '/', "api/v1/classes/{class_id}/objects/{object_id}/related/objects" },
+        get_object_related_relations = { Endpoint::ObjectRelatedRelations, '/', "api/v1/classes/{class_id}/objects/{object_id}/related/relations" },
+        get_object_related_graph = { Endpoint::ObjectRelatedGraph, '/', "api/v1/classes/{class_id}/objects/{object_id}/related/graph" },
         get_object_scoped_relation_by_id = { Endpoint::ObjectScopedRelationById, '/', "api/v1/classes/{class_id}/{from_object_id}/relations/{to_class_id}/{to_object_id}" },
         class_relation_by_id = { Endpoint::ClassRelationsById, '/', "api/v1/relations/classes/{relation_id}" },
         object_relation_by_id = { Endpoint::ObjectRelationsById, '/', "api/v1/relations/objects/{relation_id}" },
+        search = { Endpoint::Search, '/', "api/v1/search" },
+        search_stream = { Endpoint::SearchStream, '/', "api/v1/search/stream" },
         templates = { Endpoint::ReportTemplates, '/', "api/v1/templates" },
         template_by_id = { Endpoint::ReportTemplatesById, '/', "api/v1/templates/{template_id}" },
         reports = { Endpoint::Reports, '/', "api/v1/reports" },
@@ -243,6 +263,7 @@ mod test {
         api_get_user_by_id = { Endpoint::UsersById, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/iam/users/{user_id}" },
         api_get_group_by_id = { Endpoint::GroupsById, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/iam/groups/{group_id}" },
         foo_login_with_token = { Endpoint::LoginWithToken, BaseUrl::from_str("https://foo.bar.com").unwrap(), "https://foo.bar.com/api/v0/auth/validate" },
+        api_search = { Endpoint::Search, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/search" },
         api_reports = { Endpoint::Reports, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/reports" },
         api_imports = { Endpoint::Imports, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/imports" }
     )]

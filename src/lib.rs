@@ -48,5 +48,8 @@ pub use types::{
     NamespaceKey, ObjectKey, ReportContentType, ReportJsonResponse, ReportLimits, ReportMeta,
     ReportMissingDataPolicy, ReportOutputRequest, ReportRequest, ReportResult, ReportScope,
     ReportScopeKind, ReportWarning, TaskDetails, TaskEventResponse, TaskKind, TaskLinks,
-    TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, UserParams,
+    TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
+    UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
+    UnifiedSearchResults, UnifiedSearchStartedEvent, UserParams,
 };

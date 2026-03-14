@@ -3,7 +3,7 @@ use std::str::FromStr;
 use httpmock::prelude::*;
 use hubuum_client::types::{
     FilterOperator, ImportGraph, ImportRequest, Permissions, ReportContentType, ReportRequest,
-    ReportScope, ReportScopeKind, SortDirection,
+    ReportScope, ReportScopeKind, SortDirection, UnifiedSearchEvent, UnifiedSearchKind,
 };
 use hubuum_client::{
     ApiError, AsyncClient, BaseUrl, ClassGet, Credentials, ReportResult, SyncClient,
@@ -285,6 +285,29 @@ fn object_with_path_json(object_id: i32, class_id: i32, path: &[i32]) -> serde_j
         "created_at": ts(),
         "updated_at": ts(),
         "path": path
+    })
+}
+
+fn related_object_graph_json() -> serde_json::Value {
+    json!({
+        "objects": [object_with_path_json(10, 77, &[9, 10])],
+        "relations": [object_relation_json(66, 9, 10, 55)]
+    })
+}
+
+fn unified_search_response_json() -> serde_json::Value {
+    json!({
+        "query": "server",
+        "results": {
+            "namespaces": [namespace_json(7, "infra")],
+            "classes": [class_json("servers")],
+            "objects": [object_json(9, 42, "server-9")]
+        },
+        "next": {
+            "namespaces": "ns-cursor",
+            "classes": null,
+            "objects": "obj-cursor"
+        }
     })
 }
 
@@ -2158,13 +2181,37 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let related_objects = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/classes/42/9/relations")
+            .path("/api/v1/classes/42/objects/9/related/objects")
+            .query_param("ignore_classes", "42,99")
+            .query_param("ignore_self_class", "false")
+            .query_param("depth__gte", "1")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .header("x-next-cursor", "related-next")
             .json_body(json!([object_with_path_json(10, 77, &[9, 10])]));
+    });
+
+    let related_relations = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/objects/9/related/relations")
+            .query_param("class_relation__equals", "55")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_relation_json(66, 9, 10, 55)]));
+    });
+
+    let related_graph = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/objects/9/related/graph")
+            .query_param("depth__lte", "2")
+            .query_param("ignore_self_class", "false")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(related_object_graph_json());
     });
 
     let object_relation_get = server.mock(|when, then| {
@@ -2247,11 +2294,30 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
         .expect("object select should use by-id endpoint");
     let related_page = object
         .related_objects()
+        .ignore_classes([42, 99])
+        .ignore_self_class(false)
+        .add_filter("depth", FilterOperator::Gte { is_negated: false }, 1)
         .limit(1)
         .page()
         .expect("related objects should succeed");
     assert_eq!(related_page.items[0].path, vec![9, 10]);
     assert_eq!(related_page.next_cursor.as_deref(), Some("related-next"));
+
+    let related_relations_page = object
+        .related_relations()
+        .add_filter_equals("class_relation", 55)
+        .page()
+        .expect("related relations should succeed");
+    assert_eq!(related_relations_page.items[0].id, 66);
+
+    let graph = object
+        .related_graph()
+        .add_filter("depth", FilterOperator::Lte { is_negated: false }, 2)
+        .ignore_self_class(false)
+        .fetch()
+        .expect("related graph should succeed");
+    assert_eq!(graph.objects.len(), 1);
+    assert_eq!(graph.relations.len(), 1);
 
     let scoped_object_relation = object
         .relation_to(77, 10)
@@ -2286,11 +2352,133 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
     class_relation_delete.assert_calls(1);
     object_by_id.assert_calls(1);
     related_objects.assert_calls(1);
+    related_relations.assert_calls(1);
+    related_graph.assert_calls(1);
     object_relation_get.assert_calls(1);
     object_relation_create.assert_calls(1);
     object_relation_delete.assert_calls(1);
     class_relation_select.assert_calls(1);
     object_relation_select.assert_calls(1);
+}
+
+#[test]
+fn sync_unified_search_supports_grouped_results_and_stream_events() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let search = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/search")
+            .query_param("q", "server")
+            .query_param("kinds", "namespace,object")
+            .query_param("limit_per_kind", "2")
+            .query_param("cursor_objects", "obj-cursor")
+            .query_param("search_class_schema", "true")
+            .query_param("search_object_data", "false")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(unified_search_response_json());
+    });
+
+    let stream = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/search/stream")
+            .query_param("q", "server")
+            .query_param("kinds", "namespace,object")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "text/event-stream")
+            .body(concat!(
+                "event: started\n",
+                "data: {\"query\":\"server\"}\n\n",
+                "event: batch\n",
+                "data: {\"kind\":\"object\",\"namespaces\":[],\"classes\":[],\"objects\":[],\"next\":null}\n\n",
+                "event: done\n",
+                "data: {\"query\":\"server\"}\n\n",
+            ));
+    });
+
+    let client = sync_client(&server);
+
+    let response = client
+        .search("server")
+        .kinds([UnifiedSearchKind::Namespace, UnifiedSearchKind::Object])
+        .limit_per_kind(2)
+        .cursor_objects("obj-cursor")
+        .search_class_schema(true)
+        .search_object_data(false)
+        .execute()
+        .expect("unified search should succeed");
+    assert_eq!(response.results.namespaces[0].name, "infra");
+    assert_eq!(response.next.objects.as_deref(), Some("obj-cursor"));
+
+    let events = client
+        .search("server")
+        .kinds([UnifiedSearchKind::Namespace, UnifiedSearchKind::Object])
+        .stream()
+        .expect("unified search stream should succeed");
+    assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
+    assert!(matches!(events[1], UnifiedSearchEvent::Batch(_)));
+    assert!(matches!(events[2], UnifiedSearchEvent::Done(_)));
+
+    search.assert_calls(1);
+    stream.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_unified_search_supports_grouped_results_and_stream_events() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let search = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/search")
+            .query_param("q", "server")
+            .query_param("kinds", "class")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(unified_search_response_json());
+    });
+
+    let stream = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/search/stream")
+            .query_param("q", "server")
+            .query_param("kinds", "class")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "text/event-stream")
+            .body(concat!(
+                "event: started\n",
+                "data: {\"query\":\"server\"}\n\n",
+                "event: done\n",
+                "data: {\"query\":\"server\"}\n\n",
+            ));
+    });
+
+    let client = async_client(&server).await;
+
+    let response = client
+        .search("server")
+        .kinds([UnifiedSearchKind::Class])
+        .execute()
+        .await
+        .expect("async unified search should succeed");
+    assert_eq!(response.results.classes[0].name, "servers");
+
+    let events = client
+        .search("server")
+        .kinds([UnifiedSearchKind::Class])
+        .stream()
+        .await
+        .expect("async unified search stream should succeed");
+    assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
+    assert!(matches!(events[1], UnifiedSearchEvent::Done(_)));
+
+    search.assert_calls(1);
+    stream.assert_calls(1);
 }
 
 #[tokio::test]

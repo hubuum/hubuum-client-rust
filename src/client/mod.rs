@@ -218,6 +218,8 @@ mod parity_contract {
             let _ = $module::Handle::<Class>::transitive_relations_to;
 
             let _ = $module::Handle::<Object>::related_objects;
+            let _ = $module::Handle::<Object>::related_relations;
+            let _ = $module::Handle::<Object>::related_graph;
             let _ = $module::Handle::<Object>::relation_to;
             let _ = $module::Handle::<Object>::create_relation_to;
             let _ = $module::Handle::<Object>::delete_relation_to;
