@@ -93,6 +93,15 @@ let result = client
 
 The fluent API works across create/update/query flows. If needed, you can still pass raw structs through `create_raw`, `update_raw`, and `query().params(...)`.
 
+Authenticated clients also expose logout helpers that mirror the hardened auth API. Logout endpoints now use `POST`, and token revocation sends the token in a JSON body instead of the URL:
+
+```rust
+client.logout()?;
+client.logout_token("stale-token")?;
+client.logout_user(42)?;
+client.logout_all()?;
+```
+
 #### Searching Resources
 
 The client’s API is designed with a fluent query interface. For example, to search for a class by its exact name:
@@ -227,6 +236,8 @@ let result_page = client.imports().results(task.id).limit(50).page()?;
 
 Cursor-paged endpoints return `hubuum_client::Page<T>` with `items` and `next_cursor`.
 
+User token listings return metadata only. `user.tokens()` yields items with `user_id` and `issued`; the API no longer exposes token strings from this endpoint.
+
 ## Unified Search
 
 Grouped discovery searches are exposed through `client.search(...)`:
@@ -271,17 +282,20 @@ Mutating integration tests use unique `itest-<case>-<ts>` resource name prefixes
 to run with default parallel test threads.
 
 Seed behavior:
+
 - default seed file: `tests/container_integration/seed/init.sql`
 - custom seed file: `./scripts/run-integration-tests.sh --seed path/to/seed.sql`
 - disable seeding: `./scripts/run-integration-tests.sh --skip-seed`
 
 External stack mode:
+
 - tests can reuse an externally managed stack when both env vars are set:
   - `HUBUUM_INTEGRATION_BASE_URL`
   - `HUBUUM_INTEGRATION_ADMIN_PASSWORD`
 - this is what the wrapper script exports internally before running tests.
 
 Optional environment variables:
+
 - `HUBUUM_INTEGRATION_SERVER_IMAGE` to override the server image
 - `HUBUUM_INTEGRATION_DB_IMAGE` to override the database image
 - `HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS` to override startup timeout (default: `300`)

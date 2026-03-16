@@ -98,8 +98,25 @@ pub struct PermissionResult {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct UserToken {
-    pub token: String,
+pub struct UserTokenMetadata {
     pub user_id: i32,
     pub issued: HubuumDateTime,
+}
+
+#[deprecated(note = "Auth token listings now return metadata only; use UserTokenMetadata instead.")]
+pub type UserToken = UserTokenMetadata;
+
+#[cfg(test)]
+mod tests {
+    use super::UserTokenMetadata;
+
+    #[test]
+    fn user_token_metadata_deserializes_without_token_string() {
+        let metadata: UserTokenMetadata =
+            serde_json::from_str(r#"{"user_id":42,"issued":"2024-01-01T00:00:00Z"}"#)
+                .expect("metadata response should deserialize");
+
+        assert_eq!(metadata.user_id, 42);
+        assert_eq!(metadata.issued.0.to_rfc3339(), "2024-01-01T00:00:00+00:00");
+    }
 }

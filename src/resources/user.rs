@@ -3,7 +3,7 @@ use hubuum_client_derive::ApiResource;
 use std::borrow::Cow;
 
 use crate::{
-    ApiError, Group, UserToken,
+    ApiError, Group, UserTokenMetadata,
     client::{
         r#async::{
             CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
@@ -64,7 +64,7 @@ impl SyncHandle<User> {
         }
     }
 
-    pub fn tokens_request(&self) -> SyncCursorRequest<UserToken> {
+    pub fn tokens_request(&self) -> SyncCursorRequest<UserTokenMetadata> {
         SyncCursorRequest::new(
             self.client().clone(),
             Endpoint::UserTokens,
@@ -72,11 +72,11 @@ impl SyncHandle<User> {
         )
     }
 
-    pub fn tokens(&self) -> Result<Vec<UserToken>, ApiError> {
+    pub fn tokens(&self) -> Result<Vec<UserTokenMetadata>, ApiError> {
         let url_params = vec![(Cow::Borrowed("user_id"), self.id().to_string().into())];
         let res = self
             .client()
-            .request_with_endpoint::<SyncEmptyPostParams, Vec<UserToken>>(
+            .request_with_endpoint::<SyncEmptyPostParams, Vec<UserTokenMetadata>>(
                 reqwest::Method::GET,
                 &Endpoint::UserTokens,
                 url_params,
@@ -119,7 +119,7 @@ impl AsyncHandle<User> {
         }
     }
 
-    pub fn tokens_request(&self) -> AsyncCursorRequest<UserToken> {
+    pub fn tokens_request(&self) -> AsyncCursorRequest<UserTokenMetadata> {
         AsyncCursorRequest::new(
             self.client().clone(),
             Endpoint::UserTokens,
@@ -127,11 +127,11 @@ impl AsyncHandle<User> {
         )
     }
 
-    pub async fn tokens(&self) -> Result<Vec<UserToken>, ApiError> {
+    pub async fn tokens(&self) -> Result<Vec<UserTokenMetadata>, ApiError> {
         let url_params = vec![(Cow::Borrowed("user_id"), self.id().to_string().into())];
         let res = self
             .client()
-            .request_with_endpoint::<AsyncEmptyPostParams, Vec<UserToken>>(
+            .request_with_endpoint::<AsyncEmptyPostParams, Vec<UserTokenMetadata>>(
                 reqwest::Method::GET,
                 &Endpoint::UserTokens,
                 url_params,

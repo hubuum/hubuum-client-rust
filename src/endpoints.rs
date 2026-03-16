@@ -62,7 +62,7 @@ impl Endpoint {
             Endpoint::Login => "/api/v0/auth/login",
             Endpoint::LoginWithToken => "/api/v0/auth/validate",
             Endpoint::Logout => "/api/v0/auth/logout",
-            Endpoint::LogoutToken => "/api/v0/auth/logout/token/{token}",
+            Endpoint::LogoutToken => "/api/v0/auth/logout/token",
             Endpoint::LogoutUser => "/api/v0/auth/logout/uid/{user_id}",
             Endpoint::LogoutAll => "/api/v0/auth/logout_all",
             Endpoint::MetaCounts => "/api/v0/meta/counts",
@@ -157,7 +157,7 @@ mod test {
     #[parameterized(
         login = { Endpoint::Login, "/api/v0/auth/login" },
         logout = { Endpoint::Logout, "/api/v0/auth/logout" },
-        logout_token = { Endpoint::LogoutToken, "/api/v0/auth/logout/token/{token}" },
+        logout_token = { Endpoint::LogoutToken, "/api/v0/auth/logout/token" },
         logout_user = { Endpoint::LogoutUser, "/api/v0/auth/logout/uid/{user_id}" },
         logout_all = { Endpoint::LogoutAll, "/api/v0/auth/logout_all" },
         meta_counts = { Endpoint::MetaCounts, "/api/v0/meta/counts" },
@@ -206,7 +206,7 @@ mod test {
     #[parameterized(
         login = { Endpoint::Login, '/', "api/v0/auth/login" },
         logout = { Endpoint::Logout, '/', "api/v0/auth/logout" },
-        logout_token = { Endpoint::LogoutToken, '/', "api/v0/auth/logout/token/{token}" },
+        logout_token = { Endpoint::LogoutToken, '/', "api/v0/auth/logout/token" },
         logout_user = { Endpoint::LogoutUser, '/', "api/v0/auth/logout/uid/{user_id}" },
         logout_all = { Endpoint::LogoutAll, '/', "api/v0/auth/logout_all" },
         meta_counts = { Endpoint::MetaCounts, '/', "api/v0/meta/counts" },
