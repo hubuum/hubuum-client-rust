@@ -128,3 +128,104 @@ async fn async_request_patch_requires_patch_id() {
 
     assert!(matches!(err, ApiError::MissingUrlIdentifier));
 }
+
+#[test]
+fn sync_logout_auth_endpoints_use_post_requests() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let logout_mock = server.mock(|when, then| {
+        when.method(POST).path("/api/v0/auth/logout");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "status": "ok" }));
+    });
+    let logout_token_mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v0/auth/logout/token")
+            .json_body(json!({ "token": "revoked-token" }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "status": "ok" }));
+    });
+    let logout_user_mock = server.mock(|when, then| {
+        when.method(POST).path("/api/v0/auth/logout/uid/42");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "status": "ok" }));
+    });
+    let logout_all_mock = server.mock(|when, then| {
+        when.method(POST).path("/api/v0/auth/logout_all");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "status": "ok" }));
+    });
+
+    let client = build_sync_client(&server).expect("login should succeed");
+
+    client.logout().expect("logout should succeed");
+    client
+        .logout_token("revoked-token")
+        .expect("token logout should succeed");
+    client.logout_user(42).expect("user logout should succeed");
+    client.logout_all().expect("logout all should succeed");
+
+    logout_mock.assert_calls(1);
+    logout_token_mock.assert_calls(1);
+    logout_user_mock.assert_calls(1);
+    logout_all_mock.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_logout_auth_endpoints_use_post_requests() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let logout_mock = server.mock(|when, then| {
+        when.method(POST).path("/api/v0/auth/logout");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "status": "ok" }));
+    });
+    let logout_token_mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v0/auth/logout/token")
+            .json_body(json!({ "token": "revoked-token" }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "status": "ok" }));
+    });
+    let logout_user_mock = server.mock(|when, then| {
+        when.method(POST).path("/api/v0/auth/logout/uid/42");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "status": "ok" }));
+    });
+    let logout_all_mock = server.mock(|when, then| {
+        when.method(POST).path("/api/v0/auth/logout_all");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "status": "ok" }));
+    });
+
+    let client = build_async_client(&server)
+        .await
+        .expect("login should succeed");
+
+    client.logout().await.expect("logout should succeed");
+    client
+        .logout_token("revoked-token")
+        .await
+        .expect("token logout should succeed");
+    client
+        .logout_user(42)
+        .await
+        .expect("user logout should succeed");
+    client
+        .logout_all()
+        .await
+        .expect("logout all should succeed");
+
+    logout_mock.assert_calls(1);
+    logout_token_mock.assert_calls(1);
+    logout_user_mock.assert_calls(1);
+    logout_all_mock.assert_calls(1);
+}

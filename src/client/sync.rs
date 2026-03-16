@@ -14,9 +14,9 @@ use crate::resources::{
 };
 use crate::types::{
     BaseUrl, CountsResponse, Credentials, DbStateResponse, FilterOperator, ImportRequest,
-    ImportTaskResultResponse, ReportContentType, ReportJsonResponse, ReportRequest, ReportResult,
-    SortDirection, TaskEventResponse, TaskQueueStateResponse, TaskResponse, Token,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    ImportTaskResultResponse, LogoutTokenRequest, ReportContentType, ReportJsonResponse,
+    ReportRequest, ReportResult, SortDirection, TaskEventResponse, TaskQueueStateResponse,
+    TaskResponse, Token, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -131,7 +131,7 @@ impl Client<Authenticated> {
 
     pub fn logout(&self) -> Result<(), ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+            reqwest::Method::POST,
             &Endpoint::Logout,
             UrlParams::default(),
             vec![],
@@ -141,19 +141,19 @@ impl Client<Authenticated> {
     }
 
     pub fn logout_token(&self, token: &str) -> Result<(), ApiError> {
-        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+        self.request_with_endpoint::<LogoutTokenRequest, serde_json::Value>(
+            reqwest::Method::POST,
             &Endpoint::LogoutToken,
-            vec![(Cow::Borrowed("token"), token.to_string().into())],
+            UrlParams::default(),
             vec![],
-            EmptyPostParams,
+            LogoutTokenRequest::new(token.to_owned()),
         )
         .map(|_| ())
     }
 
     pub fn logout_user(&self, user_id: i32) -> Result<(), ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+            reqwest::Method::POST,
             &Endpoint::LogoutUser,
             vec![(Cow::Borrowed("user_id"), user_id.to_string().into())],
             vec![],
@@ -164,7 +164,7 @@ impl Client<Authenticated> {
 
     pub fn logout_all(&self) -> Result<(), ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+            reqwest::Method::POST,
             &Endpoint::LogoutAll,
             UrlParams::default(),
             vec![],

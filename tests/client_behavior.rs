@@ -722,7 +722,7 @@ fn sync_supports_all_auth_logout_endpoints() {
     mock_login(&server);
 
     let logout = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -731,8 +731,9 @@ fn sync_supports_all_auth_logout_endpoints() {
     });
 
     let logout_token = server.mock(|when, then| {
-        when.method(GET)
-            .path("/api/v0/auth/logout/token/revoked-token")
+        when.method(POST)
+            .path("/api/v0/auth/logout/token")
+            .json_body(json!({ "token": "revoked-token" }))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -740,7 +741,7 @@ fn sync_supports_all_auth_logout_endpoints() {
     });
 
     let logout_user = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout/uid/99")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -749,7 +750,7 @@ fn sync_supports_all_auth_logout_endpoints() {
     });
 
     let logout_all = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout_all")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -777,7 +778,7 @@ async fn async_supports_all_auth_logout_endpoints() {
     mock_login(&server);
 
     let logout = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -786,8 +787,9 @@ async fn async_supports_all_auth_logout_endpoints() {
     });
 
     let logout_token = server.mock(|when, then| {
-        when.method(GET)
-            .path("/api/v0/auth/logout/token/revoked-token")
+        when.method(POST)
+            .path("/api/v0/auth/logout/token")
+            .json_body(json!({ "token": "revoked-token" }))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -795,7 +797,7 @@ async fn async_supports_all_auth_logout_endpoints() {
     });
 
     let logout_user = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout/uid/99")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -804,7 +806,7 @@ async fn async_supports_all_auth_logout_endpoints() {
     });
 
     let logout_all = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout_all")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -990,7 +992,6 @@ fn sync_supports_user_group_and_token_endpoints() {
             .header("content-type", "application/json")
             .json_body(json!([{
                 "issued": "2024-01-01T00:00:00Z",
-                "token": "api-token-1",
                 "user_id": 11
             }]));
     });
@@ -1019,7 +1020,7 @@ fn sync_supports_user_group_and_token_endpoints() {
     let tokens = user.tokens().expect("user tokens request should succeed");
     assert_eq!(tokens.len(), 1);
     assert_eq!(tokens[0].user_id, 11);
-    assert_eq!(tokens[0].token, "api-token-1");
+    assert_eq!(tokens[0].issued.0.to_rfc3339(), "2024-01-01T00:00:00+00:00");
 
     let group = client
         .groups()
@@ -1065,7 +1066,6 @@ async fn async_supports_user_group_and_token_endpoints() {
             .header("content-type", "application/json")
             .json_body(json!([{
                 "issued": "2024-01-01T00:00:00Z",
-                "token": "api-token-1",
                 "user_id": 11
             }]));
     });
@@ -1101,7 +1101,7 @@ async fn async_supports_user_group_and_token_endpoints() {
         .expect("user tokens request should succeed");
     assert_eq!(tokens.len(), 1);
     assert_eq!(tokens[0].user_id, 11);
-    assert_eq!(tokens[0].token, "api-token-1");
+    assert_eq!(tokens[0].issued.0.to_rfc3339(), "2024-01-01T00:00:00+00:00");
 
     let group = client
         .groups()

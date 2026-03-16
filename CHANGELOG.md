@@ -6,6 +6,15 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- Auth logout helpers now use the hardened `POST` endpoints, including JSON request bodies for token revocation.
+- User token listings now deserialize the metadata-only response shape returned by `/api/v1/iam/users/{user_id}/tokens`.
+
+### Breaking
+
+- `User::tokens()` and `User::tokens_request()` now return `UserTokenMetadata` items instead of exposing token strings.
+
 ## [0.0.2] - 2026-03-14
 
 ### Changed

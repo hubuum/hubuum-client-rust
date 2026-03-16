@@ -22,3 +22,14 @@ impl Token {
         Self { token }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogoutTokenRequest {
+    pub token: String,
+}
+
+impl LogoutTokenRequest {
+    pub fn new(token: String) -> Self {
+        Self { token }
+    }
+}
