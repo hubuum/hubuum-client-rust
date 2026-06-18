@@ -106,10 +106,13 @@ dependency with only the `time` feature. (Confirmed acceptable over `futures-tim
   - `.status(TaskStatus)` → `query_param("status", status)`
   - `.submitted_by(i32)` → `query_param("submitted_by", id)`
   - `.limit(usize)`, `.sort(field, SortDirection)`, `.cursor(..)` delegate to the inner
-    `CursorRequest`. The wrapper exposes the same page/iterate terminal as other cursor
-    requests. (A bare `CursorRequest<TaskResponse>` is not returned directly, to keep
+    `CursorRequest`. The wrapper exposes the same terminals as other cursor requests —
+    `page() -> Page<TaskResponse>` and `list() -> Vec<TaskResponse>` (there is no
+    `iterate`). (A bare `CursorRequest<TaskResponse>` is not returned directly, to keep
     callers from reaching for `add_filter` and producing `kind__equals`-style params the
     backend will not honor.)
+  - Typed args serialize correctly through `query_param<V: ToString>`: `TaskKind`/
+    `TaskStatus` derive strum `Display` (snake_case) and are `Copy`; `i32` is `ToString`.
 
 ## 4. Type drift fixes (`src/types/`)
 
@@ -175,11 +178,16 @@ Client methods (sync + async on `Client<Authenticated>`):
   (DELETE `/login-rate-limit`).
 
 **Implementation note (important):** both DELETE endpoints return a `200` with a JSON
-body. The client's `parse_response` currently *rejects* a non-empty DELETE body
-(`src/client/shared.rs`, test `parse_response_rejects_non_empty_delete_body`). These two
-calls must therefore use the raw-request path (`request_with_endpoint_raw`) and parse the
-body manually, rather than the standard typed DELETE helper, so the existing global
-DELETE-body invariant is left unchanged.
+body. The client's `parse_response` unconditionally *rejects* a non-empty DELETE body
+(`src/client/shared.rs:121-127`, test `parse_response_rejects_non_empty_delete_body`).
+These two calls must therefore use the raw-request path (`request_with_endpoint_raw`) and
+`serde_json::from_str` the body manually, rather than the standard typed DELETE helper, so
+the existing global DELETE-body invariant is left unchanged. This is safe because
+`request_with_endpoint_raw` already calls `check_success` (sync `:277`, async `:283`), so a
+non-2xx status becomes an `ApiError` before we reach manual parsing; pass `EmptyPostParams`
+as the body for both GET (login-rate-limit list, with `query_param`s) and DELETE calls
+(the `DELETE`/`GET` branches do not attach a request body). The opaque `id` is
+`URL_SAFE_NO_PAD` base64 (alphabet `A–Z a–z 0–9 - _`), so it needs no extra path encoding.
 
 ## 6. Endpoints & exports
 
