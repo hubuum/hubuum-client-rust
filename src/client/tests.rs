@@ -234,3 +234,56 @@ async fn async_task_wait_times_out() {
         .unwrap_err();
     assert!(matches!(err, ApiError::Api(m) if m.contains("Timed out")));
 }
+
+#[test]
+fn sync_tasks_query_uses_raw_params() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let listing = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/tasks")
+            .query_param("kind", "report")
+            .query_param("status", "succeeded")
+            .query_param("submitted_by", "3");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([]));
+    });
+    let client = build_sync_client(&server).unwrap();
+    let _ = client
+        .tasks()
+        .query()
+        .kind(crate::types::TaskKind::Report)
+        .status(crate::types::TaskStatus::Succeeded)
+        .submitted_by(3)
+        .list()
+        .unwrap();
+    listing.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_tasks_query_uses_raw_params() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let listing = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/tasks")
+            .query_param("kind", "report")
+            .query_param("status", "succeeded")
+            .query_param("submitted_by", "3");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([]));
+    });
+    let client = build_async_client(&server).await.unwrap();
+    let _ = client
+        .tasks()
+        .query()
+        .kind(crate::types::TaskKind::Report)
+        .status(crate::types::TaskStatus::Succeeded)
+        .submitted_by(3)
+        .list()
+        .await
+        .unwrap();
+    listing.assert_calls(1);
+}

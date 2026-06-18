@@ -15,8 +15,8 @@ use crate::resources::{
 use crate::types::{
     BaseUrl, CountsResponse, Credentials, DbStateResponse, FilterOperator, ImportRequest,
     ImportTaskResultResponse, ReportContentType, ReportJsonResponse, ReportRequest, ReportResult,
-    SortDirection, TaskEventResponse, TaskQueueStateResponse, TaskResponse, Token,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    SortDirection, TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus,
+    Token, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -607,6 +607,56 @@ impl Tasks {
 
     pub fn wait(&self, task_id: i32) -> TaskWaitOp {
         TaskWaitOp::new(self.client.clone(), task_id)
+    }
+
+    pub fn query(&self) -> TaskListRequest {
+        TaskListRequest {
+            inner: CursorRequest::new(self.client.clone(), Endpoint::Tasks, UrlParams::default()),
+        }
+    }
+}
+
+pub struct TaskListRequest {
+    inner: CursorRequest<TaskResponse>,
+}
+
+impl TaskListRequest {
+    pub fn kind(mut self, kind: TaskKind) -> Self {
+        self.inner = self.inner.query_param("kind", kind);
+        self
+    }
+
+    pub fn status(mut self, status: TaskStatus) -> Self {
+        self.inner = self.inner.query_param("status", status);
+        self
+    }
+
+    pub fn submitted_by(mut self, user_id: i32) -> Self {
+        self.inner = self.inner.query_param("submitted_by", user_id);
+        self
+    }
+
+    pub fn limit(mut self, limit: usize) -> Self {
+        self.inner = self.inner.limit(limit);
+        self
+    }
+
+    pub fn sort<S: AsRef<str>>(mut self, field: S, direction: SortDirection) -> Self {
+        self.inner = self.inner.sort(field, direction);
+        self
+    }
+
+    pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
+        self.inner = self.inner.cursor(cursor);
+        self
+    }
+
+    pub fn page(self) -> Result<shared::Page<TaskResponse>, ApiError> {
+        self.inner.page()
+    }
+
+    pub fn list(self) -> Result<Vec<TaskResponse>, ApiError> {
+        self.inner.list()
     }
 }
 
