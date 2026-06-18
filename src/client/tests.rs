@@ -293,3 +293,209 @@ async fn async_tasks_query_uses_raw_params() {
         .unwrap();
     listing.assert_calls(1);
 }
+
+fn report_task_json(status: &str) -> serde_json::Value {
+    json!({
+        "id": 11, "kind": "report", "status": status,
+        "created_at": "2026-03-06T12:00:00Z",
+        "progress": {"total_items":1,"processed_items":1,"success_items":1,"failed_items":0},
+        "links": {"task":"/api/v1/tasks/11","events":"/api/v1/tasks/11/events",
+                  "report":"/api/v1/reports/11","report_output":"/api/v1/reports/11/output"}
+    })
+}
+
+fn report_request_value() -> crate::types::ReportRequest {
+    crate::types::ReportRequest {
+        limits: None,
+        missing_data_policy: None,
+        output: None,
+        query: None,
+        scope: crate::types::ReportScope {
+            class_id: Some(42),
+            kind: crate::types::ReportScopeKind::ObjectsInClass,
+            object_id: None,
+        },
+        include: None,
+        relation_context: None,
+    }
+}
+
+#[test]
+fn sync_report_run_json_output() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(POST).path("/api/v1/reports");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(report_task_json("queued"));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/11");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(report_task_json("succeeded"));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/reports/11/output");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"items": [{"id":1}], "meta": {
+                "content_type":"application/json","count":1,
+                "scope":{"class_id":42,"kind":"objects_in_class","object_id":null},
+                "truncated":false}, "warnings": []}));
+    });
+    let client = build_sync_client(&server).unwrap();
+    let result = client
+        .reports()
+        .run(report_request_value())
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
+        .unwrap();
+    match result {
+        crate::types::ReportResult::Json(body) => assert_eq!(body.meta.count, 1),
+        other => panic!("expected Json, got {other:?}"),
+    }
+}
+
+#[test]
+fn sync_report_output_rendered_csv() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/reports/11/output");
+        then.status(200)
+            .header("content-type", "text/csv")
+            .body("id,name\n1,srv-01\n");
+    });
+    let client = build_sync_client(&server).unwrap();
+    match client.reports().output(11).unwrap() {
+        crate::types::ReportResult::Rendered { content_type, body } => {
+            assert_eq!(content_type, crate::types::ReportContentType::TextCsv);
+            assert!(body.contains("srv-01"));
+        }
+        other => panic!("expected Rendered, got {other:?}"),
+    }
+}
+
+#[test]
+fn sync_report_run_failed_errors() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(POST).path("/api/v1/reports");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(report_task_json("queued"));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/11");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "id": 11, "kind":"report", "status":"failed", "summary":"boom",
+                "created_at":"2026-03-06T12:00:00Z",
+                "progress":{"total_items":1,"processed_items":1,"success_items":0,"failed_items":1},
+                "links":{"task":"/api/v1/tasks/11","events":"/api/v1/tasks/11/events"}
+            }));
+    });
+    let client = build_sync_client(&server).unwrap();
+    let err = client
+        .reports()
+        .run(report_request_value())
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
+        .unwrap_err();
+    assert!(matches!(err, ApiError::Api(m) if m.contains("boom")));
+}
+
+#[tokio::test]
+async fn async_report_run_json_output() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(POST).path("/api/v1/reports");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(report_task_json("queued"));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/11");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(report_task_json("succeeded"));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/reports/11/output");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"items": [{"id":1}], "meta": {
+                "content_type":"application/json","count":1,
+                "scope":{"class_id":42,"kind":"objects_in_class","object_id":null},
+                "truncated":false}, "warnings": []}));
+    });
+    let client = build_async_client(&server).await.unwrap();
+    let result = client
+        .reports()
+        .run(report_request_value())
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
+        .await
+        .unwrap();
+    match result {
+        crate::types::ReportResult::Json(body) => assert_eq!(body.meta.count, 1),
+        other => panic!("expected Json, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn async_report_output_rendered_html() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/reports/11/output");
+        then.status(200)
+            .header("content-type", "text/html")
+            .body("<p>html report</p>");
+    });
+    let client = build_async_client(&server).await.unwrap();
+    match client.reports().output(11).await.unwrap() {
+        crate::types::ReportResult::Rendered { content_type, body } => {
+            assert_eq!(content_type, crate::types::ReportContentType::TextHtml);
+            assert_eq!(body, "<p>html report</p>");
+        }
+        other => panic!("expected Rendered, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn async_report_run_failed_errors() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(POST).path("/api/v1/reports");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(report_task_json("queued"));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/11");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "id": 11, "kind":"report", "status":"cancelled", "summary":"stopped",
+                "created_at":"2026-03-06T12:00:00Z",
+                "progress":{"total_items":1,"processed_items":0,"success_items":0,"failed_items":0},
+                "links":{"task":"/api/v1/tasks/11","events":"/api/v1/tasks/11/events"}
+            }));
+    });
+    let client = build_async_client(&server).await.unwrap();
+    let err = client
+        .reports()
+        .run(report_request_value())
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
+        .await
+        .unwrap_err();
+    assert!(matches!(err, ApiError::Api(m) if m.contains("stopped")));
+}

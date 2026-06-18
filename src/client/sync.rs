@@ -470,13 +470,29 @@ impl Reports {
         Self { client }
     }
 
-    pub fn run(&self, request: ReportRequest) -> Result<ReportResult, ApiError> {
+    pub fn submit(&self, request: ReportRequest) -> ReportSubmitOp {
+        ReportSubmitOp::new(self.client.clone(), request)
+    }
+
+    pub fn get(&self, task_id: i32) -> Result<TaskResponse, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, TaskResponse>(
+                reqwest::Method::GET,
+                &Endpoint::ReportById,
+                vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
+                vec![],
+                EmptyPostParams,
+            )
+            .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Report returned empty result".into())))
+    }
+
+    pub fn output(&self, task_id: i32) -> Result<ReportResult, ApiError> {
         let raw = self.client.request_with_endpoint_raw(
-            reqwest::Method::POST,
-            &Endpoint::Reports,
-            UrlParams::default(),
+            reqwest::Method::GET,
+            &Endpoint::ReportOutput,
+            vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
             vec![],
-            request,
+            EmptyPostParams,
         )?;
         let content_type = raw
             .content_type
@@ -486,17 +502,123 @@ impl Reports {
         match content_type {
             ReportContentType::ApplicationJson => {
                 let body = shared::parse_response::<ReportJsonResponse>(
-                    &reqwest::Method::POST,
+                    &reqwest::Method::GET,
                     raw.status,
                     raw.body,
                 )?
-                .ok_or(ApiError::EmptyResult("Report returned empty result".into()))?;
+                .ok_or(ApiError::EmptyResult(
+                    "Report output returned empty result".into(),
+                ))?;
                 Ok(ReportResult::Json(body))
             }
             _ => Ok(ReportResult::Rendered {
                 content_type,
                 body: raw.body,
             }),
+        }
+    }
+
+    pub fn run(&self, request: ReportRequest) -> ReportRunOp {
+        ReportRunOp::new(self.client.clone(), request)
+    }
+}
+
+pub struct ReportSubmitOp {
+    client: Client<Authenticated>,
+    request: ReportRequest,
+    idempotency_key: Option<String>,
+}
+
+impl ReportSubmitOp {
+    fn new(client: Client<Authenticated>, request: ReportRequest) -> Self {
+        Self {
+            client,
+            request,
+            idempotency_key: None,
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(idempotency_key.into());
+        self
+    }
+
+    pub fn send(self) -> Result<TaskResponse, ApiError> {
+        let mut headers = Vec::new();
+        if let Some(key) = self.idempotency_key {
+            headers.push(("Idempotency-Key", key));
+        }
+
+        let raw = self.client.request_with_endpoint_raw_with_headers(
+            reqwest::Method::POST,
+            &Endpoint::Reports,
+            UrlParams::default(),
+            vec![],
+            self.request,
+            &headers,
+        )?;
+
+        shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?.ok_or(
+            ApiError::EmptyResult("Report submit returned empty result".into()),
+        )
+    }
+}
+
+pub struct ReportRunOp {
+    client: Client<Authenticated>,
+    request: ReportRequest,
+    idempotency_key: Option<String>,
+    poll_interval: std::time::Duration,
+    timeout: Option<std::time::Duration>,
+}
+
+impl ReportRunOp {
+    fn new(client: Client<Authenticated>, request: ReportRequest) -> Self {
+        Self {
+            client,
+            request,
+            idempotency_key: None,
+            poll_interval: std::time::Duration::from_secs(1),
+            timeout: Some(std::time::Duration::from_secs(300)),
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(idempotency_key.into());
+        self
+    }
+
+    pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
+        self.poll_interval = interval;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub fn send(self) -> Result<ReportResult, ApiError> {
+        let reports = Reports::new(self.client.clone());
+        let mut submit = reports.submit(self.request);
+        if let Some(key) = self.idempotency_key {
+            submit = submit.idempotency_key(key);
+        }
+        let task = submit.send()?;
+        let task = Tasks::new(self.client.clone())
+            .wait(task.id)
+            .poll_interval(self.poll_interval)
+            .timeout(self.timeout)
+            .send()?;
+        if task.status.is_success() {
+            reports.output(task.id)
+        } else {
+            Err(ApiError::Api(format!(
+                "Task {} {}: {}",
+                task.id,
+                task.status,
+                task.summary.unwrap_or_else(|| "no summary".to_string())
+            )))
         }
     }
 }

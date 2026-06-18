@@ -186,6 +186,32 @@ fn task_response_json(task_id: i32, status: &str) -> serde_json::Value {
     })
 }
 
+fn report_task_json(task_id: i32, status: &str) -> serde_json::Value {
+    json!({
+        "id": task_id,
+        "kind": "report",
+        "status": status,
+        "submitted_by": 7,
+        "created_at": ts(),
+        "started_at": null,
+        "finished_at": null,
+        "progress": {
+            "total_items": 1,
+            "processed_items": 1,
+            "success_items": 1,
+            "failed_items": 0
+        },
+        "summary": null,
+        "request_redacted_at": null,
+        "links": {
+            "task": format!("/api/v1/tasks/{task_id}"),
+            "events": format!("/api/v1/tasks/{task_id}/events"),
+            "report": format!("/api/v1/reports/{task_id}"),
+            "report_output": format!("/api/v1/reports/{task_id}/output")
+        }
+    })
+}
+
 fn task_event_json(event_id: i32) -> serde_json::Value {
     json!({
         "id": event_id,
@@ -1857,9 +1883,27 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     let server = MockServer::start();
     mock_login(&server);
 
-    let report_json = server.mock(|when, then| {
+    let report_submit = server.mock(|when, then| {
         when.method(POST)
             .path("/api/v1/reports")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(report_task_json(11, "succeeded"));
+    });
+
+    let report_task = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/tasks/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(report_task_json(11, "succeeded"));
+    });
+
+    let report_output = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/reports/11/output")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -1934,11 +1978,16 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     let report = client
         .reports()
         .run(report_request())
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
         .expect("JSON report should succeed");
     match report {
         ReportResult::Json(report) => assert_eq!(report.items.len(), 1),
         other => panic!("expected JSON report, got {other:?}"),
     }
+    report_submit.assert_calls(1);
+    report_task.assert_calls(1);
+    report_output.assert_calls(1);
 
     let page = client
         .templates()
@@ -1980,7 +2029,6 @@ fn sync_reports_and_templates_cover_new_server_surface() {
         .delete(2)
         .expect("template delete should succeed");
 
-    report_json.assert_calls(1);
     templates_page.assert_calls(1);
     template_get.assert_calls(1);
     template_create.assert_calls(1);
@@ -2018,9 +2066,25 @@ async fn async_reports_support_rendered_outputs() {
     ] {
         let server = MockServer::start();
         mock_login(&server);
-        let report = server.mock(|when, then| {
+        let report_submit = server.mock(|when, then| {
             when.method(POST)
                 .path("/api/v1/reports")
+                .header("authorization", format!("Bearer {}", TOKEN));
+            then.status(202)
+                .header("content-type", "application/json")
+                .json_body(report_task_json(11, "succeeded"));
+        });
+        let report_task = server.mock(|when, then| {
+            when.method(GET)
+                .path("/api/v1/tasks/11")
+                .header("authorization", format!("Bearer {}", TOKEN));
+            then.status(200)
+                .header("content-type", "application/json")
+                .json_body(report_task_json(11, "succeeded"));
+        });
+        let report_output = server.mock(|when, then| {
+            when.method(GET)
+                .path("/api/v1/reports/11/output")
                 .header("authorization", format!("Bearer {}", TOKEN));
             then.status(200)
                 .header("content-type", expected_type.to_string())
@@ -2031,6 +2095,8 @@ async fn async_reports_support_rendered_outputs() {
         let result = client
             .reports()
             .run(report_request())
+            .poll_interval(std::time::Duration::from_millis(1))
+            .send()
             .await
             .expect("rendered report should succeed");
         match result {
@@ -2040,7 +2106,9 @@ async fn async_reports_support_rendered_outputs() {
             }
             other => panic!("expected rendered report, got {other:?}"),
         }
-        report.assert_calls(1);
+        report_submit.assert_calls(1);
+        report_task.assert_calls(1);
+        report_output.assert_calls(1);
     }
 }
 
