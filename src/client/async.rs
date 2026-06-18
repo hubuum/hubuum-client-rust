@@ -628,6 +628,58 @@ impl Tasks {
             vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
         )
     }
+
+    pub fn wait(&self, task_id: i32) -> TaskWaitOp {
+        TaskWaitOp::new(self.client.clone(), task_id)
+    }
+}
+
+pub struct TaskWaitOp {
+    client: Client<Authenticated>,
+    task_id: i32,
+    poll_interval: std::time::Duration,
+    timeout: Option<std::time::Duration>,
+}
+
+impl TaskWaitOp {
+    fn new(client: Client<Authenticated>, task_id: i32) -> Self {
+        Self {
+            client,
+            task_id,
+            poll_interval: std::time::Duration::from_secs(1),
+            timeout: Some(std::time::Duration::from_secs(300)),
+        }
+    }
+
+    pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
+        self.poll_interval = interval;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub async fn send(self) -> Result<TaskResponse, ApiError> {
+        let tasks = Tasks::new(self.client.clone());
+        let start = std::time::Instant::now();
+        loop {
+            let task = tasks.get(self.task_id).await?;
+            if task.status.is_terminal() {
+                return Ok(task);
+            }
+            if let Some(timeout) = self.timeout {
+                if start.elapsed() >= timeout {
+                    return Err(ApiError::Api(format!(
+                        "Timed out waiting for task {} after {:?}",
+                        self.task_id, timeout
+                    )));
+                }
+            }
+            tokio::time::sleep(self.poll_interval).await;
+        }
+    }
 }
 
 pub struct UnifiedSearchRequest {

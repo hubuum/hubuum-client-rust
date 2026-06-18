@@ -141,6 +141,8 @@ fn report_request() -> ReportRequest {
             kind: ReportScopeKind::ObjectsInClass,
             object_id: None,
         },
+        include: None,
+        relation_context: None,
     }
 }
 

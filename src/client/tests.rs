@@ -128,3 +128,109 @@ async fn async_request_patch_requires_patch_id() {
 
     assert!(matches!(err, ApiError::MissingUrlIdentifier));
 }
+
+#[test]
+fn sync_task_wait_polls_until_terminal() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let task = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/9");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "id": 9, "kind": "report", "status": "succeeded",
+                "created_at": "2026-03-06T12:00:00Z",
+                "progress": {"total_items":1,"processed_items":1,"success_items":1,"failed_items":0},
+                "links": {"task":"/api/v1/tasks/9","events":"/api/v1/tasks/9/events"}
+            }));
+    });
+    let client = build_sync_client(&server).unwrap();
+    let result = client
+        .tasks()
+        .wait(9)
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
+        .unwrap();
+    assert_eq!(result.status, crate::types::TaskStatus::Succeeded);
+    task.assert_calls(1);
+}
+
+#[test]
+fn sync_task_wait_times_out() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/9");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "id": 9, "kind": "report", "status": "running",
+                "created_at": "2026-03-06T12:00:00Z",
+                "progress": {"total_items":1,"processed_items":0,"success_items":0,"failed_items":0},
+                "links": {"task":"/api/v1/tasks/9","events":"/api/v1/tasks/9/events"}
+            }));
+    });
+    let client = build_sync_client(&server).unwrap();
+    let err = client
+        .tasks()
+        .wait(9)
+        .poll_interval(std::time::Duration::from_millis(1))
+        .timeout(Some(std::time::Duration::from_millis(5)))
+        .send()
+        .unwrap_err();
+    assert!(matches!(err, ApiError::Api(m) if m.contains("Timed out")));
+}
+
+#[tokio::test]
+async fn async_task_wait_polls_until_terminal() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let task = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/9");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "id": 9, "kind": "report", "status": "succeeded",
+                "created_at": "2026-03-06T12:00:00Z",
+                "progress": {"total_items":1,"processed_items":1,"success_items":1,"failed_items":0},
+                "links": {"task":"/api/v1/tasks/9","events":"/api/v1/tasks/9/events"}
+            }));
+    });
+    let client = build_async_client(&server).await.unwrap();
+    let result = client
+        .tasks()
+        .wait(9)
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(result.status, crate::types::TaskStatus::Succeeded);
+    task.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_task_wait_times_out() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/9");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "id": 9, "kind": "report", "status": "running",
+                "created_at": "2026-03-06T12:00:00Z",
+                "progress": {"total_items":1,"processed_items":0,"success_items":0,"failed_items":0},
+                "links": {"task":"/api/v1/tasks/9","events":"/api/v1/tasks/9/events"}
+            }));
+    });
+    let client = build_async_client(&server).await.unwrap();
+    let err = client
+        .tasks()
+        .wait(9)
+        .poll_interval(std::time::Duration::from_millis(1))
+        .timeout(Some(std::time::Duration::from_millis(5)))
+        .send()
+        .await
+        .unwrap_err();
+    assert!(matches!(err, ApiError::Api(m) if m.contains("Timed out")));
+}
