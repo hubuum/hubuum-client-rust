@@ -26,6 +26,24 @@ pub enum TaskStatus {
     Cancelled,
 }
 
+impl TaskStatus {
+    /// A task in a terminal state will not change further.
+    pub fn is_terminal(&self) -> bool {
+        matches!(
+            self,
+            TaskStatus::Succeeded
+                | TaskStatus::Failed
+                | TaskStatus::PartiallySucceeded
+                | TaskStatus::Cancelled
+        )
+    }
+
+    /// Whether a terminal task produced usable output.
+    pub fn is_success(&self) -> bool {
+        matches!(self, TaskStatus::Succeeded | TaskStatus::PartiallySucceeded)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskProgress {
     pub total_items: i32,
@@ -41,6 +59,8 @@ pub struct TaskLinks {
     #[serde(rename = "import")]
     pub import_url: Option<String>,
     pub import_results: Option<String>,
+    pub report: Option<String>,
+    pub report_output: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -49,9 +69,21 @@ pub struct ImportTaskDetails {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ReportTaskDetails {
+    pub output_url: String,
+    pub output_available: bool,
+    pub output_content_type: Option<String>,
+    pub output_expires_at: Option<HubuumDateTime>,
+    pub template_name: Option<String>,
+    pub truncated: Option<bool>,
+    pub warning_count: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskDetails {
     #[serde(rename = "import")]
     pub import_details: Option<ImportTaskDetails>,
+    pub report: Option<ReportTaskDetails>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -116,4 +148,52 @@ pub struct TaskQueueStateResponse {
     pub total_import_result_rows: i64,
     pub oldest_queued_at: Option<String>,
     pub oldest_active_at: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn task_status_terminality() {
+        assert!(TaskStatus::Succeeded.is_terminal());
+        assert!(TaskStatus::Failed.is_terminal());
+        assert!(TaskStatus::PartiallySucceeded.is_terminal());
+        assert!(TaskStatus::Cancelled.is_terminal());
+        assert!(!TaskStatus::Queued.is_terminal());
+        assert!(!TaskStatus::Validating.is_terminal());
+        assert!(!TaskStatus::Running.is_terminal());
+
+        assert!(TaskStatus::Succeeded.is_success());
+        assert!(TaskStatus::PartiallySucceeded.is_success());
+        assert!(!TaskStatus::Failed.is_success());
+        assert!(!TaskStatus::Cancelled.is_success());
+    }
+
+    #[test]
+    fn task_links_and_details_deserialize_report_fields() {
+        let json = serde_json::json!({
+            "task": "/api/v1/tasks/5",
+            "events": "/api/v1/tasks/5/events",
+            "report": "/api/v1/reports/5",
+            "report_output": "/api/v1/reports/5/output"
+        });
+        let links: TaskLinks = serde_json::from_value(json).unwrap();
+        assert_eq!(links.report.as_deref(), Some("/api/v1/reports/5"));
+        assert_eq!(links.report_output.as_deref(), Some("/api/v1/reports/5/output"));
+        assert!(links.import_url.is_none());
+
+        let details: TaskDetails = serde_json::from_value(serde_json::json!({
+            "report": {
+                "output_url": "/api/v1/reports/5/output",
+                "output_available": true,
+                "warning_count": 0
+            }
+        }))
+        .unwrap();
+        let report = details.report.expect("report details present");
+        assert_eq!(report.output_url, "/api/v1/reports/5/output");
+        assert!(report.output_available);
+        assert_eq!(report.warning_count, Some(0));
+    }
 }
