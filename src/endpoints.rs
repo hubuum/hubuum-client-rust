@@ -257,11 +257,16 @@ mod test {
         templates = { Endpoint::ReportTemplates, '/', "api/v1/templates" },
         template_by_id = { Endpoint::ReportTemplatesById, '/', "api/v1/templates/{template_id}" },
         reports = { Endpoint::Reports, '/', "api/v1/reports" },
+        report_by_id = { Endpoint::ReportById, '/', "api/v1/reports/{task_id}" },
+        report_output = { Endpoint::ReportOutput, '/', "api/v1/reports/{task_id}/output" },
+        tasks_list = { Endpoint::Tasks, '/', "api/v1/tasks" },
         task_by_id = { Endpoint::TasksById, '/', "api/v1/tasks/{task_id}" },
         task_events = { Endpoint::TaskEvents, '/', "api/v1/tasks/{task_id}/events" },
         imports = { Endpoint::Imports, '/', "api/v1/imports" },
         import_by_id = { Endpoint::ImportById, '/', "api/v1/imports/{task_id}" },
-        import_results = { Endpoint::ImportResults, '/', "api/v1/imports/{task_id}/results" }
+        import_results = { Endpoint::ImportResults, '/', "api/v1/imports/{task_id}/results" },
+        meta_login_rate_limit = { Endpoint::MetaLoginRateLimit, '/', "api/v0/meta/login-rate-limit" },
+        meta_login_rate_limit_by_id = { Endpoint::MetaLoginRateLimitById, '/', "api/v0/meta/login-rate-limit/{id}" }
     )]
     fn test_trim_start_matches(endpoint: Endpoint, prefix: char, expected: &str) {
         assert_eq!(endpoint.trim_start_matches(prefix), expected);
@@ -280,7 +285,12 @@ mod test {
         foo_login_with_token = { Endpoint::LoginWithToken, BaseUrl::from_str("https://foo.bar.com").unwrap(), "https://foo.bar.com/api/v0/auth/validate" },
         api_search = { Endpoint::Search, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/search" },
         api_reports = { Endpoint::Reports, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/reports" },
-        api_imports = { Endpoint::Imports, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/imports" }
+        api_report_by_id = { Endpoint::ReportById, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/reports/{task_id}" },
+        api_report_output = { Endpoint::ReportOutput, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/reports/{task_id}/output" },
+        api_tasks = { Endpoint::Tasks, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/tasks" },
+        api_imports = { Endpoint::Imports, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/imports" },
+        api_meta_login_rate_limit = { Endpoint::MetaLoginRateLimit, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/login-rate-limit" },
+        api_meta_login_rate_limit_by_id = { Endpoint::MetaLoginRateLimitById, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/login-rate-limit/{id}" }
     )]
     fn test_complete(endpoint: Endpoint, baseurl: BaseUrl, expected: &str) {
         assert_eq!(endpoint.complete(&baseurl), expected);
