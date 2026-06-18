@@ -499,3 +499,113 @@ async fn async_report_run_failed_errors() {
         .unwrap_err();
     assert!(matches!(err, ApiError::Api(m) if m.contains("stopped")));
 }
+
+#[test]
+fn sync_meta_login_rate_limit_state() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/meta/login-rate-limit")
+            .query_param("include", "all")
+            .query_param("scope", "ip");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "config": {"enabled":true,"max_attempts":5,"max_attempts_per_ip":20,
+                    "max_attempts_per_subnet":100,"window_seconds":300,"backoff_base_seconds":300,
+                    "backoff_max_seconds":86400,"subnet_prefix_v4":24,"subnet_prefix_v6":64},
+                "tracked_entries":0,"locked_entries":0,"returned_entries":0,"entries":[]
+            }));
+    });
+    let client = build_sync_client(&server).unwrap();
+    let state = client
+        .meta_login_rate_limit()
+        .include_all(true)
+        .scope("ip")
+        .send()
+        .unwrap();
+    assert_eq!(state.config.max_attempts_per_ip, 20);
+    m.assert_calls(1);
+}
+
+#[test]
+fn sync_meta_login_rate_limit_release_decodes_delete_body() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(DELETE).path("/api/v0/meta/login-rate-limit/abc123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"released": true}));
+    });
+    let client = build_sync_client(&server).unwrap();
+    let resp = client.meta_login_rate_limit_release("abc123").unwrap();
+    assert!(resp.released);
+}
+
+#[test]
+fn sync_meta_login_rate_limit_clear_decodes_delete_body() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(DELETE).path("/api/v0/meta/login-rate-limit");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"cleared": 4}));
+    });
+    let client = build_sync_client(&server).unwrap();
+    assert_eq!(client.meta_login_rate_limit_clear().unwrap().cleared, 4);
+}
+
+#[tokio::test]
+async fn async_meta_login_rate_limit_state() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v0/meta/login-rate-limit")
+            .query_param("q", "alice");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "config": {"enabled":true,"max_attempts":5,"max_attempts_per_ip":20,
+                    "max_attempts_per_subnet":100,"window_seconds":300,"backoff_base_seconds":300,
+                    "backoff_max_seconds":86400,"subnet_prefix_v4":24,"subnet_prefix_v6":64},
+                "tracked_entries":1,"locked_entries":1,"returned_entries":1,
+                "entries":[{"id":"x","scope":"user_ip","identifier":"alice@1.2.3.4",
+                    "attempts":6,"locked":true,"locked_for_seconds":120,"lockout_level":1}]
+            }));
+    });
+    let client = build_async_client(&server).await.unwrap();
+    let state = client
+        .meta_login_rate_limit()
+        .q("alice")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(state.entries.len(), 1);
+    assert_eq!(state.entries[0].lockout_level, 1);
+    m.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_meta_login_rate_limit_release_and_clear() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(DELETE).path("/api/v0/meta/login-rate-limit/zzz");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"released": false}));
+    });
+    server.mock(|when, then| {
+        when.method(DELETE).path("/api/v0/meta/login-rate-limit");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"cleared": 0}));
+    });
+    let client = build_async_client(&server).await.unwrap();
+    assert!(!client.meta_login_rate_limit_release("zzz").await.unwrap().released);
+    assert_eq!(client.meta_login_rate_limit_clear().await.unwrap().cleared, 0);
+}

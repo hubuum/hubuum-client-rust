@@ -13,10 +13,11 @@ use crate::resources::{
     ApiResource, Class, ClassRelation, Group, Namespace, Object, ReportTemplate, User,
 };
 use crate::types::{
-    BaseUrl, CountsResponse, Credentials, DbStateResponse, FilterOperator, ImportRequest,
-    ImportTaskResultResponse, ReportContentType, ReportJsonResponse, ReportRequest, ReportResult,
-    SortDirection, TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus,
-    Token, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    BaseUrl, ClearRateLimitResponse, CountsResponse, Credentials, DbStateResponse, FilterOperator,
+    ImportRequest, ImportTaskResultResponse, LoginRateLimitState, ReleaseRateLimitResponse,
+    ReportContentType, ReportJsonResponse, ReportRequest, ReportResult, SortDirection,
+    TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -221,6 +222,39 @@ impl Client<Authenticated> {
                 "META task state returned empty result".into(),
             ))
         })
+    }
+
+    pub fn meta_login_rate_limit(&self) -> MetaLoginRateLimitOp {
+        MetaLoginRateLimitOp::new(self.clone())
+    }
+
+    pub async fn meta_login_rate_limit_release(
+        &self,
+        id: &str,
+    ) -> Result<ReleaseRateLimitResponse, ApiError> {
+        let raw = self
+            .request_with_endpoint_raw(
+                reqwest::Method::DELETE,
+                &Endpoint::MetaLoginRateLimitById,
+                vec![(Cow::Borrowed("id"), id.to_string().into())],
+                vec![],
+                EmptyPostParams,
+            )
+            .await?;
+        serde_json::from_str(&raw.body).map_err(ApiError::from)
+    }
+
+    pub async fn meta_login_rate_limit_clear(&self) -> Result<ClearRateLimitResponse, ApiError> {
+        let raw = self
+            .request_with_endpoint_raw(
+                reqwest::Method::DELETE,
+                &Endpoint::MetaLoginRateLimit,
+                UrlParams::default(),
+                vec![],
+                EmptyPostParams,
+            )
+            .await?;
+        serde_json::from_str(&raw.body).map_err(ApiError::from)
     }
 
     pub(crate) async fn request_with_endpoint_raw<T: Serialize + std::fmt::Debug>(
@@ -723,6 +757,52 @@ impl ImportSubmitOp {
         shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?.ok_or(
             ApiError::EmptyResult("Import submit returned empty result".into()),
         )
+    }
+}
+
+pub struct MetaLoginRateLimitOp {
+    client: Client<Authenticated>,
+    query_params: Vec<QueryFilter>,
+}
+
+impl MetaLoginRateLimitOp {
+    fn new(client: Client<Authenticated>) -> Self {
+        Self {
+            client,
+            query_params: Vec::new(),
+        }
+    }
+
+    pub fn include_all(mut self, include_all: bool) -> Self {
+        if include_all {
+            self.query_params.push(QueryFilter::raw("include", "all"));
+        }
+        self
+    }
+
+    pub fn scope(mut self, scope: impl Into<String>) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("scope", scope.into()));
+        self
+    }
+
+    pub fn q(mut self, needle: impl Into<String>) -> Self {
+        self.query_params.push(QueryFilter::raw("q", needle.into()));
+        self
+    }
+
+    pub async fn send(self) -> Result<LoginRateLimitState, ApiError> {
+        let raw = self
+            .client
+            .request_with_endpoint_raw(
+                reqwest::Method::GET,
+                &Endpoint::MetaLoginRateLimit,
+                UrlParams::default(),
+                self.query_params,
+                EmptyPostParams,
+            )
+            .await?;
+        serde_json::from_str(&raw.body).map_err(ApiError::from)
     }
 }
 
