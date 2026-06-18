@@ -49,11 +49,16 @@ pub enum Endpoint {
     ReportTemplates,
     ReportTemplatesById,
     Reports,
+    ReportById,
+    ReportOutput,
+    Tasks,
     TasksById,
     TaskEvents,
     Imports,
     ImportById,
     ImportResults,
+    MetaLoginRateLimit,
+    MetaLoginRateLimitById,
 }
 
 impl Endpoint {
@@ -127,11 +132,16 @@ impl Endpoint {
             Endpoint::ReportTemplates => "/api/v1/templates",
             Endpoint::ReportTemplatesById => "/api/v1/templates/{template_id}",
             Endpoint::Reports => "/api/v1/reports",
+            Endpoint::ReportById => "/api/v1/reports/{task_id}",
+            Endpoint::ReportOutput => "/api/v1/reports/{task_id}/output",
+            Endpoint::Tasks => "/api/v1/tasks",
             Endpoint::TasksById => "/api/v1/tasks/{task_id}",
             Endpoint::TaskEvents => "/api/v1/tasks/{task_id}/events",
             Endpoint::Imports => "/api/v1/imports",
             Endpoint::ImportById => "/api/v1/imports/{task_id}",
             Endpoint::ImportResults => "/api/v1/imports/{task_id}/results",
+            Endpoint::MetaLoginRateLimit => "/api/v0/meta/login-rate-limit",
+            Endpoint::MetaLoginRateLimitById => "/api/v0/meta/login-rate-limit/{id}",
         }
     }
 
@@ -193,11 +203,16 @@ mod test {
         templates = { Endpoint::ReportTemplates, "/api/v1/templates" },
         template_by_id = { Endpoint::ReportTemplatesById, "/api/v1/templates/{template_id}" },
         reports = { Endpoint::Reports, "/api/v1/reports" },
+        report_by_id = { Endpoint::ReportById, "/api/v1/reports/{task_id}" },
+        report_output = { Endpoint::ReportOutput, "/api/v1/reports/{task_id}/output" },
+        tasks_list = { Endpoint::Tasks, "/api/v1/tasks" },
         task_by_id = { Endpoint::TasksById, "/api/v1/tasks/{task_id}" },
         task_events = { Endpoint::TaskEvents, "/api/v1/tasks/{task_id}/events" },
         imports = { Endpoint::Imports, "/api/v1/imports" },
         import_by_id = { Endpoint::ImportById, "/api/v1/imports/{task_id}" },
-        import_results = { Endpoint::ImportResults, "/api/v1/imports/{task_id}/results" }
+        import_results = { Endpoint::ImportResults, "/api/v1/imports/{task_id}/results" },
+        meta_login_rate_limit = { Endpoint::MetaLoginRateLimit, "/api/v0/meta/login-rate-limit" },
+        meta_login_rate_limit_by_id = { Endpoint::MetaLoginRateLimitById, "/api/v0/meta/login-rate-limit/{id}" }
     )]
     fn test_endpoint_path(endpoint: Endpoint, expected: &str) {
         assert_eq!(endpoint.path(), expected);

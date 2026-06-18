@@ -22,11 +22,16 @@ pub use import::{
     ImportNamespacePermissionInput, ImportObjectInput, ImportObjectRelationInput,
     ImportPermissionPolicy, ImportRequest, NamespaceKey, ObjectKey,
 };
-pub use meta::{CountsResponse, DbStateResponse, ObjectsByClass};
+pub use meta::{
+    ClearRateLimitResponse, CountsResponse, DbStateResponse, LoginRateLimitConfig,
+    LoginRateLimitEntry, LoginRateLimitState, ObjectsByClass, ReleaseRateLimitResponse,
+};
 pub use params::{ClassParams, NamespacePermissionsGrantParams, UserParams};
 pub use report::{
-    ReportContentType, ReportJsonResponse, ReportLimits, ReportMeta, ReportMissingDataPolicy,
-    ReportOutputRequest, ReportRequest, ReportResult, ReportScope, ReportScopeKind, ReportWarning,
+    ReportContentType, ReportInclude, ReportIncludeRelatedDirection, ReportIncludeRelatedObject,
+    ReportIncludeRelatedSort, ReportJsonResponse, ReportLimits, ReportMeta, ReportMissingDataPolicy,
+    ReportOutputRequest, ReportRelationContext, ReportRequest, ReportResult, ReportScope,
+    ReportScopeKind, ReportWarning,
 };
 pub use search::{
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
@@ -34,8 +39,8 @@ pub use search::{
     UnifiedSearchResults, UnifiedSearchStartedEvent,
 };
 pub use task::{
-    ImportTaskDetails, ImportTaskResultResponse, TaskDetails, TaskEventResponse, TaskKind,
-    TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
+    ImportTaskDetails, ImportTaskResultResponse, ReportTaskDetails, TaskDetails, TaskEventResponse,
+    TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumIter, EnumString, Display, PartialEq, Eq)]
