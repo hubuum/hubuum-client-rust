@@ -171,13 +171,17 @@ fn sync_task_wait_times_out() {
             }));
     });
     let client = build_sync_client(&server).unwrap();
+    // Large poll interval vs. small timeout: a remaining-time-aware sleep must not
+    // overshoot the deadline by a full interval.
+    let started = std::time::Instant::now();
     let err = client
         .tasks()
         .wait(9)
-        .poll_interval(std::time::Duration::from_millis(1))
-        .timeout(Some(std::time::Duration::from_millis(5)))
+        .poll_interval(std::time::Duration::from_secs(10))
+        .timeout(Some(std::time::Duration::from_millis(20)))
         .send()
         .unwrap_err();
+    assert!(started.elapsed() < std::time::Duration::from_secs(2));
     assert!(matches!(err, ApiError::Api(m) if m.contains("Timed out")));
 }
 
@@ -224,14 +228,16 @@ async fn async_task_wait_times_out() {
             }));
     });
     let client = build_async_client(&server).await.unwrap();
+    let started = std::time::Instant::now();
     let err = client
         .tasks()
         .wait(9)
-        .poll_interval(std::time::Duration::from_millis(1))
-        .timeout(Some(std::time::Duration::from_millis(5)))
+        .poll_interval(std::time::Duration::from_secs(10))
+        .timeout(Some(std::time::Duration::from_millis(20)))
         .send()
         .await
         .unwrap_err();
+    assert!(started.elapsed() < std::time::Duration::from_secs(2));
     assert!(matches!(err, ApiError::Api(m) if m.contains("Timed out")));
 }
 

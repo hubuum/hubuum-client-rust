@@ -719,15 +719,21 @@ impl TaskWaitOp {
             if task.status.is_terminal() {
                 return Ok(task);
             }
-            if let Some(timeout) = self.timeout {
-                if start.elapsed() >= timeout {
-                    return Err(ApiError::Api(format!(
-                        "Timed out waiting for task {} after {:?}",
-                        self.task_id, timeout
-                    )));
+            // Sleep at most the remaining time so we never overshoot the deadline.
+            let sleep_for = match self.timeout {
+                Some(timeout) => {
+                    let elapsed = start.elapsed();
+                    if elapsed >= timeout {
+                        return Err(ApiError::Api(format!(
+                            "Timed out waiting for task {} after {:?}",
+                            self.task_id, timeout
+                        )));
+                    }
+                    self.poll_interval.min(timeout - elapsed)
                 }
-            }
-            tokio::time::sleep(self.poll_interval).await;
+                None => self.poll_interval,
+            };
+            tokio::time::sleep(sleep_for).await;
         }
     }
 }
