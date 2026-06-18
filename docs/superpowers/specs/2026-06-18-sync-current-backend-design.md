@@ -61,9 +61,13 @@ high-level convenience:
     `.timeout(Option<Duration>)` (default `Some(5 min)`).
   - `.send()` submits, polls the task to a terminal status via the shared wait
     primitive (§2), then fetches and returns the `ReportResult`.
-  - Terminal handling: `Succeeded` / `PartiallySucceeded` → fetch output;
-    `Failed` / `Cancelled` → `ApiError` carrying the task `summary`;
-    timeout → `ApiError`.
+  - Terminal handling (reusing the existing `ApiError::Api(String)`; no new error
+    variant is introduced):
+    - `Succeeded` / `PartiallySucceeded` → fetch and return output.
+    - `Failed` / `Cancelled` → `ApiError::Api(format!("Task {id} {status}: {summary}"))`,
+      where `summary` falls back to a fixed string (e.g. `"no summary"`) when
+      `task.summary` is `None`.
+    - timeout → `ApiError::Api(format!("Timed out waiting for task {id} after {timeout:?}"))`.
 
 The async variants are `async fn` equivalents; the builders are identical in shape.
 
@@ -76,7 +80,11 @@ Add to the `Tasks` handle (both clients):
     (default `Some(5 min)`).
   - `.send() -> Result<TaskResponse, ApiError>`: polls `GET /tasks/{task_id}` until
     the status is terminal (`Succeeded`, `Failed`, `PartiallySucceeded`, `Cancelled`),
-    then returns the final `TaskResponse`. Errors on timeout.
+    then returns the final `TaskResponse` (regardless of success/failure — the caller
+    inspects `status`). On timeout returns
+    `ApiError::Api(format!("Timed out waiting for task {id} after {timeout:?}"))`.
+    `TaskWaitOp` itself does **not** treat `Failed`/`Cancelled` as an error; that
+    success/failure interpretation lives in `ReportRunOp` (§1).
 
 `ReportRunOp` is built on `TaskWaitOp`. The same primitive serves imports:
 `imports().submit(req).send()` → `tasks().wait(id).send()` → `imports().results(id)`.
@@ -88,10 +96,20 @@ dependency with only the `time` feature. (Confirmed acceptable over `futures-tim
 ## 3. Tasks list endpoint
 
 - Add `Endpoint::Tasks` → `/api/v1/tasks`.
-- `tasks().query() -> CursorRequest<TaskResponse>` (sync) / `AsyncCursorRequest`
-  (async), reusing the existing cursor/filter infrastructure. Filters `kind`,
-  `status`, `submitted_by` flow through the standard query-filter mechanism; `limit`,
-  `sort`, `cursor` are handled by `CursorRequest` as for other list endpoints.
+- The backend defines `kind`, `status`, `submitted_by` as **raw query parameters**
+  (not operator-suffixed filters like `kind__equals`). `CursorRequest` exposes both
+  `query_param(key, value)` (raw) and `add_filter(field, op, value)` (operator); these
+  must use the raw `query_param` path.
+- `tasks().query() -> TaskListRequest` (sync) / async equivalent — a thin wrapper over
+  `CursorRequest<TaskResponse>` providing **typed helpers** that set raw params:
+  - `.kind(TaskKind)` → `query_param("kind", kind)`
+  - `.status(TaskStatus)` → `query_param("status", status)`
+  - `.submitted_by(i32)` → `query_param("submitted_by", id)`
+  - `.limit(usize)`, `.sort(field, SortDirection)`, `.cursor(..)` delegate to the inner
+    `CursorRequest`. The wrapper exposes the same page/iterate terminal as other cursor
+    requests. (A bare `CursorRequest<TaskResponse>` is not returned directly, to keep
+    callers from reaching for `add_filter` and producing `kind__equals`-style params the
+    backend will not honor.)
 
 ## 4. Type drift fixes (`src/types/`)
 
@@ -117,11 +135,14 @@ dependency with only the `time` feature. (Confirmed acceptable over `futures-tim
   `#[api(optional)] forward_template_alias: String` and
   `#[api(optional)] reverse_template_alias: String` (→ `Option<String>` in Get/Post/Patch).
 - **`resources/class.rs` relation creation**: extend `NewClassRelationFromClassParams`
-  with `forward_template_alias: Option<String>` / `reverse_template_alias: Option<String>`
-  (serialized only when `Some`). `create_relation(to_class_id)` keeps its current
-  signature (sends both aliases as `None`); a new
+  with `forward_template_alias: Option<String>` / `reverse_template_alias: Option<String>`,
+  each marked `#[serde(skip_serializing_if = "Option::is_none")]` so a `None` alias is
+  **omitted** from the wire payload (not sent as explicit JSON `null`). Thus
+  `create_relation(to_class_id)` keeps its current signature and produces exactly the
+  pre-existing payload (`{"to_hubuum_class_id": ...}`) — fully backward compatible. A new
   `create_relation_with_aliases(to_class_id, forward: Option<String>, reverse: Option<String>)`
-  carries the aliases. Implemented identically on sync and async clients.
+  carries the aliases, omitting whichever are `None`. Implemented identically on sync and
+  async clients.
 
 ## 5. New meta endpoints (PR #52)
 
