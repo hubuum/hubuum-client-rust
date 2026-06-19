@@ -183,10 +183,12 @@ let template = client
     .send()?;
 ```
 
-Report execution is exposed through `client.reports()` and returns a typed `ReportResult`:
+Reports are **asynchronous**: submitting one creates a task, and the rendered output is
+fetched once the task finishes. `client.reports().run(...)` is the high-level helper that
+submits, polls the task to completion, and returns a typed `ReportResult`:
 
 ```rust
-let report = client.reports().run(hubuum_client::ReportRequest {
+let request = hubuum_client::ReportRequest {
     limits: None,
     missing_data_policy: None,
     output: None,
@@ -196,12 +198,36 @@ let report = client.reports().run(hubuum_client::ReportRequest {
         kind: hubuum_client::ReportScopeKind::ObjectsInClass,
         object_id: None,
     },
-})?;
+    include: None,
+    relation_context: None,
+};
+
+let report = client.reports().run(request).send()?;
 
 match report {
     hubuum_client::ReportResult::Json(body) => println!("{} rows", body.items.len()),
     hubuum_client::ReportResult::Rendered { body, .. } => println!("{body}"),
 }
+```
+
+The polling cadence and deadline are configurable, and the flow can also be driven
+manually with the low-level helpers:
+
+```rust
+use std::time::Duration;
+
+// High-level, with custom polling:
+let report = client
+    .reports()
+    .run(request.clone())
+    .poll_interval(Duration::from_millis(500))
+    .timeout(Some(Duration::from_secs(120)))
+    .send()?;
+
+// Low-level: submit, wait, then fetch the output.
+let task = client.reports().submit(request).send()?;
+let task = client.tasks().wait(task.id).send()?;
+let output = client.reports().output(task.id)?;
 ```
 
 ## Imports and Tasks
@@ -223,6 +249,18 @@ let task = client
 let task_state = client.tasks().get(task.id)?;
 let event_page = client.tasks().events(task.id).limit(50).page()?;
 let result_page = client.imports().results(task.id).limit(50).page()?;
+```
+
+Tasks can also be listed and filtered (raw query parameters, cursor-paged):
+
+```rust
+let tasks = client
+    .tasks()
+    .query()
+    .kind(hubuum_client::TaskKind::Report)
+    .status(hubuum_client::TaskStatus::Succeeded)
+    .limit(50)
+    .list()?;
 ```
 
 Cursor-paged endpoints return `hubuum_client::Page<T>` with `items` and `next_cursor`.

@@ -6,6 +6,34 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-06-19
+
+### Breaking
+
+- `Client::reports().run(...)` is now an asynchronous, task-based operation. It returns
+  a `ReportRunOp` builder whose `.send()` submits the report, polls the task to a
+  terminal status, and fetches the output. The previous synchronous `run()` that
+  returned a `ReportResult` directly has been removed, matching the backend's move to
+  `POST /api/v1/reports` → `202 TaskResponse`.
+
+### Added
+
+- `Client::reports().submit(...)`, `.get(task_id)`, and `.output(task_id)` low-level
+  helpers mirroring the imports API, plus `ReportRunOp` poll-interval/timeout controls.
+- `Client::tasks().wait(task_id)` poll-to-terminal helper and `Client::tasks().query()`
+  cursor-paginated task listing (`kind`, `status`, `submitted_by` filters).
+- Login rate-limit admin meta endpoints: `meta_login_rate_limit()`,
+  `meta_login_rate_limit_release(id)`, and `meta_login_rate_limit_clear()`.
+- Class relation template aliases (`forward_template_alias` / `reverse_template_alias`)
+  via `create_relation_with_aliases(...)`.
+- Report request `include` and `relation_context` fields, `ReportWarning.path`, and
+  `report` / `report_output` task links plus `ReportTaskDetails` on task responses.
+
+### Changed
+
+- Tightened dependency floors and added `tokio` (`time` feature) as a runtime dependency
+  for the async poll helpers.
+
 ## [0.0.2] - 2026-03-14
 
 ### Changed
