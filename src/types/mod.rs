@@ -29,9 +29,9 @@ pub use meta::{
 pub use params::{ClassParams, NamespacePermissionsGrantParams, UserParams};
 pub use report::{
     ReportContentType, ReportInclude, ReportIncludeRelatedDirection, ReportIncludeRelatedObject,
-    ReportIncludeRelatedSort, ReportJsonResponse, ReportLimits, ReportMeta, ReportMissingDataPolicy,
-    ReportOutputRequest, ReportRelationContext, ReportRequest, ReportResult, ReportScope,
-    ReportScopeKind, ReportWarning,
+    ReportIncludeRelatedSort, ReportJsonResponse, ReportLimits, ReportMeta,
+    ReportMissingDataPolicy, ReportOutputRequest, ReportRelationContext, ReportRequest,
+    ReportResult, ReportScope, ReportScopeKind, ReportWarning,
 };
 pub use search::{
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,

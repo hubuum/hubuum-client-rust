@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 pub enum ReportContentType {
+    #[default]
     #[serde(rename = "application/json")]
     #[strum(serialize = "application/json")]
     ApplicationJson,
@@ -20,12 +21,6 @@ pub enum ReportContentType {
 impl ReportContentType {
     pub fn from_header(value: &str) -> Option<Self> {
         value.split(';').next()?.trim().parse().ok()
-    }
-}
-
-impl Default for ReportContentType {
-    fn default() -> Self {
-        Self::ApplicationJson
     }
 }
 
@@ -80,8 +75,7 @@ pub struct ReportIncludeRelatedObject {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct ReportInclude {
-    pub related_objects:
-        Option<std::collections::HashMap<String, ReportIncludeRelatedObject>>,
+    pub related_objects: Option<std::collections::HashMap<String, ReportIncludeRelatedObject>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -177,13 +171,21 @@ mod tests {
                 kind: ReportScopeKind::ObjectsInClass,
                 object_id: None,
             },
-            include: Some(ReportInclude { related_objects: Some(related) }),
+            include: Some(ReportInclude {
+                related_objects: Some(related),
+            }),
             relation_context: Some(ReportRelationContext { depth: Some(2) }),
         };
         let value = serde_json::to_value(&req).unwrap();
         assert_eq!(value["include"]["related_objects"]["owners"]["class_id"], 7);
-        assert_eq!(value["include"]["related_objects"]["owners"]["direction"], "outgoing");
-        assert_eq!(value["include"]["related_objects"]["owners"]["sort"], "name");
+        assert_eq!(
+            value["include"]["related_objects"]["owners"]["direction"],
+            "outgoing"
+        );
+        assert_eq!(
+            value["include"]["related_objects"]["owners"]["sort"],
+            "name"
+        );
         assert_eq!(value["relation_context"]["depth"], 2);
     }
 

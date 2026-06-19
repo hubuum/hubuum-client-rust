@@ -180,7 +180,10 @@ mod tests {
         });
         let links: TaskLinks = serde_json::from_value(json).unwrap();
         assert_eq!(links.report.as_deref(), Some("/api/v1/reports/5"));
-        assert_eq!(links.report_output.as_deref(), Some("/api/v1/reports/5/output"));
+        assert_eq!(
+            links.report_output.as_deref(),
+            Some("/api/v1/reports/5/output")
+        );
         assert!(links.import_url.is_none());
 
         let details: TaskDetails = serde_json::from_value(serde_json::json!({

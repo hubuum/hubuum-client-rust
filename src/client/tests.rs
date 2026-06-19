@@ -534,7 +534,8 @@ fn sync_meta_login_rate_limit_release_decodes_delete_body() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(DELETE).path("/api/v0/meta/login-rate-limit/abc123");
+        when.method(DELETE)
+            .path("/api/v0/meta/login-rate-limit/abc123");
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({"released": true}));
@@ -594,7 +595,8 @@ async fn async_meta_login_rate_limit_release_and_clear() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(DELETE).path("/api/v0/meta/login-rate-limit/zzz");
+        when.method(DELETE)
+            .path("/api/v0/meta/login-rate-limit/zzz");
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({"released": false}));
@@ -606,6 +608,15 @@ async fn async_meta_login_rate_limit_release_and_clear() {
             .json_body(json!({"cleared": 0}));
     });
     let client = build_async_client(&server).await.unwrap();
-    assert!(!client.meta_login_rate_limit_release("zzz").await.unwrap().released);
-    assert_eq!(client.meta_login_rate_limit_clear().await.unwrap().cleared, 0);
+    assert!(
+        !client
+            .meta_login_rate_limit_release("zzz")
+            .await
+            .unwrap()
+            .released
+    );
+    assert_eq!(
+        client.meta_login_rate_limit_clear().await.unwrap().cleared,
+        0
+    );
 }

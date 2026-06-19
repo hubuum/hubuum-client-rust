@@ -334,7 +334,8 @@ impl AsyncHandle<Class> {
     }
 
     pub async fn create_relation(&self, to_class_id: i32) -> Result<ClassRelation, ApiError> {
-        self.create_relation_with_aliases(to_class_id, None, None).await
+        self.create_relation_with_aliases(to_class_id, None, None)
+            .await
     }
 
     pub async fn create_relation_with_aliases(
