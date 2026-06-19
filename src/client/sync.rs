@@ -230,7 +230,10 @@ impl Client<Authenticated> {
         let raw = self.request_with_endpoint_raw(
             reqwest::Method::DELETE,
             &Endpoint::MetaLoginRateLimitById,
-            vec![(Cow::Borrowed("id"), id.to_string().into())],
+            vec![(
+                Cow::Borrowed("id"),
+                shared::encode_path_segment(id).into(),
+            )],
             vec![],
             EmptyPostParams,
         )?;
