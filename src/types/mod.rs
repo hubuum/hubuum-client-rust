@@ -5,6 +5,7 @@ mod filter;
 mod import;
 mod meta;
 mod params;
+mod remote;
 mod report;
 mod search;
 mod task;
@@ -12,7 +13,7 @@ mod task;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
 
-pub use auth::{Credentials, Token};
+pub use auth::{Credentials, LogoutTokenRequest, Token};
 pub use baseurl::BaseUrl;
 pub use datetime::HubuumDateTime;
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
@@ -24,9 +25,15 @@ pub use import::{
 };
 pub use meta::{
     ClearRateLimitResponse, CountsResponse, DbStateResponse, LoginRateLimitConfig,
-    LoginRateLimitEntry, LoginRateLimitState, ObjectsByClass, ReleaseRateLimitResponse,
+    LoginRateLimitEntry, LoginRateLimitState, ObjectsByClass, ProbeResponse,
+    ReleaseRateLimitResponse,
 };
 pub use params::{ClassParams, NamespacePermissionsGrantParams, UserParams};
+pub use remote::{
+    NewRemoteTarget, RemoteAuthConfig, RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject,
+    RemoteTarget, RemoteTargetGet, RemoteTargetInvokeRequest, RemoteTargetSubjectType,
+    UpdateRemoteTarget,
+};
 pub use report::{
     ReportContentType, ReportInclude, ReportIncludeRelatedDirection, ReportIncludeRelatedObject,
     ReportIncludeRelatedSort, ReportJsonResponse, ReportLimits, ReportMeta,
@@ -70,4 +77,9 @@ pub enum Permissions {
     CreateTemplate,
     UpdateTemplate,
     DeleteTemplate,
+    ReadRemoteTarget,
+    CreateRemoteTarget,
+    UpdateRemoteTarget,
+    DeleteRemoteTarget,
+    ExecuteRemoteTarget,
 }

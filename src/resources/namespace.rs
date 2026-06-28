@@ -237,20 +237,26 @@ impl SyncHandle<Namespace> {
         Ok(())
     }
 
-    pub fn user_permissions(&self, user_id: i32) -> Result<Vec<GroupPermissionsResult>, ApiError> {
+    pub fn principal_permissions(
+        &self,
+        principal_id: i32,
+    ) -> Result<Vec<GroupPermissionsResult>, ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("namespace_id"),
                 self.resource().id.to_string().into(),
             ),
-            (Cow::Borrowed("user_id"), user_id.to_string().into()),
+            (
+                Cow::Borrowed("principal_id"),
+                principal_id.to_string().into(),
+            ),
         ];
 
         let res = self
             .client()
             .request_with_endpoint::<SyncEmptyPostParams, Vec<GroupPermissionsResult>>(
                 reqwest::Method::GET,
-                &Endpoint::NamespaceUserPermissions,
+                &Endpoint::NamespacePrincipalPermissions,
                 url_params,
                 vec![],
                 SyncEmptyPostParams {},
@@ -259,19 +265,22 @@ impl SyncHandle<Namespace> {
         Ok(res.unwrap_or_default())
     }
 
-    pub fn user_permissions_request(
+    pub fn principal_permissions_request(
         &self,
-        user_id: i32,
+        principal_id: i32,
     ) -> SyncCursorRequest<GroupPermissionsResult> {
         SyncCursorRequest::new(
             self.client().clone(),
-            Endpoint::NamespaceUserPermissions,
+            Endpoint::NamespacePrincipalPermissions,
             vec![
                 (
                     Cow::Borrowed("namespace_id"),
                     self.resource().id.to_string().into(),
                 ),
-                (Cow::Borrowed("user_id"), user_id.to_string().into()),
+                (
+                    Cow::Borrowed("principal_id"),
+                    principal_id.to_string().into(),
+                ),
             ],
         )
     }
@@ -508,23 +517,26 @@ impl AsyncHandle<Namespace> {
         Ok(())
     }
 
-    pub async fn user_permissions(
+    pub async fn principal_permissions(
         &self,
-        user_id: i32,
+        principal_id: i32,
     ) -> Result<Vec<GroupPermissionsResult>, ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("namespace_id"),
                 self.resource().id.to_string().into(),
             ),
-            (Cow::Borrowed("user_id"), user_id.to_string().into()),
+            (
+                Cow::Borrowed("principal_id"),
+                principal_id.to_string().into(),
+            ),
         ];
 
         let res = self
             .client()
             .request_with_endpoint::<AsyncEmptyPostParams, Vec<GroupPermissionsResult>>(
                 reqwest::Method::GET,
-                &Endpoint::NamespaceUserPermissions,
+                &Endpoint::NamespacePrincipalPermissions,
                 url_params,
                 vec![],
                 AsyncEmptyPostParams {},
@@ -534,19 +546,22 @@ impl AsyncHandle<Namespace> {
         Ok(res.unwrap_or_default())
     }
 
-    pub fn user_permissions_request(
+    pub fn principal_permissions_request(
         &self,
-        user_id: i32,
+        principal_id: i32,
     ) -> AsyncCursorRequest<GroupPermissionsResult> {
         AsyncCursorRequest::new(
             self.client().clone(),
-            Endpoint::NamespaceUserPermissions,
+            Endpoint::NamespacePrincipalPermissions,
             vec![
                 (
                     Cow::Borrowed("namespace_id"),
                     self.resource().id.to_string().into(),
                 ),
-                (Cow::Borrowed("user_id"), user_id.to_string().into()),
+                (
+                    Cow::Borrowed("principal_id"),
+                    principal_id.to_string().into(),
+                ),
             ],
         )
     }

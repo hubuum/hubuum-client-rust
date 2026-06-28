@@ -171,6 +171,17 @@ pub(crate) fn parse_page_response<U: DeserializeOwned>(
     Ok(Page { items, next_cursor })
 }
 
+/// Decode a raw-text response body (e.g. a freshly-minted token shown once).
+///
+/// The server may return the value as plain text or as a JSON string literal;
+/// accept both and strip surrounding whitespace.
+pub(crate) fn decode_raw_text(body: String) -> String {
+    match serde_json::from_str::<String>(body.trim()) {
+        Ok(s) => s,
+        Err(_) => body.trim().to_string(),
+    }
+}
+
 pub(crate) fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
     let name = type_name::<T>();
     let name = name.rsplit("::").next().unwrap_or(name);

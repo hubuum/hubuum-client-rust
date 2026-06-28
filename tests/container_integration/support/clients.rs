@@ -158,9 +158,10 @@ pub(crate) fn create_sync_user(
     let prefix = unique_case_prefix(case);
     let username = format!("{prefix}-user");
     let user = client.users().create_raw(UserPost {
-        username: username.clone(),
+        name: username.clone(),
         password: format!("{prefix}-Passw0rd!"),
         email: Some(format!("{prefix}@example.test")),
+        proper_name: None,
     })?;
 
     Ok((username, user.id))
@@ -174,9 +175,10 @@ pub(crate) fn create_sync_loginable_user(
     let username = format!("{prefix}-user");
     let password = format!("{prefix}-Passw0rd!");
     let user = client.users().create_raw(UserPost {
-        username: username.clone(),
+        name: username.clone(),
         password: password.clone(),
         email: Some(format!("{prefix}@example.test")),
+        proper_name: None,
     })?;
 
     Ok(TestUserCredentials {
@@ -232,9 +234,10 @@ pub(crate) async fn create_async_user(
     let user = client
         .users()
         .create_raw(UserPost {
-            username: username.clone(),
+            name: username.clone(),
             password: format!("{prefix}-Passw0rd!"),
             email: Some(format!("{prefix}@example.test")),
+            proper_name: None,
         })
         .await?;
 
@@ -251,9 +254,10 @@ pub(crate) async fn create_async_loginable_user(
     let user = client
         .users()
         .create_raw(UserPost {
-            username: username.clone(),
+            name: username.clone(),
             password: password.clone(),
             email: Some(format!("{prefix}@example.test")),
+            proper_name: None,
         })
         .await?;
 

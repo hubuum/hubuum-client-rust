@@ -16,8 +16,9 @@ pub struct ClassParams {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserParams {
     pub id: Option<i32>,
-    pub username: Option<String>,
+    pub name: Option<String>,
     pub email: Option<String>,
+    pub proper_name: Option<String>,
     pub created_at: Option<HubuumDateTime>,
     pub updated_at: Option<HubuumDateTime>,
 }

@@ -44,7 +44,6 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let plural_name = format_ident!("{}", pluralize(&name));
 
     let name_field = match base_name.trim_end_matches("Resource") {
-        "User" => format_ident!("username"),
         "Group" => format_ident!("groupname"),
         _ => format_ident!("name"),
     };

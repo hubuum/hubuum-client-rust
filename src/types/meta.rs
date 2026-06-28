@@ -70,6 +70,12 @@ pub struct ClearRateLimitResponse {
     pub cleared: u64,
 }
 
+/// Response from the `/healthz` and `/readyz` liveness/readiness probes.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProbeResponse {
+    pub status: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

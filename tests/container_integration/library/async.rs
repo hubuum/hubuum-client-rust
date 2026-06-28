@@ -112,7 +112,7 @@ fn async_user_tokens_endpoint_returns_admin_token_or_legacy_404() {
         .expect("async users().select_by_name(admin) failed");
 
     match harness.block_on(admin.tokens()) {
-        Ok(tokens) => assert!(tokens.iter().any(|token| token.user_id == admin.id())),
+        Ok(tokens) => assert!(tokens.iter().any(|token| token.principal_id == admin.id())),
         Err(ApiError::HttpWithBody { status, .. }) if status == reqwest::StatusCode::NOT_FOUND => {
             // Legacy servers may not expose /users/{id}/tokens.
         }
@@ -283,11 +283,11 @@ fn async_namespace_user_permissions_endpoint_returns_non_empty() {
     let namespace = harness
         .block_on(client.namespaces().select(namespace_id))
         .expect("async namespaces().select(namespace_id) failed");
-    let user_permissions = harness
-        .block_on(namespace.user_permissions(admin_id))
-        .expect("async namespace.user_permissions(user_id) failed");
+    let principal_permissions = harness
+        .block_on(namespace.principal_permissions(admin_id))
+        .expect("async namespace.principal_permissions(principal_id) failed");
 
-    assert!(!user_permissions.is_empty());
+    assert!(!principal_permissions.is_empty());
 }
 
 #[test]
@@ -473,21 +473,21 @@ fn async_users_update_changes_fields() {
         .block_on(create_async_user(&client, "async-users-update"))
         .expect("user creation failed");
     let prefix = unique_case_prefix("async-users-update");
-    let updated_username = format!("{prefix}-updated-user");
+    let updated_proper_name = format!("{prefix} Updated User");
     let updated_email = format!("{prefix}@example.test");
 
     let updated = harness
         .block_on(client.users().update_raw(
             user_id,
             UserPatch {
-                username: Some(updated_username.clone()),
                 email: Some(updated_email.clone()),
+                proper_name: Some(updated_proper_name.clone()),
             },
         ))
         .expect("async users().update_raw() failed");
 
     assert_eq!(updated.id, user_id);
-    assert_eq!(updated.username, updated_username);
+    assert_eq!(updated.proper_name, Some(updated_proper_name.clone()));
     assert_eq!(updated.email, Some(updated_email.clone()));
 }
 
@@ -591,21 +591,25 @@ fn async_group_membership_add_remove_roundtrip() {
         .expect("async groups().select(group_id) failed");
 
     harness
-        .block_on(group.add_user(user_id))
-        .expect("async group.add_user(user_id) failed");
+        .block_on(group.add_member(user_id))
+        .expect("async group.add_member(user_id) failed");
 
     let members = harness
         .block_on(group.members())
         .expect("async group.members() failed");
-    assert!(members.iter().any(|member| member.id() == user_id));
+    assert!(members.iter().any(|member| member.principal_id == user_id));
 
     harness
-        .block_on(group.remove_user(user_id))
-        .expect("async group.remove_user(user_id) failed");
+        .block_on(group.remove_member(user_id))
+        .expect("async group.remove_member(user_id) failed");
     let members_after = harness
         .block_on(group.members())
         .expect("async group.members() after remove failed");
-    assert!(!members_after.iter().any(|member| member.id() == user_id));
+    assert!(
+        !members_after
+            .iter()
+            .any(|member| member.principal_id == user_id)
+    );
 }
 
 #[test]
@@ -856,6 +860,8 @@ fn async_class_relation_create_delete_roundtrip() {
         .block_on(client.class_relation().create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
             to_hubuum_class_id: class_b.id,
+            forward_template_alias: None,
+            reverse_template_alias: None,
         }))
         .expect("async class_relation().create_raw() failed");
 
@@ -918,6 +924,8 @@ fn async_object_relation_create_delete_roundtrip() {
         .block_on(client.class_relation().create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
             to_hubuum_class_id: class_b.id,
+            forward_template_alias: None,
+            reverse_template_alias: None,
         }))
         .expect("failed to create supporting class relation");
 

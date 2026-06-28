@@ -24,6 +24,18 @@ A Rust client library for interacting with the Hubuum API. The library is design
 
     Run server-side reports, manage stored report templates, and submit asynchronous imports with typed task polling helpers.
 
+- **Principal-Centric Identity**:
+
+    Users and service accounts are both *principals*. Manage users and service accounts (create, update, disable), group membership by principal id, scoped token minting/revocation, and per-principal effective permissions. The `me()` family exposes the caller's own identity, tokens, groups, and permissions.
+
+- **Remote Targets**:
+
+    Configure hardened outbound HTTP targets and invoke them against namespaces, classes, objects, or relations, returning an async task to poll.
+
+- **Health & Readiness Probes**:
+
+    Unauthenticated `healthz()` / `readyz()` probes for liveness and readiness checks.
+
 - **No Built-In Table Formatting**:
 
     Models no longer implement built-in table rendering traits. Consumers that want table support should wrap/newtype the exported models in their own crates.

@@ -11,6 +11,7 @@ pub enum TaskKind {
     Report,
     Export,
     Reindex,
+    RemoteCall,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]

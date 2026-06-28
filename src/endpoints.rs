@@ -12,8 +12,17 @@ pub enum Endpoint {
     MetaTasks,
     Users,
     UsersById,
-    UserGroups,
-    UserTokens,
+    ServiceAccounts,
+    ServiceAccountsById,
+    ServiceAccountDisable,
+    PrincipalGroups,
+    PrincipalPermissions,
+    PrincipalTokens,
+    PrincipalTokenRevoke,
+    Me,
+    MeGroups,
+    MePermissions,
+    MeTokens,
     Groups,
     GroupsById,
     GroupMembers,
@@ -31,7 +40,7 @@ pub enum Endpoint {
     NamespacePermissions,
     NamespacePermissionsGrant,
     NamespacePermissionGrant,
-    NamespaceUserPermissions,
+    NamespacePrincipalPermissions,
     NamespaceHasPermissions,
     Objects,
     ObjectsById,
@@ -59,6 +68,11 @@ pub enum Endpoint {
     ImportResults,
     MetaLoginRateLimit,
     MetaLoginRateLimitById,
+    RemoteTargets,
+    RemoteTargetsById,
+    RemoteTargetInvoke,
+    Healthz,
+    Readyz,
 }
 
 impl Endpoint {
@@ -67,7 +81,7 @@ impl Endpoint {
             Endpoint::Login => "/api/v0/auth/login",
             Endpoint::LoginWithToken => "/api/v0/auth/validate",
             Endpoint::Logout => "/api/v0/auth/logout",
-            Endpoint::LogoutToken => "/api/v0/auth/logout/token/{token}",
+            Endpoint::LogoutToken => "/api/v0/auth/logout/token",
             Endpoint::LogoutUser => "/api/v0/auth/logout/uid/{user_id}",
             Endpoint::LogoutAll => "/api/v0/auth/logout_all",
             Endpoint::MetaCounts => "/api/v0/meta/counts",
@@ -75,12 +89,27 @@ impl Endpoint {
             Endpoint::MetaTasks => "/api/v0/meta/tasks",
             Endpoint::Users => "/api/v1/iam/users",
             Endpoint::UsersById => "/api/v1/iam/users/{user_id}",
-            Endpoint::UserGroups => "/api/v1/iam/users/{user_id}/groups",
-            Endpoint::UserTokens => "/api/v1/iam/users/{user_id}/tokens",
+            Endpoint::ServiceAccounts => "/api/v1/iam/service-accounts",
+            Endpoint::ServiceAccountsById => "/api/v1/iam/service-accounts/{service_account_id}",
+            Endpoint::ServiceAccountDisable => {
+                "/api/v1/iam/service-accounts/{service_account_id}/disable"
+            }
+            Endpoint::PrincipalGroups => "/api/v1/iam/principals/{principal_id}/groups",
+            Endpoint::PrincipalPermissions => "/api/v1/iam/principals/{principal_id}/permissions",
+            Endpoint::PrincipalTokens => "/api/v1/iam/principals/{principal_id}/tokens",
+            Endpoint::PrincipalTokenRevoke => {
+                "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke"
+            }
+            Endpoint::Me => "/api/v1/iam/me",
+            Endpoint::MeGroups => "/api/v1/iam/me/groups",
+            Endpoint::MePermissions => "/api/v1/iam/me/permissions",
+            Endpoint::MeTokens => "/api/v1/iam/me/tokens",
             Endpoint::Groups => "/api/v1/iam/groups",
             Endpoint::GroupsById => "/api/v1/iam/groups/{group_id}",
             Endpoint::GroupMembers => "/api/v1/iam/groups/{group_id}/members",
-            Endpoint::GroupMembersAddRemove => "/api/v1/iam/groups/{group_id}/members/{user_id}",
+            Endpoint::GroupMembersAddRemove => {
+                "/api/v1/iam/groups/{group_id}/members/{principal_id}"
+            }
             Endpoint::Classes => "/api/v1/classes",
             Endpoint::ClassesById => "/api/v1/classes/{class_id}",
             Endpoint::ClassPermissions => "/api/v1/classes/{class_id}/permissions",
@@ -101,8 +130,8 @@ impl Endpoint {
             Endpoint::NamespacePermissionGrant => {
                 "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}"
             }
-            Endpoint::NamespaceUserPermissions => {
-                "/api/v1/namespaces/{namespace_id}/permissions/user/{user_id}"
+            Endpoint::NamespacePrincipalPermissions => {
+                "/api/v1/namespaces/{namespace_id}/permissions/principal/{principal_id}"
             }
             Endpoint::NamespaceHasPermissions => {
                 "/api/v1/namespaces/{namespace_id}/has_permissions/{permission}"
@@ -142,6 +171,11 @@ impl Endpoint {
             Endpoint::ImportResults => "/api/v1/imports/{task_id}/results",
             Endpoint::MetaLoginRateLimit => "/api/v0/meta/login-rate-limit",
             Endpoint::MetaLoginRateLimitById => "/api/v0/meta/login-rate-limit/{id}",
+            Endpoint::RemoteTargets => "/api/v1/remote-targets",
+            Endpoint::RemoteTargetsById => "/api/v1/remote-targets/{target_id}",
+            Endpoint::RemoteTargetInvoke => "/api/v1/remote-targets/{target_id}/invoke",
+            Endpoint::Healthz => "/healthz",
+            Endpoint::Readyz => "/readyz",
         }
     }
 
@@ -167,7 +201,7 @@ mod test {
     #[parameterized(
         login = { Endpoint::Login, "/api/v0/auth/login" },
         logout = { Endpoint::Logout, "/api/v0/auth/logout" },
-        logout_token = { Endpoint::LogoutToken, "/api/v0/auth/logout/token/{token}" },
+        logout_token = { Endpoint::LogoutToken, "/api/v0/auth/logout/token" },
         logout_user = { Endpoint::LogoutUser, "/api/v0/auth/logout/uid/{user_id}" },
         logout_all = { Endpoint::LogoutAll, "/api/v0/auth/logout_all" },
         meta_counts = { Endpoint::MetaCounts, "/api/v0/meta/counts" },
@@ -175,9 +209,19 @@ mod test {
         meta_tasks = { Endpoint::MetaTasks, "/api/v0/meta/tasks" },
         get_user = { Endpoint::Users, "/api/v1/iam/users" },
         get_user_by_id = { Endpoint::UsersById, "/api/v1/iam/users/{user_id}" },
-        get_user_groups = { Endpoint::UserGroups, "/api/v1/iam/users/{user_id}/groups" },
-        get_user_tokens = { Endpoint::UserTokens, "/api/v1/iam/users/{user_id}/tokens" },
+        service_accounts = { Endpoint::ServiceAccounts, "/api/v1/iam/service-accounts" },
+        service_account_by_id = { Endpoint::ServiceAccountsById, "/api/v1/iam/service-accounts/{service_account_id}" },
+        service_account_disable = { Endpoint::ServiceAccountDisable, "/api/v1/iam/service-accounts/{service_account_id}/disable" },
+        principal_groups = { Endpoint::PrincipalGroups, "/api/v1/iam/principals/{principal_id}/groups" },
+        principal_permissions = { Endpoint::PrincipalPermissions, "/api/v1/iam/principals/{principal_id}/permissions" },
+        principal_tokens = { Endpoint::PrincipalTokens, "/api/v1/iam/principals/{principal_id}/tokens" },
+        principal_token_revoke = { Endpoint::PrincipalTokenRevoke, "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke" },
+        me = { Endpoint::Me, "/api/v1/iam/me" },
+        me_groups = { Endpoint::MeGroups, "/api/v1/iam/me/groups" },
+        me_permissions = { Endpoint::MePermissions, "/api/v1/iam/me/permissions" },
+        me_tokens = { Endpoint::MeTokens, "/api/v1/iam/me/tokens" },
         get_group_by_id = { Endpoint::GroupsById, "/api/v1/iam/groups/{group_id}" },
+        group_members_add_remove = { Endpoint::GroupMembersAddRemove, "/api/v1/iam/groups/{group_id}/members/{principal_id}" },
         get_class_permissions = { Endpoint::ClassPermissions, "/api/v1/classes/{class_id}/permissions" },
         get_class_by_id = { Endpoint::ClassesById, "/api/v1/classes/{class_id}" },
         get_class_related_classes = { Endpoint::ClassRelatedClasses, "/api/v1/classes/{class_id}/related/classes" },
@@ -188,7 +232,7 @@ mod test {
         get_namespace_by_id = { Endpoint::NamespacesById, "/api/v1/namespaces/{namespace_id}" },
         get_namespace_permission_grant = { Endpoint::NamespacePermissionsGrant, "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}" },
         get_namespace_single_permission_grant = { Endpoint::NamespacePermissionGrant, "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}" },
-        get_namespace_user_permissions = { Endpoint::NamespaceUserPermissions, "/api/v1/namespaces/{namespace_id}/permissions/user/{user_id}" },
+        get_namespace_principal_permissions = { Endpoint::NamespacePrincipalPermissions, "/api/v1/namespaces/{namespace_id}/permissions/principal/{principal_id}" },
         get_namespace_has_permissions = { Endpoint::NamespaceHasPermissions, "/api/v1/namespaces/{namespace_id}/has_permissions/{permission}" },
         get_class = { Endpoint::Classes, "/api/v1/classes" },
         get_object_by_id = { Endpoint::ObjectsById, "/api/v1/classes/{class_id}/{object_id}" },
@@ -212,7 +256,12 @@ mod test {
         import_by_id = { Endpoint::ImportById, "/api/v1/imports/{task_id}" },
         import_results = { Endpoint::ImportResults, "/api/v1/imports/{task_id}/results" },
         meta_login_rate_limit = { Endpoint::MetaLoginRateLimit, "/api/v0/meta/login-rate-limit" },
-        meta_login_rate_limit_by_id = { Endpoint::MetaLoginRateLimitById, "/api/v0/meta/login-rate-limit/{id}" }
+        meta_login_rate_limit_by_id = { Endpoint::MetaLoginRateLimitById, "/api/v0/meta/login-rate-limit/{id}" },
+        remote_targets = { Endpoint::RemoteTargets, "/api/v1/remote-targets" },
+        remote_target_by_id = { Endpoint::RemoteTargetsById, "/api/v1/remote-targets/{target_id}" },
+        remote_target_invoke = { Endpoint::RemoteTargetInvoke, "/api/v1/remote-targets/{target_id}/invoke" },
+        healthz = { Endpoint::Healthz, "/healthz" },
+        readyz = { Endpoint::Readyz, "/readyz" }
     )]
     fn test_endpoint_path(endpoint: Endpoint, expected: &str) {
         assert_eq!(endpoint.path(), expected);
@@ -221,7 +270,7 @@ mod test {
     #[parameterized(
         login = { Endpoint::Login, '/', "api/v0/auth/login" },
         logout = { Endpoint::Logout, '/', "api/v0/auth/logout" },
-        logout_token = { Endpoint::LogoutToken, '/', "api/v0/auth/logout/token/{token}" },
+        logout_token = { Endpoint::LogoutToken, '/', "api/v0/auth/logout/token" },
         logout_user = { Endpoint::LogoutUser, '/', "api/v0/auth/logout/uid/{user_id}" },
         logout_all = { Endpoint::LogoutAll, '/', "api/v0/auth/logout_all" },
         meta_counts = { Endpoint::MetaCounts, '/', "api/v0/meta/counts" },
@@ -229,8 +278,12 @@ mod test {
         meta_tasks = { Endpoint::MetaTasks, '/', "api/v0/meta/tasks" },
         get_user = { Endpoint::Users, '/', "api/v1/iam/users" },
         get_user_by_id = { Endpoint::UsersById, '/', "api/v1/iam/users/{user_id}" },
-        get_user_groups = { Endpoint::UserGroups, '/', "api/v1/iam/users/{user_id}/groups" },
-        get_user_tokens = { Endpoint::UserTokens, '/', "api/v1/iam/users/{user_id}/tokens" },
+        service_accounts = { Endpoint::ServiceAccounts, '/', "api/v1/iam/service-accounts" },
+        service_account_by_id = { Endpoint::ServiceAccountsById, '/', "api/v1/iam/service-accounts/{service_account_id}" },
+        principal_tokens = { Endpoint::PrincipalTokens, '/', "api/v1/iam/principals/{principal_id}/tokens" },
+        principal_token_revoke = { Endpoint::PrincipalTokenRevoke, '/', "api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke" },
+        me = { Endpoint::Me, '/', "api/v1/iam/me" },
+        me_tokens = { Endpoint::MeTokens, '/', "api/v1/iam/me/tokens" },
         get_group_by_id = { Endpoint::GroupsById, '/', "api/v1/iam/groups/{group_id}" },
         get_class_permissions = { Endpoint::ClassPermissions, '/', "api/v1/classes/{class_id}/permissions" },
         get_class_by_id = { Endpoint::ClassesById, '/', "api/v1/classes/{class_id}" },
@@ -242,7 +295,7 @@ mod test {
         get_namespace_by_id = { Endpoint::NamespacesById, '/', "api/v1/namespaces/{namespace_id}" },
         get_namespace_permission_grant = { Endpoint::NamespacePermissionsGrant, '/', "api/v1/namespaces/{namespace_id}/permissions/group/{group_id}" },
         get_namespace_single_permission_grant = { Endpoint::NamespacePermissionGrant, '/', "api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}" },
-        get_namespace_user_permissions = { Endpoint::NamespaceUserPermissions, '/', "api/v1/namespaces/{namespace_id}/permissions/user/{user_id}" },
+        get_namespace_principal_permissions = { Endpoint::NamespacePrincipalPermissions, '/', "api/v1/namespaces/{namespace_id}/permissions/principal/{principal_id}" },
         get_namespace_has_permissions = { Endpoint::NamespaceHasPermissions, '/', "api/v1/namespaces/{namespace_id}/has_permissions/{permission}" },
         get_class = { Endpoint::Classes, '/', "api/v1/classes" },
         get_object_by_id = { Endpoint::ObjectsById, '/', "api/v1/classes/{class_id}/{object_id}" },
@@ -266,7 +319,11 @@ mod test {
         import_by_id = { Endpoint::ImportById, '/', "api/v1/imports/{task_id}" },
         import_results = { Endpoint::ImportResults, '/', "api/v1/imports/{task_id}/results" },
         meta_login_rate_limit = { Endpoint::MetaLoginRateLimit, '/', "api/v0/meta/login-rate-limit" },
-        meta_login_rate_limit_by_id = { Endpoint::MetaLoginRateLimitById, '/', "api/v0/meta/login-rate-limit/{id}" }
+        meta_login_rate_limit_by_id = { Endpoint::MetaLoginRateLimitById, '/', "api/v0/meta/login-rate-limit/{id}" },
+        remote_targets = { Endpoint::RemoteTargets, '/', "api/v1/remote-targets" },
+        remote_target_invoke = { Endpoint::RemoteTargetInvoke, '/', "api/v1/remote-targets/{target_id}/invoke" },
+        healthz = { Endpoint::Healthz, '/', "healthz" },
+        readyz = { Endpoint::Readyz, '/', "readyz" }
     )]
     fn test_trim_start_matches(endpoint: Endpoint, prefix: char, expected: &str) {
         assert_eq!(endpoint.trim_start_matches(prefix), expected);
@@ -290,7 +347,10 @@ mod test {
         api_tasks = { Endpoint::Tasks, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/tasks" },
         api_imports = { Endpoint::Imports, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/imports" },
         api_meta_login_rate_limit = { Endpoint::MetaLoginRateLimit, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/login-rate-limit" },
-        api_meta_login_rate_limit_by_id = { Endpoint::MetaLoginRateLimitById, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/login-rate-limit/{id}" }
+        api_meta_login_rate_limit_by_id = { Endpoint::MetaLoginRateLimitById, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/login-rate-limit/{id}" },
+        api_remote_targets = { Endpoint::RemoteTargets, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/remote-targets" },
+        api_healthz = { Endpoint::Healthz, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/healthz" },
+        api_readyz = { Endpoint::Readyz, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/readyz" }
     )]
     fn test_complete(endpoint: Endpoint, baseurl: BaseUrl, expected: &str) {
         assert_eq!(endpoint.complete(&baseurl), expected);

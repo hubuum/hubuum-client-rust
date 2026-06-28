@@ -12,12 +12,15 @@ use crate::errors::ApiError;
 use crate::resources::{
     ApiResource, Class, ClassRelation, Group, Namespace, Object, ReportTemplate, User,
 };
+use crate::resources::{
+    MeResponse, PrincipalNamespacePermissions, PrincipalTokenMetadata, RemoteTarget, ServiceAccount,
+};
 use crate::types::{
     BaseUrl, ClearRateLimitResponse, CountsResponse, Credentials, DbStateResponse, FilterOperator,
-    ImportRequest, ImportTaskResultResponse, LoginRateLimitState, ReleaseRateLimitResponse,
-    ReportContentType, ReportJsonResponse, ReportRequest, ReportResult, SortDirection,
-    TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    ImportRequest, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
+    ProbeResponse, ReleaseRateLimitResponse, ReportContentType, ReportJsonResponse, ReportRequest,
+    ReportResult, SortDirection, TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse,
+    TaskStatus, Token, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -123,6 +126,27 @@ impl Client<Unauthenticated> {
             Err(ApiError::InvalidToken)
         }
     }
+
+    /// Liveness probe (`GET /healthz`). Requires no authentication.
+    pub fn healthz(&self) -> Result<ProbeResponse, ApiError> {
+        Ok(self
+            .http_client
+            .get(self.build_url(&Endpoint::Healthz, UrlParams::default()))
+            .send()?
+            .error_for_status()?
+            .json()?)
+    }
+
+    /// Readiness probe (`GET /readyz`). Requires no authentication; a not-ready
+    /// server responds with `503`, surfaced here as an error.
+    pub fn readyz(&self) -> Result<ProbeResponse, ApiError> {
+        Ok(self
+            .http_client
+            .get(self.build_url(&Endpoint::Readyz, UrlParams::default()))
+            .send()?
+            .error_for_status()?
+            .json()?)
+    }
 }
 
 impl Client<Authenticated> {
@@ -132,7 +156,7 @@ impl Client<Authenticated> {
 
     pub fn logout(&self) -> Result<(), ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+            reqwest::Method::POST,
             &Endpoint::Logout,
             UrlParams::default(),
             vec![],
@@ -142,19 +166,21 @@ impl Client<Authenticated> {
     }
 
     pub fn logout_token(&self, token: &str) -> Result<(), ApiError> {
-        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+        self.request_with_endpoint::<LogoutTokenRequest, serde_json::Value>(
+            reqwest::Method::POST,
             &Endpoint::LogoutToken,
-            vec![(Cow::Borrowed("token"), token.to_string().into())],
+            UrlParams::default(),
             vec![],
-            EmptyPostParams,
+            LogoutTokenRequest {
+                token: token.to_string(),
+            },
         )
         .map(|_| ())
     }
 
     pub fn logout_user(&self, user_id: i32) -> Result<(), ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+            reqwest::Method::POST,
             &Endpoint::LogoutUser,
             vec![(Cow::Borrowed("user_id"), user_id.to_string().into())],
             vec![],
@@ -165,7 +191,7 @@ impl Client<Authenticated> {
 
     pub fn logout_all(&self) -> Result<(), ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+            reqwest::Method::POST,
             &Endpoint::LogoutAll,
             UrlParams::default(),
             vec![],
@@ -336,6 +362,20 @@ impl Client<Authenticated> {
         shared::parse_response(&method, raw.status, raw.body)
     }
 
+    /// Issue a request whose successful response body is an opaque text payload
+    /// (e.g. a freshly-minted token), rather than a JSON resource.
+    pub(crate) fn request_raw_text<T: Serialize + std::fmt::Debug>(
+        &self,
+        method: reqwest::Method,
+        endpoint: &Endpoint,
+        url_params: UrlParams,
+        post_params: T,
+    ) -> Result<String, ApiError> {
+        let raw =
+            self.request_with_endpoint_raw(method, endpoint, url_params, vec![], post_params)?;
+        Ok(shared::decode_raw_text(raw.body))
+    }
+
     pub fn request<R: ApiResource, T: Serialize + std::fmt::Debug, U: DeserializeOwned>(
         &self,
         method: reqwest::Method,
@@ -444,6 +484,79 @@ impl Client<Authenticated> {
 
     pub fn users(&self) -> Resource<User> {
         Resource::new(self.clone(), UrlParams::default())
+    }
+
+    pub fn service_accounts(&self) -> Resource<ServiceAccount> {
+        Resource::new(self.clone(), UrlParams::default())
+    }
+
+    pub fn remote_targets(&self) -> Resource<RemoteTarget> {
+        Resource::new(self.clone(), UrlParams::default())
+    }
+
+    /// The authenticated caller's own identity and current-token metadata.
+    pub fn me(&self) -> Result<MeResponse, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, MeResponse>(
+            reqwest::Method::GET,
+            &Endpoint::Me,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .and_then(|opt| opt.ok_or(ApiError::EmptyResult("me returned empty result".into())))
+    }
+
+    /// The authenticated caller's own groups.
+    pub fn me_groups(&self) -> Result<Vec<Handle<Group>>, ApiError> {
+        let res = self.request_with_endpoint::<EmptyPostParams, Vec<Group>>(
+            reqwest::Method::GET,
+            &Endpoint::MeGroups,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )?;
+        Ok(res
+            .unwrap_or_default()
+            .into_iter()
+            .map(|group| Handle::new(self.clone(), group))
+            .collect())
+    }
+
+    pub fn me_groups_request(&self) -> CursorRequest<Group> {
+        CursorRequest::new(self.clone(), Endpoint::MeGroups, UrlParams::default())
+    }
+
+    /// The authenticated caller's own active tokens.
+    pub fn me_tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
+        let res = self.request_with_endpoint::<EmptyPostParams, Vec<PrincipalTokenMetadata>>(
+            reqwest::Method::GET,
+            &Endpoint::MeTokens,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )?;
+        Ok(res.unwrap_or_default())
+    }
+
+    pub fn me_tokens_request(&self) -> CursorRequest<PrincipalTokenMetadata> {
+        CursorRequest::new(self.clone(), Endpoint::MeTokens, UrlParams::default())
+    }
+
+    /// The authenticated caller's own effective permissions, per namespace.
+    pub fn me_permissions(&self) -> Result<Vec<PrincipalNamespacePermissions>, ApiError> {
+        let res = self
+            .request_with_endpoint::<EmptyPostParams, Vec<PrincipalNamespacePermissions>>(
+                reqwest::Method::GET,
+                &Endpoint::MePermissions,
+                UrlParams::default(),
+                vec![],
+                EmptyPostParams,
+            )?;
+        Ok(res.unwrap_or_default())
+    }
+
+    pub fn me_permissions_request(&self) -> CursorRequest<PrincipalNamespacePermissions> {
+        CursorRequest::new(self.clone(), Endpoint::MePermissions, UrlParams::default())
     }
 
     pub fn classes(&self) -> Resource<Class> {
@@ -1821,6 +1934,36 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            Endpoint::ServiceAccounts => {
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::ServiceAccountsById,
+                    vec![(Cow::Borrowed("service_account_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
+            Endpoint::RemoteTargets => {
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::RemoteTargetsById,
+                    vec![(Cow::Borrowed("target_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
             _ => {}
         }
 
@@ -1837,7 +1980,7 @@ where
     ///
     /// This will use the appropriate field for the resource type.
     ///   - Group: groupname
-    ///   - User: username
+    ///   - User: name
     ///   - Everything else: name
     pub fn select_by_name(&self, name: &str) -> Result<Handle<T>, ApiError> {
         let (url_params, filters) = shared::select_name_lookup_params::<T>(name);

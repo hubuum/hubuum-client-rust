@@ -62,7 +62,8 @@ mod parity_contract {
         sync as sync_client,
     };
     use crate::resources::{
-        Class, ClassRelation, Group, Namespace, Object, ObjectRelation, ReportTemplate, User,
+        Class, ClassRelation, Group, Namespace, Object, ObjectRelation, RemoteTarget,
+        ReportTemplate, ServiceAccount, User,
     };
     use crate::{QueryFilter, types::BaseUrl};
 
@@ -88,6 +89,8 @@ mod parity_contract {
         ($module:ident) => {
             let _: fn(BaseUrl, bool) -> $module::Client<Unauthenticated> =
                 $module::Client::<Unauthenticated>::new_with_certificate_validation;
+            let _ = $module::Client::<Unauthenticated>::healthz;
+            let _ = $module::Client::<Unauthenticated>::readyz;
         };
     }
 
@@ -95,6 +98,10 @@ mod parity_contract {
         ($module:ident) => {
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<User> =
                 $module::Client::<Authenticated>::users;
+            let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ServiceAccount> =
+                $module::Client::<Authenticated>::service_accounts;
+            let _: fn(&$module::Client<Authenticated>) -> $module::Resource<RemoteTarget> =
+                $module::Client::<Authenticated>::remote_targets;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<Class> =
                 $module::Client::<Authenticated>::classes;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<Namespace> =
@@ -125,6 +132,13 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::meta_counts;
             let _ = $module::Client::<Authenticated>::meta_db;
             let _ = $module::Client::<Authenticated>::meta_tasks;
+            let _ = $module::Client::<Authenticated>::me;
+            let _ = $module::Client::<Authenticated>::me_groups;
+            let _ = $module::Client::<Authenticated>::me_groups_request;
+            let _ = $module::Client::<Authenticated>::me_tokens;
+            let _ = $module::Client::<Authenticated>::me_tokens_request;
+            let _ = $module::Client::<Authenticated>::me_permissions;
+            let _ = $module::Client::<Authenticated>::me_permissions_request;
         };
     }
 
@@ -228,9 +242,18 @@ mod parity_contract {
             let _ = $module::Handle::<User>::groups_request;
             let _ = $module::Handle::<User>::tokens;
             let _ = $module::Handle::<User>::tokens_request;
+            let _ = $module::Handle::<User>::tokens_create;
+            let _ = $module::Handle::<User>::token_revoke;
 
-            let _ = $module::Handle::<Group>::add_user;
-            let _ = $module::Handle::<Group>::remove_user;
+            let _ = $module::Handle::<ServiceAccount>::disable;
+            let _ = $module::Handle::<ServiceAccount>::tokens;
+            let _ = $module::Handle::<ServiceAccount>::tokens_create;
+            let _ = $module::Handle::<ServiceAccount>::token_revoke;
+
+            let _ = $module::Handle::<RemoteTarget>::invoke;
+
+            let _ = $module::Handle::<Group>::add_member;
+            let _ = $module::Handle::<Group>::remove_member;
             let _ = $module::Handle::<Group>::members;
             let _ = $module::Handle::<Group>::members_request;
 
@@ -243,8 +266,8 @@ mod parity_contract {
             let _ = $module::Handle::<Namespace>::has_group_permission;
             let _ = $module::Handle::<Namespace>::grant_permission;
             let _ = $module::Handle::<Namespace>::revoke_permission;
-            let _ = $module::Handle::<Namespace>::user_permissions;
-            let _ = $module::Handle::<Namespace>::user_permissions_request;
+            let _ = $module::Handle::<Namespace>::principal_permissions;
+            let _ = $module::Handle::<Namespace>::principal_permissions_request;
             let _ = $module::Handle::<Namespace>::groups_with_permission;
         };
     }

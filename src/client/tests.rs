@@ -18,7 +18,7 @@ fn mock_login(server: &MockServer) {
     server.mock(|when, then| {
         when.method(POST)
             .path("/api/v0/auth/login")
-            .json_body(json!({ "username": USERNAME, "password": PASSWORD }));
+            .json_body(json!({ "name": USERNAME, "password": PASSWORD }));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({ "token": TOKEN }));

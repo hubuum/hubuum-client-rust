@@ -67,13 +67,11 @@ fn group_json() -> serde_json::Value {
     })
 }
 
-fn user_json() -> serde_json::Value {
+fn principal_member_json() -> serde_json::Value {
     json!({
-        "id": USER_ID,
-        "username": "alice",
-        "email": "alice@example.com",
-        "created_at": ts(),
-        "updated_at": ts()
+        "principal_id": USER_ID,
+        "kind": "human",
+        "name": "alice",
     })
 }
 
@@ -111,7 +109,7 @@ fn setup_scenario_mocks(server: &MockServer) {
     server.mock(|when, then| {
         when.method(POST)
             .path("/api/v0/auth/login")
-            .json_body(json!({ "username": USERNAME, "password": PASSWORD }));
+            .json_body(json!({ "name": USERNAME, "password": PASSWORD }));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({ "token": TOKEN }));
@@ -165,7 +163,7 @@ fn setup_scenario_mocks(server: &MockServer) {
         when.method(GET)
             .path("/api/v1/iam/groups/10/members")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(200).json_body(json!([user_json()]));
+        then.status(200).json_body(json!([principal_member_json()]));
     });
 
     server.mock(|when, then| {
@@ -234,8 +232,8 @@ fn run_shared_scenario_sync(client: &SyncClient<Authenticated>) -> Result<(), Ap
     client.classes().select(CLASS_ID)?.delete()?;
 
     assert_eq!(client.groups().select(GROUP_ID)?.members()?.len(), 1);
-    client.groups().select(GROUP_ID)?.add_user(USER_ID)?;
-    client.groups().select(GROUP_ID)?.remove_user(USER_ID)?;
+    client.groups().select(GROUP_ID)?.add_member(USER_ID)?;
+    client.groups().select(GROUP_ID)?.remove_member(USER_ID)?;
 
     assert_eq!(
         client
@@ -302,13 +300,13 @@ async fn run_shared_scenario_async(client: &AsyncClient<Authenticated>) -> Resul
         .groups()
         .select(GROUP_ID)
         .await?
-        .add_user(USER_ID)
+        .add_member(USER_ID)
         .await?;
     client
         .groups()
         .select(GROUP_ID)
         .await?
-        .remove_user(USER_ID)
+        .remove_member(USER_ID)
         .await?;
 
     assert_eq!(

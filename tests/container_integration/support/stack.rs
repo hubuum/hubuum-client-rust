@@ -156,7 +156,7 @@ fn collect_stack_diagnostics(
 
     let probe = match reqwest::blocking::Client::new()
         .post(format!("{base_url}/api/v0/auth/login"))
-        .json(&json!({ "username": "__readiness__", "password": "__readiness__" }))
+        .json(&json!({ "name": "__readiness__", "password": "__readiness__" }))
         .send()
     {
         Ok(response) => format!(
@@ -334,7 +334,7 @@ impl StackInner {
         if let Err(err) = wait_until(timeout, || {
             match reqwest::blocking::Client::new()
                 .post(format!("{base_url}/api/v0/auth/login"))
-                .json(&json!({ "username": "__readiness__", "password": "__readiness__" }))
+                .json(&json!({ "name": "__readiness__", "password": "__readiness__" }))
                 .send()
             {
                 Ok(response) => {
