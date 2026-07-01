@@ -6,7 +6,7 @@ pub(crate) fn login_token(base_url: &str, admin_password: &str) -> Result<String
     let response = reqwest::blocking::Client::new()
         .post(format!("{base_url}/api/v0/auth/login"))
         .json(&json!({
-            "username": ADMIN_USERNAME,
+            "name": ADMIN_USERNAME,
             "password": admin_password
         }))
         .send()
@@ -31,7 +31,7 @@ pub(crate) fn fetch_admin_ids(base_url: &str, token: &str) -> Result<(i32, i32),
 
     let users_response = http
         .get(format!(
-            "{base_url}/api/v1/iam/users/?username__equals={ADMIN_USERNAME}"
+            "{base_url}/api/v1/iam/users/?name__equals={ADMIN_USERNAME}"
         ))
         .bearer_auth(token)
         .send()

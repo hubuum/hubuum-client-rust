@@ -1967,7 +1967,11 @@ where
             _ => {}
         }
 
-        let (url_params, filters) = shared::select_id_lookup_params(id);
+        let (id_params, filters) = shared::select_id_lookup_params(id);
+        // Preserve any parametrized path segments (e.g. `class_id` for objects) so the
+        // fallback lookup targets a fully-substituted URL instead of a literal `{class_id}`.
+        let mut url_params = self.url_params.clone();
+        url_params.extend(id_params);
         let raw: Vec<<T as ApiResource>::GetOutput> =
             self.client.get(T::default(), url_params, filters)?;
 
