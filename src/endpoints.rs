@@ -15,6 +15,7 @@ pub enum Endpoint {
     ServiceAccounts,
     ServiceAccountsById,
     ServiceAccountDisable,
+    UserAnonymize,
     PrincipalGroups,
     PrincipalPermissions,
     PrincipalTokens,
@@ -30,6 +31,9 @@ pub enum Endpoint {
     Classes,
     ClassesById,
     ClassPermissions,
+    ClassEvents,
+    ClassHistory,
+    ClassHistoryAsOf,
     ClassRelatedClasses,
     ClassRelatedRelations,
     ClassRelatedGraph,
@@ -38,6 +42,11 @@ pub enum Endpoint {
     Namespaces,
     NamespacesById,
     NamespacePermissions,
+    NamespaceEvents,
+    NamespaceHistory,
+    NamespaceHistoryAsOf,
+    NamespaceEventSubscriptions,
+    NamespaceEventSubscriptionsById,
     NamespacePermissionsGrant,
     NamespacePermissionGrant,
     NamespacePrincipalPermissions,
@@ -45,6 +54,9 @@ pub enum Endpoint {
     Objects,
     ObjectsById,
     ObjectRelatedObjects,
+    ObjectEvents,
+    ObjectHistory,
+    ObjectHistoryAsOf,
     ObjectRelatedRelations,
     ObjectRelatedGraph,
     ObjectScopedRelationById,
@@ -57,12 +69,23 @@ pub enum Endpoint {
     SearchStream,
     ReportTemplates,
     ReportTemplatesById,
+    ReportTemplateEvents,
+    ReportTemplateHistory,
+    ReportTemplateHistoryAsOf,
     Reports,
     ReportById,
     ReportOutput,
     Tasks,
     TasksById,
     TaskEvents,
+    Events,
+    EventSinks,
+    EventSinksById,
+    EventDeliveries,
+    EventDeliveryHealth,
+    EventDeliveriesById,
+    EventDeliveryRetry,
+    EventDeliveryDead,
     Imports,
     ImportById,
     ImportResults,
@@ -70,6 +93,9 @@ pub enum Endpoint {
     MetaLoginRateLimitById,
     RemoteTargets,
     RemoteTargetsById,
+    RemoteTargetEvents,
+    RemoteTargetHistory,
+    RemoteTargetHistoryAsOf,
     RemoteTargetInvoke,
     Healthz,
     Readyz,
@@ -94,6 +120,7 @@ impl Endpoint {
             Endpoint::ServiceAccountDisable => {
                 "/api/v1/iam/service-accounts/{service_account_id}/disable"
             }
+            Endpoint::UserAnonymize => "/api/v1/iam/users/{user_id}/anonymize",
             Endpoint::PrincipalGroups => "/api/v1/iam/principals/{principal_id}/groups",
             Endpoint::PrincipalPermissions => "/api/v1/iam/principals/{principal_id}/permissions",
             Endpoint::PrincipalTokens => "/api/v1/iam/principals/{principal_id}/tokens",
@@ -113,6 +140,9 @@ impl Endpoint {
             Endpoint::Classes => "/api/v1/classes",
             Endpoint::ClassesById => "/api/v1/classes/{class_id}",
             Endpoint::ClassPermissions => "/api/v1/classes/{class_id}/permissions",
+            Endpoint::ClassEvents => "/api/v1/classes/{class_id}/events",
+            Endpoint::ClassHistory => "/api/v1/classes/{class_id}/history",
+            Endpoint::ClassHistoryAsOf => "/api/v1/classes/{class_id}/history/as-of",
             Endpoint::ClassRelatedClasses => "/api/v1/classes/{class_id}/related/classes",
             Endpoint::ClassRelatedRelations => "/api/v1/classes/{class_id}/related/relations",
             Endpoint::ClassRelatedGraph => "/api/v1/classes/{class_id}/related/graph",
@@ -124,6 +154,15 @@ impl Endpoint {
             Endpoint::NamespacesById => "/api/v1/namespaces/{namespace_id}",
 
             Endpoint::NamespacePermissions => "/api/v1/namespaces/{namespace_id}/permissions",
+            Endpoint::NamespaceEvents => "/api/v1/namespaces/{namespace_id}/events",
+            Endpoint::NamespaceHistory => "/api/v1/namespaces/{namespace_id}/history",
+            Endpoint::NamespaceHistoryAsOf => "/api/v1/namespaces/{namespace_id}/history/as-of",
+            Endpoint::NamespaceEventSubscriptions => {
+                "/api/v1/namespaces/{namespace_id}/event-subscriptions"
+            }
+            Endpoint::NamespaceEventSubscriptionsById => {
+                "/api/v1/namespaces/{namespace_id}/event-subscriptions/{subscription_id}"
+            }
             Endpoint::NamespacePermissionsGrant => {
                 "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}"
             }
@@ -142,6 +181,9 @@ impl Endpoint {
             Endpoint::ObjectRelatedObjects => {
                 "/api/v1/classes/{class_id}/objects/{object_id}/related/objects"
             }
+            Endpoint::ObjectEvents => "/api/v1/classes/{class_id}/{object_id}/events",
+            Endpoint::ObjectHistory => "/api/v1/classes/{class_id}/{object_id}/history",
+            Endpoint::ObjectHistoryAsOf => "/api/v1/classes/{class_id}/{object_id}/history/as-of",
             Endpoint::ObjectRelatedRelations => {
                 "/api/v1/classes/{class_id}/objects/{object_id}/related/relations"
             }
@@ -160,12 +202,23 @@ impl Endpoint {
             Endpoint::SearchStream => "/api/v1/search/stream",
             Endpoint::ReportTemplates => "/api/v1/templates",
             Endpoint::ReportTemplatesById => "/api/v1/templates/{template_id}",
+            Endpoint::ReportTemplateEvents => "/api/v1/templates/{template_id}/events",
+            Endpoint::ReportTemplateHistory => "/api/v1/templates/{template_id}/history",
+            Endpoint::ReportTemplateHistoryAsOf => "/api/v1/templates/{template_id}/history/as-of",
             Endpoint::Reports => "/api/v1/reports",
             Endpoint::ReportById => "/api/v1/reports/{task_id}",
             Endpoint::ReportOutput => "/api/v1/reports/{task_id}/output",
             Endpoint::Tasks => "/api/v1/tasks",
             Endpoint::TasksById => "/api/v1/tasks/{task_id}",
             Endpoint::TaskEvents => "/api/v1/tasks/{task_id}/events",
+            Endpoint::Events => "/api/v1/events",
+            Endpoint::EventSinks => "/api/v1/event-sinks",
+            Endpoint::EventSinksById => "/api/v1/event-sinks/{sink_id}",
+            Endpoint::EventDeliveries => "/api/v1/event-deliveries",
+            Endpoint::EventDeliveryHealth => "/api/v1/event-deliveries/health",
+            Endpoint::EventDeliveriesById => "/api/v1/event-deliveries/{delivery_id}",
+            Endpoint::EventDeliveryRetry => "/api/v1/event-deliveries/{delivery_id}/retry",
+            Endpoint::EventDeliveryDead => "/api/v1/event-deliveries/{delivery_id}/dead",
             Endpoint::Imports => "/api/v1/imports",
             Endpoint::ImportById => "/api/v1/imports/{task_id}",
             Endpoint::ImportResults => "/api/v1/imports/{task_id}/results",
@@ -173,6 +226,11 @@ impl Endpoint {
             Endpoint::MetaLoginRateLimitById => "/api/v0/meta/login-rate-limit/{id}",
             Endpoint::RemoteTargets => "/api/v1/remote-targets",
             Endpoint::RemoteTargetsById => "/api/v1/remote-targets/{target_id}",
+            Endpoint::RemoteTargetEvents => "/api/v1/remote-targets/{target_id}/events",
+            Endpoint::RemoteTargetHistory => "/api/v1/remote-targets/{remote_target_id}/history",
+            Endpoint::RemoteTargetHistoryAsOf => {
+                "/api/v1/remote-targets/{remote_target_id}/history/as-of"
+            }
             Endpoint::RemoteTargetInvoke => "/api/v1/remote-targets/{target_id}/invoke",
             Endpoint::Healthz => "/healthz",
             Endpoint::Readyz => "/readyz",

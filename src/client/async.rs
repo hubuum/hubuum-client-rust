@@ -10,17 +10,20 @@ use super::{
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{
-    ApiResource, Class, ClassRelation, Group, Namespace, Object, ReportTemplate, User,
+    ApiResource, Class, ClassRelation, EventSink, Group, Namespace, Object, ReportTemplate, User,
 };
 use crate::resources::{
     MeResponse, PrincipalNamespacePermissions, PrincipalTokenMetadata, RemoteTarget, ServiceAccount,
 };
 use crate::types::{
-    BaseUrl, ClearRateLimitResponse, CountsResponse, Credentials, DbStateResponse, FilterOperator,
-    ImportRequest, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
-    ProbeResponse, ReleaseRateLimitResponse, ReportContentType, ReportJsonResponse, ReportRequest,
-    ReportResult, SortDirection, TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse,
-    TaskStatus, Token, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    BaseUrl, ClassHistory, ClearRateLimitResponse, CountsResponse, Credentials, DbStateResponse,
+    EventDelivery, EventDeliveryHealthResponse, EventDeliveryUpdateResponse, EventResponse,
+    EventSubscription, FilterOperator, HubuumDateTime, ImportRequest, ImportTaskResultResponse,
+    LoginRateLimitState, LogoutTokenRequest, NamespaceHistory, NewEventSubscription, ObjectHistory,
+    ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory, ReportContentType,
+    ReportJsonResponse, ReportRequest, ReportResult, ReportTemplateHistory, SortDirection,
+    TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -154,6 +157,24 @@ impl Client<Unauthenticated> {
 impl Client<Authenticated> {
     pub fn get_token(&self) -> &str {
         &self.state.token
+    }
+
+    async fn history_as_of<T: DeserializeOwned>(
+        &self,
+        endpoint: Endpoint,
+        url_params: UrlParams,
+        at: HubuumDateTime,
+        empty_message: &str,
+    ) -> Result<T, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, T>(
+            reqwest::Method::GET,
+            &endpoint,
+            url_params,
+            vec![QueryFilter::raw("at", at.0.to_rfc3339())],
+            EmptyPostParams,
+        )
+        .await?
+        .ok_or(ApiError::EmptyResult(empty_message.into()))
     }
 
     pub async fn logout(&self) -> Result<(), ApiError> {
@@ -519,6 +540,18 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
+    pub fn event_sinks(&self) -> Resource<EventSink> {
+        Resource::new(self.clone(), UrlParams::default())
+    }
+
+    pub fn events(&self) -> EventListRequest {
+        EventListRequest::new(self.clone(), Endpoint::Events, UrlParams::default())
+    }
+
+    pub fn event_deliveries(&self) -> EventDeliveries {
+        EventDeliveries::new(self.clone())
+    }
+
     /// The authenticated caller's own identity and current-token metadata.
     pub async fn me(&self) -> Result<MeResponse, ApiError> {
         self.request_with_endpoint::<EmptyPostParams, MeResponse>(
@@ -598,12 +631,125 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
+    pub fn namespace_events(&self, namespace_id: i32) -> EventListRequest {
+        EventListRequest::new(
+            self.clone(),
+            Endpoint::NamespaceEvents,
+            vec![(
+                Cow::Borrowed("namespace_id"),
+                namespace_id.to_string().into(),
+            )],
+        )
+    }
+
+    pub fn namespace_history(&self, namespace_id: i32) -> HistoryRequest<NamespaceHistory> {
+        HistoryRequest::new(
+            self.clone(),
+            Endpoint::NamespaceHistory,
+            vec![(
+                Cow::Borrowed("namespace_id"),
+                namespace_id.to_string().into(),
+            )],
+        )
+    }
+
+    pub async fn namespace_history_as_of(
+        &self,
+        namespace_id: i32,
+        at: HubuumDateTime,
+    ) -> Result<NamespaceHistory, ApiError> {
+        self.history_as_of(
+            Endpoint::NamespaceHistoryAsOf,
+            vec![(
+                Cow::Borrowed("namespace_id"),
+                namespace_id.to_string().into(),
+            )],
+            at,
+            "Namespace history as-of returned empty result",
+        )
+        .await
+    }
+
+    pub fn event_subscriptions(&self, namespace_id: i32) -> EventSubscriptions {
+        EventSubscriptions::new(self.clone(), namespace_id)
+    }
+
     pub fn groups(&self) -> Resource<Group> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
     pub fn objects(&self, class_id: i32) -> Resource<Object> {
         Resource::new(self.clone(), vec![("class_id", class_id.to_string())])
+    }
+
+    pub fn class_events(&self, class_id: i32) -> EventListRequest {
+        EventListRequest::new(
+            self.clone(),
+            Endpoint::ClassEvents,
+            vec![(Cow::Borrowed("class_id"), class_id.to_string().into())],
+        )
+    }
+
+    pub fn class_history(&self, class_id: i32) -> HistoryRequest<ClassHistory> {
+        HistoryRequest::new(
+            self.clone(),
+            Endpoint::ClassHistory,
+            vec![(Cow::Borrowed("class_id"), class_id.to_string().into())],
+        )
+    }
+
+    pub async fn class_history_as_of(
+        &self,
+        class_id: i32,
+        at: HubuumDateTime,
+    ) -> Result<ClassHistory, ApiError> {
+        self.history_as_of(
+            Endpoint::ClassHistoryAsOf,
+            vec![(Cow::Borrowed("class_id"), class_id.to_string().into())],
+            at,
+            "Class history as-of returned empty result",
+        )
+        .await
+    }
+
+    pub fn object_events(&self, class_id: i32, object_id: i32) -> EventListRequest {
+        EventListRequest::new(
+            self.clone(),
+            Endpoint::ObjectEvents,
+            vec![
+                (Cow::Borrowed("class_id"), class_id.to_string().into()),
+                (Cow::Borrowed("object_id"), object_id.to_string().into()),
+            ],
+        )
+    }
+
+    pub fn object_history(&self, class_id: i32, object_id: i32) -> HistoryRequest<ObjectHistory> {
+        HistoryRequest::new(
+            self.clone(),
+            Endpoint::ObjectHistory,
+            vec![
+                (Cow::Borrowed("class_id"), class_id.to_string().into()),
+                (Cow::Borrowed("object_id"), object_id.to_string().into()),
+            ],
+        )
+    }
+
+    pub async fn object_history_as_of(
+        &self,
+        class_id: i32,
+        object_id: i32,
+        at: HubuumDateTime,
+    ) -> Result<ObjectHistory, ApiError> {
+        self.history_as_of(
+            Endpoint::ObjectHistoryAsOf,
+            vec![
+                (Cow::Borrowed("class_id"), class_id.to_string().into()),
+                (Cow::Borrowed("object_id"), object_id.to_string().into()),
+            ],
+            at,
+            "Object history as-of returned empty result",
+        )
+        .await
     }
 
     pub fn class_relation(&self) -> Resource<ClassRelation> {
@@ -622,6 +768,75 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
+    pub fn template_events(&self, template_id: i32) -> EventListRequest {
+        EventListRequest::new(
+            self.clone(),
+            Endpoint::ReportTemplateEvents,
+            vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
+        )
+    }
+
+    pub fn template_history(&self, template_id: i32) -> HistoryRequest<ReportTemplateHistory> {
+        HistoryRequest::new(
+            self.clone(),
+            Endpoint::ReportTemplateHistory,
+            vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
+        )
+    }
+
+    pub async fn template_history_as_of(
+        &self,
+        template_id: i32,
+        at: HubuumDateTime,
+    ) -> Result<ReportTemplateHistory, ApiError> {
+        self.history_as_of(
+            Endpoint::ReportTemplateHistoryAsOf,
+            vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
+            at,
+            "Template history as-of returned empty result",
+        )
+        .await
+    }
+
+    pub fn remote_target_events(&self, target_id: i32) -> EventListRequest {
+        EventListRequest::new(
+            self.clone(),
+            Endpoint::RemoteTargetEvents,
+            vec![(Cow::Borrowed("target_id"), target_id.to_string().into())],
+        )
+    }
+
+    pub fn remote_target_history(
+        &self,
+        remote_target_id: i32,
+    ) -> HistoryRequest<RemoteTargetHistory> {
+        HistoryRequest::new(
+            self.clone(),
+            Endpoint::RemoteTargetHistory,
+            vec![(
+                Cow::Borrowed("remote_target_id"),
+                remote_target_id.to_string().into(),
+            )],
+        )
+    }
+
+    pub async fn remote_target_history_as_of(
+        &self,
+        remote_target_id: i32,
+        at: HubuumDateTime,
+    ) -> Result<RemoteTargetHistory, ApiError> {
+        self.history_as_of(
+            Endpoint::RemoteTargetHistoryAsOf,
+            vec![(
+                Cow::Borrowed("remote_target_id"),
+                remote_target_id.to_string().into(),
+            )],
+            at,
+            "Remote target history as-of returned empty result",
+        )
+        .await
+    }
+
     pub fn reports(&self) -> Reports {
         Reports::new(self.clone())
     }
@@ -632,6 +847,303 @@ impl Client<Authenticated> {
 
     pub fn tasks(&self) -> Tasks {
         Tasks::new(self.clone())
+    }
+}
+
+pub struct EventListRequest {
+    inner: CursorRequest<EventResponse>,
+}
+
+impl EventListRequest {
+    fn new(client: Client<Authenticated>, endpoint: Endpoint, url_params: UrlParams) -> Self {
+        Self {
+            inner: CursorRequest::new(client, endpoint, url_params),
+        }
+    }
+
+    pub fn action(mut self, action: impl Into<String>) -> Self {
+        self.inner = self.inner.query_param("action", action.into());
+        self
+    }
+
+    pub fn actor_kind(mut self, actor_kind: impl Into<String>) -> Self {
+        self.inner = self.inner.query_param("actor_kind", actor_kind.into());
+        self
+    }
+
+    pub fn actor_user_id(mut self, actor_user_id: i32) -> Self {
+        self.inner = self.inner.query_param("actor_user_id", actor_user_id);
+        self
+    }
+
+    pub fn namespace_id(mut self, namespace_id: i32) -> Self {
+        self.inner = self.inner.query_param("namespace_id", namespace_id);
+        self
+    }
+
+    pub fn occurred_after(mut self, occurred_after: impl Into<String>) -> Self {
+        self.inner = self
+            .inner
+            .query_param("occurred_after", occurred_after.into());
+        self
+    }
+
+    pub fn occurred_before(mut self, occurred_before: impl Into<String>) -> Self {
+        self.inner = self
+            .inner
+            .query_param("occurred_before", occurred_before.into());
+        self
+    }
+
+    pub fn limit(mut self, limit: usize) -> Self {
+        self.inner = self.inner.limit(limit);
+        self
+    }
+
+    pub fn sort<S: AsRef<str>>(mut self, field: S, direction: SortDirection) -> Self {
+        self.inner = self.inner.sort(field, direction);
+        self
+    }
+
+    pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
+        self.inner = self.inner.cursor(cursor);
+        self
+    }
+
+    pub async fn page(self) -> Result<shared::Page<EventResponse>, ApiError> {
+        self.inner.page().await
+    }
+
+    pub async fn list(self) -> Result<Vec<EventResponse>, ApiError> {
+        self.inner.list().await
+    }
+}
+
+pub struct HistoryRequest<T> {
+    inner: CursorRequest<T>,
+}
+
+impl<T> HistoryRequest<T>
+where
+    T: DeserializeOwned,
+{
+    fn new(client: Client<Authenticated>, endpoint: Endpoint, url_params: UrlParams) -> Self {
+        Self {
+            inner: CursorRequest::new(client, endpoint, url_params),
+        }
+    }
+
+    pub fn limit(mut self, limit: usize) -> Self {
+        self.inner = self.inner.limit(limit);
+        self
+    }
+
+    pub fn sort<S: AsRef<str>>(mut self, field: S, direction: SortDirection) -> Self {
+        self.inner = self.inner.sort(field, direction);
+        self
+    }
+
+    pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
+        self.inner = self.inner.cursor(cursor);
+        self
+    }
+
+    pub async fn page(self) -> Result<shared::Page<T>, ApiError> {
+        self.inner.page().await
+    }
+
+    pub async fn list(self) -> Result<Vec<T>, ApiError> {
+        self.inner.list().await
+    }
+}
+
+pub struct EventSubscriptions {
+    client: Client<Authenticated>,
+    namespace_id: i32,
+}
+
+impl EventSubscriptions {
+    fn new(client: Client<Authenticated>, namespace_id: i32) -> Self {
+        Self {
+            client,
+            namespace_id,
+        }
+    }
+
+    fn url_params(&self) -> UrlParams {
+        vec![(
+            Cow::Borrowed("namespace_id"),
+            self.namespace_id.to_string().into(),
+        )]
+    }
+
+    fn url_params_with_subscription(&self, subscription_id: i32) -> UrlParams {
+        vec![
+            (
+                Cow::Borrowed("namespace_id"),
+                self.namespace_id.to_string().into(),
+            ),
+            (
+                Cow::Borrowed("subscription_id"),
+                subscription_id.to_string().into(),
+            ),
+        ]
+    }
+
+    pub fn query(&self) -> CursorRequest<EventSubscription> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::NamespaceEventSubscriptions,
+            self.url_params(),
+        )
+    }
+
+    pub async fn get(&self, subscription_id: i32) -> Result<EventSubscription, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, EventSubscription>(
+                reqwest::Method::GET,
+                &Endpoint::NamespaceEventSubscriptionsById,
+                self.url_params_with_subscription(subscription_id),
+                vec![],
+                EmptyPostParams,
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Event subscription returned empty result".into(),
+            ))
+    }
+
+    pub async fn create(
+        &self,
+        request: NewEventSubscription,
+    ) -> Result<EventSubscription, ApiError> {
+        self.client
+            .request_with_endpoint::<NewEventSubscription, EventSubscription>(
+                reqwest::Method::POST,
+                &Endpoint::NamespaceEventSubscriptions,
+                self.url_params(),
+                vec![],
+                request,
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Event subscription create returned empty result".into(),
+            ))
+    }
+
+    pub async fn update(
+        &self,
+        subscription_id: i32,
+        request: UpdateEventSubscription,
+    ) -> Result<EventSubscription, ApiError> {
+        let mut url_params = self.url_params();
+        url_params.push(("patch_id".into(), subscription_id.to_string().into()));
+        self.client
+            .request_with_endpoint::<UpdateEventSubscription, EventSubscription>(
+                reqwest::Method::PATCH,
+                &Endpoint::NamespaceEventSubscriptions,
+                url_params,
+                vec![],
+                request,
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Event subscription update returned empty result".into(),
+            ))
+    }
+
+    pub async fn delete(&self, subscription_id: i32) -> Result<(), ApiError> {
+        let mut url_params = self.url_params();
+        url_params.push(("delete_id".into(), subscription_id.to_string().into()));
+        self.client
+            .request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+                reqwest::Method::DELETE,
+                &Endpoint::NamespaceEventSubscriptions,
+                url_params,
+                vec![],
+                EmptyPostParams,
+            )
+            .await
+            .map(|_| ())
+    }
+}
+
+pub struct EventDeliveries {
+    client: Client<Authenticated>,
+}
+
+impl EventDeliveries {
+    fn new(client: Client<Authenticated>) -> Self {
+        Self { client }
+    }
+
+    pub fn query(&self) -> CursorRequest<EventDelivery> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::EventDeliveries,
+            UrlParams::default(),
+        )
+    }
+
+    pub async fn get(&self, delivery_id: i64) -> Result<EventDelivery, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, EventDelivery>(
+                reqwest::Method::GET,
+                &Endpoint::EventDeliveriesById,
+                vec![(Cow::Borrowed("delivery_id"), delivery_id.to_string().into())],
+                vec![],
+                EmptyPostParams,
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Event delivery returned empty result".into(),
+            ))
+    }
+
+    pub async fn health(&self) -> Result<EventDeliveryHealthResponse, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, EventDeliveryHealthResponse>(
+                reqwest::Method::GET,
+                &Endpoint::EventDeliveryHealth,
+                UrlParams::default(),
+                vec![],
+                EmptyPostParams,
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Event delivery health returned empty result".into(),
+            ))
+    }
+
+    pub async fn retry(&self, delivery_id: i64) -> Result<EventDelivery, ApiError> {
+        self.update_delivery(Endpoint::EventDeliveryRetry, delivery_id, "retry")
+            .await
+    }
+
+    pub async fn mark_dead(&self, delivery_id: i64) -> Result<EventDelivery, ApiError> {
+        self.update_delivery(Endpoint::EventDeliveryDead, delivery_id, "mark dead")
+            .await
+    }
+
+    async fn update_delivery(
+        &self,
+        endpoint: Endpoint,
+        delivery_id: i64,
+        operation: &str,
+    ) -> Result<EventDelivery, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, EventDeliveryUpdateResponse>(
+                reqwest::Method::POST,
+                &endpoint,
+                vec![(Cow::Borrowed("delivery_id"), delivery_id.to_string().into())],
+                vec![],
+                EmptyPostParams,
+            )
+            .await?
+            .map(|response| response.delivery)
+            .ok_or(ApiError::EmptyResult(format!(
+                "Event delivery {operation} returned empty result"
+            )))
     }
 }
 

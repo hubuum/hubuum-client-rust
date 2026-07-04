@@ -108,6 +108,19 @@ impl SyncHandle<User> {
             )?;
         Ok(())
     }
+
+    /// Anonymize this user. The server returns `204 No Content` on success.
+    pub fn anonymize(&self) -> Result<(), ApiError> {
+        self.client()
+            .request_with_endpoint::<SyncEmptyPostParams, serde_json::Value>(
+                reqwest::Method::POST,
+                &Endpoint::UserAnonymize,
+                vec![(Cow::Borrowed("user_id"), self.id().to_string().into())],
+                vec![],
+                SyncEmptyPostParams {},
+            )?;
+        Ok(())
+    }
 }
 
 impl AsyncHandle<User> {
@@ -175,6 +188,20 @@ impl AsyncHandle<User> {
                 SetPasswordBody {
                     password: password.into(),
                 },
+            )
+            .await?;
+        Ok(())
+    }
+
+    /// Anonymize this user. The server returns `204 No Content` on success.
+    pub async fn anonymize(&self) -> Result<(), ApiError> {
+        self.client()
+            .request_with_endpoint::<AsyncEmptyPostParams, serde_json::Value>(
+                reqwest::Method::POST,
+                &Endpoint::UserAnonymize,
+                vec![(Cow::Borrowed("user_id"), self.id().to_string().into())],
+                vec![],
+                AsyncEmptyPostParams {},
             )
             .await?;
         Ok(())

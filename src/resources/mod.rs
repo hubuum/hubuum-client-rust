@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::fmt::Debug;
 
 mod class;
+mod event_sink;
 mod group;
 mod namespace;
 mod object;
@@ -29,9 +30,10 @@ pub use self::service_account::{
 };
 pub use self::user::{User, UserGet, UserPatch, UserPost};
 pub use crate::types::{
-    FilterOperator, HubuumDateTime, NewRemoteTarget, QueryFilter, RemoteAuthConfig,
-    RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject, RemoteTarget, RemoteTargetGet,
-    RemoteTargetInvokeRequest, RemoteTargetSubjectType, UpdateRemoteTarget,
+    EventSink, FilterOperator, HubuumDateTime, NewEventSink, NewRemoteTarget, QueryFilter,
+    RemoteAuthConfig, RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject, RemoteTarget,
+    RemoteTargetGet, RemoteTargetInvokeRequest, RemoteTargetSubjectType, UpdateEventSink,
+    UpdateRemoteTarget,
 };
 
 use crate::endpoints::Endpoint;
