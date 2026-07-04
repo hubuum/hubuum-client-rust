@@ -39,3 +39,80 @@ fn e2e_sync_meta_and_crud_lifecycle() {
         .expect("object should be fetchable");
     assert_eq!(object.id(), object_id);
 }
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn e2e_probe_meta_and_auth_admin_endpoints() {
+    let harness = E2EHarness::from_env().expect("failed to start e2e harness");
+
+    let probe_client = hubuum_client::SyncClient::new(harness.base_url.clone());
+    let health = probe_client.healthz().expect("healthz endpoint failed");
+    assert!(!health.status.is_empty());
+    let ready = probe_client.readyz().expect("readyz endpoint failed");
+    assert!(!ready.status.is_empty());
+
+    let db = harness.client.meta_db().expect("meta db endpoint failed");
+    assert!(db.available_connections >= 0);
+    let tasks = harness
+        .client
+        .meta_tasks()
+        .expect("meta tasks endpoint failed");
+    assert!(tasks.total_tasks >= tasks.active_tasks);
+
+    let rate_limits = harness
+        .client
+        .meta_login_rate_limit()
+        .include_all(true)
+        .send()
+        .expect("login rate limit state should fetch");
+    assert!(rate_limits.returned_entries <= rate_limits.tracked_entries);
+    let clear = harness
+        .client
+        .meta_login_rate_limit_clear()
+        .expect("login rate limit clear should succeed");
+    assert!(clear.cleared <= rate_limits.tracked_entries);
+
+    let managed_user = harness
+        .create_user("auth-admin")
+        .expect("managed user should create");
+    let managed_session = managed_user
+        .login(harness.base_url.clone())
+        .expect("managed user should log in");
+    let second_session = hubuum_client::SyncClient::new(harness.base_url.clone())
+        .login(hubuum_client::Credentials::new(
+            "admin".to_string(),
+            harness.admin_password.clone(),
+        ))
+        .expect("second admin login should succeed");
+    let second_token = second_session.get_token().to_string();
+
+    harness
+        .client
+        .logout_token(&second_token)
+        .expect("admin should revoke a specific token");
+    second_session
+        .meta_counts()
+        .expect_err("revoked token should no longer authorize requests");
+
+    harness
+        .client
+        .logout_user(managed_user.id)
+        .expect("admin should revoke user tokens");
+    managed_session
+        .meta_counts()
+        .expect_err("logout_user should revoke the target user's session");
+
+    let fourth_session = hubuum_client::SyncClient::new(harness.base_url.clone())
+        .login(hubuum_client::Credentials::new(
+            "admin".to_string(),
+            harness.admin_password.clone(),
+        ))
+        .expect("fourth admin login should succeed");
+    harness
+        .client
+        .logout_all()
+        .expect("logout_all should revoke all other tokens");
+    fourth_session
+        .meta_counts()
+        .expect_err("logout_all should revoke other sessions");
+}

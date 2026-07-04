@@ -1,8 +1,9 @@
 use std::{thread, time::Duration};
 
 use hubuum_client::{
-    ClassPatch, EventSinkKind, NewEventSink, NewEventSubscription, ObjectPatch, ReportContentType,
-    ReportTemplateKind, ReportTemplatePost, UpdateEventSubscription,
+    ClassPatch, EventDeliveryStatus, EventSinkKind, NewEventSink, NewEventSubscription,
+    ObjectPatch, ReportContentType, ReportTemplateKind, ReportTemplatePost,
+    UpdateEventSubscription,
 };
 use serde_json::json;
 
@@ -120,6 +121,20 @@ fn e2e_event_subscriptions_create_delivery_rows() {
         .get(matching_delivery.id)
         .expect("event delivery should be fetchable");
     assert_eq!(fetched_delivery.subscription_id, subscription.id);
+
+    let dead_delivery = harness
+        .client
+        .event_deliveries()
+        .mark_dead(matching_delivery.id)
+        .expect("event delivery should be markable dead");
+    assert_eq!(dead_delivery.status, EventDeliveryStatus::Dead);
+
+    let retried_delivery = harness
+        .client
+        .event_deliveries()
+        .retry(matching_delivery.id)
+        .expect("event delivery should be retryable");
+    assert_eq!(retried_delivery.status, EventDeliveryStatus::Pending);
 
     let health = harness
         .client

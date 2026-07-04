@@ -66,6 +66,13 @@ fn e2e_import_creates_graph_and_exposes_results() {
         .expect("import task should complete");
     assert!(completed.status.is_success(), "{completed:?}");
 
+    let fetched_import = harness
+        .client
+        .imports()
+        .get(submitted.id)
+        .expect("import task should be fetchable through import endpoint");
+    assert_eq!(fetched_import.id, submitted.id);
+
     let results = harness
         .client
         .imports()
