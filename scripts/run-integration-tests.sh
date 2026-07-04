@@ -8,17 +8,20 @@ cd "${REPO_ROOT}"
 DB_USER="${HUBUUM_INTEGRATION_DB_USER:-hubuum}"
 DB_PASSWORD="${HUBUUM_INTEGRATION_DB_PASSWORD:-hubuum_password}"
 DB_NAME="${HUBUUM_INTEGRATION_DB_NAME:-hubuum}"
-DB_IMAGE="${HUBUUM_INTEGRATION_DB_IMAGE:-postgres:15}"
-SERVER_IMAGE="${HUBUUM_INTEGRATION_SERVER_IMAGE:-ghcr.io/hubuum/hubuum-server:no-tls-main}"
+DB_IMAGE="${HUBUUM_INTEGRATION_DB_IMAGE:-postgres:18}"
+SERVER_IMAGE="${HUBUUM_INTEGRATION_SERVER_IMAGE:-ghcr.io/hubuum/hubuum-server:main}"
 CLIENT_ALLOWLIST="${HUBUUM_CLIENT_ALLOWLIST:-*}"
 STACK_TIMEOUT_SECS="${HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS:-300}"
 KEEP_CONTAINERS="${HUBUUM_INTEGRATION_KEEP_CONTAINERS:-0}"
+CONTAINER_RUNTIME="${HUBUUM_INTEGRATION_CONTAINER_RUNTIME:-}"
 
 DEFAULT_SEED_SQL="tests/container_integration/seed/init.sql"
 SEED_SQL="${HUBUUM_INTEGRATION_SEED_SQL:-${DEFAULT_SEED_SQL}}"
 SEED_MODE="auto"
 
 TEST_ARGS=()
+RUN_E2E_CLIENT="0"
+E2E_ONLY="0"
 
 usage() {
     cat <<'USAGE'
@@ -27,6 +30,8 @@ Usage: scripts/run-integration-tests.sh [options] [-- <test-binary-args...>]
 Options:
   --seed <path>      Apply SQL seed file after server startup (fails if file is missing).
   --skip-seed        Do not apply any SQL seed.
+  --with-e2e-client  Run e2e_client integration tests in addition to library integration tests.
+  --e2e-only         Run only e2e_client integration tests.
   --keep             Keep containers and network after run.
   -h, --help         Show this help text.
 
@@ -52,6 +57,15 @@ while (($# > 0)); do
         SEED_MODE="off"
         shift
         ;;
+    --with-e2e-client)
+        RUN_E2E_CLIENT="1"
+        shift
+        ;;
+    --e2e-only)
+        E2E_ONLY="1"
+        RUN_E2E_CLIENT="1"
+        shift
+        ;;
     --keep)
         KEEP_CONTAINERS="1"
         shift
@@ -72,6 +86,31 @@ while (($# > 0)); do
     esac
 done
 
+detect_container_runtime() {
+    if [[ -n "${CONTAINER_RUNTIME}" ]]; then
+        if ! command -v "${CONTAINER_RUNTIME}" >/dev/null 2>&1; then
+            echo "Configured container runtime not found: ${CONTAINER_RUNTIME}" >&2
+            exit 1
+        fi
+        return
+    fi
+
+    if command -v docker >/dev/null 2>&1; then
+        CONTAINER_RUNTIME="docker"
+    elif command -v podman >/dev/null 2>&1; then
+        CONTAINER_RUNTIME="podman"
+    else
+        echo "Neither docker nor podman was found. Set HUBUUM_INTEGRATION_CONTAINER_RUNTIME." >&2
+        exit 1
+    fi
+}
+
+container() {
+    "${CONTAINER_RUNTIME}" "$@"
+}
+
+detect_container_runtime
+
 suffix="$(date +%s)-$$-${RANDOM}"
 NETWORK_NAME="hubuum-it-net-${suffix}"
 DB_CONTAINER="hubuum-it-db-${suffix}"
@@ -86,14 +125,14 @@ is_true() {
 
 print_db_diagnostics() {
     echo "DB diagnostics for ${DB_CONTAINER}:"
-    docker inspect -f '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${DB_CONTAINER}" || true
-    docker logs --tail 120 "${DB_CONTAINER}" || true
+    container inspect -f '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${DB_CONTAINER}" || true
+    container logs --tail 120 "${DB_CONTAINER}" || true
 }
 
 print_server_diagnostics() {
     echo "Server diagnostics for ${SERVER_CONTAINER}:"
-    docker inspect -f '{{.State.Status}}' "${SERVER_CONTAINER}" || true
-    docker logs --tail 120 "${SERVER_CONTAINER}" || true
+    container inspect -f '{{.State.Status}}' "${SERVER_CONTAINER}" || true
+    container logs --tail 120 "${SERVER_CONTAINER}" || true
 }
 
 cleanup() {
@@ -105,8 +144,8 @@ cleanup() {
         return
     fi
 
-    docker rm -f "${SERVER_CONTAINER}" "${DB_CONTAINER}" >/dev/null 2>&1 || true
-    docker network rm "${NETWORK_NAME}" >/dev/null 2>&1 || true
+    container rm -f "${SERVER_CONTAINER}" "${DB_CONTAINER}" >/dev/null 2>&1 || true
+    container network rm "${NETWORK_NAME}" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT INT TERM
 
@@ -115,8 +154,8 @@ wait_for_db() {
     while ((SECONDS < deadline)); do
         local status
         local health
-        status="$(docker inspect -f '{{.State.Status}}' "${DB_CONTAINER}" 2>/dev/null || true)"
-        health="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${DB_CONTAINER}" 2>/dev/null || true)"
+        status="$(container inspect -f '{{.State.Status}}' "${DB_CONTAINER}" 2>/dev/null || true)"
+        health="$(container inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${DB_CONTAINER}" 2>/dev/null || true)"
 
         if [[ "${health}" == "healthy" ]]; then
             return 0
@@ -135,27 +174,54 @@ wait_for_db() {
 }
 
 extract_admin_password() {
-    docker logs "${SERVER_CONTAINER}" 2>&1 \
+    container logs "${SERVER_CONTAINER}" 2>&1 \
         | grep '"message":"Created admin user"' \
         | sed -n 's/.*"password":"\([^"]*\)".*/\1/p' \
         | tail -n 1
 }
 
-wait_for_admin_password() {
+extract_admin_password_from_text() {
+    sed -n -E \
+        -e 's/.*"password":"([^\"]+)".*/\1/p' \
+        -e 's/.*"password"[[:space:]]*:[[:space:]]*"([^\"]+)".*/\1/p' \
+        -e 's/.*[Pp]assword for user [^[:space:]]+ reset to:[[:space:]]*([^[:space:]]+).*/\1/p' \
+        -e 's/.*[Pp]assword:[[:space:]]*([^[:space:]]+).*/\1/p' \
+        | sed -E 's/^"(.*)"$/\1/' \
+        | tail -n 1
+}
+
+reset_admin_password() {
     local deadline=$((SECONDS + STACK_TIMEOUT_SECS))
+
     while ((SECONDS < deadline)); do
+        local output
         local password
-        password="$(extract_admin_password || true)"
+        output="$(container exec "${SERVER_CONTAINER}" hubuum-admin --reset-password admin 2>&1 || true)"
+        password="$(printf '%s\n' "${output}" | extract_admin_password_from_text || true)"
+
         if [[ -n "${password}" ]]; then
             printf '%s' "${password}"
             return 0
         fi
+
         sleep 1
     done
 
-    echo "Timed out waiting for admin password in server logs after ${STACK_TIMEOUT_SECS}s." >&2
+    echo "Timed out resetting admin password via hubuum-admin after ${STACK_TIMEOUT_SECS}s." >&2
     print_server_diagnostics
     return 1
+}
+
+resolve_admin_password() {
+    local password
+    password="$(extract_admin_password || true)"
+    if [[ -n "${password}" ]]; then
+        printf '%s' "${password}"
+        return 0
+    fi
+
+    echo "Admin password not present in logs; resetting admin password via hubuum-admin." >&2
+    reset_admin_password
 }
 
 wait_for_server_readiness() {
@@ -167,7 +233,7 @@ wait_for_server_readiness() {
         status="$(curl -sS -o /dev/null -w '%{http_code}' \
             -X POST "${base_url}/api/v0/auth/login" \
             -H 'content-type: application/json' \
-            -d '{"username":"__readiness__","password":"__readiness__"}' || true)"
+            -d '{"name":"__readiness__","username":"__readiness__","password":"__readiness__"}' || true)"
 
         if [[ "${status}" =~ ^[0-9]{3}$ ]] && [[ "${status}" != "000" ]]; then
             local category="${status:0:1}"
@@ -199,16 +265,17 @@ apply_seed_if_requested() {
     fi
 
     echo "Applying SQL seed: ${SEED_SQL}"
-    docker exec -i "${DB_CONTAINER}" \
+    container exec -i "${DB_CONTAINER}" \
         psql -v ON_ERROR_STOP=1 -U "${DB_USER}" -d "${DB_NAME}" \
         <"${SEED_SQL}"
 }
 
-echo "Creating integration Docker network: ${NETWORK_NAME}"
-docker network create "${NETWORK_NAME}" >/dev/null
+echo "Using container runtime: ${CONTAINER_RUNTIME}"
+echo "Creating integration container network: ${NETWORK_NAME}"
+container network create "${NETWORK_NAME}" >/dev/null
 
 echo "Starting DB container: ${DB_CONTAINER} (${DB_IMAGE})"
-docker run -d \
+container run -d \
     --name "${DB_CONTAINER}" \
     --network "${NETWORK_NAME}" \
     --health-cmd "pg_isready -U ${DB_USER} -d ${DB_NAME}" \
@@ -225,7 +292,7 @@ wait_for_db
 DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_CONTAINER}/${DB_NAME}"
 
 echo "Starting server container: ${SERVER_CONTAINER} (${SERVER_IMAGE})"
-docker run -d \
+container run -d \
     --name "${SERVER_CONTAINER}" \
     --network "${NETWORK_NAME}" \
     -p "127.0.0.1::8080" \
@@ -237,7 +304,7 @@ docker run -d \
     -e "DATABASE_URL=${DATABASE_URL}" \
     "${SERVER_IMAGE}" >/dev/null
 
-MAPPED_PORT="$(docker port "${SERVER_CONTAINER}" 8080/tcp | awk -F: 'END {print $NF}')"
+MAPPED_PORT="$(container port "${SERVER_CONTAINER}" 8080/tcp | awk -F: 'END {print $NF}')"
 if [[ -z "${MAPPED_PORT}" ]]; then
     echo "Failed to resolve mapped server port." >&2
     print_server_diagnostics
@@ -245,8 +312,8 @@ if [[ -z "${MAPPED_PORT}" ]]; then
 fi
 BASE_URL="http://127.0.0.1:${MAPPED_PORT}"
 
-ADMIN_PASSWORD="$(wait_for_admin_password)"
 wait_for_server_readiness "${BASE_URL}"
+ADMIN_PASSWORD="$(resolve_admin_password)"
 apply_seed_if_requested
 
 export HUBUUM_INTEGRATION_BASE_URL="${BASE_URL}"
@@ -254,9 +321,20 @@ export HUBUUM_INTEGRATION_ADMIN_PASSWORD="${ADMIN_PASSWORD}"
 
 echo "Running integration tests against external stack: ${BASE_URL}"
 
-CMD=(cargo test --features integration-tests --test container_integration -- --ignored --nocapture)
-if ((${#TEST_ARGS[@]} > 0)); then
-    CMD+=("${TEST_ARGS[@]}")
+if [[ "${E2E_ONLY}" != "1" ]]; then
+    CMD=(cargo test --features integration-tests --test container_integration -- --ignored --nocapture)
+    if ((${#TEST_ARGS[@]} > 0)); then
+        CMD+=("${TEST_ARGS[@]}")
+    fi
+
+    "${CMD[@]}"
 fi
 
-"${CMD[@]}"
+if [[ "${RUN_E2E_CLIENT}" == "1" ]]; then
+    E2E_CMD=(cargo test -p e2e_client --features integration-tests -- --ignored --nocapture)
+    if ((${#TEST_ARGS[@]} > 0)); then
+        E2E_CMD+=("${TEST_ARGS[@]}")
+    fi
+
+    "${E2E_CMD[@]}"
+fi

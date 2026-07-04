@@ -47,13 +47,22 @@ fn group_json(group_id: i32, groupname: &str) -> serde_json::Value {
     })
 }
 
-fn user_json(user_id: i32, username: &str) -> serde_json::Value {
+fn user_json(user_id: i32, name: &str) -> serde_json::Value {
     json!({
         "id": user_id,
-        "username": username,
-        "email": format!("{username}@example.com"),
+        "name": name,
+        "email": format!("{name}@example.com"),
+        "proper_name": null,
         "created_at": ts(),
         "updated_at": ts()
+    })
+}
+
+fn principal_member_json(principal_id: i32, name: &str) -> serde_json::Value {
+    json!({
+        "principal_id": principal_id,
+        "kind": "human",
+        "name": name,
     })
 }
 
@@ -141,6 +150,8 @@ fn report_request() -> ReportRequest {
             kind: ReportScopeKind::ObjectsInClass,
             object_id: None,
         },
+        include: None,
+        relation_context: None,
     }
 }
 
@@ -180,6 +191,32 @@ fn task_response_json(task_id: i32, status: &str) -> serde_json::Value {
             "import": {
                 "results_url": format!("/api/v1/imports/{task_id}/results")
             }
+        }
+    })
+}
+
+fn report_task_json(task_id: i32, status: &str) -> serde_json::Value {
+    json!({
+        "id": task_id,
+        "kind": "report",
+        "status": status,
+        "submitted_by": 7,
+        "created_at": ts(),
+        "started_at": null,
+        "finished_at": null,
+        "progress": {
+            "total_items": 1,
+            "processed_items": 1,
+            "success_items": 1,
+            "failed_items": 0
+        },
+        "summary": null,
+        "request_redacted_at": null,
+        "links": {
+            "task": format!("/api/v1/tasks/{task_id}"),
+            "events": format!("/api/v1/tasks/{task_id}/events"),
+            "report": format!("/api/v1/reports/{task_id}"),
+            "report_output": format!("/api/v1/reports/{task_id}/output")
         }
     })
 }
@@ -327,7 +364,7 @@ fn mock_login(server: &MockServer) {
     server.mock(|when, then| {
         when.method(POST)
             .path("/api/v0/auth/login")
-            .json_body(json!({ "username": USERNAME, "password": PASSWORD }));
+            .json_body(json!({ "name": USERNAME, "password": PASSWORD }));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({ "token": TOKEN }));
@@ -722,7 +759,7 @@ fn sync_supports_all_auth_logout_endpoints() {
     mock_login(&server);
 
     let logout = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -731,8 +768,9 @@ fn sync_supports_all_auth_logout_endpoints() {
     });
 
     let logout_token = server.mock(|when, then| {
-        when.method(GET)
-            .path("/api/v0/auth/logout/token/revoked-token")
+        when.method(POST)
+            .path("/api/v0/auth/logout/token")
+            .json_body(json!({ "token": "revoked-token" }))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -740,7 +778,7 @@ fn sync_supports_all_auth_logout_endpoints() {
     });
 
     let logout_user = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout/uid/99")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -749,7 +787,7 @@ fn sync_supports_all_auth_logout_endpoints() {
     });
 
     let logout_all = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout_all")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -777,7 +815,7 @@ async fn async_supports_all_auth_logout_endpoints() {
     mock_login(&server);
 
     let logout = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -786,8 +824,9 @@ async fn async_supports_all_auth_logout_endpoints() {
     });
 
     let logout_token = server.mock(|when, then| {
-        when.method(GET)
-            .path("/api/v0/auth/logout/token/revoked-token")
+        when.method(POST)
+            .path("/api/v0/auth/logout/token")
+            .json_body(json!({ "token": "revoked-token" }))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -795,7 +834,7 @@ async fn async_supports_all_auth_logout_endpoints() {
     });
 
     let logout_user = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout/uid/99")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -804,7 +843,7 @@ async fn async_supports_all_auth_logout_endpoints() {
     });
 
     let logout_all = server.mock(|when, then| {
-        when.method(GET)
+        when.method(POST)
             .path("/api/v0/auth/logout_all")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -975,7 +1014,7 @@ fn sync_supports_user_group_and_token_endpoints() {
 
     let user_groups = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/users/11/groups")
+            .path("/api/v1/iam/principals/11/groups")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -984,14 +1023,15 @@ fn sync_supports_user_group_and_token_endpoints() {
 
     let user_tokens = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/users/11/tokens")
+            .path("/api/v1/iam/principals/11/tokens")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!([{
-                "issued": "2024-01-01T00:00:00Z",
-                "token": "api-token-1",
-                "user_id": 11
+                "id": 1,
+                "principal_id": 11,
+                "scoped": false,
+                "issued": "2024-01-01T00:00:00Z"
             }]));
     });
 
@@ -1018,8 +1058,8 @@ fn sync_supports_user_group_and_token_endpoints() {
 
     let tokens = user.tokens().expect("user tokens request should succeed");
     assert_eq!(tokens.len(), 1);
-    assert_eq!(tokens[0].user_id, 11);
-    assert_eq!(tokens[0].token, "api-token-1");
+    assert_eq!(tokens[0].principal_id, 11);
+    assert_eq!(tokens[0].id, 1);
 
     let group = client
         .groups()
@@ -1050,7 +1090,7 @@ async fn async_supports_user_group_and_token_endpoints() {
 
     let user_groups = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/users/11/groups")
+            .path("/api/v1/iam/principals/11/groups")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -1059,14 +1099,15 @@ async fn async_supports_user_group_and_token_endpoints() {
 
     let user_tokens = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/users/11/tokens")
+            .path("/api/v1/iam/principals/11/tokens")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!([{
-                "issued": "2024-01-01T00:00:00Z",
-                "token": "api-token-1",
-                "user_id": 11
+                "id": 1,
+                "principal_id": 11,
+                "scoped": false,
+                "issued": "2024-01-01T00:00:00Z"
             }]));
     });
 
@@ -1100,8 +1141,8 @@ async fn async_supports_user_group_and_token_endpoints() {
         .await
         .expect("user tokens request should succeed");
     assert_eq!(tokens.len(), 1);
-    assert_eq!(tokens[0].user_id, 11);
-    assert_eq!(tokens[0].token, "api-token-1");
+    assert_eq!(tokens[0].principal_id, 11);
+    assert_eq!(tokens[0].id, 1);
 
     let group = client
         .groups()
@@ -1133,7 +1174,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let user_groups = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/users/11/groups")
+            .path("/api/v1/iam/principals/11/groups")
             .query_param("sort", "groupname.asc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1144,16 +1185,17 @@ fn sync_handle_list_requests_support_sorting() {
 
     let user_tokens = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/users/11/tokens")
+            .path("/api/v1/iam/principals/11/tokens")
             .query_param("sort", "issued.desc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!([{
-                "issued": "2024-01-01T00:00:00Z",
-                "token": "api-token-1",
-                "user_id": 11
+                "id": 1,
+                "principal_id": 11,
+                "scoped": false,
+                "issued": "2024-01-01T00:00:00Z"
             }]));
     });
 
@@ -1169,12 +1211,12 @@ fn sync_handle_list_requests_support_sorting() {
     let group_members = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/iam/groups/10/members")
-            .query_param("sort", "username.asc")
+            .query_param("sort", "name.asc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([user_json(11, "alice")]));
+            .json_body(json!([principal_member_json(11, "alice")]));
     });
 
     let class_by_id = server.mock(|when, then| {
@@ -1230,7 +1272,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let namespace_user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/user/11")
+            .path("/api/v1/namespaces/7/permissions/principal/11")
             .query_param("sort", "group.groupname.desc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1259,7 +1301,7 @@ fn sync_handle_list_requests_support_sorting() {
         .limit(1)
         .page()
         .expect("user tokens request builder should succeed");
-    assert_eq!(user_token_page.items[0].user_id, 11);
+    assert_eq!(user_token_page.items[0].principal_id, 11);
 
     let group = client
         .groups()
@@ -1267,11 +1309,11 @@ fn sync_handle_list_requests_support_sorting() {
         .expect("group lookup should succeed");
     let member_page = group
         .members_request()
-        .sort("username", SortDirection::Asc)
+        .sort("name", SortDirection::Asc)
         .limit(1)
         .page()
         .expect("group members request builder should succeed");
-    assert_eq!(member_page.items[0].id, 11);
+    assert_eq!(member_page.items[0].principal_id, 11);
 
     let class = client
         .classes()
@@ -1306,7 +1348,7 @@ fn sync_handle_list_requests_support_sorting() {
     assert_eq!(namespace_permission_page.items[0].permission.group_id, 10);
 
     let namespace_user_permission_page = namespace
-        .user_permissions_request(11)
+        .principal_permissions_request(11)
         .sort("group.groupname", SortDirection::Desc)
         .limit(1)
         .page()
@@ -1345,7 +1387,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let user_groups = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/users/11/groups")
+            .path("/api/v1/iam/principals/11/groups")
             .query_param("sort", "groupname.asc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1356,16 +1398,17 @@ async fn async_handle_list_requests_support_sorting() {
 
     let user_tokens = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/iam/users/11/tokens")
+            .path("/api/v1/iam/principals/11/tokens")
             .query_param("sort", "issued.desc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!([{
-                "issued": "2024-01-01T00:00:00Z",
-                "token": "api-token-1",
-                "user_id": 11
+                "id": 1,
+                "principal_id": 11,
+                "scoped": false,
+                "issued": "2024-01-01T00:00:00Z"
             }]));
     });
 
@@ -1381,12 +1424,12 @@ async fn async_handle_list_requests_support_sorting() {
     let group_members = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/iam/groups/10/members")
-            .query_param("sort", "username.asc")
+            .query_param("sort", "name.asc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([user_json(11, "alice")]));
+            .json_body(json!([principal_member_json(11, "alice")]));
     });
 
     let class_by_id = server.mock(|when, then| {
@@ -1442,7 +1485,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let namespace_user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/user/11")
+            .path("/api/v1/namespaces/7/permissions/principal/11")
             .query_param("sort", "group.groupname.desc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1474,7 +1517,7 @@ async fn async_handle_list_requests_support_sorting() {
         .page()
         .await
         .expect("user tokens request builder should succeed");
-    assert_eq!(user_token_page.items[0].user_id, 11);
+    assert_eq!(user_token_page.items[0].principal_id, 11);
 
     let group = client
         .groups()
@@ -1483,12 +1526,12 @@ async fn async_handle_list_requests_support_sorting() {
         .expect("group lookup should succeed");
     let member_page = group
         .members_request()
-        .sort("username", SortDirection::Asc)
+        .sort("name", SortDirection::Asc)
         .limit(1)
         .page()
         .await
         .expect("group members request builder should succeed");
-    assert_eq!(member_page.items[0].id, 11);
+    assert_eq!(member_page.items[0].principal_id, 11);
 
     let class = client
         .classes()
@@ -1528,7 +1571,7 @@ async fn async_handle_list_requests_support_sorting() {
     assert_eq!(namespace_permission_page.items[0].permission.group_id, 10);
 
     let namespace_user_permission_page = namespace
-        .user_permissions_request(11)
+        .principal_permissions_request(11)
         .sort("group.groupname", SortDirection::Desc)
         .limit(1)
         .page()
@@ -1632,7 +1675,7 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     let user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/user/11")
+            .path("/api/v1/namespaces/7/permissions/principal/11")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -1679,7 +1722,7 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
         .revoke_permission(10, Permissions::ReadCollection)
         .expect("revoke_permission should succeed");
     let user_permissions_rows = namespace
-        .user_permissions(11)
+        .principal_permissions(11)
         .expect("user_permissions should succeed");
     assert_eq!(user_permissions_rows.len(), 1);
     assert_eq!(user_permissions_rows[0].permission.group_id, 10);
@@ -1776,7 +1819,7 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     let user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/user/11")
+            .path("/api/v1/namespaces/7/permissions/principal/11")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -1832,7 +1875,7 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
         .await
         .expect("revoke_permission should succeed");
     let user_permissions_rows = namespace
-        .user_permissions(11)
+        .principal_permissions(11)
         .await
         .expect("user_permissions should succeed");
     assert_eq!(user_permissions_rows.len(), 1);
@@ -1855,9 +1898,27 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     let server = MockServer::start();
     mock_login(&server);
 
-    let report_json = server.mock(|when, then| {
+    let report_submit = server.mock(|when, then| {
         when.method(POST)
             .path("/api/v1/reports")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(report_task_json(11, "succeeded"));
+    });
+
+    let report_task = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/tasks/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(report_task_json(11, "succeeded"));
+    });
+
+    let report_output = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/reports/11/output")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -1932,11 +1993,16 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     let report = client
         .reports()
         .run(report_request())
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
         .expect("JSON report should succeed");
     match report {
         ReportResult::Json(report) => assert_eq!(report.items.len(), 1),
         other => panic!("expected JSON report, got {other:?}"),
     }
+    report_submit.assert_calls(1);
+    report_task.assert_calls(1);
+    report_output.assert_calls(1);
 
     let page = client
         .templates()
@@ -1978,7 +2044,6 @@ fn sync_reports_and_templates_cover_new_server_surface() {
         .delete(2)
         .expect("template delete should succeed");
 
-    report_json.assert_calls(1);
     templates_page.assert_calls(1);
     template_get.assert_calls(1);
     template_create.assert_calls(1);
@@ -2016,9 +2081,25 @@ async fn async_reports_support_rendered_outputs() {
     ] {
         let server = MockServer::start();
         mock_login(&server);
-        let report = server.mock(|when, then| {
+        let report_submit = server.mock(|when, then| {
             when.method(POST)
                 .path("/api/v1/reports")
+                .header("authorization", format!("Bearer {}", TOKEN));
+            then.status(202)
+                .header("content-type", "application/json")
+                .json_body(report_task_json(11, "succeeded"));
+        });
+        let report_task = server.mock(|when, then| {
+            when.method(GET)
+                .path("/api/v1/tasks/11")
+                .header("authorization", format!("Bearer {}", TOKEN));
+            then.status(200)
+                .header("content-type", "application/json")
+                .json_body(report_task_json(11, "succeeded"));
+        });
+        let report_output = server.mock(|when, then| {
+            when.method(GET)
+                .path("/api/v1/reports/11/output")
                 .header("authorization", format!("Bearer {}", TOKEN));
             then.status(200)
                 .header("content-type", expected_type.to_string())
@@ -2029,6 +2110,8 @@ async fn async_reports_support_rendered_outputs() {
         let result = client
             .reports()
             .run(report_request())
+            .poll_interval(std::time::Duration::from_millis(1))
+            .send()
             .await
             .expect("rendered report should succeed");
         match result {
@@ -2038,7 +2121,9 @@ async fn async_reports_support_rendered_outputs() {
             }
             other => panic!("expected rendered report, got {other:?}"),
         }
-        report.assert_calls(1);
+        report_submit.assert_calls(1);
+        report_task.assert_calls(1);
+        report_output.assert_calls(1);
     }
 }
 
@@ -2665,4 +2750,255 @@ fn sync_import_submit_without_idempotency_key_succeeds() {
     assert_eq!(task.id, 13);
 
     import_submit.assert_calls(1);
+}
+
+fn service_account_json(id: i32, name: &str, owner_group_id: i32) -> serde_json::Value {
+    json!({
+        "id": id,
+        "name": name,
+        "description": "integration service account",
+        "owner_group_id": owner_group_id,
+        "created_by": null,
+        "disabled_at": null,
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+#[test]
+fn sync_service_account_create_and_disable() {
+    use hubuum_client::ServiceAccountPost;
+
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/iam/service-accounts")
+            .json_body(json!({
+                "name": "dns-sync",
+                "description": "integration service account",
+                "owner_group_id": 10
+            }))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(service_account_json(5, "dns-sync", 10));
+    });
+
+    let select = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/service-accounts/5")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(service_account_json(5, "dns-sync", 10));
+    });
+
+    let disable = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/iam/service-accounts/5/disable")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "id": 5,
+                "name": "dns-sync",
+                "description": "integration service account",
+                "owner_group_id": 10,
+                "created_by": null,
+                "disabled_at": ts(),
+                "created_at": ts(),
+                "updated_at": ts()
+            }));
+    });
+
+    let client = sync_client(&server);
+    let created = client
+        .service_accounts()
+        .create()
+        .params(ServiceAccountPost {
+            name: "dns-sync".to_string(),
+            description: Some("integration service account".to_string()),
+            owner_group_id: 10,
+        })
+        .send()
+        .expect("service account create should succeed");
+    assert_eq!(created.id, 5);
+    assert_eq!(created.name, "dns-sync");
+
+    let sa = client
+        .service_accounts()
+        .select(5)
+        .expect("service account select should succeed");
+    let disabled = sa.disable().expect("disable should succeed");
+    assert!(disabled.disabled_at.is_some());
+
+    create.assert_calls(1);
+    select.assert_calls(1);
+    disable.assert_calls(1);
+}
+
+#[test]
+fn sync_user_token_create_with_scopes_returns_raw_token() {
+    use hubuum_client::{NewTokenRequest, Permissions};
+
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let user_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(user_json(11, "alice")));
+    });
+
+    let token_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/iam/principals/11/tokens")
+            .json_body(json!({
+                "name": "ci",
+                "scopes": ["ReadClass"]
+            }))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "text/plain")
+            .body("raw-secret-token");
+    });
+
+    let client = sync_client(&server);
+    let user = client
+        .users()
+        .select(11)
+        .expect("user select should succeed");
+    let raw = user
+        .tokens_create(
+            NewTokenRequest::new()
+                .name("ci")
+                .scopes(vec![Permissions::ReadClass]),
+        )
+        .expect("token create should succeed");
+    assert_eq!(raw, "raw-secret-token");
+
+    user_by_id.assert_calls(1);
+    token_create.assert_calls(1);
+}
+
+#[test]
+fn sync_remote_target_invoke_returns_task() {
+    use hubuum_client::{RemoteInvocationSubject, RemoteTargetInvokeRequest};
+
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let target_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/remote-targets/3")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "id": 3,
+                "namespace_id": 7,
+                "name": "webhook",
+                "description": "",
+                "method": "post",
+                "url_template": "https://example.test/{name}",
+                "headers_template": null,
+                "auth_config": { "type": "none" },
+                "allowed_subject_types": ["object"],
+                "timeout_ms": 5000,
+                "enabled": true,
+                "body_template": null,
+                "class_id": null,
+                "created_at": ts(),
+                "updated_at": ts()
+            }));
+    });
+
+    let invoke = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/remote-targets/3/invoke")
+            .json_body(json!({
+                "subject": { "type": "object", "class_id": 1, "object_id": 2 }
+            }))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(task_response_json(21, "queued"));
+    });
+
+    let client = sync_client(&server);
+    let target = client
+        .remote_targets()
+        .select(3)
+        .expect("remote target select should succeed");
+    let task = target
+        .invoke(RemoteTargetInvokeRequest::new(
+            RemoteInvocationSubject::Object {
+                class_id: 1,
+                object_id: 2,
+            },
+        ))
+        .expect("invoke should succeed");
+    assert_eq!(task.id, 21);
+
+    target_by_id.assert_calls(1);
+    invoke.assert_calls(1);
+}
+
+#[test]
+fn sync_me_returns_identity_and_token() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let me = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/me")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "principal": { "principal_id": 11, "kind": "human", "name": "alice" },
+                "token": {
+                    "id": 1,
+                    "name": null,
+                    "description": null,
+                    "scoped": false,
+                    "scopes": null,
+                    "issued": ts(),
+                    "expires_at": null,
+                    "last_used_at": null
+                }
+            }));
+    });
+
+    let client = sync_client(&server);
+    let me_response = client.me().expect("me should succeed");
+    assert_eq!(me_response.principal.principal_id, 11);
+    assert_eq!(me_response.principal.kind, "human");
+    assert!(!me_response.token.scoped);
+
+    me.assert_calls(1);
+}
+
+#[test]
+fn sync_healthz_probe_succeeds_without_auth() {
+    let server = MockServer::start();
+
+    let healthz = server.mock(|when, then| {
+        when.method(GET).path("/healthz");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "status": "ok" }));
+    });
+
+    let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
+    let client = SyncClient::new_with_certificate_validation(base_url, true);
+    let probe = client.healthz().expect("healthz should succeed");
+    assert_eq!(probe.status, "ok");
+
+    healthz.assert_calls(1);
 }

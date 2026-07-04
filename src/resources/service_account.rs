@@ -1,0 +1,109 @@
+use std::borrow::Cow;
+
+use hubuum_client_derive::ApiResource;
+
+use crate::{
+    ApiError, NewTokenRequest, PrincipalTokenMetadata,
+    client::{
+        r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle},
+        sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
+    },
+    endpoints::Endpoint,
+    resources::user::{
+        principal_token_create_async, principal_token_create_sync, principal_token_revoke_async,
+        principal_token_revoke_sync, principal_tokens_async, principal_tokens_sync,
+    },
+    types::HubuumDateTime,
+};
+
+#[allow(dead_code)]
+#[derive(ApiResource)]
+pub struct ServiceAccountResource {
+    #[api(read_only)]
+    pub id: i32,
+    // The principal name. Required on create; renaming lives on the principal, so it
+    // is excluded from PATCH.
+    #[api(skip_patch)]
+    pub name: String,
+    // Optional on create, mutable on update; always present in responses.
+    #[api(optional)]
+    pub description: String,
+    pub owner_group_id: i32,
+    #[api(read_only, optional)]
+    pub created_by: i32,
+    #[api(read_only, optional)]
+    pub disabled_at: HubuumDateTime,
+    #[api(read_only)]
+    pub created_at: HubuumDateTime,
+    #[api(read_only)]
+    pub updated_at: HubuumDateTime,
+}
+
+impl SyncHandle<ServiceAccount> {
+    /// Disable this service account. Returns the updated service account.
+    pub fn disable(&self) -> Result<ServiceAccount, ApiError> {
+        let url_params = vec![(
+            Cow::Borrowed("service_account_id"),
+            self.id().to_string().into(),
+        )];
+        self.client()
+            .request_with_endpoint::<SyncEmptyPostParams, ServiceAccount>(
+                reqwest::Method::POST,
+                &Endpoint::ServiceAccountDisable,
+                url_params,
+                vec![],
+                SyncEmptyPostParams {},
+            )?
+            .ok_or(ApiError::EmptyResult(
+                "Disabling service account returned empty result".into(),
+            ))
+    }
+
+    pub fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
+        principal_tokens_sync(self.client(), self.id())
+    }
+
+    /// Mint a new token for this service account. Returns the raw token, shown once.
+    pub fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
+        principal_token_create_sync(self.client(), self.id(), request)
+    }
+
+    pub fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
+        principal_token_revoke_sync(self.client(), self.id(), token_id)
+    }
+}
+
+impl AsyncHandle<ServiceAccount> {
+    /// Disable this service account. Returns the updated service account.
+    pub async fn disable(&self) -> Result<ServiceAccount, ApiError> {
+        let url_params = vec![(
+            Cow::Borrowed("service_account_id"),
+            self.id().to_string().into(),
+        )];
+        self.client()
+            .request_with_endpoint::<AsyncEmptyPostParams, ServiceAccount>(
+                reqwest::Method::POST,
+                &Endpoint::ServiceAccountDisable,
+                url_params,
+                vec![],
+                AsyncEmptyPostParams {},
+            )
+            .await?
+            .ok_or(ApiError::EmptyResult(
+                "Disabling service account returned empty result".into(),
+            ))
+    }
+
+    pub async fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
+        principal_tokens_async(self.client(), self.id()).await
+    }
+
+    /// Mint a new token for this service account. Returns the raw token, shown once.
+    pub async fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
+        principal_token_create_async(self.client(), self.id(), request).await
+    }
+
+    pub async fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
+        principal_token_revoke_async(self.client(), self.id(), token_id).await
+    }
+}

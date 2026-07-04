@@ -1,4 +1,5 @@
 use log::error;
+use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use reqwest::{
     StatusCode,
     header::{CONTENT_TYPE, HeaderMap},
@@ -18,6 +19,27 @@ use crate::types::FilterOperator;
 use crate::types::{BaseUrl, IntoQueryTuples, ReportContentType};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
+
+/// Characters that must be escaped when interpolating an opaque value into a
+/// single URL path segment. Unreserved characters (including base64url's `-`
+/// and `_`) are left untouched; reserved/delimiter characters are escaped.
+const PATH_SEGMENT: &AsciiSet = &CONTROLS
+    .add(b' ')
+    .add(b'"')
+    .add(b'#')
+    .add(b'%')
+    .add(b'/')
+    .add(b'<')
+    .add(b'>')
+    .add(b'?')
+    .add(b'`')
+    .add(b'{')
+    .add(b'}');
+
+/// Percent-encode a value for safe use as a single URL path segment.
+pub(crate) fn encode_path_segment(segment: &str) -> String {
+    utf8_percent_encode(segment, PATH_SEGMENT).to_string()
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Page<T> {
@@ -149,6 +171,17 @@ pub(crate) fn parse_page_response<U: DeserializeOwned>(
     Ok(Page { items, next_cursor })
 }
 
+/// Decode a raw-text response body (e.g. a freshly-minted token shown once).
+///
+/// The server may return the value as plain text or as a JSON string literal;
+/// accept both and strip surrounding whitespace.
+pub(crate) fn decode_raw_text(body: String) -> String {
+    match serde_json::from_str::<String>(body.trim()) {
+        Ok(s) => s,
+        Err(_) => body.trim().to_string(),
+    }
+}
+
 pub(crate) fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
     let name = type_name::<T>();
     let name = name.rsplit("::").next().unwrap_or(name);
@@ -224,6 +257,17 @@ mod test {
     use crate::types::FilterOperator;
     use std::borrow::Cow;
     use std::str::FromStr;
+
+    #[test]
+    fn encode_path_segment_escapes_reserved_characters() {
+        // base64url ids (alphanumerics plus '-' and '_') pass through unchanged.
+        assert_eq!(encode_path_segment("dTp0ZXN0-_"), "dTp0ZXN0-_");
+        // Reserved / delimiter characters are percent-encoded.
+        assert_eq!(encode_path_segment("a/b"), "a%2Fb");
+        assert_eq!(encode_path_segment("a?b#c"), "a%3Fb%23c");
+        assert_eq!(encode_path_segment("a b"), "a%20b");
+        assert_eq!(encode_path_segment("a%b"), "a%25b");
+    }
 
     #[test]
     fn build_url_replaces_placeholders() {

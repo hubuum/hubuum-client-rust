@@ -12,11 +12,15 @@ use crate::errors::ApiError;
 use crate::resources::{
     ApiResource, Class, ClassRelation, Group, Namespace, Object, ReportTemplate, User,
 };
+use crate::resources::{
+    MeResponse, PrincipalNamespacePermissions, PrincipalTokenMetadata, RemoteTarget, ServiceAccount,
+};
 use crate::types::{
-    BaseUrl, CountsResponse, Credentials, DbStateResponse, FilterOperator, ImportRequest,
-    ImportTaskResultResponse, ReportContentType, ReportJsonResponse, ReportRequest, ReportResult,
-    SortDirection, TaskEventResponse, TaskQueueStateResponse, TaskResponse, Token,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    BaseUrl, ClearRateLimitResponse, CountsResponse, Credentials, DbStateResponse, FilterOperator,
+    ImportRequest, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
+    ProbeResponse, ReleaseRateLimitResponse, ReportContentType, ReportJsonResponse, ReportRequest,
+    ReportResult, SortDirection, TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse,
+    TaskStatus, Token, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -122,6 +126,27 @@ impl Client<Unauthenticated> {
             Err(ApiError::InvalidToken)
         }
     }
+
+    /// Liveness probe (`GET /healthz`). Requires no authentication.
+    pub fn healthz(&self) -> Result<ProbeResponse, ApiError> {
+        Ok(self
+            .http_client
+            .get(self.build_url(&Endpoint::Healthz, UrlParams::default()))
+            .send()?
+            .error_for_status()?
+            .json()?)
+    }
+
+    /// Readiness probe (`GET /readyz`). Requires no authentication; a not-ready
+    /// server responds with `503`, surfaced here as an error.
+    pub fn readyz(&self) -> Result<ProbeResponse, ApiError> {
+        Ok(self
+            .http_client
+            .get(self.build_url(&Endpoint::Readyz, UrlParams::default()))
+            .send()?
+            .error_for_status()?
+            .json()?)
+    }
 }
 
 impl Client<Authenticated> {
@@ -131,7 +156,7 @@ impl Client<Authenticated> {
 
     pub fn logout(&self) -> Result<(), ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+            reqwest::Method::POST,
             &Endpoint::Logout,
             UrlParams::default(),
             vec![],
@@ -141,19 +166,21 @@ impl Client<Authenticated> {
     }
 
     pub fn logout_token(&self, token: &str) -> Result<(), ApiError> {
-        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+        self.request_with_endpoint::<LogoutTokenRequest, serde_json::Value>(
+            reqwest::Method::POST,
             &Endpoint::LogoutToken,
-            vec![(Cow::Borrowed("token"), token.to_string().into())],
+            UrlParams::default(),
             vec![],
-            EmptyPostParams,
+            LogoutTokenRequest {
+                token: token.to_string(),
+            },
         )
         .map(|_| ())
     }
 
     pub fn logout_user(&self, user_id: i32) -> Result<(), ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+            reqwest::Method::POST,
             &Endpoint::LogoutUser,
             vec![(Cow::Borrowed("user_id"), user_id.to_string().into())],
             vec![],
@@ -164,7 +191,7 @@ impl Client<Authenticated> {
 
     pub fn logout_all(&self) -> Result<(), ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::GET,
+            reqwest::Method::POST,
             &Endpoint::LogoutAll,
             UrlParams::default(),
             vec![],
@@ -216,6 +243,35 @@ impl Client<Authenticated> {
                 "META task state returned empty result".into(),
             ))
         })
+    }
+
+    pub fn meta_login_rate_limit(&self) -> MetaLoginRateLimitOp {
+        MetaLoginRateLimitOp::new(self.clone())
+    }
+
+    pub fn meta_login_rate_limit_release(
+        &self,
+        id: &str,
+    ) -> Result<ReleaseRateLimitResponse, ApiError> {
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::DELETE,
+            &Endpoint::MetaLoginRateLimitById,
+            vec![(Cow::Borrowed("id"), shared::encode_path_segment(id).into())],
+            vec![],
+            EmptyPostParams,
+        )?;
+        serde_json::from_str(&raw.body).map_err(ApiError::from)
+    }
+
+    pub fn meta_login_rate_limit_clear(&self) -> Result<ClearRateLimitResponse, ApiError> {
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::DELETE,
+            &Endpoint::MetaLoginRateLimit,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )?;
+        serde_json::from_str(&raw.body).map_err(ApiError::from)
     }
 
     pub(crate) fn request_with_endpoint_raw<T: Serialize + std::fmt::Debug>(
@@ -304,6 +360,20 @@ impl Client<Authenticated> {
             post_params,
         )?;
         shared::parse_response(&method, raw.status, raw.body)
+    }
+
+    /// Issue a request whose successful response body is an opaque text payload
+    /// (e.g. a freshly-minted token), rather than a JSON resource.
+    pub(crate) fn request_raw_text<T: Serialize + std::fmt::Debug>(
+        &self,
+        method: reqwest::Method,
+        endpoint: &Endpoint,
+        url_params: UrlParams,
+        post_params: T,
+    ) -> Result<String, ApiError> {
+        let raw =
+            self.request_with_endpoint_raw(method, endpoint, url_params, vec![], post_params)?;
+        Ok(shared::decode_raw_text(raw.body))
     }
 
     pub fn request<R: ApiResource, T: Serialize + std::fmt::Debug, U: DeserializeOwned>(
@@ -416,6 +486,79 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
+    pub fn service_accounts(&self) -> Resource<ServiceAccount> {
+        Resource::new(self.clone(), UrlParams::default())
+    }
+
+    pub fn remote_targets(&self) -> Resource<RemoteTarget> {
+        Resource::new(self.clone(), UrlParams::default())
+    }
+
+    /// The authenticated caller's own identity and current-token metadata.
+    pub fn me(&self) -> Result<MeResponse, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, MeResponse>(
+            reqwest::Method::GET,
+            &Endpoint::Me,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .and_then(|opt| opt.ok_or(ApiError::EmptyResult("me returned empty result".into())))
+    }
+
+    /// The authenticated caller's own groups.
+    pub fn me_groups(&self) -> Result<Vec<Handle<Group>>, ApiError> {
+        let res = self.request_with_endpoint::<EmptyPostParams, Vec<Group>>(
+            reqwest::Method::GET,
+            &Endpoint::MeGroups,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )?;
+        Ok(res
+            .unwrap_or_default()
+            .into_iter()
+            .map(|group| Handle::new(self.clone(), group))
+            .collect())
+    }
+
+    pub fn me_groups_request(&self) -> CursorRequest<Group> {
+        CursorRequest::new(self.clone(), Endpoint::MeGroups, UrlParams::default())
+    }
+
+    /// The authenticated caller's own active tokens.
+    pub fn me_tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
+        let res = self.request_with_endpoint::<EmptyPostParams, Vec<PrincipalTokenMetadata>>(
+            reqwest::Method::GET,
+            &Endpoint::MeTokens,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )?;
+        Ok(res.unwrap_or_default())
+    }
+
+    pub fn me_tokens_request(&self) -> CursorRequest<PrincipalTokenMetadata> {
+        CursorRequest::new(self.clone(), Endpoint::MeTokens, UrlParams::default())
+    }
+
+    /// The authenticated caller's own effective permissions, per namespace.
+    pub fn me_permissions(&self) -> Result<Vec<PrincipalNamespacePermissions>, ApiError> {
+        let res = self
+            .request_with_endpoint::<EmptyPostParams, Vec<PrincipalNamespacePermissions>>(
+                reqwest::Method::GET,
+                &Endpoint::MePermissions,
+                UrlParams::default(),
+                vec![],
+                EmptyPostParams,
+            )?;
+        Ok(res.unwrap_or_default())
+    }
+
+    pub fn me_permissions_request(&self) -> CursorRequest<PrincipalNamespacePermissions> {
+        CursorRequest::new(self.clone(), Endpoint::MePermissions, UrlParams::default())
+    }
+
     pub fn classes(&self) -> Resource<Class> {
         Resource::new(self.clone(), UrlParams::default())
     }
@@ -470,13 +613,29 @@ impl Reports {
         Self { client }
     }
 
-    pub fn run(&self, request: ReportRequest) -> Result<ReportResult, ApiError> {
+    pub fn submit(&self, request: ReportRequest) -> ReportSubmitOp {
+        ReportSubmitOp::new(self.client.clone(), request)
+    }
+
+    pub fn get(&self, task_id: i32) -> Result<TaskResponse, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, TaskResponse>(
+                reqwest::Method::GET,
+                &Endpoint::ReportById,
+                vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
+                vec![],
+                EmptyPostParams,
+            )
+            .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Report returned empty result".into())))
+    }
+
+    pub fn output(&self, task_id: i32) -> Result<ReportResult, ApiError> {
         let raw = self.client.request_with_endpoint_raw(
-            reqwest::Method::POST,
-            &Endpoint::Reports,
-            UrlParams::default(),
+            reqwest::Method::GET,
+            &Endpoint::ReportOutput,
+            vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
             vec![],
-            request,
+            EmptyPostParams,
         )?;
         let content_type = raw
             .content_type
@@ -486,17 +645,123 @@ impl Reports {
         match content_type {
             ReportContentType::ApplicationJson => {
                 let body = shared::parse_response::<ReportJsonResponse>(
-                    &reqwest::Method::POST,
+                    &reqwest::Method::GET,
                     raw.status,
                     raw.body,
                 )?
-                .ok_or(ApiError::EmptyResult("Report returned empty result".into()))?;
+                .ok_or(ApiError::EmptyResult(
+                    "Report output returned empty result".into(),
+                ))?;
                 Ok(ReportResult::Json(body))
             }
             _ => Ok(ReportResult::Rendered {
                 content_type,
                 body: raw.body,
             }),
+        }
+    }
+
+    pub fn run(&self, request: ReportRequest) -> ReportRunOp {
+        ReportRunOp::new(self.client.clone(), request)
+    }
+}
+
+pub struct ReportSubmitOp {
+    client: Client<Authenticated>,
+    request: ReportRequest,
+    idempotency_key: Option<String>,
+}
+
+impl ReportSubmitOp {
+    fn new(client: Client<Authenticated>, request: ReportRequest) -> Self {
+        Self {
+            client,
+            request,
+            idempotency_key: None,
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(idempotency_key.into());
+        self
+    }
+
+    pub fn send(self) -> Result<TaskResponse, ApiError> {
+        let mut headers = Vec::new();
+        if let Some(key) = self.idempotency_key {
+            headers.push(("Idempotency-Key", key));
+        }
+
+        let raw = self.client.request_with_endpoint_raw_with_headers(
+            reqwest::Method::POST,
+            &Endpoint::Reports,
+            UrlParams::default(),
+            vec![],
+            self.request,
+            &headers,
+        )?;
+
+        shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?.ok_or(
+            ApiError::EmptyResult("Report submit returned empty result".into()),
+        )
+    }
+}
+
+pub struct ReportRunOp {
+    client: Client<Authenticated>,
+    request: ReportRequest,
+    idempotency_key: Option<String>,
+    poll_interval: std::time::Duration,
+    timeout: Option<std::time::Duration>,
+}
+
+impl ReportRunOp {
+    fn new(client: Client<Authenticated>, request: ReportRequest) -> Self {
+        Self {
+            client,
+            request,
+            idempotency_key: None,
+            poll_interval: std::time::Duration::from_secs(1),
+            timeout: Some(std::time::Duration::from_secs(300)),
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(idempotency_key.into());
+        self
+    }
+
+    pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
+        self.poll_interval = interval;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub fn send(self) -> Result<ReportResult, ApiError> {
+        let reports = Reports::new(self.client.clone());
+        let mut submit = reports.submit(self.request);
+        if let Some(key) = self.idempotency_key {
+            submit = submit.idempotency_key(key);
+        }
+        let task = submit.send()?;
+        let task = Tasks::new(self.client.clone())
+            .wait(task.id)
+            .poll_interval(self.poll_interval)
+            .timeout(self.timeout)
+            .send()?;
+        if task.status.is_success() {
+            reports.output(task.id)
+        } else {
+            Err(ApiError::Api(format!(
+                "Task {} {}: {}",
+                task.id,
+                task.status,
+                task.summary.unwrap_or_else(|| "no summary".to_string())
+            )))
         }
     }
 }
@@ -576,6 +841,49 @@ impl ImportSubmitOp {
     }
 }
 
+pub struct MetaLoginRateLimitOp {
+    client: Client<Authenticated>,
+    query_params: Vec<QueryFilter>,
+}
+
+impl MetaLoginRateLimitOp {
+    fn new(client: Client<Authenticated>) -> Self {
+        Self {
+            client,
+            query_params: Vec::new(),
+        }
+    }
+
+    pub fn include_all(mut self, include_all: bool) -> Self {
+        if include_all {
+            self.query_params.push(QueryFilter::raw("include", "all"));
+        }
+        self
+    }
+
+    pub fn scope(mut self, scope: impl Into<String>) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("scope", scope.into()));
+        self
+    }
+
+    pub fn q(mut self, needle: impl Into<String>) -> Self {
+        self.query_params.push(QueryFilter::raw("q", needle.into()));
+        self
+    }
+
+    pub fn send(self) -> Result<LoginRateLimitState, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::MetaLoginRateLimit,
+            UrlParams::default(),
+            self.query_params,
+            EmptyPostParams,
+        )?;
+        serde_json::from_str(&raw.body).map_err(ApiError::from)
+    }
+}
+
 pub struct Tasks {
     client: Client<Authenticated>,
 }
@@ -603,6 +911,114 @@ impl Tasks {
             Endpoint::TaskEvents,
             vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
         )
+    }
+
+    pub fn wait(&self, task_id: i32) -> TaskWaitOp {
+        TaskWaitOp::new(self.client.clone(), task_id)
+    }
+
+    pub fn query(&self) -> TaskListRequest {
+        TaskListRequest {
+            inner: CursorRequest::new(self.client.clone(), Endpoint::Tasks, UrlParams::default()),
+        }
+    }
+}
+
+pub struct TaskListRequest {
+    inner: CursorRequest<TaskResponse>,
+}
+
+impl TaskListRequest {
+    pub fn kind(mut self, kind: TaskKind) -> Self {
+        self.inner = self.inner.query_param("kind", kind);
+        self
+    }
+
+    pub fn status(mut self, status: TaskStatus) -> Self {
+        self.inner = self.inner.query_param("status", status);
+        self
+    }
+
+    pub fn submitted_by(mut self, user_id: i32) -> Self {
+        self.inner = self.inner.query_param("submitted_by", user_id);
+        self
+    }
+
+    pub fn limit(mut self, limit: usize) -> Self {
+        self.inner = self.inner.limit(limit);
+        self
+    }
+
+    pub fn sort<S: AsRef<str>>(mut self, field: S, direction: SortDirection) -> Self {
+        self.inner = self.inner.sort(field, direction);
+        self
+    }
+
+    pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
+        self.inner = self.inner.cursor(cursor);
+        self
+    }
+
+    pub fn page(self) -> Result<shared::Page<TaskResponse>, ApiError> {
+        self.inner.page()
+    }
+
+    pub fn list(self) -> Result<Vec<TaskResponse>, ApiError> {
+        self.inner.list()
+    }
+}
+
+pub struct TaskWaitOp {
+    client: Client<Authenticated>,
+    task_id: i32,
+    poll_interval: std::time::Duration,
+    timeout: Option<std::time::Duration>,
+}
+
+impl TaskWaitOp {
+    fn new(client: Client<Authenticated>, task_id: i32) -> Self {
+        Self {
+            client,
+            task_id,
+            poll_interval: std::time::Duration::from_secs(1),
+            timeout: Some(std::time::Duration::from_secs(300)),
+        }
+    }
+
+    pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
+        self.poll_interval = interval;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub fn send(self) -> Result<TaskResponse, ApiError> {
+        let tasks = Tasks::new(self.client.clone());
+        let start = std::time::Instant::now();
+        loop {
+            let task = tasks.get(self.task_id)?;
+            if task.status.is_terminal() {
+                return Ok(task);
+            }
+            // Sleep at most the remaining time so we never overshoot the deadline.
+            let sleep_for = match self.timeout {
+                Some(timeout) => {
+                    let elapsed = start.elapsed();
+                    if elapsed >= timeout {
+                        return Err(ApiError::Api(format!(
+                            "Timed out waiting for task {} after {:?}",
+                            self.task_id, timeout
+                        )));
+                    }
+                    self.poll_interval.min(timeout - elapsed)
+                }
+                None => self.poll_interval,
+            };
+            std::thread::sleep(sleep_for);
+        }
     }
 }
 
@@ -1518,10 +1934,44 @@ where
                     Err(err) => return Err(err),
                 }
             }
+            Endpoint::ServiceAccounts => {
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::ServiceAccountsById,
+                    vec![(Cow::Borrowed("service_account_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
+            Endpoint::RemoteTargets => {
+                match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &Endpoint::RemoteTargetsById,
+                    vec![(Cow::Borrowed("target_id"), id.to_string().into())],
+                    vec![],
+                    EmptyPostParams,
+                ) {
+                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                    Ok(None) => {}
+                    Err(ApiError::HttpWithBody { status, .. })
+                        if status == reqwest::StatusCode::NOT_FOUND => {}
+                    Err(err) => return Err(err),
+                }
+            }
             _ => {}
         }
 
-        let (url_params, filters) = shared::select_id_lookup_params(id);
+        let (id_params, filters) = shared::select_id_lookup_params(id);
+        // Preserve any parametrized path segments (e.g. `class_id` for objects) so the
+        // fallback lookup targets a fully-substituted URL instead of a literal `{class_id}`.
+        let mut url_params = self.url_params.clone();
+        url_params.extend(id_params);
         let raw: Vec<<T as ApiResource>::GetOutput> =
             self.client.get(T::default(), url_params, filters)?;
 
@@ -1534,7 +1984,7 @@ where
     ///
     /// This will use the appropriate field for the resource type.
     ///   - Group: groupname
-    ///   - User: username
+    ///   - User: name
     ///   - Everything else: name
     pub fn select_by_name(&self, name: &str) -> Result<Handle<T>, ApiError> {
         let (url_params, filters) = shared::select_name_lookup_params::<T>(name);

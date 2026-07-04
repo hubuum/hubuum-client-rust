@@ -116,7 +116,7 @@ fn sync_user_tokens_endpoint_returns_admin_token_or_legacy_404() {
         .expect("sync users().select_by_name(admin) failed");
 
     match admin.tokens() {
-        Ok(tokens) => assert!(tokens.iter().any(|token| token.user_id == admin.id())),
+        Ok(tokens) => assert!(tokens.iter().any(|token| token.principal_id == admin.id())),
         Err(ApiError::HttpWithBody { status, .. }) if status == reqwest::StatusCode::NOT_FOUND => {
             // Legacy servers may not expose /users/{id}/tokens.
         }
@@ -262,11 +262,11 @@ fn sync_namespace_user_permissions_endpoint_returns_non_empty() {
         .namespaces()
         .select(namespace_id)
         .expect("sync namespaces().select(namespace_id) failed");
-    let user_permissions = namespace
-        .user_permissions(admin_id)
-        .expect("sync namespace.user_permissions(user_id) failed");
+    let principal_permissions = namespace
+        .principal_permissions(admin_id)
+        .expect("sync namespace.principal_permissions(principal_id) failed");
 
-    assert!(!user_permissions.is_empty());
+    assert!(!principal_permissions.is_empty());
 }
 
 #[test]
@@ -423,7 +423,7 @@ fn sync_users_update_changes_fields() {
     let (_, user_id) =
         create_sync_user(&harness.client, "sync-users-update").expect("user creation failed");
     let prefix = unique_case_prefix("sync-users-update");
-    let updated_username = format!("{prefix}-updated-user");
+    let updated_proper_name = format!("{prefix} Updated User");
     let updated_email = format!("{prefix}@example.test");
 
     let updated = harness
@@ -432,14 +432,14 @@ fn sync_users_update_changes_fields() {
         .update_raw(
             user_id,
             UserPatch {
-                username: Some(updated_username.clone()),
                 email: Some(updated_email.clone()),
+                proper_name: Some(updated_proper_name.clone()),
             },
         )
         .expect("sync users().update_raw() failed");
 
     assert_eq!(updated.id, user_id);
-    assert_eq!(updated.username, updated_username);
+    assert_eq!(updated.proper_name, Some(updated_proper_name.clone()));
     assert_eq!(updated.email, Some(updated_email.clone()));
 }
 
@@ -542,19 +542,23 @@ fn sync_group_membership_add_remove_roundtrip() {
         .expect("sync groups().select(group_id) failed");
 
     group
-        .add_user(user_id)
-        .expect("sync group.add_user(user_id) failed");
+        .add_member(user_id)
+        .expect("sync group.add_member(user_id) failed");
 
     let members = group.members().expect("sync group.members() failed");
-    assert!(members.iter().any(|member| member.id() == user_id));
+    assert!(members.iter().any(|member| member.principal_id == user_id));
 
     group
-        .remove_user(user_id)
-        .expect("sync group.remove_user(user_id) failed");
+        .remove_member(user_id)
+        .expect("sync group.remove_member(user_id) failed");
     let members_after = group
         .members()
         .expect("sync group.members() after remove failed");
-    assert!(!members_after.iter().any(|member| member.id() == user_id));
+    assert!(
+        !members_after
+            .iter()
+            .any(|member| member.principal_id == user_id)
+    );
 }
 
 #[test]
@@ -776,6 +780,8 @@ fn sync_class_relation_create_delete_roundtrip() {
         .create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
             to_hubuum_class_id: class_b.id,
+            forward_template_alias: None,
+            reverse_template_alias: None,
         })
         .expect("sync class_relation().create_raw() failed");
 
@@ -841,6 +847,8 @@ fn sync_object_relation_create_delete_roundtrip() {
         .create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
             to_hubuum_class_id: class_b.id,
+            forward_template_alias: None,
+            reverse_template_alias: None,
         })
         .expect("failed to create supporting class relation");
 

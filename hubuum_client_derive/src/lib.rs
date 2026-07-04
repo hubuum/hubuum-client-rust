@@ -44,7 +44,6 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let plural_name = format_ident!("{}", pluralize(&name));
 
     let name_field = match base_name.trim_end_matches("Resource") {
-        "User" => format_ident!("username"),
         "Group" => format_ident!("groupname"),
         _ => format_ident!("name"),
     };
@@ -208,7 +207,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     // Find the first matching field from the options
     let display_field = display_field_options
         .iter()
-        .find(|&field| fields.iter().any(|f| f.ident.as_ref() == Some(&field)))
+        .find(|&field| fields.iter().any(|f| f.ident.as_ref() == Some(field)))
         .unwrap();
 
     // Generate the Display implementation
@@ -314,16 +313,14 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
 
 fn has_attribute(field: &syn::Field, attr_name: &str) -> bool {
     field.attrs.iter().any(|attr| {
-        if attr.path().is_ident("api") {
-            if let Meta::List(list) = &attr.meta {
-                if let Ok(nested) =
-                    list.parse_args_with(Punctuated::<Meta, syn::Token![,]>::parse_terminated)
-                {
-                    return nested
-                        .iter()
-                        .any(|meta| matches!(meta, Meta::Path(path) if path.is_ident(attr_name)));
-                }
-            }
+        if attr.path().is_ident("api")
+            && let Meta::List(list) = &attr.meta
+            && let Ok(nested) =
+                list.parse_args_with(Punctuated::<Meta, syn::Token![,]>::parse_terminated)
+        {
+            return nested
+                .iter()
+                .any(|meta| matches!(meta, Meta::Path(path) if path.is_ident(attr_name)));
         }
         false
     })

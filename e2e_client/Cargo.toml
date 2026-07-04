@@ -1,0 +1,12 @@
+[package]
+name = "e2e_client"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[features]
+integration-tests = []
+
+[dependencies]
+hubuum_client = { path = ".." }
+serde_json = "1"

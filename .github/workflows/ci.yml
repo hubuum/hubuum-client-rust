@@ -14,7 +14,6 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  HUBUUM_INTEGRATION_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server:no-tls-main
 
 jobs:
   test:
@@ -55,4 +54,6 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Run Integration Test Suite
-        run: ./scripts/run-integration-tests.sh
+        run: ./scripts/run-integration-tests.sh --with-e2e-client
+        env:
+          HUBUUM_INTEGRATION_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server:main

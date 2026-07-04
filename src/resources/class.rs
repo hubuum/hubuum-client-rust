@@ -24,6 +24,10 @@ use super::Namespace;
 #[derive(Debug, Clone, serde::Serialize)]
 struct NewClassRelationFromClassParams {
     to_hubuum_class_id: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    forward_template_alias: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reverse_template_alias: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -52,6 +56,10 @@ pub struct ClassRelationResource {
     pub id: i32,
     pub from_hubuum_class_id: i32,
     pub to_hubuum_class_id: i32,
+    #[api(optional)]
+    pub forward_template_alias: String,
+    #[api(optional)]
+    pub reverse_template_alias: String,
     #[api(read_only)]
     pub created_at: HubuumDateTime,
     #[api(read_only)]
@@ -189,6 +197,15 @@ impl SyncHandle<Class> {
     }
 
     pub fn create_relation(&self, to_class_id: i32) -> Result<ClassRelation, ApiError> {
+        self.create_relation_with_aliases(to_class_id, None, None)
+    }
+
+    pub fn create_relation_with_aliases(
+        &self,
+        to_class_id: i32,
+        forward_template_alias: Option<String>,
+        reverse_template_alias: Option<String>,
+    ) -> Result<ClassRelation, ApiError> {
         self.client()
             .request_with_endpoint::<NewClassRelationFromClassParams, ClassRelation>(
                 reqwest::Method::POST,
@@ -197,6 +214,8 @@ impl SyncHandle<Class> {
                 vec![],
                 NewClassRelationFromClassParams {
                     to_hubuum_class_id: to_class_id,
+                    forward_template_alias,
+                    reverse_template_alias,
                 },
             )?
             .ok_or(ApiError::EmptyResult(
@@ -315,6 +334,16 @@ impl AsyncHandle<Class> {
     }
 
     pub async fn create_relation(&self, to_class_id: i32) -> Result<ClassRelation, ApiError> {
+        self.create_relation_with_aliases(to_class_id, None, None)
+            .await
+    }
+
+    pub async fn create_relation_with_aliases(
+        &self,
+        to_class_id: i32,
+        forward_template_alias: Option<String>,
+        reverse_template_alias: Option<String>,
+    ) -> Result<ClassRelation, ApiError> {
         self.client()
             .request_with_endpoint::<NewClassRelationFromClassParams, ClassRelation>(
                 reqwest::Method::POST,
@@ -323,6 +352,8 @@ impl AsyncHandle<Class> {
                 vec![],
                 NewClassRelationFromClassParams {
                     to_hubuum_class_id: to_class_id,
+                    forward_template_alias,
+                    reverse_template_alias,
                 },
             )
             .await?
@@ -345,5 +376,35 @@ impl AsyncHandle<Class> {
             )
             .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod alias_tests {
+    use super::*;
+
+    #[test]
+    fn new_relation_params_without_aliases_serialize_one_key() {
+        let params = NewClassRelationFromClassParams {
+            to_hubuum_class_id: 2,
+            forward_template_alias: None,
+            reverse_template_alias: None,
+        };
+        let value = serde_json::to_value(&params).unwrap();
+        let obj = value.as_object().unwrap();
+        assert_eq!(obj.len(), 1, "no-alias payload must stay byte-compatible");
+        assert_eq!(obj["to_hubuum_class_id"], 2);
+    }
+
+    #[test]
+    fn new_relation_params_with_aliases_serialize_three_keys() {
+        let params = NewClassRelationFromClassParams {
+            to_hubuum_class_id: 2,
+            forward_template_alias: Some("rooms".into()),
+            reverse_template_alias: Some("hosts".into()),
+        };
+        let value = serde_json::to_value(&params).unwrap();
+        assert_eq!(value["forward_template_alias"], "rooms");
+        assert_eq!(value["reverse_template_alias"], "hosts");
     }
 }

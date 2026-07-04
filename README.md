@@ -24,6 +24,18 @@ A Rust client library for interacting with the Hubuum API. The library is design
 
     Run server-side reports, manage stored report templates, and submit asynchronous imports with typed task polling helpers.
 
+- **Principal-Centric Identity**:
+
+    Users and service accounts are both *principals*. Manage users and service accounts (create, update, disable), group membership by principal id, scoped token minting/revocation, and per-principal effective permissions. The `me()` family exposes the caller's own identity, tokens, groups, and permissions.
+
+- **Remote Targets**:
+
+    Configure hardened outbound HTTP targets and invoke them against namespaces, classes, objects, or relations, returning an async task to poll.
+
+- **Health & Readiness Probes**:
+
+    Unauthenticated `healthz()` / `readyz()` probes for liveness and readiness checks.
+
 - **No Built-In Table Formatting**:
 
     Models no longer implement built-in table rendering traits. Consumers that want table support should wrap/newtype the exported models in their own crates.
@@ -183,10 +195,12 @@ let template = client
     .send()?;
 ```
 
-Report execution is exposed through `client.reports()` and returns a typed `ReportResult`:
+Reports are **asynchronous**: submitting one creates a task, and the rendered output is
+fetched once the task finishes. `client.reports().run(...)` is the high-level helper that
+submits, polls the task to completion, and returns a typed `ReportResult`:
 
 ```rust
-let report = client.reports().run(hubuum_client::ReportRequest {
+let request = hubuum_client::ReportRequest {
     limits: None,
     missing_data_policy: None,
     output: None,
@@ -196,12 +210,36 @@ let report = client.reports().run(hubuum_client::ReportRequest {
         kind: hubuum_client::ReportScopeKind::ObjectsInClass,
         object_id: None,
     },
-})?;
+    include: None,
+    relation_context: None,
+};
+
+let report = client.reports().run(request).send()?;
 
 match report {
     hubuum_client::ReportResult::Json(body) => println!("{} rows", body.items.len()),
     hubuum_client::ReportResult::Rendered { body, .. } => println!("{body}"),
 }
+```
+
+The polling cadence and deadline are configurable, and the flow can also be driven
+manually with the low-level helpers:
+
+```rust
+use std::time::Duration;
+
+// High-level, with custom polling:
+let report = client
+    .reports()
+    .run(request.clone())
+    .poll_interval(Duration::from_millis(500))
+    .timeout(Some(Duration::from_secs(120)))
+    .send()?;
+
+// Low-level: submit, wait, then fetch the output.
+let task = client.reports().submit(request).send()?;
+let task = client.tasks().wait(task.id).send()?;
+let output = client.reports().output(task.id)?;
 ```
 
 ## Imports and Tasks
@@ -223,6 +261,18 @@ let task = client
 let task_state = client.tasks().get(task.id)?;
 let event_page = client.tasks().events(task.id).limit(50).page()?;
 let result_page = client.imports().results(task.id).limit(50).page()?;
+```
+
+Tasks can also be listed and filtered (raw query parameters, cursor-paged):
+
+```rust
+let tasks = client
+    .tasks()
+    .query()
+    .kind(hubuum_client::TaskKind::Report)
+    .status(hubuum_client::TaskStatus::Succeeded)
+    .limit(50)
+    .list()?;
 ```
 
 Cursor-paged endpoints return `hubuum_client::Page<T>` with `items` and `next_cursor`.
@@ -263,6 +313,18 @@ Recommended entrypoint:
 ./scripts/run-integration-tests.sh
 ```
 
+Run both library integration tests and the consumer e2e client suite:
+
+```bash
+./scripts/run-integration-tests.sh --with-e2e-client
+```
+
+Run only the consumer e2e client suite (still provisions server + postgres):
+
+```bash
+./scripts/run-integration-tests.sh --e2e-only
+```
+
 The script starts one PostgreSQL container and one Hubuum server container, waits for readiness,
 optionally applies SQL seed data, runs integration tests, and tears everything down in a shell
 `trap` (unless keep mode is enabled).
@@ -271,22 +333,30 @@ Mutating integration tests use unique `itest-<case>-<ts>` resource name prefixes
 to run with default parallel test threads.
 
 Seed behavior:
+
 - default seed file: `tests/container_integration/seed/init.sql`
 - custom seed file: `./scripts/run-integration-tests.sh --seed path/to/seed.sql`
 - disable seeding: `./scripts/run-integration-tests.sh --skip-seed`
 
 External stack mode:
+
 - tests can reuse an externally managed stack when both env vars are set:
   - `HUBUUM_INTEGRATION_BASE_URL`
   - `HUBUUM_INTEGRATION_ADMIN_PASSWORD`
 - this is what the wrapper script exports internally before running tests.
 
 Optional environment variables:
+
 - `HUBUUM_INTEGRATION_SERVER_IMAGE` to override the server image
 - `HUBUUM_INTEGRATION_DB_IMAGE` to override the database image
+- `HUBUUM_INTEGRATION_CONTAINER_RUNTIME` to force `docker` or `podman`
 - `HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS` to override startup timeout (default: `300`)
 - `HUBUUM_INTEGRATION_KEEP_CONTAINERS=1` to keep containers running for debugging
 - `HUBUUM_INTEGRATION_SEED_SQL` to override the default seed SQL file
+
+CI runs integration tests against `ghcr.io/hubuum/hubuum-server:main` with
+`--with-e2e-client`, so the consumer e2e suite is validated with the library integration
+tests.
 
 If the server image is private in your environment, authenticate first:
 

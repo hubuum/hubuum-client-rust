@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use hubuum_client_derive::ApiResource;
 
 use crate::{
-    ApiError, User,
+    ApiError, PrincipalMember,
     client::{
         r#async::{
             CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
@@ -32,13 +32,16 @@ pub struct GroupResource {
 }
 
 impl SyncHandle<Group> {
-    pub fn add_user(&self, user_id: i32) -> Result<(), ApiError> {
+    pub fn add_member(&self, principal_id: i32) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("group_id"),
                 self.resource().id.to_string().into(),
             ),
-            (Cow::Borrowed("user_id"), user_id.to_string().into()),
+            (
+                Cow::Borrowed("principal_id"),
+                principal_id.to_string().into(),
+            ),
         ];
 
         self.client()
@@ -52,13 +55,16 @@ impl SyncHandle<Group> {
         Ok(())
     }
 
-    pub fn remove_user(&self, user_id: i32) -> Result<(), ApiError> {
+    pub fn remove_member(&self, principal_id: i32) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("group_id"),
                 self.resource().id.to_string().into(),
             ),
-            (Cow::Borrowed("user_id"), user_id.to_string().into()),
+            (
+                Cow::Borrowed("principal_id"),
+                principal_id.to_string().into(),
+            ),
         ];
 
         self.client()
@@ -72,14 +78,14 @@ impl SyncHandle<Group> {
         Ok(())
     }
 
-    pub fn members(&self) -> Result<Vec<SyncHandle<User>>, ApiError> {
+    pub fn members(&self) -> Result<Vec<PrincipalMember>, ApiError> {
         let url_params = vec![(
             Cow::Borrowed("group_id"),
             self.resource().id.to_string().into(),
         )];
         let res = self
             .client()
-            .request_with_endpoint::<SyncEmptyPostParams, Vec<User>>(
+            .request_with_endpoint::<SyncEmptyPostParams, Vec<PrincipalMember>>(
                 reqwest::Method::GET,
                 &Endpoint::GroupMembers,
                 url_params,
@@ -87,16 +93,10 @@ impl SyncHandle<Group> {
                 SyncEmptyPostParams {},
             )?;
 
-        match res {
-            None => Ok(vec![]),
-            Some(users) => Ok(users
-                .into_iter()
-                .map(|user| SyncHandle::new(self.client().clone(), user))
-                .collect()),
-        }
+        Ok(res.unwrap_or_default())
     }
 
-    pub fn members_request(&self) -> SyncCursorRequest<User> {
+    pub fn members_request(&self) -> SyncCursorRequest<PrincipalMember> {
         SyncCursorRequest::new(
             self.client().clone(),
             Endpoint::GroupMembers,
@@ -109,13 +109,16 @@ impl SyncHandle<Group> {
 }
 
 impl AsyncHandle<Group> {
-    pub async fn add_user(&self, user_id: i32) -> Result<(), ApiError> {
+    pub async fn add_member(&self, principal_id: i32) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("group_id"),
                 self.resource().id.to_string().into(),
             ),
-            (Cow::Borrowed("user_id"), user_id.to_string().into()),
+            (
+                Cow::Borrowed("principal_id"),
+                principal_id.to_string().into(),
+            ),
         ];
 
         self.client()
@@ -130,13 +133,16 @@ impl AsyncHandle<Group> {
         Ok(())
     }
 
-    pub async fn remove_user(&self, user_id: i32) -> Result<(), ApiError> {
+    pub async fn remove_member(&self, principal_id: i32) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("group_id"),
                 self.resource().id.to_string().into(),
             ),
-            (Cow::Borrowed("user_id"), user_id.to_string().into()),
+            (
+                Cow::Borrowed("principal_id"),
+                principal_id.to_string().into(),
+            ),
         ];
 
         self.client()
@@ -151,14 +157,14 @@ impl AsyncHandle<Group> {
         Ok(())
     }
 
-    pub async fn members(&self) -> Result<Vec<AsyncHandle<User>>, ApiError> {
+    pub async fn members(&self) -> Result<Vec<PrincipalMember>, ApiError> {
         let url_params = vec![(
             Cow::Borrowed("group_id"),
             self.resource().id.to_string().into(),
         )];
         let res = self
             .client()
-            .request_with_endpoint::<AsyncEmptyPostParams, Vec<User>>(
+            .request_with_endpoint::<AsyncEmptyPostParams, Vec<PrincipalMember>>(
                 reqwest::Method::GET,
                 &Endpoint::GroupMembers,
                 url_params,
@@ -167,16 +173,10 @@ impl AsyncHandle<Group> {
             )
             .await?;
 
-        match res {
-            None => Ok(vec![]),
-            Some(users) => Ok(users
-                .into_iter()
-                .map(|user| AsyncHandle::new(self.client().clone(), user))
-                .collect()),
-        }
+        Ok(res.unwrap_or_default())
     }
 
-    pub fn members_request(&self) -> AsyncCursorRequest<User> {
+    pub fn members_request(&self) -> AsyncCursorRequest<PrincipalMember> {
         AsyncCursorRequest::new(
             self.client().clone(),
             Endpoint::GroupMembers,

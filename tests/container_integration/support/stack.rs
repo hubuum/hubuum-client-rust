@@ -10,30 +10,55 @@ use crate::support::naming::unique_suffix;
 const DB_USER: &str = "hubuum";
 const DB_PASSWORD: &str = "hubuum_password";
 const DB_NAME: &str = "hubuum";
-const DB_IMAGE_DEFAULT: &str = "postgres:15";
-const SERVER_IMAGE_DEFAULT: &str = "ghcr.io/hubuum/hubuum-server:no-tls-main";
+const DB_IMAGE_DEFAULT: &str = "postgres:18";
+const SERVER_IMAGE_DEFAULT: &str = "ghcr.io/hubuum/hubuum-server:main";
 const CLIENT_ALLOWLIST_DEFAULT: &str = "*";
 const STACK_TIMEOUT_DEFAULT_SECS: u64 = 300;
 const EXTERNAL_BASE_URL_ENV: &str = "HUBUUM_INTEGRATION_BASE_URL";
 const EXTERNAL_ADMIN_PASSWORD_ENV: &str = "HUBUUM_INTEGRATION_ADMIN_PASSWORD";
+const CONTAINER_RUNTIME_ENV: &str = "HUBUUM_INTEGRATION_CONTAINER_RUNTIME";
 
 fn shared_stack_slot() -> &'static Mutex<Weak<StackInner>> {
     static SHARED_STACK: OnceLock<Mutex<Weak<StackInner>>> = OnceLock::new();
     SHARED_STACK.get_or_init(|| Mutex::new(Weak::new()))
 }
 
-fn docker(args: &[String]) -> Result<String, String> {
-    let output = Command::new("docker")
+fn container_runtime() -> Result<String, String> {
+    if let Ok(runtime) = std::env::var(CONTAINER_RUNTIME_ENV) {
+        let runtime = runtime.trim();
+        if !runtime.is_empty() {
+            return Ok(runtime.to_string());
+        }
+    }
+
+    for runtime in ["docker", "podman"] {
+        if Command::new(runtime)
+            .arg("--version")
+            .output()
+            .is_ok_and(|output| output.status.success())
+        {
+            return Ok(runtime.to_string());
+        }
+    }
+
+    Err(format!(
+        "neither docker nor podman was found; set {CONTAINER_RUNTIME_ENV}"
+    ))
+}
+
+fn container(args: &[String]) -> Result<String, String> {
+    let runtime = container_runtime()?;
+    let output = Command::new(&runtime)
         .args(args)
         .output()
-        .map_err(|err| format!("failed to run `docker {}`: {err}", args.join(" ")))?;
+        .map_err(|err| format!("failed to run `{runtime} {}`: {err}", args.join(" ")))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!(
-            "`docker {}` failed with status {}: {}",
+            "`{runtime} {}` failed with status {}: {}",
             args.join(" "),
             output
                 .status
@@ -99,18 +124,78 @@ fn extract_admin_password(logs: &str) -> Option<String> {
     None
 }
 
+fn extract_admin_password_from_text(text: &str) -> Option<String> {
+    for line in text.lines().rev() {
+        if let Ok(json) = serde_json::from_str::<Value>(line)
+            && let Some(password) = json.get("password").and_then(Value::as_str)
+        {
+            return Some(password.to_string());
+        }
+
+        let lower = line.to_ascii_lowercase();
+        if !lower.contains("password") {
+            continue;
+        }
+
+        if let Some(candidate) = line
+            .split_whitespace()
+            .last()
+            .map(|raw| raw.trim_matches(|c| c == '"' || c == '\'' || c == ',' || c == '.'))
+            .filter(|candidate| !candidate.is_empty())
+        {
+            return Some(candidate.to_string());
+        }
+    }
+
+    None
+}
+
+fn reset_admin_password(server_container_name: &str) -> Result<Option<String>, String> {
+    let output = container(&[
+        "exec".to_string(),
+        server_container_name.to_string(),
+        "hubuum-admin".to_string(),
+        "--reset-password".to_string(),
+        "admin".to_string(),
+    ])?;
+
+    Ok(extract_admin_password_from_text(&output))
+}
+
+fn resolve_admin_password(
+    server_container_name: &str,
+    timeout: Duration,
+) -> Result<String, String> {
+    let logs = container(&["logs".to_string(), server_container_name.to_string()])?;
+    if let Some(password) = extract_admin_password(&logs) {
+        return Ok(password);
+    }
+
+    let started = Instant::now();
+    while started.elapsed() < timeout {
+        match reset_admin_password(server_container_name) {
+            Ok(Some(password)) => return Ok(password),
+            Ok(None) => {}
+            Err(_) => {}
+        }
+        sleep(Duration::from_millis(500));
+    }
+
+    Err("failed to reset admin password via hubuum-admin before timeout".to_string())
+}
+
 fn cleanup_stack_resources(
     network_name: &str,
     db_container_name: &str,
     server_container_name: &str,
 ) {
-    let _ = docker(&[
+    let _ = container(&[
         "rm".to_string(),
         "-f".to_string(),
         server_container_name.to_string(),
         db_container_name.to_string(),
     ]);
-    let _ = docker(&[
+    let _ = container(&[
         "network".to_string(),
         "rm".to_string(),
         network_name.to_string(),
@@ -122,7 +207,7 @@ fn collect_stack_diagnostics(
     db_container_name: &str,
     base_url: &str,
 ) -> String {
-    let server_status = docker(&[
+    let server_status = container(&[
         "inspect".to_string(),
         "-f".to_string(),
         "{{.State.Status}}".to_string(),
@@ -130,7 +215,7 @@ fn collect_stack_diagnostics(
     ])
     .unwrap_or_else(|err| format!("inspect-error: {err}"));
 
-    let db_status = docker(&[
+    let db_status = container(&[
         "inspect".to_string(),
         "-f".to_string(),
         "{{.State.Status}}".to_string(),
@@ -138,7 +223,7 @@ fn collect_stack_diagnostics(
     ])
     .unwrap_or_else(|err| format!("inspect-error: {err}"));
 
-    let server_logs = docker(&[
+    let server_logs = container(&[
         "logs".to_string(),
         "--tail".to_string(),
         "100".to_string(),
@@ -146,7 +231,7 @@ fn collect_stack_diagnostics(
     ])
     .unwrap_or_else(|err| format!("logs-error: {err}"));
 
-    let db_logs = docker(&[
+    let db_logs = container(&[
         "logs".to_string(),
         "--tail".to_string(),
         "50".to_string(),
@@ -156,7 +241,7 @@ fn collect_stack_diagnostics(
 
     let probe = match reqwest::blocking::Client::new()
         .post(format!("{base_url}/api/v0/auth/login"))
-        .json(&json!({ "username": "__readiness__", "password": "__readiness__" }))
+        .json(&json!({ "name": "__readiness__", "password": "__readiness__" }))
         .send()
     {
         Ok(response) => format!(
@@ -172,7 +257,7 @@ fn collect_stack_diagnostics(
 }
 
 fn collect_db_startup_diagnostics(db_container_name: &str) -> String {
-    let db_status = docker(&[
+    let db_status = container(&[
         "inspect".to_string(),
         "-f".to_string(),
         "{{.State.Status}}".to_string(),
@@ -180,7 +265,7 @@ fn collect_db_startup_diagnostics(db_container_name: &str) -> String {
     ])
     .unwrap_or_else(|err| format!("inspect-error: {err}"));
 
-    let db_health = docker(&[
+    let db_health = container(&[
         "inspect".to_string(),
         "-f".to_string(),
         "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}".to_string(),
@@ -188,7 +273,7 @@ fn collect_db_startup_diagnostics(db_container_name: &str) -> String {
     ])
     .unwrap_or_else(|err| format!("inspect-error: {err}"));
 
-    let db_logs = docker(&[
+    let db_logs = container(&[
         "logs".to_string(),
         "--tail".to_string(),
         "80".to_string(),
@@ -215,7 +300,7 @@ impl StackInner {
         let db_container_name = format!("hubuum-it-db-{suffix}");
         let server_container_name = format!("hubuum-it-server-{suffix}");
 
-        docker(&[
+        container(&[
             "network".to_string(),
             "create".to_string(),
             network_name.clone(),
@@ -225,7 +310,7 @@ impl StackInner {
         let database_url =
             format!("postgres://{DB_USER}:{DB_PASSWORD}@{db_container_name}/{DB_NAME}");
 
-        if let Err(err) = docker(&[
+        if let Err(err) = container(&[
             "run".to_string(),
             "-d".to_string(),
             "--name".to_string(),
@@ -255,7 +340,7 @@ impl StackInner {
         }
 
         if let Err(err) = wait_until(timeout, || {
-            let health = docker(&[
+            let health = container(&[
                 "inspect".to_string(),
                 "-f".to_string(),
                 "{{.State.Health.Status}}".to_string(),
@@ -270,7 +355,7 @@ impl StackInner {
             return Err(format!("{err}\n{diagnostics}"));
         }
 
-        if let Err(err) = docker(&[
+        if let Err(err) = container(&[
             "run".to_string(),
             "-d".to_string(),
             "--name".to_string(),
@@ -299,7 +384,7 @@ impl StackInner {
             ));
         }
 
-        let mapped = match docker(&[
+        let mapped = match container(&[
             "port".to_string(),
             server_container_name.clone(),
             "8080/tcp".to_string(),
@@ -319,22 +404,9 @@ impl StackInner {
         let base_url = format!("http://127.0.0.1:{mapped_port}");
 
         if let Err(err) = wait_until(timeout, || {
-            let logs = docker(&["logs".to_string(), server_container_name.clone()])?;
-            Ok(extract_admin_password(&logs).is_some())
-        })
-        .map_err(|err| {
-            format!("failed to detect bootstrapped admin password in server logs: {err}")
-        }) {
-            let diagnostics =
-                collect_stack_diagnostics(&server_container_name, &db_container_name, &base_url);
-            cleanup_stack_resources(&network_name, &db_container_name, &server_container_name);
-            return Err(format!("{err}\n{diagnostics}"));
-        }
-
-        if let Err(err) = wait_until(timeout, || {
             match reqwest::blocking::Client::new()
                 .post(format!("{base_url}/api/v0/auth/login"))
-                .json(&json!({ "username": "__readiness__", "password": "__readiness__" }))
+                .json(&json!({ "name": "__readiness__", "password": "__readiness__" }))
                 .send()
             {
                 Ok(response) => {
@@ -351,16 +423,18 @@ impl StackInner {
             return Err(format!("{err}\n{diagnostics}"));
         }
 
-        let logs = match docker(&["logs".to_string(), server_container_name.clone()]) {
-            Ok(value) => value,
+        let admin_password = match resolve_admin_password(&server_container_name, timeout) {
+            Ok(password) => password,
             Err(err) => {
+                let diagnostics = collect_stack_diagnostics(
+                    &server_container_name,
+                    &db_container_name,
+                    &base_url,
+                );
                 cleanup_stack_resources(&network_name, &db_container_name, &server_container_name);
-                return Err(format!("failed to read server logs: {err}"));
+                return Err(format!("{err}\n{diagnostics}"));
             }
         };
-        let admin_password = extract_admin_password(&logs).ok_or_else(|| {
-            "admin password was not present in server logs after successful startup".to_string()
-        })?;
 
         Ok(Self {
             network_name,
@@ -446,5 +520,40 @@ impl IntegrationStack {
             admin_password: inner.admin_password.clone(),
             _inner: Some(inner),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extracts_admin_password_from_bootstrap_json_logs() {
+        let logs = r#"
+{"message":"other"}
+{"message":"Created admin user","password":"boot-pass"}
+"#;
+
+        assert_eq!(extract_admin_password(logs).as_deref(), Some("boot-pass"));
+    }
+
+    #[test]
+    fn extracts_admin_password_from_reset_json_output() {
+        let output = r#"{"username":"admin","password":"reset-pass"}"#;
+
+        assert_eq!(
+            extract_admin_password_from_text(output).as_deref(),
+            Some("reset-pass")
+        );
+    }
+
+    #[test]
+    fn extracts_admin_password_from_reset_text_output() {
+        let output = "Reset admin password: text-pass";
+
+        assert_eq!(
+            extract_admin_password_from_text(output).as_deref(),
+            Some("text-pass")
+        );
     }
 }
