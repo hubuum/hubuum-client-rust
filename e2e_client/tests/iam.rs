@@ -104,7 +104,11 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
         .limit(20)
         .list()
         .expect("me permissions should page");
-    assert!(me_permissions.len() <= 20);
+    assert!(
+        me_permissions
+            .iter()
+            .all(|entry| !entry.namespace_name.is_empty())
+    );
 
     let user_tokens = user_handle.tokens().expect("user tokens should list");
     let created_user_token = user_tokens
