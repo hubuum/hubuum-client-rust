@@ -52,7 +52,7 @@ pub use report::{
     ReportContentType, ReportInclude, ReportIncludeRelatedDirection, ReportIncludeRelatedObject,
     ReportIncludeRelatedSort, ReportJsonResponse, ReportLimits, ReportMeta,
     ReportMissingDataPolicy, ReportOutputRequest, ReportRelationContext, ReportRequest,
-    ReportResult, ReportScope, ReportScopeKind, ReportWarning,
+    ReportResult, ReportScope, ReportScopeKind, ReportTemplateKind, ReportWarning,
 };
 pub use search::{
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
@@ -96,4 +96,6 @@ pub enum Permissions {
     UpdateRemoteTarget,
     DeleteRemoteTarget,
     ExecuteRemoteTarget,
+    ReadAudit,
+    ManageEventSubscription,
 }

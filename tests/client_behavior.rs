@@ -135,6 +135,14 @@ fn report_template_json(template_id: i32, name: &str) -> serde_json::Value {
         "description": "Template",
         "content_type": "text/plain",
         "template": "{{name}}",
+        "kind": "fragment",
+        "scope_kind": null,
+        "class_id": null,
+        "default_query": null,
+        "include": null,
+        "relation_context": null,
+        "default_missing_data_policy": null,
+        "default_limits": null,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -2068,12 +2076,6 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     let template_patch = server.mock(|when, then| {
         when.method(PATCH)
             .path("/api/v1/templates/2")
-            .json_body(json!({
-                "namespace_id": null,
-                "name": "updated-template",
-                "description": null,
-                "template": null
-            }))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -2125,6 +2127,7 @@ fn sync_reports_and_templates_cover_new_server_surface() {
         .description("Template")
         .content_type(ReportContentType::TextPlain)
         .template("{{name}}")
+        .kind(hubuum_client::ReportTemplateKind::Fragment)
         .send()
         .expect("template create should succeed");
     assert_eq!(created.id, 2);
@@ -2156,6 +2159,14 @@ fn report_template_patch_omits_content_type() {
         name: Some("updated-template".to_string()),
         description: None,
         template: None,
+        kind: None,
+        scope_kind: None,
+        class_id: None,
+        default_query: None,
+        include: None,
+        relation_context: None,
+        default_missing_data_policy: None,
+        default_limits: None,
     };
 
     let body = serde_json::to_value(&patch).expect("patch should serialize");
@@ -2165,7 +2176,15 @@ fn report_template_patch_omits_content_type() {
             "namespace_id": null,
             "name": "updated-template",
             "description": null,
-            "template": null
+            "template": null,
+            "kind": null,
+            "scope_kind": null,
+            "class_id": null,
+            "default_query": null,
+            "include": null,
+            "relation_context": null,
+            "default_missing_data_policy": null,
+            "default_limits": null
         })
     );
 }

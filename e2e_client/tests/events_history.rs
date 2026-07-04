@@ -1,7 +1,8 @@
 use std::{thread, time::Duration};
 
 use hubuum_client::{
-    ClassPatch, EventSinkKind, NewEventSink, NewEventSubscription, UpdateEventSubscription,
+    ClassPatch, EventSinkKind, NewEventSink, NewEventSubscription, ObjectPatch, ReportContentType,
+    ReportTemplateKind, ReportTemplatePost, UpdateEventSubscription,
 };
 use serde_json::json;
 
@@ -157,4 +158,208 @@ fn e2e_event_subscriptions_create_delivery_rows() {
         .event_sinks()
         .delete(sink.id)
         .expect("event sink should delete");
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn e2e_events_and_history_cover_core_and_templates() {
+    let harness = E2EHarness::from_env().expect("failed to start e2e harness");
+    let (admin_id, admin_group_id) =
+        admin_context(&harness.client).expect("failed to resolve admin context");
+    let (namespace_id, class_id, object_id) = harness
+        .create_namespace_class_object("events-history-read", admin_group_id)
+        .expect("failed to create namespace/class/object");
+    let prefix = unique_case_prefix("events-history-read");
+
+    let updated_class_name = format!("{prefix}-class-history-updated");
+    harness
+        .client
+        .classes()
+        .update_raw(
+            class_id,
+            ClassPatch {
+                name: Some(updated_class_name.clone()),
+                description: Some("e2e class history update".to_string()),
+                namespace_id,
+                json_schema: None,
+                validate_schema: Some(false),
+            },
+        )
+        .expect("class update should produce history");
+
+    let updated_object_name = format!("{prefix}-object-history-updated");
+    harness
+        .client
+        .objects(class_id)
+        .update_raw(
+            object_id,
+            ObjectPatch {
+                name: Some(updated_object_name.clone()),
+                namespace_id: Some(namespace_id),
+                hubuum_class_id: Some(class_id),
+                description: Some("e2e object history update".to_string()),
+                data: Some(json!({"source": "e2e-client", "history": true})),
+            },
+        )
+        .expect("object update should produce history");
+
+    let template = harness
+        .client
+        .templates()
+        .create_raw(ReportTemplatePost {
+            namespace_id,
+            name: format!("{prefix}-template"),
+            description: "e2e report template".to_string(),
+            content_type: ReportContentType::TextPlain,
+            template: "count={{ meta.count }}".to_string(),
+            kind: ReportTemplateKind::Fragment,
+            scope_kind: None,
+            class_id: None,
+            default_query: None,
+            include: None,
+            relation_context: None,
+            default_missing_data_policy: None,
+            default_limits: None,
+        })
+        .expect("template create should produce history");
+
+    let namespace_history = harness
+        .client
+        .namespace_history(namespace_id)
+        .limit(20)
+        .list()
+        .expect("namespace history should list");
+    assert!(
+        namespace_history
+            .iter()
+            .any(|entry| entry.id == namespace_id && !entry.history.op.is_empty())
+    );
+    let namespace_as_of = harness
+        .client
+        .namespace_history_as_of(
+            namespace_id,
+            namespace_history[0].history.valid_from.clone(),
+        )
+        .expect("namespace history as-of should fetch");
+    assert_eq!(namespace_as_of.id, namespace_id);
+
+    let class_history = harness
+        .client
+        .class_history(class_id)
+        .limit(20)
+        .list()
+        .expect("class history should list");
+    assert!(
+        class_history
+            .iter()
+            .any(|entry| entry.id == class_id && entry.name == updated_class_name)
+    );
+    let class_as_of = harness
+        .client
+        .class_history_as_of(class_id, class_history[0].history.valid_from.clone())
+        .expect("class history as-of should fetch");
+    assert_eq!(class_as_of.id, class_id);
+
+    let object_history = harness
+        .client
+        .object_history(class_id, object_id)
+        .limit(20)
+        .list()
+        .expect("object history should list");
+    assert!(
+        object_history
+            .iter()
+            .any(|entry| entry.id == object_id && entry.name == updated_object_name)
+    );
+    let object_as_of = harness
+        .client
+        .object_history_as_of(
+            class_id,
+            object_id,
+            object_history[0].history.valid_from.clone(),
+        )
+        .expect("object history as-of should fetch");
+    assert_eq!(object_as_of.id, object_id);
+
+    let template_history = harness
+        .client
+        .template_history(template.id)
+        .limit(20)
+        .list()
+        .expect("template history should list");
+    assert!(
+        template_history
+            .iter()
+            .any(|entry| entry.id == template.id && entry.namespace_id == namespace_id)
+    );
+    let template_as_of = harness
+        .client
+        .template_history_as_of(template.id, template_history[0].history.valid_from.clone())
+        .expect("template history as-of should fetch");
+    assert_eq!(template_as_of.id, template.id);
+
+    let events = harness
+        .client
+        .events()
+        .actor_user_id(admin_id)
+        .namespace_id(namespace_id)
+        .limit(100)
+        .list()
+        .expect("global event listing should support filters");
+    assert!(events.iter().any(|event| event.entity_type == "class"
+        && event.entity_id == Some(class_id)
+        && event.action == "updated"));
+    assert!(events.iter().any(|event| event.entity_type == "object"
+        && event.entity_id == Some(object_id)
+        && event.action == "updated"));
+
+    let namespace_events = harness
+        .client
+        .namespace_events(namespace_id)
+        .limit(100)
+        .list()
+        .expect("namespace events should list");
+    assert!(
+        namespace_events
+            .iter()
+            .any(|event| event.namespace_id == Some(namespace_id))
+    );
+
+    let class_events = harness
+        .client
+        .class_events(class_id)
+        .action("updated")
+        .limit(20)
+        .list()
+        .expect("class events should list");
+    assert!(
+        class_events
+            .iter()
+            .any(|event| event.entity_id == Some(class_id) && event.action == "updated")
+    );
+
+    let object_events = harness
+        .client
+        .object_events(class_id, object_id)
+        .action("updated")
+        .limit(20)
+        .list()
+        .expect("object events should list");
+    assert!(
+        object_events
+            .iter()
+            .any(|event| event.entity_id == Some(object_id) && event.action == "updated")
+    );
+
+    let template_events = harness
+        .client
+        .template_events(template.id)
+        .limit(20)
+        .list()
+        .expect("template events should list");
+    assert!(
+        template_events
+            .iter()
+            .any(|event| event.entity_id == Some(template.id))
+    );
 }

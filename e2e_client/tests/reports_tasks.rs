@@ -49,6 +49,19 @@ fn e2e_report_submission_task_wait_output_and_task_listing() {
         .expect("report task should complete");
     assert!(completed.status.is_success());
 
+    let task_events = harness
+        .client
+        .tasks()
+        .events(submitted.id)
+        .limit(20)
+        .list()
+        .expect("report task events should list");
+    assert!(
+        task_events
+            .iter()
+            .any(|event| event.task_id == submitted.id && !event.event_type.is_empty())
+    );
+
     let output = harness
         .client
         .reports()
