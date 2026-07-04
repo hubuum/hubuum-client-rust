@@ -271,6 +271,9 @@ apply_seed_if_requested() {
 }
 
 echo "Using container runtime: ${CONTAINER_RUNTIME}"
+echo "Refreshing server image: ${SERVER_IMAGE}"
+container pull "${SERVER_IMAGE}"
+
 echo "Creating integration container network: ${NETWORK_NAME}"
 container network create "${NETWORK_NAME}" >/dev/null
 
