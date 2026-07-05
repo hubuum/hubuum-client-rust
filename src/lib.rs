@@ -1,14 +1,19 @@
+#![cfg_attr(
+    not(any(feature = "async", feature = "blocking")),
+    allow(dead_code, unused_imports)
+)]
+
 //! A hubuum API client library.
 //!
 //! async:
 //! ```no_run
-//! use hubuum_client::{AsyncClient, BaseUrl};
+//! use hubuum_client::{BaseUrl, Client};
 //! use std::str::FromStr;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!    let base_url = BaseUrl::from_str("https://api.example.com")?;
-//!     let client = AsyncClient::new(base_url);
+//!     let client = Client::new(base_url);
 //!     // ... rest of the code
 //!     Ok(())
 //! }
@@ -16,12 +21,12 @@
 //!
 //! sync:
 //! ```no_run
-//! use hubuum_client::{SyncClient, BaseUrl};
+//! use hubuum_client::{BaseUrl, blocking};
 //! use std::str::FromStr;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!    let base_url = BaseUrl::from_str("https://api.example.com")?;
-//!    let client = SyncClient::new(base_url);
+//!    let client = blocking::Client::new(base_url);
 //!    // ... rest of the code
 //!    Ok(())
 //! }
@@ -34,8 +39,11 @@ pub mod types;
 mod endpoints;
 
 // Re-export commonly used items
+#[cfg(feature = "async")]
+pub use client::Client;
 pub use client::{
-    AsyncClient, Authenticated, IntoResourceFilter, Page, SyncClient, Unauthenticated,
+    Authenticated, IntoQueryFilters, Page, QueryBoolField, QueryJsonField, QueryNumericField,
+    QueryTextField, QueryValueField, Unauthenticated,
 };
 pub use errors::ApiError;
 pub use resources::*;
@@ -64,3 +72,8 @@ pub use types::{
     UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
     UserParams,
 };
+
+#[cfg(feature = "blocking")]
+pub mod blocking {
+    pub use crate::client::sync::*;
+}

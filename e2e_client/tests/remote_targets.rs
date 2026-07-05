@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use hubuum_client::{
-    NewRemoteTarget, RemoteAuthConfig, RemoteHttpMethod, RemoteInvocationSubject,
+    FilterOperator, NewRemoteTarget, RemoteAuthConfig, RemoteHttpMethod, RemoteInvocationSubject,
     RemoteTargetInvokeRequest, RemoteTargetSubjectType, TaskKind, UpdateRemoteTarget,
 };
 use serde_json::json;
@@ -45,7 +45,7 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
     let selected = harness
         .client
         .remote_targets()
-        .select(target.id)
+        .get(target.id)
         .expect("remote target should be selectable");
     assert_eq!(selected.resource().name, target.name);
 
@@ -67,8 +67,16 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
         .client
         .remote_targets()
         .query()
-        .add_filter_equals("namespace_id", namespace_id)
-        .add_filter_equals("name", &target.name)
+        .filter(
+            "namespace_id",
+            FilterOperator::Equals { is_negated: false },
+            namespace_id,
+        )
+        .filter(
+            "name",
+            FilterOperator::Equals { is_negated: false },
+            &target.name,
+        )
         .limit(10)
         .list()
         .expect("remote target query should list");

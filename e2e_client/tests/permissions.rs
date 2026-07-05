@@ -19,7 +19,7 @@ fn e2e_namespace_permissions_grant_and_revoke() {
     let group = harness
         .client
         .groups()
-        .select(group_id)
+        .get(group_id)
         .expect("created group should be selectable");
     group.add_member(user.id).expect("group add_member failed");
 
@@ -36,7 +36,7 @@ fn e2e_namespace_permissions_grant_and_revoke() {
     let namespace_handle = harness
         .client
         .namespaces()
-        .select(namespace.id)
+        .get(namespace.id)
         .expect("namespace should be selectable");
 
     namespace_handle
@@ -48,14 +48,14 @@ fn e2e_namespace_permissions_grant_and_revoke() {
         .expect("created user login should succeed");
     let selected = user_client
         .namespaces()
-        .select(namespace.id)
+        .get(namespace.id)
         .expect("user should read namespace after grant");
     assert_eq!(selected.id(), namespace.id);
 
     namespace_handle
         .revoke_permissions(group_id)
         .expect("revoking group permissions should succeed");
-    if user_client.namespaces().select(namespace.id).is_ok() {
+    if user_client.namespaces().get(namespace.id).is_ok() {
         panic!("user should not read namespace after revoke");
     }
 }

@@ -2,18 +2,18 @@ use std::borrow::Cow;
 
 use hubuum_client_derive::ApiResource;
 
+#[cfg(feature = "async")]
+use crate::client::r#async::{
+    CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+    Handle as AsyncHandle,
+};
+#[cfg(feature = "blocking")]
+use crate::client::sync::{
+    CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+    Handle as SyncHandle,
+};
 use crate::{
     ApiError, Group, GroupPermissionsResult, PermissionResult,
-    client::{
-        r#async::{
-            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-            Handle as AsyncHandle,
-        },
-        sync::{
-            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            Handle as SyncHandle,
-        },
-    },
     endpoints::Endpoint,
     types::{HubuumDateTime, NamespacePermissionsGrantParams, Permissions},
 };
@@ -33,6 +33,7 @@ pub struct NamespaceResource {
     pub updated_at: HubuumDateTime,
 }
 
+#[cfg(feature = "blocking")]
 impl SyncHandle<Namespace> {
     pub fn permissions_request(&self) -> SyncCursorRequest<GroupPermissionsResult> {
         SyncCursorRequest::new(
@@ -300,6 +301,7 @@ impl SyncHandle<Namespace> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncHandle<Namespace> {
     pub fn permissions_request(&self) -> AsyncCursorRequest<GroupPermissionsResult> {
         AsyncCursorRequest::new(

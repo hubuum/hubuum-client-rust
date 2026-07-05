@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use std::marker::PhantomData;
 
 use super::{
-    Authenticated, ClientCore, GetID, IntoResourceFilter, Unauthenticated, UrlParams, shared,
+    Authenticated, ClientCore, GetID, IntoQueryFilters, Unauthenticated, UrlParams, shared,
 };
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
@@ -46,6 +46,57 @@ pub struct Client<S> {
     state: S,
 }
 
+#[derive(Debug, Clone)]
+pub struct ClientBuilder {
+    base_url: BaseUrl,
+    validate_server_certificate: bool,
+    timeout: Option<std::time::Duration>,
+    user_agent: Option<String>,
+}
+
+impl ClientBuilder {
+    fn new(base_url: BaseUrl) -> Self {
+        Self {
+            base_url,
+            validate_server_certificate: true,
+            timeout: None,
+            user_agent: None,
+        }
+    }
+
+    pub fn validate_certs(mut self, validate: bool) -> Self {
+        self.validate_server_certificate = validate;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
+
+    pub fn user_agent(mut self, user_agent: impl Into<String>) -> Self {
+        self.user_agent = Some(user_agent.into());
+        self
+    }
+
+    pub fn build(self) -> Result<Client<Unauthenticated>, ApiError> {
+        let mut builder = reqwest::blocking::Client::builder()
+            .danger_accept_invalid_certs(!self.validate_server_certificate);
+        if let Some(timeout) = self.timeout {
+            builder = builder.timeout(timeout);
+        }
+        if let Some(user_agent) = self.user_agent {
+            builder = builder.user_agent(user_agent);
+        }
+
+        Ok(Client {
+            http_client: builder.build()?,
+            base_url: self.base_url,
+            state: Unauthenticated,
+        })
+    }
+}
+
 impl<S> ClientCore for Client<S> {
     fn build_url(&self, endpoint: &Endpoint, url_params: UrlParams) -> String {
         shared::build_url(&self.base_url, endpoint, url_params)
@@ -72,6 +123,10 @@ impl<T> ResponseHandler for Client<T> {
 }
 
 impl Client<Unauthenticated> {
+    pub fn builder(base_url: BaseUrl) -> ClientBuilder {
+        ClientBuilder::new(base_url)
+    }
+
     pub fn new(base_url: BaseUrl) -> Self {
         Self::new_with_certificate_validation(base_url, true)
     }
@@ -84,14 +139,10 @@ impl Client<Unauthenticated> {
         base_url: BaseUrl,
         validate_server_certificate: bool,
     ) -> Self {
-        Client {
-            http_client: reqwest::blocking::Client::builder()
-                .danger_accept_invalid_certs(!validate_server_certificate)
-                .build()
-                .unwrap(),
-            base_url,
-            state: Unauthenticated,
-        }
+        Self::builder(base_url)
+            .validate_certs(validate_server_certificate)
+            .build()
+            .expect("reqwest blocking client should build")
     }
 }
 
@@ -413,7 +464,7 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn get<R: ApiResource, F: IntoResourceFilter<R>>(
+    pub fn get<R: ApiResource, F: IntoQueryFilters<R>>(
         &self,
         resource: R,
         url_params: UrlParams,
@@ -423,7 +474,7 @@ impl Client<Authenticated> {
             reqwest::Method::GET,
             resource,
             url_params,
-            filter.into_resource_filter(),
+            filter.into_query_filters(),
             EmptyPostParams,
         )
         .and_then(|opt| opt.ok_or(ApiError::EmptyResult("GET returned empty result".into())))
@@ -1738,205 +1789,21 @@ impl<T: ApiResource> QueryOp<T> {
         self
     }
 
-    pub fn filters(mut self, filters: impl IntoResourceFilter<T>) -> Self {
-        self.query_params.extend(filters.into_resource_filter());
+    pub fn filters(mut self, filters: impl IntoQueryFilters<T>) -> Self {
+        self.query_params.extend(filters.into_query_filters());
         self
     }
 
-    pub fn add_filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
+    pub fn filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
         self.query_params
             .push(QueryFilter::filter(field, op, value.to_string()));
         self
     }
 
-    pub fn add_filter_equals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Equals { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_equals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Equals { is_negated: true }, value)
-    }
-
-    pub fn add_filter_iequals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::IEquals { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_iequals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::IEquals { is_negated: true }, value)
-    }
-
-    pub fn add_filter_contains<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Contains { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_contains<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Contains { is_negated: true }, value)
-    }
-
-    pub fn add_filter_icontains<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::IContains { is_negated: false },
-            value,
-        )
-    }
-
-    pub fn add_filter_not_icontains<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::IContains { is_negated: true }, value)
-    }
-
-    pub fn add_filter_startswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::StartsWith { is_negated: false },
-            value,
-        )
-    }
-
-    pub fn add_filter_not_startswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::StartsWith { is_negated: true },
-            value,
-        )
-    }
-
-    pub fn add_filter_istartswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::IStartsWith { is_negated: false },
-            value,
-        )
-    }
-
-    pub fn add_filter_not_istartswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::IStartsWith { is_negated: true },
-            value,
-        )
-    }
-
-    pub fn add_filter_endswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::EndsWith { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_endswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::EndsWith { is_negated: true }, value)
-    }
-
-    pub fn add_filter_iendswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::IEndsWith { is_negated: false },
-            value,
-        )
-    }
-
-    pub fn add_filter_not_iendswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::IEndsWith { is_negated: true }, value)
-    }
-
-    pub fn add_filter_like<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Like { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_like<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Like { is_negated: true }, value)
-    }
-
-    pub fn add_filter_regex<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Regex { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_regex<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Regex { is_negated: true }, value)
-    }
-
-    pub fn add_filter_gt<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Gt { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_gt<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Gt { is_negated: true }, value)
-    }
-
-    pub fn add_filter_gte<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Gte { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_gte<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Gte { is_negated: true }, value)
-    }
-
-    pub fn add_filter_lt<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Lt { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_lt<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Lt { is_negated: true }, value)
-    }
-
-    pub fn add_filter_lte<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Lte { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_lte<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Lte { is_negated: true }, value)
-    }
-
-    pub fn add_filter_between<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Between { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_between<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Between { is_negated: true }, value)
-    }
-
-    pub fn add_filter_id<V: ToString>(self, value: V) -> Self {
-        self.add_filter_equals("id", value)
-    }
-
-    /// Add a filter for the ideomatic `name` field.
-    ///
-    /// For most resources, this will be the `name` field, but for some it may be different.
-    /// This cloaks all `name` fields behind the resource's specific name field.
-    pub fn add_filter_name_exact<V: ToString>(self, value: V) -> Self {
-        self.add_filter_equals(T::NAME_FIELD, value)
-    }
-
-    pub fn add_json_path_filter<I, S, V>(
-        self,
-        field: &str,
-        path: I,
-        op: FilterOperator,
-        value: V,
-    ) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-        V: ToString,
-    {
-        let path = path
-            .into_iter()
-            .map(|segment| segment.as_ref().to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-        let value = if path.is_empty() {
-            value.to_string()
-        } else {
-            format!("{path}={}", value.to_string())
-        };
-        self.add_filter(field, op, value)
-    }
-
-    pub fn add_json_path_lt<I, S, V>(self, field: &str, path: I, value: V) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-        V: ToString,
-    {
-        self.add_json_path_filter(field, path, FilterOperator::Lt { is_negated: false }, value)
+    pub fn raw_param<V: ToString>(mut self, key: &'static str, value: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw(key, value.to_string()));
+        self
     }
 
     pub fn sort_by<V: ToString>(mut self, sort: V) -> Self {
@@ -1980,14 +1847,6 @@ impl<T: ApiResource> QueryOp<T> {
         self
     }
 
-    pub fn execute_expecting_single_result(self) -> Result<T::GetOutput, ApiError> {
-        self.one()
-    }
-
-    pub fn execute(self) -> Result<Vec<T::GetOutput>, ApiError> {
-        self.list()
-    }
-
     pub fn list(self) -> Result<Vec<T::GetOutput>, ApiError> {
         self.client
             .search_resource::<T>(T::default(), self.url_params, self.query_params)
@@ -2019,7 +1878,15 @@ impl<T: ApiResource> QueryOp<T> {
     }
 }
 
-pub type FilterBuilder<T> = QueryOp<T>;
+impl<T: ApiResource> shared::QueryFilterTarget for QueryOp<T> {
+    fn push_filter<V: ToString>(self, field: &'static str, op: FilterOperator, value: V) -> Self {
+        self.filter(field, op, value)
+    }
+
+    fn push_raw_param<V: ToString>(self, key: &'static str, value: V) -> Self {
+        self.raw_param(key, value)
+    }
+}
 
 pub struct CursorRequest<T> {
     client: Client<Authenticated>,
@@ -2095,39 +1962,10 @@ impl<T> CursorRequest<T> {
         self
     }
 
-    pub fn add_filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
+    pub fn filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
         self.query_params
             .push(QueryFilter::filter(field, op, value.to_string()));
         self
-    }
-
-    pub fn add_filter_equals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Equals { is_negated: false }, value)
-    }
-
-    pub fn add_json_path_filter<I, S, V>(
-        self,
-        field: &str,
-        path: I,
-        op: FilterOperator,
-        value: V,
-    ) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-        V: ToString,
-    {
-        let path = path
-            .into_iter()
-            .map(|segment| segment.as_ref().to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-        let value = if path.is_empty() {
-            value.to_string()
-        } else {
-            format!("{path}={}", value.to_string())
-        };
-        self.add_filter(field, op, value)
     }
 }
 
@@ -2184,39 +2022,10 @@ impl<T> GraphRequest<T> {
         self
     }
 
-    pub fn add_filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
+    pub fn filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
         self.query_params
             .push(QueryFilter::filter(field, op, value.to_string()));
         self
-    }
-
-    pub fn add_filter_equals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Equals { is_negated: false }, value)
-    }
-
-    pub fn add_json_path_filter<I, S, V>(
-        self,
-        field: &str,
-        path: I,
-        op: FilterOperator,
-        value: V,
-    ) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-        V: ToString,
-    {
-        let path = path
-            .into_iter()
-            .map(|segment| segment.as_ref().to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-        let value = if path.is_empty() {
-            value.to_string()
-        } else {
-            format!("{path}={}", value.to_string())
-        };
-        self.add_filter(field, op, value)
     }
 }
 
@@ -2266,38 +2075,6 @@ impl<T: ApiResource> Resource<T> {
         QueryOp::new(self.client.clone(), self.url_params.clone())
     }
 
-    pub fn find(&self) -> QueryOp<T> {
-        self.query()
-    }
-
-    pub fn filter_raw(
-        &self,
-        filter: impl IntoResourceFilter<T>,
-    ) -> Result<Vec<T::GetOutput>, ApiError> {
-        self.query().filters(filter).list()
-    }
-
-    pub fn filter_one_raw(
-        &self,
-        filter: impl IntoResourceFilter<T>,
-    ) -> Result<T::GetOutput, ApiError> {
-        self.query().filters(filter).one()
-    }
-
-    pub fn filter(
-        &self,
-        filter: impl IntoResourceFilter<T>,
-    ) -> Result<Vec<T::GetOutput>, ApiError> {
-        self.filter_raw(filter)
-    }
-
-    pub fn filter_expecting_single_result(
-        &self,
-        filter: impl IntoResourceFilter<T>,
-    ) -> Result<T::GetOutput, ApiError> {
-        self.filter_one_raw(filter)
-    }
-
     pub fn create(&self) -> CreateOp<T> {
         CreateOp::new(self.client.clone(), self.url_params.clone())
     }
@@ -2330,183 +2107,36 @@ impl<T> Resource<T>
 where
     T: ApiResource<GetOutput = T> + DeserializeOwned + GetID + Default + 'static,
 {
-    pub fn select(&self, id: i32) -> Result<Handle<T>, ApiError> {
-        match T::default().endpoint() {
-            Endpoint::Users => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::UsersById,
-                    vec![(Cow::Borrowed("user_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
+    pub fn get(&self, id: i32) -> Result<Handle<T>, ApiError> {
+        if let Some(endpoint) = T::ITEM_ENDPOINT {
+            let mut url_params = self.url_params.clone();
+            url_params.push((Cow::Borrowed(T::ID_PARAM), id.to_string().into()));
+            match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                reqwest::Method::GET,
+                &endpoint,
+                url_params,
+                vec![],
+                EmptyPostParams,
+            ) {
+                Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                Ok(None) => {}
+                Err(ApiError::HttpWithBody { status, .. })
+                    if status == reqwest::StatusCode::NOT_FOUND => {}
+                Err(err) => return Err(err),
             }
-            Endpoint::Groups => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::GroupsById,
-                    vec![(Cow::Borrowed("group_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::Classes => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ClassesById,
-                    vec![(Cow::Borrowed("class_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::Namespaces => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::NamespacesById,
-                    vec![(Cow::Borrowed("namespace_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::Objects => {
-                let mut url_params = self.url_params.clone();
-                url_params.push((Cow::Borrowed("object_id"), id.to_string().into()));
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ObjectsById,
-                    url_params,
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::ClassRelations => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ClassRelationsById,
-                    vec![(Cow::Borrowed("relation_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::ObjectRelations => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ObjectRelationsById,
-                    vec![(Cow::Borrowed("relation_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::ReportTemplates => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ReportTemplatesById,
-                    vec![(Cow::Borrowed("template_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::ServiceAccounts => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ServiceAccountsById,
-                    vec![(Cow::Borrowed("service_account_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::RemoteTargets => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::RemoteTargetsById,
-                    vec![(Cow::Borrowed("target_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            _ => {}
         }
 
         let (id_params, filters) = shared::select_id_lookup_params(id);
-        // Preserve any parametrized path segments (e.g. `class_id` for objects) so the
-        // fallback lookup targets a fully-substituted URL instead of a literal `{class_id}`.
         let mut url_params = self.url_params.clone();
         url_params.extend(id_params);
         let raw: Vec<<T as ApiResource>::GetOutput> =
             self.client.get(T::default(), url_params, filters)?;
 
-        let got = one_or_err(raw)?;
-        let resource: T = got;
+        let resource: T = one_or_err(raw)?;
         Ok(Handle::new(self.client.clone(), resource))
     }
 
-    /// Select a resource by its name.
-    ///
-    /// This will use the appropriate field for the resource type.
-    ///   - Group: groupname
-    ///   - User: name
-    ///   - Everything else: name
-    pub fn select_by_name(&self, name: &str) -> Result<Handle<T>, ApiError> {
+    pub fn get_by_name(&self, name: &str) -> Result<Handle<T>, ApiError> {
         let (url_params, filters) = shared::select_name_lookup_params::<T>(name);
         let raw: Vec<<T as ApiResource>::GetOutput> =
             self.client.get(T::default(), url_params, filters)?;

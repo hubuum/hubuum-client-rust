@@ -94,7 +94,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
     let imported_class = harness
         .client
         .classes()
-        .select_by_name(&class_name)
+        .get_by_name(&class_name)
         .expect("imported class should be selectable by name");
     let imported_object = imported_class
         .object_by_name(&object_name)
@@ -104,7 +104,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
     let imported_namespace = harness
         .client
         .namespaces()
-        .select_by_name(&namespace_name)
+        .get_by_name(&namespace_name)
         .expect("imported namespace should be selectable by name");
     assert_eq!(imported_namespace.resource().name, namespace_name);
 
@@ -120,7 +120,8 @@ fn e2e_import_creates_graph_and_exposes_results() {
         .client
         .classes()
         .query()
-        .add_filter_equals("name", &class_name)
+        .name()
+        .eq(&class_name)
         .limit(5)
         .list()
         .expect("class query filters should list imported class");

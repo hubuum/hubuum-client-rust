@@ -6,9 +6,7 @@ use hubuum_client::types::{
     NewEventSubscription, Permissions, ReportContentType, ReportRequest, ReportScope,
     ReportScopeKind, SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
 };
-use hubuum_client::{
-    ApiError, AsyncClient, BaseUrl, ClassGet, Credentials, ReportResult, SyncClient,
-};
+use hubuum_client::{ApiError, BaseUrl, ClassGet, Client, Credentials, ReportResult, blocking};
 use serde_json::json;
 
 const USERNAME: &str = "tester";
@@ -467,16 +465,16 @@ fn mock_login(server: &MockServer) {
     });
 }
 
-fn sync_client(server: &MockServer) -> SyncClient<hubuum_client::Authenticated> {
+fn sync_client(server: &MockServer) -> blocking::Client<hubuum_client::Authenticated> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    SyncClient::new_with_certificate_validation(base_url, true)
+    blocking::Client::new_with_certificate_validation(base_url, true)
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .expect("sync login should succeed")
 }
 
-async fn async_client(server: &MockServer) -> AsyncClient<hubuum_client::Authenticated> {
+async fn async_client(server: &MockServer) -> Client<hubuum_client::Authenticated> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    AsyncClient::new_with_certificate_validation(base_url, true)
+    Client::new_with_certificate_validation(base_url, true)
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .await
         .expect("async login should succeed")
@@ -496,7 +494,8 @@ fn sync_returns_http_error_with_message_from_json_body() {
 
     let err = client
         .classes()
-        .filter(())
+        .query()
+        .list()
         .expect_err("request should fail");
     match err {
         ApiError::HttpWithBody { status, message } => {
@@ -521,7 +520,8 @@ async fn async_returns_http_error_with_message_from_json_body() {
 
     let err = client
         .classes()
-        .filter(())
+        .query()
+        .list()
         .await
         .expect_err("request should fail");
     match err {
@@ -583,7 +583,7 @@ async fn async_delete_rejects_non_empty_response_body() {
 }
 
 #[test]
-fn sync_select_by_name_applies_name_filter() {
+fn sync_get_by_name_applies_name_filter() {
     let server = MockServer::start();
     mock_login(&server);
     let class_name = "class-name-1";
@@ -600,13 +600,36 @@ fn sync_select_by_name_applies_name_filter() {
 
     let class = client
         .classes()
-        .select_by_name(class_name)
+        .get_by_name(class_name)
+        .expect("class lookup should succeed");
+    assert_eq!(class.resource().name, class_name);
+}
+
+#[test]
+fn sync_new_resource_get_by_name_alias_applies_name_filter() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let class_name = "class-name-2";
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("name__equals", class_name)
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json(class_name)]));
+    });
+    let client = sync_client(&server);
+
+    let class = client
+        .classes()
+        .get_by_name(class_name)
         .expect("class lookup should succeed");
     assert_eq!(class.resource().name, class_name);
 }
 
 #[tokio::test]
-async fn async_select_by_name_applies_name_filter() {
+async fn async_get_by_name_applies_name_filter() {
     let server = MockServer::start();
     mock_login(&server);
     let class_name = "class-name-1";
@@ -623,10 +646,32 @@ async fn async_select_by_name_applies_name_filter() {
 
     let class = client
         .classes()
-        .select_by_name(class_name)
+        .get_by_name(class_name)
         .await
         .expect("class lookup should succeed");
     assert_eq!(class.resource().name, class_name);
+}
+
+#[tokio::test]
+async fn async_new_resource_get_alias_fetches_by_id() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("class-by-id"));
+    });
+    let client = async_client(&server).await;
+
+    let class = client
+        .classes()
+        .get(42)
+        .await
+        .expect("class lookup should succeed");
+    assert_eq!(class.resource().name, "class-by-id");
 }
 
 #[test]
@@ -723,18 +768,21 @@ fn sync_class_query_builder_supports_eq_contains_and_get_params() {
     let class_by_eq = client
         .classes()
         .query()
-        .name_eq(by_eq)
+        .name()
+        .eq(by_eq)
         .one()
-        .expect("query().name_eq().one() should succeed");
+        .expect("query().name().eq().one() should succeed");
     assert_eq!(class_by_eq.name, by_eq);
 
     let class_by_eq_contains = client
         .classes()
         .query()
-        .name_eq(by_eq_contains)
-        .description_contains("Clas")
+        .name()
+        .eq(by_eq_contains)
+        .description()
+        .contains("Clas")
         .one()
-        .expect("query().name_eq().description_contains().one() should succeed");
+        .expect("query().name().eq().description().contains().one() should succeed");
     assert_eq!(class_by_eq_contains.name, by_eq_contains);
 
     let class_by_params = client
@@ -747,6 +795,38 @@ fn sync_class_query_builder_supports_eq_contains_and_get_params() {
         .one()
         .expect("query().params().one() should succeed");
     assert_eq!(class_by_params.name, by_params);
+}
+
+#[test]
+fn sync_class_query_builder_supports_typed_field_operators() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("name__contains", "server")
+            .query_param("created_at__gte", "2024-01-01T00:00:00+00:00")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("server-class")]));
+    });
+
+    let since: HubuumDateTime =
+        serde_json::from_str(r#""2024-01-01T00:00:00Z""#).expect("timestamp should parse");
+    let client = sync_client(&server);
+    let class = client
+        .classes()
+        .query()
+        .name()
+        .contains("server")
+        .created_at()
+        .gte(since)
+        .one()
+        .expect("typed field query should succeed");
+
+    assert_eq!(class.name, "server-class");
 }
 
 #[tokio::test]
@@ -770,12 +850,43 @@ async fn async_class_query_builder_supports_contains() {
     let class_by_eq_contains = client
         .classes()
         .query()
-        .name_eq(by_eq_contains)
-        .description_contains("Clas")
+        .name()
+        .eq(by_eq_contains)
+        .description()
+        .contains("Clas")
         .one()
         .await
-        .expect("async query().name_eq().description_contains().one() should succeed");
+        .expect("async query().name().eq().description().contains().one() should succeed");
     assert_eq!(class_by_eq_contains.name, by_eq_contains);
+}
+
+#[tokio::test]
+async fn async_class_query_builder_supports_typed_json_path_operator() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("json_schema__lt", "properties,latitude,minimum=0")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("geo-class")]));
+    });
+
+    let client = async_client(&server).await;
+    let class = client
+        .classes()
+        .query()
+        .json_schema()
+        .path(["properties", "latitude", "minimum"])
+        .lt(0)
+        .one()
+        .await
+        .expect("typed json path query should succeed");
+
+    assert_eq!(class.name, "geo-class");
 }
 
 #[test]
@@ -800,7 +911,8 @@ fn sync_class_query_builder_supports_sort_and_limit() {
     let one = client
         .classes()
         .query()
-        .add_filter_startswith("name", starts_with)
+        .name()
+        .starts_with(starts_with)
         .sort_by_fields(vec![
             ("name", SortDirection::Asc),
             ("created_at", SortDirection::Desc),
@@ -834,13 +946,11 @@ async fn async_class_query_builder_supports_json_path_and_order_by_alias() {
     let one = client
         .classes()
         .query()
-        .add_filter_not_iequals("name", "legacy")
-        .add_json_path_filter(
-            "json_schema",
-            vec!["properties", "latitude", "minimum"],
-            FilterOperator::Lt { is_negated: false },
-            0,
-        )
+        .name()
+        .not_ieq("legacy")
+        .json_schema()
+        .path(["properties", "latitude", "minimum"])
+        .lt(0)
         .order_by("name.desc")
         .limit(1)
         .one()
@@ -1151,7 +1261,7 @@ fn sync_supports_user_group_and_token_endpoints() {
 
     let user = client
         .users()
-        .select(11)
+        .get(11)
         .expect("user by id request should succeed");
     assert_eq!(user.resource().id, 11);
 
@@ -1168,7 +1278,7 @@ fn sync_supports_user_group_and_token_endpoints() {
 
     let group = client
         .groups()
-        .select(10)
+        .get(10)
         .expect("group by id request should succeed");
     assert_eq!(group.resource().id, 10);
     assert_eq!(group.resource().groupname, "admins");
@@ -1230,7 +1340,7 @@ async fn async_supports_user_group_and_token_endpoints() {
 
     let user = client
         .users()
-        .select(11)
+        .get(11)
         .await
         .expect("user by id request should succeed");
     assert_eq!(user.resource().id, 11);
@@ -1252,7 +1362,7 @@ async fn async_supports_user_group_and_token_endpoints() {
 
     let group = client
         .groups()
-        .select(10)
+        .get(10)
         .await
         .expect("group by id request should succeed");
     assert_eq!(group.resource().id, 10);
@@ -1389,10 +1499,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let client = sync_client(&server);
 
-    let user = client
-        .users()
-        .select(11)
-        .expect("user lookup should succeed");
+    let user = client.users().get(11).expect("user lookup should succeed");
     let user_group_page = user
         .groups_request()
         .sort("groupname", SortDirection::Asc)
@@ -1411,7 +1518,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let group = client
         .groups()
-        .select(10)
+        .get(10)
         .expect("group lookup should succeed");
     let member_page = group
         .members_request()
@@ -1423,7 +1530,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .expect("class lookup should succeed");
     let object_page = class
         .objects_query()
@@ -1443,7 +1550,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let namespace = client
         .namespaces()
-        .select(7)
+        .get(7)
         .expect("namespace lookup should succeed");
     let namespace_permission_page = namespace
         .permissions_request()
@@ -1604,7 +1711,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let user = client
         .users()
-        .select(11)
+        .get(11)
         .await
         .expect("user lookup should succeed");
     let user_group_page = user
@@ -1627,7 +1734,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let group = client
         .groups()
-        .select(10)
+        .get(10)
         .await
         .expect("group lookup should succeed");
     let member_page = group
@@ -1641,7 +1748,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .await
         .expect("class lookup should succeed");
     let object_page = class
@@ -1664,7 +1771,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let namespace = client
         .namespaces()
-        .select(7)
+        .get(7)
         .await
         .expect("namespace lookup should succeed");
     let namespace_permission_page = namespace
@@ -1792,7 +1899,7 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .expect("class lookup should succeed");
     let class_permission_rows = class
         .permissions()
@@ -1802,7 +1909,7 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     let namespace = client
         .namespaces()
-        .select(7)
+        .get(7)
         .expect("namespace lookup should succeed");
     let group_permission = namespace
         .group_permissions(10)
@@ -1936,7 +2043,7 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .await
         .expect("class lookup should succeed");
     let class_permission_rows = class
@@ -1948,7 +2055,7 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     let namespace = client
         .namespaces()
-        .select(7)
+        .get(7)
         .await
         .expect("namespace lookup should succeed");
     let group_permission = namespace
@@ -2115,7 +2222,7 @@ fn sync_reports_and_templates_cover_new_server_surface() {
 
     let selected = client
         .templates()
-        .select(1)
+        .get(1)
         .expect("template select should succeed");
     assert_eq!(selected.resource().id, 1);
 
@@ -2305,7 +2412,7 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
 
     let namespace = client
         .namespaces()
-        .select(7)
+        .get(7)
         .expect("namespace select should succeed");
     let group_page = namespace
         .groups_with_permission(Permissions::ReadTemplate)
@@ -2317,11 +2424,11 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .expect("class select should succeed");
     let related_page = class
         .related_classes()
-        .add_filter("path", FilterOperator::Contains { is_negated: false }, "42")
+        .filter("path", FilterOperator::Contains { is_negated: false }, "42")
         .limit(1)
         .page()
         .expect("related_classes should succeed");
@@ -2498,11 +2605,15 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .expect("class select should use by-id endpoint");
     let class_related_page = class
         .related_classes()
-        .add_filter_equals("from_classes", 42)
+        .filter(
+            "from_classes",
+            FilterOperator::Equals { is_negated: false },
+            42,
+        )
         .limit(1)
         .page()
         .expect("class related classes should succeed");
@@ -2514,14 +2625,18 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let class_relation_page = class
         .related_relations()
-        .add_filter_equals("to_classes", 77)
+        .filter(
+            "to_classes",
+            FilterOperator::Equals { is_negated: false },
+            77,
+        )
         .page()
         .expect("class related relations should succeed");
     assert_eq!(class_relation_page.items[0].id, 55);
 
     let class_graph = class
         .related_graph()
-        .add_filter("path", FilterOperator::Contains { is_negated: false }, "42")
+        .filter("path", FilterOperator::Contains { is_negated: false }, "42")
         .fetch()
         .expect("class related graph should succeed");
     assert_eq!(class_graph.classes.len(), 1);
@@ -2543,13 +2658,13 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let object = client
         .objects(42)
-        .select(9)
+        .get(9)
         .expect("object select should use by-id endpoint");
     let related_page = object
         .related_objects()
         .ignore_classes([42, 99])
         .ignore_self_class(false)
-        .add_filter("depth", FilterOperator::Gte { is_negated: false }, 1)
+        .filter("depth", FilterOperator::Gte { is_negated: false }, 1)
         .limit(1)
         .page()
         .expect("related objects should succeed");
@@ -2558,14 +2673,18 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let related_relations_page = object
         .related_relations()
-        .add_filter_equals("class_relation", 55)
+        .filter(
+            "class_relation",
+            FilterOperator::Equals { is_negated: false },
+            55,
+        )
         .page()
         .expect("related relations should succeed");
     assert_eq!(related_relations_page.items[0].id, 66);
 
     let graph = object
         .related_graph()
-        .add_filter("depth", FilterOperator::Lte { is_negated: false }, 2)
+        .filter("depth", FilterOperator::Lte { is_negated: false }, 2)
         .ignore_self_class(false)
         .fetch()
         .expect("related graph should succeed");
@@ -2588,13 +2707,13 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let selected_class_relation = client
         .class_relation()
-        .select(56)
+        .get(56)
         .expect("class relation select should use direct endpoint");
     assert_eq!(selected_class_relation.id(), 56);
 
     let selected_object_relation = client
         .object_relation()
-        .select(66)
+        .get(66)
         .expect("object relation select should use direct endpoint");
     assert_eq!(selected_object_relation.id(), 66);
 
@@ -3303,7 +3422,7 @@ fn sync_service_account_create_and_disable() {
 
     let sa = client
         .service_accounts()
-        .select(5)
+        .get(5)
         .expect("service account select should succeed");
     let disabled = sa.disable().expect("disable should succeed");
     assert!(disabled.disabled_at.is_some());
@@ -3343,10 +3462,7 @@ fn sync_user_token_create_with_scopes_returns_raw_token() {
     });
 
     let client = sync_client(&server);
-    let user = client
-        .users()
-        .select(11)
-        .expect("user select should succeed");
+    let user = client.users().get(11).expect("user select should succeed");
     let raw = user
         .tokens_create(
             NewTokenRequest::new()
@@ -3407,7 +3523,7 @@ fn sync_remote_target_invoke_returns_task() {
     let client = sync_client(&server);
     let target = client
         .remote_targets()
-        .select(3)
+        .get(3)
         .expect("remote target select should succeed");
     let task = target
         .invoke(RemoteTargetInvokeRequest::new(
@@ -3470,7 +3586,7 @@ fn sync_healthz_probe_succeeds_without_auth() {
     });
 
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    let client = SyncClient::new_with_certificate_validation(base_url, true);
+    let client = blocking::Client::new_with_certificate_validation(base_url, true);
     let probe = client.healthz().expect("healthz should succeed");
     assert_eq!(probe.status, "ok");
 

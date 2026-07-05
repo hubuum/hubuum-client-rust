@@ -2,21 +2,17 @@ use std::borrow::Cow;
 
 use hubuum_client_derive::ApiResource;
 
-use crate::{
-    ApiError,
-    client::{
-        r#async::{
-            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-            GraphRequest as AsyncGraphRequest, Handle as AsyncHandle,
-        },
-        sync::{
-            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            GraphRequest as SyncGraphRequest, Handle as SyncHandle,
-        },
-    },
-    endpoints::Endpoint,
-    types::HubuumDateTime,
+#[cfg(feature = "async")]
+use crate::client::r#async::{
+    CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+    GraphRequest as AsyncGraphRequest, Handle as AsyncHandle,
 };
+#[cfg(feature = "blocking")]
+use crate::client::sync::{
+    CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+    GraphRequest as SyncGraphRequest, Handle as SyncHandle,
+};
+use crate::{ApiError, endpoints::Endpoint, types::HubuumDateTime};
 
 #[allow(dead_code)]
 #[derive(ApiResource)]
@@ -68,6 +64,7 @@ pub struct RelatedObjectGraph {
     pub relations: Vec<ObjectRelation>,
 }
 
+#[cfg(feature = "blocking")]
 impl SyncHandle<Object> {
     pub fn related_objects(&self) -> SyncCursorRequest<ObjectWithPath> {
         SyncCursorRequest::new(
@@ -205,6 +202,7 @@ impl SyncHandle<Object> {
     }
 }
 
+#[cfg(feature = "blocking")]
 impl SyncCursorRequest<ObjectWithPath> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
@@ -225,6 +223,7 @@ impl SyncCursorRequest<ObjectWithPath> {
     }
 }
 
+#[cfg(feature = "blocking")]
 impl SyncGraphRequest<RelatedObjectGraph> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
@@ -245,6 +244,7 @@ impl SyncGraphRequest<RelatedObjectGraph> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncHandle<Object> {
     pub fn related_objects(&self) -> AsyncCursorRequest<ObjectWithPath> {
         AsyncCursorRequest::new(
@@ -389,6 +389,7 @@ impl AsyncHandle<Object> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncCursorRequest<ObjectWithPath> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
@@ -409,6 +410,7 @@ impl AsyncCursorRequest<ObjectWithPath> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncGraphRequest<RelatedObjectGraph> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where

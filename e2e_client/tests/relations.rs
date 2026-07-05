@@ -41,7 +41,7 @@ fn e2e_class_and_object_relations_roundtrip() {
     let class_a = harness
         .client
         .classes()
-        .select(class_a_id)
+        .get(class_a_id)
         .expect("source class should be selectable");
     let class_relation = class_a
         .create_relation_with_aliases(
@@ -101,7 +101,7 @@ fn e2e_class_and_object_relations_roundtrip() {
     let object_a = harness
         .client
         .objects(class_a_id)
-        .select(object_a_id)
+        .get(object_a_id)
         .expect("source object should be selectable");
     let object_relation = object_a
         .create_relation_to(class_b.id, object_b.id)

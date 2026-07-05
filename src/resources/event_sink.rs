@@ -28,8 +28,12 @@ impl crate::resources::ApiResource for EventSink {
     type DeleteParams = ();
     type DeleteOutput = ();
 
+    const COLLECTION_ENDPOINT: Endpoint = Endpoint::EventSinks;
+    const ITEM_ENDPOINT: Option<Endpoint> = Some(Endpoint::EventSinksById);
+    const ID_PARAM: &'static str = "sink_id";
+
     fn endpoint(&self) -> Endpoint {
-        Endpoint::EventSinks
+        Self::COLLECTION_ENDPOINT
     }
 
     fn build_params(filters: Vec<(String, FilterOperator, String)>) -> Vec<QueryFilter> {

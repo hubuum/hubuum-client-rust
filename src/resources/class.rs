@@ -2,22 +2,19 @@ use std::borrow::Cow;
 
 use hubuum_client_derive::ApiResource;
 
-use crate::{
-    ApiError, FilterOperator, GroupPermissionsResult, Object, QueryFilter,
-    client::{
-        r#async::{
-            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-            GraphRequest as AsyncGraphRequest, Handle as AsyncHandle, QueryOp as AsyncQueryOp,
-        },
-        sync::{
-            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            GraphRequest as SyncGraphRequest, Handle as SyncHandle, QueryOp as SyncQueryOp,
-            one_or_err,
-        },
-    },
-    endpoints::Endpoint,
-    types::HubuumDateTime,
+#[cfg(feature = "async")]
+use crate::client::r#async::{
+    CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+    GraphRequest as AsyncGraphRequest, Handle as AsyncHandle, QueryOp as AsyncQueryOp,
 };
+#[cfg(feature = "blocking")]
+use crate::client::sync::{
+    CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+    GraphRequest as SyncGraphRequest, Handle as SyncHandle, QueryOp as SyncQueryOp, one_or_err,
+};
+use crate::{ApiError, GroupPermissionsResult, Object, endpoints::Endpoint, types::HubuumDateTime};
+#[cfg(feature = "blocking")]
+use crate::{FilterOperator, QueryFilter};
 
 use super::Namespace;
 
@@ -85,6 +82,7 @@ pub struct RelatedClassGraph {
     pub relations: Vec<ClassRelation>,
 }
 
+#[cfg(feature = "blocking")]
 impl SyncHandle<Class> {
     pub fn objects_query(&self) -> SyncQueryOp<Object> {
         self.client().objects(self.id()).query()
@@ -239,6 +237,7 @@ impl SyncHandle<Class> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncHandle<Class> {
     pub fn objects_query(&self) -> AsyncQueryOp<Object> {
         self.client().objects(self.id()).query()
@@ -257,7 +256,8 @@ impl AsyncHandle<Class> {
             .client()
             .objects(self.id())
             .query()
-            .add_filter_equals("name", name)
+            .name()
+            .eq(name)
             .one()
             .await?;
         Ok(AsyncHandle::new(self.client().clone(), resource))

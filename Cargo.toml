@@ -3,7 +3,7 @@ members = ["hubuum_client_derive", "e2e_client"]
 
 [package]
 name = "hubuum_client"
-version = "0.0.3"
+version = "0.1.0"
 edition = "2024"
 license = "MIT"
 description = "Rust client library for the Hubuum API with synchronous and asynchronous interfaces."
@@ -14,11 +14,14 @@ keywords = ["hubuum", "api", "client", "async"]
 categories = ["api-bindings"]
 
 [features]
+default = ["async", "blocking"]
+async = ["tokio"]
+blocking = ["reqwest/blocking"]
 integration-tests = []
 
 [dependencies]
-hubuum_client_derive = { version = "0.0.3", path = "./hubuum_client_derive" }
-reqwest = { version = "0.13", features = ["json", "blocking"] }
+hubuum_client_derive = { version = "0.1.0", path = "./hubuum_client_derive" }
+reqwest = { version = "0.13", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
@@ -29,7 +32,7 @@ serde_urlencoded = "0.7"
 log = "0.4"
 percent-encoding = "2"
 strum = { version = "0.28", features = ["derive", "strum_macros"] }
-tokio = { version = "1", features = ["time"] }
+tokio = { version = "1", features = ["time"], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

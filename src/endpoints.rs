@@ -1,5 +1,6 @@
 use crate::types::BaseUrl;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Endpoint {
     Login,
     LoginWithToken,

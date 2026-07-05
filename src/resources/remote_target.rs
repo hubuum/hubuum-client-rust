@@ -1,8 +1,11 @@
 use std::borrow::Cow;
 
+#[cfg(feature = "async")]
+use crate::client::r#async::Handle as AsyncHandle;
+#[cfg(feature = "blocking")]
+use crate::client::sync::Handle as SyncHandle;
 use crate::{
     ApiError,
-    client::{r#async::Handle as AsyncHandle, sync::Handle as SyncHandle},
     endpoints::Endpoint,
     types::{
         FilterOperator, NewRemoteTarget, QueryFilter, RemoteTarget, RemoteTargetGet,
@@ -36,8 +39,12 @@ impl crate::resources::ApiResource for RemoteTarget {
     type DeleteParams = ();
     type DeleteOutput = ();
 
+    const COLLECTION_ENDPOINT: Endpoint = Endpoint::RemoteTargets;
+    const ITEM_ENDPOINT: Option<Endpoint> = Some(Endpoint::RemoteTargetsById);
+    const ID_PARAM: &'static str = "target_id";
+
     fn endpoint(&self) -> Endpoint {
-        Endpoint::RemoteTargets
+        Self::COLLECTION_ENDPOINT
     }
 
     fn build_params(filters: Vec<(String, FilterOperator, String)>) -> Vec<QueryFilter> {
@@ -76,6 +83,7 @@ impl crate::resources::ApiResource for RemoteTarget {
     }
 }
 
+#[cfg(feature = "blocking")]
 impl SyncHandle<RemoteTarget> {
     /// Invoke this remote target. Returns the async task tracking the call.
     pub fn invoke(&self, request: RemoteTargetInvokeRequest) -> Result<TaskResponse, ApiError> {
@@ -94,6 +102,7 @@ impl SyncHandle<RemoteTarget> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncHandle<RemoteTarget> {
     /// Invoke this remote target. Returns the async task tracking the call.
     pub async fn invoke(

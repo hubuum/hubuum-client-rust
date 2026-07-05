@@ -1,8 +1,8 @@
 use std::future::Future;
 
 use hubuum_client::{
-    ApiError, AsyncClient, Authenticated, BaseUrl, ClassPost, Credentials, GroupPost,
-    NamespacePost, ObjectPost, SyncClient, UserPost,
+    ApiError, Authenticated, BaseUrl, ClassPost, Client, Credentials, GroupPost, NamespacePost,
+    ObjectPost, UserPost, blocking,
 };
 
 use crate::support::naming::unique_case_prefix;
@@ -20,8 +20,8 @@ impl TestUserCredentials {
     pub(crate) fn login_sync(
         &self,
         base_url: BaseUrl,
-    ) -> Result<SyncClient<Authenticated>, ApiError> {
-        SyncClient::new(base_url).login(Credentials::new(
+    ) -> Result<blocking::Client<Authenticated>, ApiError> {
+        blocking::Client::new(base_url).login(Credentials::new(
             self.username.clone(),
             self.password.clone(),
         ))
@@ -30,8 +30,8 @@ impl TestUserCredentials {
     pub(crate) async fn login_async(
         &self,
         base_url: BaseUrl,
-    ) -> Result<AsyncClient<Authenticated>, ApiError> {
-        AsyncClient::new(base_url)
+    ) -> Result<Client<Authenticated>, ApiError> {
+        Client::new(base_url)
             .login(Credentials::new(
                 self.username.clone(),
                 self.password.clone(),
@@ -43,8 +43,8 @@ impl TestUserCredentials {
 pub(crate) fn login_sync(
     base_url: BaseUrl,
     admin_password: &str,
-) -> Result<SyncClient<Authenticated>, ApiError> {
-    SyncClient::new(base_url).login(Credentials::new(
+) -> Result<blocking::Client<Authenticated>, ApiError> {
+    blocking::Client::new(base_url).login(Credentials::new(
         ADMIN_USERNAME.to_string(),
         admin_password.to_string(),
     ))
@@ -63,8 +63,8 @@ pub(crate) fn is_unsupported_query_operator(err: &ApiError, operator: &str) -> b
 pub(crate) async fn login_async(
     base_url: BaseUrl,
     admin_password: &str,
-) -> Result<AsyncClient<Authenticated>, ApiError> {
-    AsyncClient::new(base_url)
+) -> Result<Client<Authenticated>, ApiError> {
+    Client::new(base_url)
         .login(Credentials::new(
             ADMIN_USERNAME.to_string(),
             admin_password.to_string(),
@@ -74,7 +74,7 @@ pub(crate) async fn login_async(
 
 pub(crate) struct SyncHarness {
     _stack: IntegrationStack,
-    pub(crate) client: SyncClient<Authenticated>,
+    pub(crate) client: blocking::Client<Authenticated>,
 }
 
 impl SyncHarness {
@@ -96,7 +96,7 @@ impl SyncHarness {
 
 pub(crate) struct AsyncHarness {
     _stack: IntegrationStack,
-    pub(crate) client: AsyncClient<Authenticated>,
+    pub(crate) client: Client<Authenticated>,
     runtime: tokio::runtime::Runtime,
 }
 
@@ -129,9 +129,9 @@ impl AsyncHarness {
 }
 
 pub(crate) fn sync_admin_context(
-    client: &SyncClient<Authenticated>,
+    client: &blocking::Client<Authenticated>,
 ) -> Result<(i32, i32), ApiError> {
-    let admin = client.users().select_by_name(ADMIN_USERNAME)?;
+    let admin = client.users().get_by_name(ADMIN_USERNAME)?;
     let admin_id = admin.id();
 
     let admin_group_id = match admin.groups() {
@@ -139,11 +139,11 @@ pub(crate) fn sync_admin_context(
             if let Some(group) = admin_groups.first() {
                 group.id()
             } else {
-                client.groups().select_by_name(ADMIN_USERNAME)?.id()
+                client.groups().get_by_name(ADMIN_USERNAME)?.id()
             }
         }
         Err(ApiError::HttpWithBody { status, .. }) if status == reqwest::StatusCode::NOT_FOUND => {
-            client.groups().select_by_name(ADMIN_USERNAME)?.id()
+            client.groups().get_by_name(ADMIN_USERNAME)?.id()
         }
         Err(err) => return Err(err),
     };
@@ -152,7 +152,7 @@ pub(crate) fn sync_admin_context(
 }
 
 pub(crate) fn create_sync_user(
-    client: &SyncClient<Authenticated>,
+    client: &blocking::Client<Authenticated>,
     case: &str,
 ) -> Result<(String, i32), ApiError> {
     let prefix = unique_case_prefix(case);
@@ -168,7 +168,7 @@ pub(crate) fn create_sync_user(
 }
 
 pub(crate) fn create_sync_loginable_user(
-    client: &SyncClient<Authenticated>,
+    client: &blocking::Client<Authenticated>,
     case: &str,
 ) -> Result<TestUserCredentials, ApiError> {
     let prefix = unique_case_prefix(case);
@@ -189,7 +189,7 @@ pub(crate) fn create_sync_loginable_user(
 }
 
 pub(crate) fn create_sync_group(
-    client: &SyncClient<Authenticated>,
+    client: &blocking::Client<Authenticated>,
     case: &str,
 ) -> Result<(String, i32), ApiError> {
     let prefix = unique_case_prefix(case);
@@ -203,9 +203,9 @@ pub(crate) fn create_sync_group(
 }
 
 pub(crate) async fn async_admin_context(
-    client: &AsyncClient<Authenticated>,
+    client: &Client<Authenticated>,
 ) -> Result<(i32, i32), ApiError> {
-    let admin = client.users().select_by_name(ADMIN_USERNAME).await?;
+    let admin = client.users().get_by_name(ADMIN_USERNAME).await?;
     let admin_id = admin.id();
 
     let admin_group_id = match admin.groups().await {
@@ -213,11 +213,11 @@ pub(crate) async fn async_admin_context(
             if let Some(group) = admin_groups.first() {
                 group.id()
             } else {
-                client.groups().select_by_name(ADMIN_USERNAME).await?.id()
+                client.groups().get_by_name(ADMIN_USERNAME).await?.id()
             }
         }
         Err(ApiError::HttpWithBody { status, .. }) if status == reqwest::StatusCode::NOT_FOUND => {
-            client.groups().select_by_name(ADMIN_USERNAME).await?.id()
+            client.groups().get_by_name(ADMIN_USERNAME).await?.id()
         }
         Err(err) => return Err(err),
     };
@@ -226,7 +226,7 @@ pub(crate) async fn async_admin_context(
 }
 
 pub(crate) async fn create_async_user(
-    client: &AsyncClient<Authenticated>,
+    client: &Client<Authenticated>,
     case: &str,
 ) -> Result<(String, i32), ApiError> {
     let prefix = unique_case_prefix(case);
@@ -245,7 +245,7 @@ pub(crate) async fn create_async_user(
 }
 
 pub(crate) async fn create_async_loginable_user(
-    client: &AsyncClient<Authenticated>,
+    client: &Client<Authenticated>,
     case: &str,
 ) -> Result<TestUserCredentials, ApiError> {
     let prefix = unique_case_prefix(case);
@@ -269,7 +269,7 @@ pub(crate) async fn create_async_loginable_user(
 }
 
 pub(crate) async fn create_async_group(
-    client: &AsyncClient<Authenticated>,
+    client: &Client<Authenticated>,
     case: &str,
 ) -> Result<(String, i32), ApiError> {
     let prefix = unique_case_prefix(case);
@@ -286,7 +286,7 @@ pub(crate) async fn create_async_group(
 }
 
 pub(crate) fn create_sync_permission_sandbox(
-    client: &SyncClient<Authenticated>,
+    client: &blocking::Client<Authenticated>,
     admin_group_id: i32,
     case: &str,
 ) -> Result<(i32, i32), ApiError> {
@@ -310,7 +310,7 @@ pub(crate) fn create_sync_permission_sandbox(
 }
 
 pub(crate) fn create_sync_object(
-    client: &SyncClient<Authenticated>,
+    client: &blocking::Client<Authenticated>,
     namespace_id: i32,
     class_id: i32,
     case: &str,
@@ -329,7 +329,7 @@ pub(crate) fn create_sync_object(
 }
 
 pub(crate) async fn create_async_permission_sandbox(
-    client: &AsyncClient<Authenticated>,
+    client: &Client<Authenticated>,
     admin_group_id: i32,
     case: &str,
 ) -> Result<(i32, i32), ApiError> {
@@ -359,7 +359,7 @@ pub(crate) async fn create_async_permission_sandbox(
 }
 
 pub(crate) async fn create_async_object(
-    client: &AsyncClient<Authenticated>,
+    client: &Client<Authenticated>,
     namespace_id: i32,
     class_id: i32,
     case: &str,

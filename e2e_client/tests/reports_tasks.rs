@@ -124,7 +124,7 @@ fn e2e_report_template_update_report_get_and_delete() {
     let selected = harness
         .client
         .templates()
-        .select(template.id)
+        .get(template.id)
         .expect("report template should be selectable");
     assert_eq!(selected.resource().id, template.id);
 
@@ -204,7 +204,7 @@ fn e2e_report_template_update_report_get_and_delete() {
         .delete(template.id)
         .expect("report template should delete");
     assert!(
-        harness.client.templates().select(template.id).is_err(),
+        harness.client.templates().get(template.id).is_err(),
         "deleted report template should not be selectable"
     );
 }

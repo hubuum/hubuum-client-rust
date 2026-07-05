@@ -21,21 +21,21 @@ fn e2e_sync_meta_and_crud_lifecycle() {
     let namespace = harness
         .client
         .namespaces()
-        .select(namespace_id)
+        .get(namespace_id)
         .expect("namespace should be fetchable");
     assert_eq!(namespace.id(), namespace_id);
 
     let class = harness
         .client
         .classes()
-        .select(class_id)
+        .get(class_id)
         .expect("class should be fetchable");
     assert_eq!(class.id(), class_id);
 
     let object = harness
         .client
         .objects(class_id)
-        .select(object_id)
+        .get(object_id)
         .expect("object should be fetchable");
     assert_eq!(object.id(), object_id);
 }
@@ -45,7 +45,7 @@ fn e2e_sync_meta_and_crud_lifecycle() {
 fn e2e_probe_meta_and_auth_admin_endpoints() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
 
-    let probe_client = hubuum_client::SyncClient::new(harness.base_url.clone());
+    let probe_client = hubuum_client::blocking::Client::new(harness.base_url.clone());
     let health = probe_client.healthz().expect("healthz endpoint failed");
     assert!(!health.status.is_empty());
     let ready = probe_client.readyz().expect("readyz endpoint failed");
@@ -78,7 +78,7 @@ fn e2e_probe_meta_and_auth_admin_endpoints() {
     let managed_session = managed_user
         .login(harness.base_url.clone())
         .expect("managed user should log in");
-    let second_session = hubuum_client::SyncClient::new(harness.base_url.clone())
+    let second_session = hubuum_client::blocking::Client::new(harness.base_url.clone())
         .login(hubuum_client::Credentials::new(
             "admin".to_string(),
             harness.admin_password.clone(),
@@ -102,7 +102,7 @@ fn e2e_probe_meta_and_auth_admin_endpoints() {
         .meta_counts()
         .expect_err("logout_user should revoke the target user's session");
 
-    let fourth_session = hubuum_client::SyncClient::new(harness.base_url.clone())
+    let fourth_session = hubuum_client::blocking::Client::new(harness.base_url.clone())
         .login(hubuum_client::Credentials::new(
             "admin".to_string(),
             harness.admin_password.clone(),

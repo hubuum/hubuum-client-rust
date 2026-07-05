@@ -13,7 +13,7 @@ impl Default for HubuumDateTime {
 
 impl std::fmt::Display for HubuumDateTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.format("%Y-%m-%d %H:%M:%S"))
+        write!(f, "{}", self.0.to_rfc3339())
     }
 }
 
@@ -80,5 +80,14 @@ mod tests {
         let dt = HubuumDateTime(inner);
         let encoded = serde_json::to_string(&dt).expect("serialization should succeed");
         assert_eq!(encoded, r#""2024-01-01T00:00:00+00:00""#);
+    }
+
+    #[test]
+    fn displays_as_rfc3339_for_query_filters() {
+        let inner: DateTime<Utc> = DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
+            .expect("valid date-time")
+            .with_timezone(&Utc);
+        let dt = HubuumDateTime(inner);
+        assert_eq!(dt.to_string(), "2024-01-01T00:00:00+00:00");
     }
 }

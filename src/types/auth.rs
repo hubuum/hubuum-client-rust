@@ -8,8 +8,11 @@ pub struct Credentials {
 
 impl Credentials {
     /// `name` is the principal name (formerly the username).
-    pub fn new(name: String, password: String) -> Self {
-        Self { name, password }
+    pub fn new(name: impl Into<String>, password: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            password: password.into(),
+        }
     }
 }
 
@@ -19,8 +22,10 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(token: String) -> Self {
-        Self { token }
+    pub fn new(token: impl Into<String>) -> Self {
+        Self {
+            token: token.into(),
+        }
     }
 }
 

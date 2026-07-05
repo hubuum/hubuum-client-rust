@@ -2,18 +2,20 @@ use std::borrow::Cow;
 
 use hubuum_client_derive::ApiResource;
 
+#[cfg(feature = "async")]
+use crate::client::r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle};
+#[cfg(feature = "blocking")]
+use crate::client::sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle};
+#[cfg(feature = "async")]
+use crate::resources::user::{
+    principal_token_create_async, principal_token_revoke_async, principal_tokens_async,
+};
+#[cfg(feature = "blocking")]
+use crate::resources::user::{
+    principal_token_create_sync, principal_token_revoke_sync, principal_tokens_sync,
+};
 use crate::{
-    ApiError, NewTokenRequest, PrincipalTokenMetadata,
-    client::{
-        r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle},
-        sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
-    },
-    endpoints::Endpoint,
-    resources::user::{
-        principal_token_create_async, principal_token_create_sync, principal_token_revoke_async,
-        principal_token_revoke_sync, principal_tokens_async, principal_tokens_sync,
-    },
-    types::HubuumDateTime,
+    ApiError, NewTokenRequest, PrincipalTokenMetadata, endpoints::Endpoint, types::HubuumDateTime,
 };
 
 #[allow(dead_code)]
@@ -39,6 +41,7 @@ pub struct ServiceAccountResource {
     pub updated_at: HubuumDateTime,
 }
 
+#[cfg(feature = "blocking")]
 impl SyncHandle<ServiceAccount> {
     /// Disable this service account. Returns the updated service account.
     pub fn disable(&self) -> Result<ServiceAccount, ApiError> {
@@ -73,6 +76,7 @@ impl SyncHandle<ServiceAccount> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncHandle<ServiceAccount> {
     /// Disable this service account. Returns the updated service account.
     pub async fn disable(&self) -> Result<ServiceAccount, ApiError> {

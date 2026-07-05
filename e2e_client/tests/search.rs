@@ -17,7 +17,7 @@ fn e2e_unified_search_finds_created_object() {
     let object = harness
         .client
         .objects(class_id)
-        .select(object_id)
+        .get(object_id)
         .expect("created object should be selectable");
     let object_name = object.resource().name.clone();
 

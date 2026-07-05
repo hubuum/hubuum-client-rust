@@ -97,39 +97,17 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
                 }
             });
 
-            let method_ident = format_ident!("{}_eq", post_patch_field_ident);
+            let field_wrapper = query_field_wrapper(field_ty, is_as_id);
             query_sync_methods.extend(quote! {
-                pub fn #method_ident<V: ToString>(self, value: V) -> Self {
-                    self.add_filter_equals(stringify!(#post_patch_field_ident), value)
+                pub fn #post_patch_field_ident(self) -> #field_wrapper {
+                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
                 }
             });
             query_async_methods.extend(quote! {
-                pub fn #method_ident<V: ToString>(self, value: V) -> Self {
-                    self.add_filter_equals(stringify!(#post_patch_field_ident), value)
+                pub fn #post_patch_field_ident(self) -> #field_wrapper {
+                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
                 }
             });
-
-            if !is_as_id && is_string_type(field_ty) {
-                let contains_method_ident = format_ident!("{}_contains", post_patch_field_ident);
-                query_sync_methods.extend(quote! {
-                    pub fn #contains_method_ident<V: ToString>(self, value: V) -> Self {
-                        self.add_filter(
-                            stringify!(#post_patch_field_ident),
-                            crate::types::FilterOperator::Contains { is_negated: false },
-                            value,
-                        )
-                    }
-                });
-                query_async_methods.extend(quote! {
-                    pub fn #contains_method_ident<V: ToString>(self, value: V) -> Self {
-                        self.add_filter(
-                            stringify!(#post_patch_field_ident),
-                            crate::types::FilterOperator::Contains { is_negated: false },
-                            value,
-                        )
-                    }
-                });
-            }
         }
 
         if is_post_only || !is_read_only {
@@ -195,6 +173,8 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let post_name = format_ident!("{}Post", name);
     let patch_name = format_ident!("{}Patch", name);
     let endpoint = format_ident!("{}", plural_name);
+    let item_endpoint = format_ident!("{}ById", plural_name);
+    let id_param = id_param_name(&name.to_string());
 
     // List of field names to check for Display implementation, in order of preference
     let display_field_options = &[
@@ -259,9 +239,12 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             type DeleteOutput = ();
 
             const NAME_FIELD: &'static str = stringify!(#name_field);
+            const COLLECTION_ENDPOINT: crate::endpoints::Endpoint = crate::endpoints::Endpoint::#endpoint;
+            const ITEM_ENDPOINT: Option<crate::endpoints::Endpoint> = Some(crate::endpoints::Endpoint::#item_endpoint);
+            const ID_PARAM: &'static str = #id_param;
 
             fn endpoint(&self) -> crate::endpoints::Endpoint {
-                crate::endpoints::Endpoint::#endpoint
+                Self::COLLECTION_ENDPOINT
             }
 
             fn build_params(filters: Vec<(String, crate::types::FilterOperator, String)>) -> Vec<crate::types::QueryFilter> {
@@ -283,26 +266,32 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             }
         }
 
+        #[cfg(feature = "blocking")]
         impl crate::client::sync::CreateOp<#name> {
             #create_sync_methods
         }
 
+        #[cfg(feature = "async")]
         impl crate::client::r#async::CreateOp<#name> {
             #create_async_methods
         }
 
+        #[cfg(feature = "blocking")]
         impl crate::client::sync::UpdateOp<#name> {
             #update_sync_methods
         }
 
+        #[cfg(feature = "async")]
         impl crate::client::r#async::UpdateOp<#name> {
             #update_async_methods
         }
 
+        #[cfg(feature = "blocking")]
         impl crate::client::sync::QueryOp<#name> {
             #query_sync_methods
         }
 
+        #[cfg(feature = "async")]
         impl crate::client::r#async::QueryOp<#name> {
             #query_async_methods
         }
@@ -346,6 +335,7 @@ fn option_inner_type(ty: &Type) -> Option<&Type> {
 }
 
 fn is_string_type(ty: &Type) -> bool {
+    let ty = option_inner_type(ty).unwrap_or(ty);
     let Type::Path(type_path) = ty else {
         return false;
     };
@@ -355,6 +345,96 @@ fn is_string_type(ty: &Type) -> bool {
         .last()
         .map(|segment| segment.ident == "String")
         .unwrap_or(false)
+}
+
+fn is_bool_type(ty: &Type) -> bool {
+    let ty = option_inner_type(ty).unwrap_or(ty);
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
+    type_path
+        .path
+        .segments
+        .last()
+        .map(|segment| segment.ident == "bool")
+        .unwrap_or(false)
+}
+
+fn is_json_value_type(ty: &Type) -> bool {
+    let ty = option_inner_type(ty).unwrap_or(ty);
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
+    let segments = &type_path.path.segments;
+    let last = segments.last().map(|segment| segment.ident.to_string());
+    last.as_deref() == Some("Value")
+}
+
+fn is_numeric_or_datetime_type(ty: &Type) -> bool {
+    let ty = option_inner_type(ty).unwrap_or(ty);
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
+    let Some(segment) = type_path.path.segments.last() else {
+        return false;
+    };
+    matches!(
+        segment.ident.to_string().as_str(),
+        "i8" | "i16"
+            | "i32"
+            | "i64"
+            | "i128"
+            | "isize"
+            | "u8"
+            | "u16"
+            | "u32"
+            | "u64"
+            | "u128"
+            | "usize"
+            | "f32"
+            | "f64"
+            | "HubuumDateTime"
+            | "DateTime"
+            | "NaiveDateTime"
+    )
+}
+
+fn query_value_type(field_ty: &Type, is_as_id: bool) -> proc_macro2::TokenStream {
+    if is_as_id {
+        quote!(i32)
+    } else {
+        let ty = option_inner_type(field_ty).unwrap_or(field_ty);
+        quote!(#ty)
+    }
+}
+
+fn query_field_wrapper(field_ty: &Type, is_as_id: bool) -> proc_macro2::TokenStream {
+    let value_ty = query_value_type(field_ty, is_as_id);
+    if is_as_id || is_numeric_or_datetime_type(field_ty) {
+        quote!(crate::client::QueryNumericField<Self, #value_ty>)
+    } else if is_string_type(field_ty) {
+        quote!(crate::client::QueryTextField<Self>)
+    } else if is_bool_type(field_ty) {
+        quote!(crate::client::QueryBoolField<Self>)
+    } else if is_json_value_type(field_ty) {
+        quote!(crate::client::QueryJsonField<Self>)
+    } else {
+        quote!(crate::client::QueryValueField<Self, #value_ty>)
+    }
+}
+
+fn id_param_name(name: &str) -> &'static str {
+    match name {
+        "User" => "user_id",
+        "Group" => "group_id",
+        "Class" => "class_id",
+        "Namespace" => "namespace_id",
+        "Object" => "object_id",
+        "ReportTemplate" => "template_id",
+        "ServiceAccount" => "service_account_id",
+        "ClassRelation" | "ObjectRelation" => "relation_id",
+        _ => "id",
+    }
 }
 
 fn fluent_arg_and_assign(

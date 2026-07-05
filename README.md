@@ -14,7 +14,7 @@ A Rust client library for interacting with the Hubuum API. The library is design
   
 - **Configurable Client Setup**:
 
-    Use `SyncClient::new(base_url)` for secure defaults, or the explicit `new_with_certificate_validation` / `new_without_certificate_validation` constructors when needed.
+    Use `Client::new(base_url)` for secure async defaults, `blocking::Client::new(base_url)` for blocking applications, or `Client::builder(base_url)` when you need certificate validation, timeout, or user-agent controls.
 
 - **Comprehensive API Access**:
 
@@ -46,7 +46,7 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.0.3"
+hubuum_client = "0.1.0"
 ```
 
 If you need unreleased changes, you can still point Cargo at the Git repository:
@@ -58,25 +58,25 @@ hubuum_client = { git = "https://github.com/terjekv/hubuum-client-rust" }
 
 ## Usage
 
-The library offers both a sync and an async client. The interface for both is similar, but the async client adds `await` syntax for asynchronous operations.
+The root `Client` is asynchronous. Blocking users can use `hubuum_client::blocking::Client`.
 
 It is safe to `clone()` the client if need be.
 
-### Synchronous Client
+### Blocking Client
 
-The synchronous client provides a blocking interface that is ideal for simpler or legacy applications.
+The blocking client provides a synchronous interface that is ideal for simpler or legacy applications.
 
 #### Client Initialization and Authentication
 
 ```rust
 use std::str::FromStr;
-use hubuum_client::{BaseUrl, SyncClient, Token, Credentials};
+use hubuum_client::{blocking, BaseUrl, Token, Credentials};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let baseurl = BaseUrl::from_str("https://server.example.com:443")?;
 
     // Create a new client in the Unauthenticated state
-    let client = SyncClient::new(baseurl);
+    let client = blocking::Client::new(baseurl);
 
     // Log in using username; login returns a Client in the Authenticated state or an error.
     let password = "secret".to_string();
@@ -114,9 +114,96 @@ let name = "example-class";
 let class = client
     .classes()
     .query()
-    .name_eq(name)
+    .name()
+    .eq(name)
     .one()?;
 ```
+
+Resource handle lookup uses explicit names:
+
+```rust
+let class = client.classes().get(42)?;
+let class = client.classes().get_by_name("example-class")?;
+```
+
+Typed query fields expose only operators that make sense for that field shape:
+
+```rust
+let classes = client
+    .classes()
+    .query()
+    .name()
+    .contains("server")
+    .created_at()
+    .gte(since)
+    .limit(25)
+    .list()?;
+```
+
+Filters compose by chaining field operators. Each operator appends another query
+condition and returns the query builder:
+
+```rust
+let classes = client
+    .classes()
+    .query()
+    .name()
+    .icontains("server")
+    .created_at()
+    .gte(since)
+    .validate_schema()
+    .eq(true)
+    .list()?;
+```
+
+Use `query().list()` for an unfiltered collection request:
+
+```rust
+let classes = client.classes().query().list()?;
+```
+
+Existing `QueryFilter` values can be passed as a batch:
+
+```rust
+let classes = client
+    .classes()
+    .query()
+    .filters(vec![name_filter, namespace_filter])
+    .list()?;
+```
+
+Typed filters and raw filters can be mixed when an endpoint supports a query
+field that is not modeled yet:
+
+```rust
+let classes = client
+    .classes()
+    .query()
+    .name()
+    .contains("server")
+    .filter(
+        "namespace_id",
+        hubuum_client::FilterOperator::Equals { is_negated: false },
+        42,
+    )
+    .list()?;
+```
+
+Async clients use the same query builder and only await the terminal call:
+
+```rust
+let classes = client
+    .classes()
+    .query()
+    .name()
+    .contains("server")
+    .created_at()
+    .gte(since)
+    .list()
+    .await?;
+```
+
+Use `filter(...)` or `raw_param(...)` for backend query features that are not modeled yet.
 
 Or, to find a relation between classes:
 
@@ -124,8 +211,10 @@ Or, to find a relation between classes:
 let relation = client
         .class_relation()
         .query()
-        .add_filter_equals("from_classes", 1)
-        .add_filter_equals("to_classes", 2)
+        .from_hubuum_class_id()
+        .eq(1)
+        .to_hubuum_class_id()
+        .eq(2)
         .one()?;
 ```
 
@@ -136,13 +225,21 @@ let related = object
     .related_objects()
     .ignore_classes([42, 99])
     .ignore_self_class(false)
-    .add_filter_equals("from_classes", 42)
+    .filter(
+        "from_classes",
+        hubuum_client::FilterOperator::Equals { is_negated: false },
+        42,
+    )
     .limit(25)
     .page()?;
 
 let graph = object
     .related_graph()
-    .add_filter_equals("depth", 2)
+    .filter(
+        "depth",
+        hubuum_client::FilterOperator::Equals { is_negated: false },
+        2,
+    )
     .fetch()?;
 ```
 
@@ -154,7 +251,7 @@ The asynchronous client leverages Rust’s async/await syntax and is built for h
 
 ```rust
 use std::str::FromStr;
-use hubuum_client::{AsyncClient, BaseUrl, Credentials, Token};
+use hubuum_client::{BaseUrl, Client, Credentials, Token};
 
 #[tokio::main]
 
@@ -162,7 +259,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let baseurl = BaseUrl::from_str("https://server.example.com:443")?;
 
     // Create a new asynchronous client in the Unauthenticated state
-    let client = AsyncClient::new(baseurl);
+    let client = Client::new(baseurl);
 
     // Log in using username; login returns a Client in the Authenticated state or an error.
     let password = "secret".to_string();

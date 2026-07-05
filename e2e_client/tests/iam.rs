@@ -12,7 +12,7 @@ fn e2e_iam_user_group_membership_lifecycle() {
     let group = harness
         .client
         .groups()
-        .select(group_id)
+        .get(group_id)
         .expect("created group should be selectable");
     group
         .add_member(user.id)
@@ -28,7 +28,7 @@ fn e2e_iam_user_group_membership_lifecycle() {
     let selected_user = harness
         .client
         .users()
-        .select_by_name(&user.username)
+        .get_by_name(&user.username)
         .expect("created user should be selectable by name");
     let user_groups = selected_user
         .groups()
@@ -50,7 +50,7 @@ fn e2e_iam_user_group_membership_lifecycle() {
     let selected_group = harness
         .client
         .groups()
-        .select_by_name(&groupname)
+        .get_by_name(&groupname)
         .expect("created group should be selectable by name");
     assert_eq!(selected_group.id(), group_id);
 }
@@ -68,7 +68,7 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
     let user_handle = harness
         .client
         .users()
-        .select(user.id)
+        .get(user.id)
         .expect("created user should be selectable");
     let raw_user_token = user_handle
         .tokens_create(
@@ -131,7 +131,7 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
     let service_account_handle = harness
         .client
         .service_accounts()
-        .select(service_account.id)
+        .get(service_account.id)
         .expect("service account should be selectable");
     let raw_service_token = service_account_handle
         .tokens_create(NewTokenRequest::new().name("e2e-service-token"))

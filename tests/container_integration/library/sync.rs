@@ -1,6 +1,6 @@
 use hubuum_client::{
     ApiError, BaseUrl, ClassPost, ClassRelationPost, GroupPatch, NamespacePatch, NamespacePost,
-    ObjectPatch, ObjectRelationPost, QueryFilter, SyncClient, Token, UserPatch,
+    ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch, blocking,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -68,13 +68,13 @@ fn sync_users_select_by_id_returns_same_user() {
     let admin_by_name = harness
         .client
         .users()
-        .select_by_name(ADMIN_USERNAME)
-        .expect("sync users().select_by_name(admin) failed");
+        .get_by_name(ADMIN_USERNAME)
+        .expect("sync users().get_by_name(admin) failed");
     let admin_by_id = harness
         .client
         .users()
-        .select(admin_by_name.id())
-        .expect("sync users().select(id) failed");
+        .get(admin_by_name.id())
+        .expect("sync users().get(id) failed");
 
     assert_eq!(admin_by_name.id(), admin_by_id.id());
 }
@@ -87,8 +87,8 @@ fn sync_user_groups_endpoint_returns_group_or_legacy_fallback() {
     let admin = harness
         .client
         .users()
-        .select_by_name(ADMIN_USERNAME)
-        .expect("sync users().select_by_name(admin) failed");
+        .get_by_name(ADMIN_USERNAME)
+        .expect("sync users().get_by_name(admin) failed");
 
     match admin.groups() {
         Ok(groups) => assert!(!groups.is_empty()),
@@ -96,8 +96,8 @@ fn sync_user_groups_endpoint_returns_group_or_legacy_fallback() {
             let fallback = harness
                 .client
                 .groups()
-                .select_by_name(ADMIN_USERNAME)
-                .expect("sync groups().select_by_name(admin) fallback failed");
+                .get_by_name(ADMIN_USERNAME)
+                .expect("sync groups().get_by_name(admin) fallback failed");
             assert!(fallback.id() > 0);
         }
         Err(err) => panic!("sync admin.groups() failed: {err}"),
@@ -112,8 +112,8 @@ fn sync_user_tokens_endpoint_returns_admin_token_or_legacy_404() {
     let admin = harness
         .client
         .users()
-        .select_by_name(ADMIN_USERNAME)
-        .expect("sync users().select_by_name(admin) failed");
+        .get_by_name(ADMIN_USERNAME)
+        .expect("sync users().get_by_name(admin) failed");
 
     match admin.tokens() {
         Ok(tokens) => assert!(tokens.iter().any(|token| token.principal_id == admin.id())),
@@ -137,8 +137,8 @@ fn sync_class_permissions_endpoint_returns_non_empty() {
     let class = harness
         .client
         .classes()
-        .select(class_id)
-        .expect("sync classes().select(class_id) failed");
+        .get(class_id)
+        .expect("sync classes().get(class_id) failed");
     let permissions = class
         .permissions()
         .expect("sync class.permissions() failed");
@@ -159,8 +159,8 @@ fn sync_namespace_group_permissions_endpoint_matches_group() {
     let namespace = harness
         .client
         .namespaces()
-        .select(namespace_id)
-        .expect("sync namespaces().select(namespace_id) failed");
+        .get(namespace_id)
+        .expect("sync namespaces().get(namespace_id) failed");
     let group_permissions = namespace
         .group_permissions(admin_group_id)
         .expect("sync namespace.group_permissions(group_id) failed");
@@ -186,8 +186,8 @@ fn sync_namespace_has_group_permission_returns_expected(
     let namespace = harness
         .client
         .namespaces()
-        .select(namespace_id)
-        .expect("sync namespaces().select(namespace_id) failed");
+        .get(namespace_id)
+        .expect("sync namespaces().get(namespace_id) failed");
 
     let target_group_id = if existing_group {
         admin_group_id
@@ -220,8 +220,8 @@ fn sync_namespace_permission_mutation_endpoint_succeeds(
     let namespace = harness
         .client
         .namespaces()
-        .select(namespace_id)
-        .expect("sync namespaces().select(namespace_id) failed");
+        .get(namespace_id)
+        .expect("sync namespaces().get(namespace_id) failed");
 
     match mutation {
         SyncMutationCase::GrantSingle => namespace
@@ -260,8 +260,8 @@ fn sync_namespace_user_permissions_endpoint_returns_non_empty() {
     let namespace = harness
         .client
         .namespaces()
-        .select(namespace_id)
-        .expect("sync namespaces().select(namespace_id) failed");
+        .get(namespace_id)
+        .expect("sync namespaces().get(namespace_id) failed");
     let principal_permissions = namespace
         .principal_permissions(admin_id)
         .expect("sync namespace.principal_permissions(principal_id) failed");
@@ -282,7 +282,7 @@ fn sync_auth_login_with_token_accepts_valid_token() {
         login_sync(base_url.clone(), &stack.admin_password).expect("failed to login for token");
     let token = logged_in.get_token().to_string();
 
-    let validated = SyncClient::new(base_url)
+    let validated = blocking::Client::new(base_url)
         .login_with_token(Token::new(token.clone()))
         .expect("sync login_with_token(valid) failed");
 
@@ -298,7 +298,7 @@ fn sync_auth_login_with_token_rejects_invalid_token() {
         .parse::<BaseUrl>()
         .expect("stack base URL should parse as BaseUrl");
 
-    let err = SyncClient::new(base_url)
+    let err = blocking::Client::new(base_url)
         .login_with_token(Token::new("invalid-token".to_string()))
         .expect_err("login_with_token should fail for invalid token");
 
@@ -402,7 +402,7 @@ fn sync_auth_logout_all_revokes_existing_tokens() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_users_create_and_select_by_name_roundtrip() {
+fn sync_users_create_and_get_by_name_roundtrip() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (username, user_id) = create_sync_user(&harness.client, "sync-users-create-select")
         .expect("user creation failed");
@@ -410,8 +410,8 @@ fn sync_users_create_and_select_by_name_roundtrip() {
     let selected = harness
         .client
         .users()
-        .select_by_name(&username)
-        .expect("sync users().select_by_name(created) failed");
+        .get_by_name(&username)
+        .expect("sync users().get_by_name(created) failed");
 
     assert_eq!(selected.id(), user_id);
 }
@@ -456,7 +456,7 @@ fn sync_users_delete_removes_resource() {
         .delete(user_id)
         .expect("sync users().delete() failed");
 
-    let err = match harness.client.users().select(user_id) {
+    let err = match harness.client.users().get(user_id) {
         Ok(_) => panic!("deleted user should not be selectable"),
         Err(err) => err,
     };
@@ -465,7 +465,7 @@ fn sync_users_delete_removes_resource() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_groups_create_and_select_by_name_roundtrip() {
+fn sync_groups_create_and_get_by_name_roundtrip() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (groupname, group_id) = create_sync_group(&harness.client, "sync-groups-create-select")
         .expect("group creation failed");
@@ -473,8 +473,8 @@ fn sync_groups_create_and_select_by_name_roundtrip() {
     let selected = harness
         .client
         .groups()
-        .select_by_name(&groupname)
-        .expect("sync groups().select_by_name(created) failed");
+        .get_by_name(&groupname)
+        .expect("sync groups().get_by_name(created) failed");
 
     assert_eq!(selected.id(), group_id);
 }
@@ -520,7 +520,7 @@ fn sync_groups_delete_removes_resource() {
         .delete(group_id)
         .expect("sync groups().delete() failed");
 
-    let err = match harness.client.groups().select(group_id) {
+    let err = match harness.client.groups().get(group_id) {
         Ok(_) => panic!("deleted group should not be selectable"),
         Err(err) => err,
     };
@@ -538,8 +538,8 @@ fn sync_group_membership_add_remove_roundtrip() {
     let group = harness
         .client
         .groups()
-        .select(group_id)
-        .expect("sync groups().select(group_id) failed");
+        .get(group_id)
+        .expect("sync groups().get(group_id) failed");
 
     group
         .add_member(user_id)
@@ -593,7 +593,7 @@ fn sync_namespace_update_changes_fields() {
     let selected = harness
         .client
         .namespaces()
-        .select_by_name(&updated_name)
+        .get_by_name(&updated_name)
         .expect("updated namespace should be selectable by new name");
     assert_eq!(selected.id(), namespace_id);
 }
@@ -618,8 +618,8 @@ fn sync_class_objects_lists_created_object() {
     let class = harness
         .client
         .classes()
-        .select(class_id)
-        .expect("sync classes().select(class_id) failed");
+        .get(class_id)
+        .expect("sync classes().get(class_id) failed");
     let objects = class.objects().expect("sync class.objects() failed");
 
     assert!(objects.iter().any(|object| object.id() == object_id));
@@ -648,8 +648,8 @@ fn sync_class_object_by_name_returns_matching_object() {
     let class = harness
         .client
         .classes()
-        .select(class_id)
-        .expect("sync classes().select(class_id) failed");
+        .get(class_id)
+        .expect("sync classes().get(class_id) failed");
     let object = class
         .object_by_name(&object_name)
         .expect("sync class.object_by_name() failed");
@@ -670,11 +670,11 @@ fn sync_class_handle_delete_removes_resource() {
     let class = harness
         .client
         .classes()
-        .select(class_id)
-        .expect("sync classes().select(class_id) failed");
+        .get(class_id)
+        .expect("sync classes().get(class_id) failed");
     class.delete().expect("sync class.delete() failed");
 
-    let err = match harness.client.classes().select(class_id) {
+    let err = match harness.client.classes().get(class_id) {
         Ok(_) => panic!("deleted class should not be selectable"),
         Err(err) => err,
     };
@@ -746,7 +746,7 @@ fn sync_object_delete_removes_resource() {
         .delete(object_id)
         .expect("sync objects().delete() failed");
 
-    let err = match harness.client.objects(class_id).select(object_id) {
+    let err = match harness.client.objects(class_id).get(object_id) {
         Ok(_) => panic!("deleted object should not be selectable"),
         Err(err) => err,
     };
@@ -788,8 +788,8 @@ fn sync_class_relation_create_delete_roundtrip() {
     let selected = harness
         .client
         .class_relation()
-        .select(relation.id)
-        .expect("sync class_relation().select(id) failed");
+        .get(relation.id)
+        .expect("sync class_relation().get(id) failed");
     assert_eq!(selected.id(), relation.id);
 
     harness
@@ -797,7 +797,7 @@ fn sync_class_relation_create_delete_roundtrip() {
         .class_relation()
         .delete(relation.id)
         .expect("sync class_relation().delete() failed");
-    let err = match harness.client.class_relation().select(relation.id) {
+    let err = match harness.client.class_relation().get(relation.id) {
         Ok(_) => panic!("deleted class relation should not be selectable"),
         Err(err) => err,
     };
@@ -865,8 +865,8 @@ fn sync_object_relation_create_delete_roundtrip() {
     let selected = harness
         .client
         .object_relation()
-        .select(relation.id)
-        .expect("sync object_relation().select(id) failed");
+        .get(relation.id)
+        .expect("sync object_relation().get(id) failed");
     assert_eq!(selected.id(), relation.id);
 
     harness
@@ -874,7 +874,7 @@ fn sync_object_relation_create_delete_roundtrip() {
         .object_relation()
         .delete(relation.id)
         .expect("sync object_relation().delete() failed");
-    let err = match harness.client.object_relation().select(relation.id) {
+    let err = match harness.client.object_relation().get(relation.id) {
         Ok(_) => panic!("deleted object relation should not be selectable"),
         Err(err) => err,
     };
@@ -896,24 +896,29 @@ fn sync_groups_filter_helpers_return_expected_group() {
     let listed = harness
         .client
         .groups()
-        .filter(vec![filter.clone()])
-        .expect("sync groups().filter() failed");
+        .query()
+        .filters(vec![filter.clone()])
+        .list()
+        .expect("sync groups().query().list() failed");
     assert!(listed.iter().any(|group| group.id == group_id));
 
     let single = harness
         .client
         .groups()
-        .filter_expecting_single_result(vec![filter])
-        .expect("sync groups().filter_expecting_single_result() failed");
+        .query()
+        .filters(vec![filter])
+        .one()
+        .expect("sync groups().query().one() failed");
     assert_eq!(single.id, group_id);
 
     let found = harness
         .client
         .groups()
-        .find()
-        .add_filter_name_exact(&groupname)
-        .execute_expecting_single_result()
-        .expect("sync groups().find().add_filter_name_exact() failed");
+        .query()
+        .groupname()
+        .eq(&groupname)
+        .one()
+        .expect("sync groups().query().groupname().eq().one() failed");
     assert_eq!(found.id, group_id);
 }
 
@@ -928,7 +933,11 @@ fn sync_query_iequals_supports_case_insensitive_match() {
         .client
         .users()
         .query()
-        .add_filter_iequals("username", username.to_uppercase())
+        .filter(
+            "username",
+            FilterOperator::IEquals { is_negated: false },
+            username.to_uppercase(),
+        )
         .one();
 
     let found = match found {
@@ -937,7 +946,7 @@ fn sync_query_iequals_supports_case_insensitive_match() {
             eprintln!("skipping: server does not support iequals for username ({err})");
             return;
         }
-        Err(err) => panic!("sync users().query().add_filter_iequals().one() failed: {err}"),
+        Err(err) => panic!("sync users().query().filter(iequals).one() failed: {err}"),
     };
 
     assert_eq!(found.id, user_id);
@@ -986,7 +995,8 @@ fn sync_query_sort_and_limit_returns_expected_class() {
         .client
         .classes()
         .query()
-        .add_filter_startswith("name", format!("{prefix}-sort-"))
+        .name()
+        .starts_with(format!("{prefix}-sort-"))
         .sort_by_fields(vec![("name", SortDirection::Asc)])
         .limit(1)
         .one()
@@ -1046,10 +1056,13 @@ fn sync_query_json_path_lt_filters_json_schema() {
         .client
         .classes()
         .query()
-        .add_filter_startswith("name", format!("{prefix}-geo-"))
-        .add_json_path_lt("json_schema", vec!["properties", "latitude", "minimum"], 0)
+        .name()
+        .starts_with(format!("{prefix}-geo-"))
+        .json_schema()
+        .path(["properties", "latitude", "minimum"])
+        .lt(0)
         .list()
-        .expect("sync classes().query().add_json_path_lt().list() failed");
+        .expect("sync classes().query().json_schema().path().lt().list() failed");
 
     assert!(matched.iter().any(|class| class.id == south.id));
     assert!(!matched.iter().any(|class| class.id == north.id));

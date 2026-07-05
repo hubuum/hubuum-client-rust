@@ -6,6 +6,33 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-05
+
+### Breaking
+
+- The async client is now exported as `hubuum_client::Client`; the blocking client is
+  exported as `hubuum_client::blocking::Client`.
+- Resource lookup APIs now use `get(id)` and `get_by_name(name)`; the legacy
+  `select*` names were removed.
+- Query builders now expose `query().list()`, `query().one()`, typed field handles,
+  and explicit raw escape hatches instead of the old `find()`, `execute*()`,
+  `FilterBuilder`, and generated `field_eq`/`field_contains` shortcuts.
+
+### Added
+
+- Client builders for async and blocking clients with certificate validation, timeout,
+  and user-agent controls.
+- Typed query field handles such as `.name().contains(...)`, `.created_at().gte(...)`,
+  and `.json_schema().path([...]).lt(...)`, with raw query escape hatches.
+- Generated resource endpoint metadata used by the new `get(id)` path.
+- Real `async` and `blocking` Cargo features. Defaults still enable both clients,
+  while feature-specific builds expose only the selected client surface.
+
+### Changed
+
+- `HubuumDateTime` now formats as RFC3339 for typed query filters while still accepting
+  both RFC3339 and naive UTC timestamp input during deserialization.
+
 ## [0.0.3] - 2026-07-05
 
 ### Breaking
@@ -59,7 +86,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Breaking
 
-- The public `Client::search`/`AsyncClient::search` low-level resource helper has been replaced by the unified search builder. Resource querying continues through resource handles like `client.classes().query()`.
+- The public `blocking::Client::search`/`Client::search` low-level resource helper has been replaced by the unified search builder. Resource querying continues through resource handles like `client.classes().query()`.
 - `Class::transitive_relations()` and `Class::transitive_relations_to(...)` were removed. Class traversal now mirrors object traversal through `related_classes()`, `related_relations()`, and `related_graph()`.
 - Relationship examples and fluent filters should use the new API query aliases such as `from_classes`, `to_classes`, `from_objects`, `to_objects`, and `class_relation` instead of the older storage-shaped field names.
 

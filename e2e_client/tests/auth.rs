@@ -1,4 +1,4 @@
-use hubuum_client::{Credentials, SyncClient, Token};
+use hubuum_client::{Credentials, Token, blocking};
 
 use e2e_client::harness::E2EHarness;
 
@@ -11,7 +11,7 @@ fn e2e_auth_identity_token_and_logout() {
     assert_eq!(me.principal.name, "admin");
 
     let current_token = harness.client.get_token().to_string();
-    let token_client = SyncClient::new(harness.base_url.clone())
+    let token_client = blocking::Client::new(harness.base_url.clone())
         .login_with_token(Token::new(current_token.clone()))
         .expect("login_with_token should accept current token");
     assert_eq!(token_client.get_token(), current_token);
@@ -21,7 +21,7 @@ fn e2e_auth_identity_token_and_logout() {
         .expect("current token listing should succeed");
     assert!(!tokens.is_empty());
 
-    let second_session = SyncClient::new(harness.base_url.clone())
+    let second_session = blocking::Client::new(harness.base_url.clone())
         .login(Credentials::new(
             "admin".to_string(),
             harness.admin_password.clone(),

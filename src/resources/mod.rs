@@ -50,6 +50,9 @@ pub trait ApiResource: Default {
     type DeleteOutput: DeserializeOwned + Debug;
 
     const NAME_FIELD: &'static str = "name";
+    const COLLECTION_ENDPOINT: Endpoint;
+    const ITEM_ENDPOINT: Option<Endpoint> = None;
+    const ID_PARAM: &'static str = "id";
 
     fn endpoint(&self) -> Endpoint;
     fn build_params(filters: Vec<(String, FilterOperator, String)>) -> Vec<QueryFilter>;

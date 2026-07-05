@@ -17,7 +17,7 @@ fn e2e_core_namespace_class_object_crud_and_query() {
     let namespace = harness
         .client
         .namespaces()
-        .select(namespace_id)
+        .get(namespace_id)
         .expect("namespace should be fetchable");
     assert_eq!(namespace.id(), namespace_id);
 
@@ -60,14 +60,14 @@ fn e2e_core_namespace_class_object_crud_and_query() {
     let selected = harness
         .client
         .objects(class_id)
-        .select(object_id)
+        .get(object_id)
         .expect("object should be selectable by id");
     assert_eq!(selected.id(), object_id);
 
     let class = harness
         .client
         .classes()
-        .select(class_id)
+        .get(class_id)
         .expect("class should be selectable by id");
     let by_name = class
         .object_by_name(&updated_object_name)
@@ -78,7 +78,8 @@ fn e2e_core_namespace_class_object_crud_and_query() {
         .client
         .objects(class_id)
         .query()
-        .add_filter_equals("name", &updated_object_name)
+        .name()
+        .eq(&updated_object_name)
         .limit(5)
         .page()
         .expect("object query should succeed");

@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use hubuum_client::{
     ApiError, Authenticated, BaseUrl, ClassPost, Credentials, GroupPost, NamespacePost, ObjectPost,
-    SyncClient, UserPost,
+    UserPost, blocking,
 };
 
 use crate::naming::unique_case_prefix;
@@ -14,7 +14,7 @@ const ADMIN_USERNAME: &str = "admin";
 pub struct E2EHarness {
     pub base_url: BaseUrl,
     pub admin_password: String,
-    pub client: SyncClient<Authenticated>,
+    pub client: blocking::Client<Authenticated>,
 }
 
 pub struct E2EUser {
@@ -24,8 +24,8 @@ pub struct E2EUser {
 }
 
 impl E2EUser {
-    pub fn login(&self, base_url: BaseUrl) -> Result<SyncClient<Authenticated>, ApiError> {
-        SyncClient::new(base_url).login(Credentials::new(
+    pub fn login(&self, base_url: BaseUrl) -> Result<blocking::Client<Authenticated>, ApiError> {
+        blocking::Client::new(base_url).login(Credentials::new(
             self.username.clone(),
             self.password.clone(),
         ))
@@ -42,7 +42,7 @@ impl E2EHarness {
         let parsed_base_url =
             BaseUrl::from_str(&base_url).map_err(|err| format!("invalid base url: {err}"))?;
 
-        let client = SyncClient::new(parsed_base_url.clone())
+        let client = blocking::Client::new(parsed_base_url.clone())
             .login(Credentials::new(
                 ADMIN_USERNAME.to_string(),
                 admin_password.to_string(),
@@ -118,8 +118,8 @@ impl E2EHarness {
     }
 }
 
-pub fn admin_context(client: &SyncClient<Authenticated>) -> Result<(i32, i32), ApiError> {
-    let admin = client.users().select_by_name(ADMIN_USERNAME)?;
+pub fn admin_context(client: &blocking::Client<Authenticated>) -> Result<(i32, i32), ApiError> {
+    let admin = client.users().get_by_name(ADMIN_USERNAME)?;
     let admin_id = admin.id();
 
     let admin_group_id = match admin.groups() {
@@ -127,11 +127,11 @@ pub fn admin_context(client: &SyncClient<Authenticated>) -> Result<(i32, i32), A
             if let Some(group) = admin_groups.first() {
                 group.id()
             } else {
-                client.groups().select_by_name(ADMIN_USERNAME)?.id()
+                client.groups().get_by_name(ADMIN_USERNAME)?.id()
             }
         }
         Err(ApiError::HttpWithBody { status, .. }) if status.as_u16() == 404 => {
-            client.groups().select_by_name(ADMIN_USERNAME)?.id()
+            client.groups().get_by_name(ADMIN_USERNAME)?.id()
         }
         Err(err) => return Err(err),
     };
