@@ -78,6 +78,8 @@ jobs:
         run: |
           version="$(sed -nE 's/^version = "([^"]+)"/\1/p' hubuum_client_derive/Cargo.toml | head -n1)"
           tmpdir="$(mktemp -d)"
+          mkdir -p "${tmpdir}/src"
+          printf "" > "${tmpdir}/src/lib.rs"
           printf '%s\n' \
             '[package]' \
             'name = "hubuum-client-release-probe"' \
@@ -139,6 +141,8 @@ jobs:
           version="$(sed -nE 's/^version = "([^"]+)"/\1/p' hubuum_client_derive/Cargo.toml | head -n1)"
           for attempt in $(seq 1 60); do
             tmpdir="$(mktemp -d)"
+            mkdir -p "${tmpdir}/src"
+            printf "" > "${tmpdir}/src/lib.rs"
             printf '%s\n' \
               '[package]' \
               'name = "hubuum-client-release-probe"' \
@@ -163,6 +167,8 @@ jobs:
         run: |
           version="$(sed -nE 's/^version = "([^"]+)"/\1/p' Cargo.toml | head -n1)"
           tmpdir="$(mktemp -d)"
+          mkdir -p "${tmpdir}/src"
+          printf "" > "${tmpdir}/src/lib.rs"
           printf '%s\n' \
             '[package]' \
             'name = "hubuum-client-release-probe"' \
