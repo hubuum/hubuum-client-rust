@@ -548,6 +548,22 @@ impl Client<Authenticated> {
         EventListRequest::new(self.clone(), Endpoint::Events, UrlParams::default())
     }
 
+    pub fn user_events(&self, user_id: i32) -> EventListRequest {
+        EventListRequest::new(
+            self.clone(),
+            Endpoint::UserEvents,
+            vec![(Cow::Borrowed("user_id"), user_id.to_string().into())],
+        )
+    }
+
+    pub fn group_events(&self, group_id: i32) -> EventListRequest {
+        EventListRequest::new(
+            self.clone(),
+            Endpoint::GroupEvents,
+            vec![(Cow::Borrowed("group_id"), group_id.to_string().into())],
+        )
+    }
+
     pub fn event_deliveries(&self) -> EventDeliveries {
         EventDeliveries::new(self.clone())
     }
@@ -873,6 +889,16 @@ impl EventListRequest {
 
     pub fn actor_user_id(mut self, actor_user_id: i32) -> Self {
         self.inner = self.inner.query_param("actor_user_id", actor_user_id);
+        self
+    }
+
+    pub fn entity_type(mut self, entity_type: impl Into<String>) -> Self {
+        self.inner = self.inner.query_param("entity_type", entity_type.into());
+        self
+    }
+
+    pub fn entity_id(mut self, entity_id: i32) -> Self {
+        self.inner = self.inner.query_param("entity_id", entity_id);
         self
     }
 

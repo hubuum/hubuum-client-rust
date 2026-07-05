@@ -2877,6 +2877,8 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
     let events = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/events")
+            .query_param("entity_type", "class")
+            .query_param("entity_id", "42")
             .query_param("action", "updated")
             .query_param("actor_kind", "human")
             .query_param("namespace_id", "7")
@@ -2887,6 +2889,28 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
             .header("content-type", "application/json")
             .header("x-next-cursor", "events-next")
             .json_body(json!([audit_event_json(1, "class", "updated")]));
+    });
+
+    let user_events = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/3/events")
+            .query_param("action", "updated")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([audit_event_json(3, "user", "updated")]));
+    });
+
+    let group_events = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/groups/4/events")
+            .query_param("actor_user_id", "3")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([audit_event_json(4, "group", "updated")]));
     });
 
     let class_history = server.mock(|when, then| {
@@ -2961,6 +2985,8 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
     let client = sync_client(&server);
     let event_page = client
         .events()
+        .entity_type("class")
+        .entity_id(42)
         .action("updated")
         .actor_kind("human")
         .namespace_id(7)
@@ -2970,6 +2996,22 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
         .expect("events page should succeed");
     assert_eq!(event_page.items[0].entity_type, "class");
     assert_eq!(event_page.next_cursor.as_deref(), Some("events-next"));
+
+    let user_event_list = client
+        .user_events(3)
+        .action("updated")
+        .limit(1)
+        .list()
+        .expect("user events should succeed");
+    assert_eq!(user_event_list[0].entity_type, "user");
+
+    let group_event_list = client
+        .group_events(4)
+        .actor_user_id(3)
+        .limit(1)
+        .list()
+        .expect("group events should succeed");
+    assert_eq!(group_event_list[0].entity_type, "group");
 
     let history = client
         .class_history(42)
@@ -3029,6 +3071,8 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
     assert_eq!(delivery.id, 99);
 
     events.assert_calls(1);
+    user_events.assert_calls(1);
+    group_events.assert_calls(1);
     class_history.assert_calls(1);
     class_as_of.assert_calls(1);
     sink_create.assert_calls(1);
@@ -3050,6 +3094,37 @@ async fn async_scoped_events_and_delivery_health_use_backend_routes() {
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!([audit_event_json(2, "object", "updated")]));
+    });
+
+    let global_events = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/events")
+            .query_param("entity_type", "user")
+            .query_param("entity_id", "3")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([audit_event_json(3, "user", "updated")]));
+    });
+
+    let user_events = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/3/events")
+            .query_param("action", "updated")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([audit_event_json(3, "user", "updated")]));
+    });
+
+    let group_events = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/groups/4/events")
+            .query_param("actor_user_id", "3")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([audit_event_json(4, "group", "updated")]));
     });
 
     let health = server.mock(|when, then| {
@@ -3112,6 +3187,31 @@ async fn async_scoped_events_and_delivery_health_use_backend_routes() {
         .expect("object events should succeed");
     assert_eq!(events[0].entity_type, "object");
 
+    let filtered_global_events = client
+        .events()
+        .entity_type("user")
+        .entity_id(3)
+        .list()
+        .await
+        .expect("global events should support entity filters");
+    assert_eq!(filtered_global_events[0].entity_type, "user");
+
+    let user_event_list = client
+        .user_events(3)
+        .action("updated")
+        .list()
+        .await
+        .expect("user events should succeed");
+    assert_eq!(user_event_list[0].entity_type, "user");
+
+    let group_event_list = client
+        .group_events(4)
+        .actor_user_id(3)
+        .list()
+        .await
+        .expect("group events should succeed");
+    assert_eq!(group_event_list[0].entity_type, "group");
+
     let health_response = client
         .event_deliveries()
         .health()
@@ -3120,6 +3220,9 @@ async fn async_scoped_events_and_delivery_health_use_backend_routes() {
     assert_eq!(health_response.delivery.counts.total, 0);
 
     object_events.assert_calls(1);
+    global_events.assert_calls(1);
+    user_events.assert_calls(1);
+    group_events.assert_calls(1);
     health.assert_calls(1);
 }
 

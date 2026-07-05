@@ -1,9 +1,9 @@
 use std::{thread, time::Duration};
 
 use hubuum_client::{
-    ClassPatch, EventDeliveryStatus, EventSinkKind, NewEventSink, NewEventSubscription,
+    ClassPatch, EventDeliveryStatus, EventSinkKind, GroupPatch, NewEventSink, NewEventSubscription,
     ObjectPatch, ReportContentType, ReportTemplateKind, ReportTemplatePost,
-    UpdateEventSubscription,
+    UpdateEventSubscription, UserPatch,
 };
 use serde_json::json;
 
@@ -238,6 +238,36 @@ fn e2e_events_and_history_cover_core_and_templates() {
         })
         .expect("template create should produce history");
 
+    let user = harness
+        .create_user("events-history-user")
+        .expect("failed to create user for audit events");
+    harness
+        .client
+        .users()
+        .update_raw(
+            user.id,
+            UserPatch {
+                email: Some(format!("{prefix}-updated-user@example.test")),
+                proper_name: Some(format!("{prefix} Updated User")),
+            },
+        )
+        .expect("user update should produce audit event");
+
+    let (_groupname, group_id) = harness
+        .create_group("events-history-group")
+        .expect("failed to create group for audit events");
+    harness
+        .client
+        .groups()
+        .update_raw(
+            group_id,
+            GroupPatch {
+                groupname: Some(format!("{prefix}-updated-group")),
+                description: Some("e2e group audit update".to_string()),
+            },
+        )
+        .expect("group update should produce audit event");
+
     let namespace_history = harness
         .client
         .namespace_history(namespace_id)
@@ -328,6 +358,34 @@ fn e2e_events_and_history_cover_core_and_templates() {
         && event.entity_id == Some(object_id)
         && event.action == "updated"));
 
+    let user_global_events = harness
+        .client
+        .events()
+        .entity_type("user")
+        .entity_id(user.id)
+        .limit(20)
+        .list()
+        .expect("global event listing should filter by user entity");
+    assert!(
+        user_global_events
+            .iter()
+            .any(|event| event.entity_type == "user" && event.entity_id == Some(user.id))
+    );
+
+    let group_global_events = harness
+        .client
+        .events()
+        .entity_type("group")
+        .entity_id(group_id)
+        .limit(20)
+        .list()
+        .expect("global event listing should filter by group entity");
+    assert!(
+        group_global_events
+            .iter()
+            .any(|event| event.entity_type == "group" && event.entity_id == Some(group_id))
+    );
+
     let namespace_events = harness
         .client
         .namespace_events(namespace_id)
@@ -376,5 +434,29 @@ fn e2e_events_and_history_cover_core_and_templates() {
         template_events
             .iter()
             .any(|event| event.entity_id == Some(template.id))
+    );
+
+    let user_events = harness
+        .client
+        .user_events(user.id)
+        .limit(20)
+        .list()
+        .expect("user events should list");
+    assert!(
+        user_events
+            .iter()
+            .any(|event| event.entity_type == "user" && event.entity_id == Some(user.id))
+    );
+
+    let group_events = harness
+        .client
+        .group_events(group_id)
+        .limit(20)
+        .list()
+        .expect("group events should list");
+    assert!(
+        group_events
+            .iter()
+            .any(|event| event.entity_type == "group" && event.entity_id == Some(group_id))
     );
 }
