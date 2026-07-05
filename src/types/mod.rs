@@ -1,7 +1,9 @@
 mod auth;
 mod baseurl;
 mod datetime;
+mod event;
 mod filter;
+mod history;
 mod import;
 mod meta;
 mod params;
@@ -16,7 +18,19 @@ use strum::{Display, EnumIter, EnumString};
 pub use auth::{Credentials, LogoutTokenRequest, Token};
 pub use baseurl::BaseUrl;
 pub use datetime::HubuumDateTime;
+pub use event::{
+    EventDelivery, EventDeliveryHealthResponse, EventDeliveryQueueHealth, EventDeliveryStatus,
+    EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
+    EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSubscription,
+    EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventWorkerHealth,
+    EventWorkerWakeupStats, NewEventSink, NewEventSubscription, UpdateEventSink,
+    UpdateEventSubscription,
+};
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
+pub use history::{
+    ClassHistory, HistoryMetadata, NamespaceHistory, ObjectHistory, RemoteTargetHistory,
+    ReportTemplateHistory,
+};
 pub use import::{
     CURRENT_IMPORT_VERSION, ClassKey, GroupKey, ImportAtomicity, ImportClassInput,
     ImportClassRelationInput, ImportCollisionPolicy, ImportGraph, ImportMode, ImportNamespaceInput,
@@ -38,7 +52,7 @@ pub use report::{
     ReportContentType, ReportInclude, ReportIncludeRelatedDirection, ReportIncludeRelatedObject,
     ReportIncludeRelatedSort, ReportJsonResponse, ReportLimits, ReportMeta,
     ReportMissingDataPolicy, ReportOutputRequest, ReportRelationContext, ReportRequest,
-    ReportResult, ReportScope, ReportScopeKind, ReportWarning,
+    ReportResult, ReportScope, ReportScopeKind, ReportTemplateKind, ReportWarning,
 };
 pub use search::{
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
@@ -82,4 +96,6 @@ pub enum Permissions {
     UpdateRemoteTarget,
     DeleteRemoteTarget,
     ExecuteRemoteTarget,
+    ReadAudit,
+    ManageEventSubscription,
 }

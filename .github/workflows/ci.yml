@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -38,7 +38,7 @@ jobs:
     needs: test
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -47,13 +47,13 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Authenticate to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USERNAME || github.actor }}
           password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Run Integration Test Suite
-        run: ./scripts/run-integration-tests.sh --with-e2e-client
+        run: ./scripts/run-integration-tests.sh --with-e2e-client -- --test-threads=1
         env:
           HUBUUM_INTEGRATION_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server:main

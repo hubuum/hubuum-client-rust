@@ -36,6 +36,15 @@ pub enum ReportScopeKind {
     RelatedObjects,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display, Default)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum ReportTemplateKind {
+    #[default]
+    Report,
+    Fragment,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]

@@ -2,8 +2,9 @@ use std::str::FromStr;
 
 use httpmock::prelude::*;
 use hubuum_client::types::{
-    FilterOperator, ImportGraph, ImportRequest, Permissions, ReportContentType, ReportRequest,
-    ReportScope, ReportScopeKind, SortDirection, UnifiedSearchEvent, UnifiedSearchKind,
+    EventSinkKind, FilterOperator, HubuumDateTime, ImportGraph, ImportRequest, NewEventSink,
+    NewEventSubscription, Permissions, ReportContentType, ReportRequest, ReportScope,
+    ReportScopeKind, SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
 };
 use hubuum_client::{
     ApiError, AsyncClient, BaseUrl, ClassGet, Credentials, ReportResult, SyncClient,
@@ -134,6 +135,14 @@ fn report_template_json(template_id: i32, name: &str) -> serde_json::Value {
         "description": "Template",
         "content_type": "text/plain",
         "template": "{{name}}",
+        "kind": "fragment",
+        "scope_kind": null,
+        "class_id": null,
+        "default_query": null,
+        "include": null,
+        "relation_context": null,
+        "default_missing_data_policy": null,
+        "default_limits": null,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -357,6 +366,93 @@ fn unified_search_response_json() -> serde_json::Value {
             "classes": null,
             "objects": "obj-cursor"
         }
+    })
+}
+
+fn audit_event_json(event_id: i64, entity_type: &str, action: &str) -> serde_json::Value {
+    json!({
+        "id": event_id,
+        "event_id": "11111111-1111-4111-8111-111111111111",
+        "occurred_at": ts(),
+        "entity_type": entity_type,
+        "entity_id": 42,
+        "entity_name": "servers",
+        "namespace_id": 7,
+        "action": action,
+        "actor_kind": "human",
+        "actor_user_id": 3,
+        "correlation_id": "corr-1",
+        "request_id": "22222222-2222-4222-8222-222222222222",
+        "summary": "updated servers",
+        "before": {"name": "old"},
+        "after": {"name": "new"},
+        "metadata": {"source": "test"},
+        "schema_version": 1
+    })
+}
+
+fn class_history_json() -> serde_json::Value {
+    json!({
+        "id": 42,
+        "name": "servers",
+        "namespace_id": 7,
+        "validate_schema": true,
+        "description": "Class",
+        "json_schema": {"type": "object"},
+        "created_at": ts(),
+        "updated_at": ts(),
+        "op": "update",
+        "valid_from": ts(),
+        "valid_to": null,
+        "history_id": 9001,
+        "actor_id": 3,
+        "actor_username": "tester"
+    })
+}
+
+fn event_sink_json() -> serde_json::Value {
+    json!({
+        "id": 5,
+        "name": "audit-webhook",
+        "kind": "webhook",
+        "config": {"url": "https://example.invalid/hook"},
+        "enabled": true,
+        "secret_ref": null,
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn event_subscription_json() -> serde_json::Value {
+    json!({
+        "id": 8,
+        "namespace_id": 7,
+        "sink_id": 5,
+        "name": "class-updates",
+        "description": "Class update events",
+        "entity_types": ["class"],
+        "actions": ["updated"],
+        "routing": {"topic": "classes"},
+        "enabled": true,
+        "filter": {"actor_kinds": ["human"]},
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn event_delivery_json(status: &str) -> serde_json::Value {
+    json!({
+        "id": 99,
+        "event_id": 1001,
+        "subscription_id": 8,
+        "status": status,
+        "attempts": 2,
+        "next_attempt_at": ts(),
+        "claim_token": null,
+        "last_error": null,
+        "locked_until": null,
+        "created_at": ts(),
+        "updated_at": ts()
     })
 }
 
@@ -1035,6 +1131,13 @@ fn sync_supports_user_group_and_token_endpoints() {
             }]));
     });
 
+    let user_anonymize = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/iam/users/11/anonymize")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(204);
+    });
+
     let group_by_id = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/iam/groups/10")
@@ -1061,6 +1164,8 @@ fn sync_supports_user_group_and_token_endpoints() {
     assert_eq!(tokens[0].principal_id, 11);
     assert_eq!(tokens[0].id, 1);
 
+    user.anonymize().expect("user anonymize should succeed");
+
     let group = client
         .groups()
         .select(10)
@@ -1071,6 +1176,7 @@ fn sync_supports_user_group_and_token_endpoints() {
     user_by_id.assert_calls(1);
     user_groups.assert_calls(1);
     user_tokens.assert_calls(1);
+    user_anonymize.assert_calls(1);
     group_by_id.assert_calls(1);
 }
 
@@ -1970,12 +2076,6 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     let template_patch = server.mock(|when, then| {
         when.method(PATCH)
             .path("/api/v1/templates/2")
-            .json_body(json!({
-                "namespace_id": null,
-                "name": "updated-template",
-                "description": null,
-                "template": null
-            }))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -2027,6 +2127,7 @@ fn sync_reports_and_templates_cover_new_server_surface() {
         .description("Template")
         .content_type(ReportContentType::TextPlain)
         .template("{{name}}")
+        .kind(hubuum_client::ReportTemplateKind::Fragment)
         .send()
         .expect("template create should succeed");
     assert_eq!(created.id, 2);
@@ -2058,6 +2159,14 @@ fn report_template_patch_omits_content_type() {
         name: Some("updated-template".to_string()),
         description: None,
         template: None,
+        kind: None,
+        scope_kind: None,
+        class_id: None,
+        default_query: None,
+        include: None,
+        relation_context: None,
+        default_missing_data_policy: None,
+        default_limits: None,
     };
 
     let body = serde_json::to_value(&patch).expect("patch should serialize");
@@ -2067,7 +2176,15 @@ fn report_template_patch_omits_content_type() {
             "namespace_id": null,
             "name": "updated-template",
             "description": null,
-            "template": null
+            "template": null,
+            "kind": null,
+            "scope_kind": null,
+            "class_id": null,
+            "default_query": null,
+            "include": null,
+            "relation_context": null,
+            "default_missing_data_policy": null,
+            "default_limits": null
         })
     );
 }
@@ -2750,6 +2867,260 @@ fn sync_import_submit_without_idempotency_key_succeeds() {
     assert_eq!(task.id, 13);
 
     import_submit.assert_calls(1);
+}
+
+#[test]
+fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let events = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/events")
+            .query_param("action", "updated")
+            .query_param("actor_kind", "human")
+            .query_param("namespace_id", "7")
+            .query_param("limit", "1")
+            .query_param("sort", "occurred_at.desc")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "events-next")
+            .json_body(json!([audit_event_json(1, "class", "updated")]));
+    });
+
+    let class_history = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/history")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_history_json()]));
+    });
+
+    let class_as_of = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/history/as-of")
+            .query_param("at", "2024-01-01T00:00:00+00:00")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_history_json());
+    });
+
+    let sink_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/event-sinks")
+            .json_body(json!({
+                "name": "audit-webhook",
+                "kind": "webhook",
+                "enabled": true
+            }))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(event_sink_json());
+    });
+
+    let subscription_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/namespaces/7/event-subscriptions")
+            .json_body(json!({
+                "sink_id": 5,
+                "name": "class-updates",
+                "entity_types": ["class"],
+                "actions": ["updated"],
+                "enabled": true
+            }))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(event_subscription_json());
+    });
+
+    let subscription_update = server.mock(|when, then| {
+        when.method(PATCH)
+            .path("/api/v1/namespaces/7/event-subscriptions/8")
+            .json_body(json!({"enabled": false}))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(event_subscription_json());
+    });
+
+    let delivery_retry = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/event-deliveries/99/retry")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"delivery": event_delivery_json("pending")}));
+    });
+
+    let client = sync_client(&server);
+    let event_page = client
+        .events()
+        .action("updated")
+        .actor_kind("human")
+        .namespace_id(7)
+        .limit(1)
+        .sort("occurred_at", SortDirection::Desc)
+        .page()
+        .expect("events page should succeed");
+    assert_eq!(event_page.items[0].entity_type, "class");
+    assert_eq!(event_page.next_cursor.as_deref(), Some("events-next"));
+
+    let history = client
+        .class_history(42)
+        .limit(1)
+        .list()
+        .expect("class history should succeed");
+    assert_eq!(history[0].history.history_id, 9001);
+
+    let at: HubuumDateTime = serde_json::from_str(r#""2024-01-01T00:00:00Z""#).unwrap();
+    let version = client
+        .class_history_as_of(42, at)
+        .expect("class history as-of should succeed");
+    assert_eq!(version.name, "servers");
+
+    let sink = client
+        .event_sinks()
+        .create()
+        .params(NewEventSink {
+            name: "audit-webhook".to_string(),
+            kind: EventSinkKind::Webhook,
+            enabled: Some(true),
+            ..Default::default()
+        })
+        .send()
+        .expect("event sink create should succeed");
+    assert_eq!(sink.id, 5);
+
+    let subscription = client
+        .event_subscriptions(7)
+        .create(NewEventSubscription {
+            sink_id: 5,
+            name: "class-updates".to_string(),
+            entity_types: vec!["class".to_string()],
+            actions: vec!["updated".to_string()],
+            enabled: Some(true),
+            ..Default::default()
+        })
+        .expect("event subscription create should succeed");
+    assert_eq!(subscription.id, 8);
+
+    let updated = client
+        .event_subscriptions(7)
+        .update(
+            8,
+            UpdateEventSubscription {
+                enabled: Some(false),
+                ..Default::default()
+            },
+        )
+        .expect("event subscription update should succeed");
+    assert_eq!(updated.id, 8);
+
+    let delivery = client
+        .event_deliveries()
+        .retry(99)
+        .expect("event delivery retry should succeed");
+    assert_eq!(delivery.id, 99);
+
+    events.assert_calls(1);
+    class_history.assert_calls(1);
+    class_as_of.assert_calls(1);
+    sink_create.assert_calls(1);
+    subscription_create.assert_calls(1);
+    subscription_update.assert_calls(1);
+    delivery_retry.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_scoped_events_and_delivery_health_use_backend_routes() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let object_events = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/9/events")
+            .query_param("occurred_after", "2024-01-01")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([audit_event_json(2, "object", "updated")]));
+    });
+
+    let health = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/event-deliveries/health")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "fanout": {
+                    "pending_events": 0,
+                    "in_flight_events": 0,
+                    "stale_claims": 0,
+                    "worker": {
+                        "workers_configured": 1,
+                        "batch_size": 100,
+                        "poll_interval_ms": 1000,
+                        "lock_timeout_ms": 30000,
+                        "wakeups": {
+                            "notifications_sent": 0,
+                            "notification_wakeups": 0,
+                            "poll_wakeups": 1
+                        }
+                    }
+                },
+                "delivery": {
+                    "counts": {
+                        "total": 0,
+                        "pending": 0,
+                        "in_flight": 0,
+                        "succeeded": 0,
+                        "failed": 0,
+                        "dead": 0,
+                        "retryable": 0
+                    },
+                    "stale_claims": 0,
+                    "worker": {
+                        "workers_configured": 1,
+                        "batch_size": 100,
+                        "poll_interval_ms": 1000,
+                        "lock_timeout_ms": 30000,
+                        "wakeups": {
+                            "notifications_sent": 0,
+                            "notification_wakeups": 0,
+                            "poll_wakeups": 1
+                        }
+                    }
+                },
+                "sinks": [],
+                "subscriptions": []
+            }));
+    });
+
+    let client = async_client(&server).await;
+    let events = client
+        .object_events(42, 9)
+        .occurred_after("2024-01-01")
+        .list()
+        .await
+        .expect("object events should succeed");
+    assert_eq!(events[0].entity_type, "object");
+
+    let health_response = client
+        .event_deliveries()
+        .health()
+        .await
+        .expect("event delivery health should succeed");
+    assert_eq!(health_response.delivery.counts.total, 0);
+
+    object_events.assert_calls(1);
+    health.assert_calls(1);
 }
 
 fn service_account_json(id: i32, name: &str, owner_group_id: i32) -> serde_json::Value {

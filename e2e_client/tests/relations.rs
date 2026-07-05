@@ -54,6 +54,49 @@ fn e2e_class_and_object_relations_roundtrip() {
         class_relation.forward_template_alias.as_deref(),
         Some("targets")
     );
+    let fetched_class_relation = class_a
+        .relation(class_relation.id)
+        .expect("class relation should be fetchable through source class");
+    assert_eq!(fetched_class_relation.id(), class_relation.id);
+
+    let related_classes = class_a
+        .related_classes()
+        .limit(10)
+        .page()
+        .expect("related classes should list");
+    assert!(
+        related_classes
+            .items
+            .iter()
+            .any(|class| class.id == class_b.id)
+    );
+    let related_class_relations = class_a
+        .related_relations()
+        .limit(10)
+        .page()
+        .expect("related class relations should list");
+    assert!(
+        related_class_relations
+            .items
+            .iter()
+            .any(|relation| relation.id == class_relation.id)
+    );
+    let class_graph = class_a
+        .related_graph()
+        .fetch()
+        .expect("related class graph should fetch");
+    assert!(
+        class_graph
+            .classes
+            .iter()
+            .any(|class| class.id == class_b.id)
+    );
+    assert!(
+        class_graph
+            .relations
+            .iter()
+            .any(|relation| relation.id == class_relation.id)
+    );
 
     let object_a = harness
         .client
@@ -64,6 +107,10 @@ fn e2e_class_and_object_relations_roundtrip() {
         .create_relation_to(class_b.id, object_b.id)
         .expect("object relation create should succeed");
     assert_eq!(object_relation.class_relation_id, class_relation.id);
+    let scoped_relation = object_a
+        .relation_to(class_b.id, object_b.id)
+        .expect("scoped object relation should be fetchable");
+    assert_eq!(scoped_relation.id(), object_relation.id);
 
     let related = object_a
         .related_objects()
@@ -82,5 +129,33 @@ fn e2e_class_and_object_relations_roundtrip() {
             .relations
             .iter()
             .any(|relation| relation.id == object_relation.id)
+    );
+
+    let object_relations = object_a
+        .related_relations()
+        .limit(10)
+        .page()
+        .expect("related object relations should list");
+    assert!(
+        object_relations
+            .items
+            .iter()
+            .any(|relation| relation.id == object_relation.id)
+    );
+
+    object_a
+        .delete_relation_to(class_b.id, object_b.id)
+        .expect("scoped object relation should delete");
+    assert!(
+        object_a.relation_to(class_b.id, object_b.id).is_err(),
+        "deleted scoped object relation should not be fetchable"
+    );
+
+    class_a
+        .delete_relation(class_relation.id)
+        .expect("class relation should delete");
+    assert!(
+        class_a.relation(class_relation.id).is_err(),
+        "deleted class relation should not be fetchable"
     );
 }
