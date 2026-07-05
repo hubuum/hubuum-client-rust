@@ -1,6 +1,6 @@
 [package]
 name = "hubuum_client_derive"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2024"
 license = "MIT"
 description = "Procedural macros used by hubuum_client to define Hubuum API resources."

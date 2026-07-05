@@ -6,7 +6,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
-## [0.0.3] - 2026-06-19
+## [0.0.3] - 2026-07-05
 
 ### Breaking
 
@@ -28,6 +28,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   via `create_relation_with_aliases(...)`.
 - Report request `include` and `relation_context` fields, `ReportWarning.path`, and
   `report` / `report_output` task links plus `ReportTaskDetails` on task responses.
+- Typed audit event support for `/api/v1/iam/users/{user_id}/events` and
+  `/api/v1/iam/groups/{group_id}/events` via `user_events(user_id)` and
+  `group_events(group_id)` on both sync and async clients.
+- Global audit event `entity_type` and `entity_id` filters on `EventListRequest`.
 
 ### Changed
 
