@@ -21,8 +21,8 @@ use crate::resources::ApiResource;
 
 pub type UrlParams = Vec<(Cow<'static, str>, Cow<'static, str>)>;
 
-pub trait GetID {
-    fn id(&self) -> i32;
+pub trait GetID: ApiResource {
+    fn id(&self) -> Self::Id;
 }
 
 trait ClientCore {
@@ -63,8 +63,8 @@ pub struct Authenticated {
 mod parity_contract {
     use super::{Authenticated, Unauthenticated, r#async as async_client, sync as sync_client};
     use crate::resources::{
-        Class, ClassRelation, Group, Namespace, Object, ObjectRelation, RemoteTarget,
-        ReportTemplate, ServiceAccount, User,
+        Class, ClassId, ClassRelation, ClassRelationId, Group, Namespace, Object, ObjectId,
+        ObjectRelation, RemoteTarget, ReportTemplate, ServiceAccount, User,
     };
     use crate::types::BaseUrl;
 
@@ -127,8 +127,8 @@ mod parity_contract {
 
     macro_rules! assert_filter_builder_surface {
         ($module:ident) => {
-            let _ = $module::QueryOp::<Class>::filter::<i32>;
-            let _ = $module::QueryOp::<Class>::raw_param::<&str>;
+            let _ = $module::QueryOp::<Class>::filter::<&str, i32>;
+            let _ = $module::QueryOp::<Class>::raw_param::<&str, &str>;
             let _ = $module::QueryOp::<Class>::sort_by::<&str>;
             let _ = $module::QueryOp::<Class>::order_by::<&str>;
             let _ = $module::QueryOp::<Class>::sort::<&str>;
@@ -149,9 +149,9 @@ mod parity_contract {
         ($module:ident) => {
             let _ = $module::Resource::<Class>::query;
             let _ = $module::Resource::<Class>::create;
-            let _ = $module::Resource::<Class>::update;
-            let _ = $module::Resource::<Class>::delete;
-            let _ = $module::Resource::<Class>::get;
+            let _ = $module::Resource::<Class>::update::<ClassId>;
+            let _ = $module::Resource::<Class>::delete::<ClassId>;
+            let _ = $module::Resource::<Class>::get::<ClassId>;
             let _ = $module::Resource::<Class>::get_by_name;
         };
     }
@@ -176,16 +176,16 @@ mod parity_contract {
             let _ = $module::Handle::<Class>::related_classes;
             let _ = $module::Handle::<Class>::related_relations;
             let _ = $module::Handle::<Class>::related_graph;
-            let _ = $module::Handle::<Class>::relation;
-            let _ = $module::Handle::<Class>::create_relation;
-            let _ = $module::Handle::<Class>::delete_relation;
+            let _ = $module::Handle::<Class>::relation::<ClassRelationId>;
+            let _ = $module::Handle::<Class>::create_relation::<ClassId>;
+            let _ = $module::Handle::<Class>::delete_relation::<ClassRelationId>;
 
             let _ = $module::Handle::<Object>::related_objects;
             let _ = $module::Handle::<Object>::related_relations;
             let _ = $module::Handle::<Object>::related_graph;
-            let _ = $module::Handle::<Object>::relation_to;
-            let _ = $module::Handle::<Object>::create_relation_to;
-            let _ = $module::Handle::<Object>::delete_relation_to;
+            let _ = $module::Handle::<Object>::relation_to::<ClassId, ObjectId>;
+            let _ = $module::Handle::<Object>::create_relation_to::<ClassId, ObjectId>;
+            let _ = $module::Handle::<Object>::delete_relation_to::<ClassId, ObjectId>;
 
             let _ = $module::Handle::<User>::groups;
             let _ = $module::Handle::<User>::groups_request;

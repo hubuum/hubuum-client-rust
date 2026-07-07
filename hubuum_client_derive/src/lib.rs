@@ -41,6 +41,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         panic!("ApiResource only supports structs with names ending in 'Resource'");
     }
     let name = format_ident!("{}", base_name.trim_end_matches("Resource"));
+    let id_name = format_ident!("{}Id", name);
     let plural_name = format_ident!("{}", pluralize(&name));
 
     let name_field = match base_name.trim_end_matches("Resource") {
@@ -56,7 +57,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         _ => panic!("ApiResource only supports structs"),
     };
 
-    let (main_fields, get_fields, post_fields, patch_fields) = process_fields(fields);
+    let (main_fields, get_fields, post_fields, patch_fields) = process_fields(fields, &id_name);
 
     let mut get_param_filters = proc_macro2::TokenStream::new();
     let mut create_sync_methods = proc_macro2::TokenStream::new();
@@ -65,6 +66,8 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let mut update_async_methods = proc_macro2::TokenStream::new();
     let mut query_sync_methods = proc_macro2::TokenStream::new();
     let mut query_async_methods = proc_macro2::TokenStream::new();
+    let mut resource_sync_query_methods = proc_macro2::TokenStream::new();
+    let mut resource_async_query_methods = proc_macro2::TokenStream::new();
 
     for field in fields {
         let field_ident = field
@@ -104,6 +107,16 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
                 }
             });
             query_async_methods.extend(quote! {
+                pub fn #post_patch_field_ident(self) -> #field_wrapper {
+                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
+                }
+            });
+            resource_sync_query_methods.extend(quote! {
+                pub fn #post_patch_field_ident(self) -> #field_wrapper {
+                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
+                }
+            });
+            resource_async_query_methods.extend(quote! {
                 pub fn #post_patch_field_ident(self) -> #field_wrapper {
                     <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
                 }
@@ -200,13 +213,75 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     };
 
     let expanded = quote! {
+        #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
+        #[serde(transparent)]
+        pub struct #id_name(i32);
+
+        impl #id_name {
+            pub fn new(value: i32) -> Self {
+                Self(value)
+            }
+
+            pub fn get(self) -> i32 {
+                self.0
+            }
+        }
+
+        impl std::fmt::Display for #id_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+
+        impl std::str::FromStr for #id_name {
+            type Err = <i32 as std::str::FromStr>::Err;
+
+            fn from_str(value: &str) -> Result<Self, Self::Err> {
+                value.parse::<i32>().map(Self)
+            }
+        }
+
+        impl From<i32> for #id_name {
+            fn from(value: i32) -> Self {
+                Self(value)
+            }
+        }
+
+        impl From<#id_name> for i32 {
+            fn from(value: #id_name) -> Self {
+                value.0
+            }
+        }
+
+        impl PartialEq<i32> for #id_name {
+            fn eq(&self, other: &i32) -> bool {
+                self.0 == *other
+            }
+        }
+
+        impl PartialEq<#id_name> for i32 {
+            fn eq(&self, other: &#id_name) -> bool {
+                *self == other.0
+            }
+        }
+
+        impl crate::resources::ResourceId for #id_name {
+            fn new(value: i32) -> Self {
+                Self(value)
+            }
+
+            fn get(self) -> i32 {
+                self.0
+            }
+        }
+
         #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
         pub struct #name {
             #main_fields
         }
 
         impl crate::client::GetID for #name {
-            fn id(&self) -> i32 {
+            fn id(&self) -> Self::Id {
                 self.id
             }
         }
@@ -229,6 +304,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         #display_impl
 
         impl crate::resources::ApiResource for #name {
+            type Id = #id_name;
             type GetParams = #get_name;
             type GetOutput = #name;
             type PostParams = #post_name;
@@ -294,6 +370,16 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         #[cfg(feature = "async")]
         impl crate::client::r#async::QueryOp<#name> {
             #query_async_methods
+        }
+
+        #[cfg(feature = "blocking")]
+        impl crate::client::sync::Resource<#name> {
+            #resource_sync_query_methods
+        }
+
+        #[cfg(feature = "async")]
+        impl crate::client::r#async::Resource<#name> {
+            #resource_async_query_methods
         }
     };
 
@@ -457,6 +543,7 @@ fn fluent_arg_and_assign(
 
 fn process_fields(
     fields: &Punctuated<syn::Field, syn::Token![,]>,
+    id_name: &syn::Ident,
 ) -> (
     proc_macro2::TokenStream,
     proc_macro2::TokenStream,
@@ -487,7 +574,9 @@ fn process_fields(
         let id_field_ident = syn::Ident::new(&id_field_name, proc_macro2::Span::call_site());
 
         if !is_post_only {
-            let main_field_ty = if is_optional {
+            let main_field_ty = if fieldname == "id" {
+                quote!(#id_name)
+            } else if is_optional {
                 quote!(Option<#ty>)
             } else {
                 quote!(#ty)

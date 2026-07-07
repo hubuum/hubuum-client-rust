@@ -33,8 +33,14 @@ pub enum ApiError {
     #[error("Missing location header for: {0}")]
     MissingLocationHeader(String),
 
-    #[error("HTTP error {status}: {message}")]
-    HttpWithBody { status: StatusCode, message: String },
+    #[error("HTTP {method} {url} failed with {status}: {message}")]
+    HttpWithBody {
+        method: reqwest::Method,
+        url: String,
+        status: StatusCode,
+        message: String,
+        body: String,
+    },
 
     #[error("Deserialization error: {0}")]
     DeserializationError(String),
@@ -50,6 +56,9 @@ pub enum ApiError {
 
     #[error("Missing URL identifier")]
     MissingUrlIdentifier,
+
+    #[error("Missing URL parameter: {0}")]
+    MissingUrlParameter(String),
 
     #[error("Unknown permission `{0}`")]
     UnknownPermission(#[from] strum::ParseError),

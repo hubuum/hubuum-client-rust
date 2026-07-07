@@ -113,7 +113,6 @@ The client’s API is designed with a fluent query interface. For example, to se
 let name = "example-class";
 let class = client
     .classes()
-    .query()
     .name()
     .eq(name)
     .one()?;
@@ -131,7 +130,6 @@ Typed query fields expose only operators that make sense for that field shape:
 ```rust
 let classes = client
     .classes()
-    .query()
     .name()
     .contains("server")
     .created_at()
@@ -146,7 +144,6 @@ condition and returns the query builder:
 ```rust
 let classes = client
     .classes()
-    .query()
     .name()
     .icontains("server")
     .created_at()
@@ -156,10 +153,10 @@ let classes = client
     .list()?;
 ```
 
-Use `query().list()` for an unfiltered collection request:
+Use `list()` for an unfiltered collection request:
 
 ```rust
-let classes = client.classes().query().list()?;
+let classes = client.classes().list()?;
 ```
 
 Existing `QueryFilter` values can be passed as a batch:
@@ -167,7 +164,6 @@ Existing `QueryFilter` values can be passed as a batch:
 ```rust
 let classes = client
     .classes()
-    .query()
     .filters(vec![name_filter, namespace_filter])
     .list()?;
 ```
@@ -178,7 +174,6 @@ field that is not modeled yet:
 ```rust
 let classes = client
     .classes()
-    .query()
     .name()
     .contains("server")
     .filter(
@@ -194,7 +189,6 @@ Async clients use the same query builder and only await the terminal call:
 ```rust
 let classes = client
     .classes()
-    .query()
     .name()
     .contains("server")
     .created_at()
@@ -210,7 +204,6 @@ Or, to find a relation between classes:
 ```rust
 let relation = client
         .class_relation()
-        .query()
         .from_hubuum_class_id()
         .eq(1)
         .to_hubuum_class_id()
@@ -240,7 +233,7 @@ let graph = object
         hubuum_client::FilterOperator::Equals { is_negated: false },
         2,
     )
-    .fetch()?;
+    .send()?;
 ```
 
 ### Asynchronous Client
@@ -387,7 +380,7 @@ let search = client
     ])
     .limit_per_kind(5)
     .search_object_data(true)
-    .execute()?;
+    .send()?;
 
 for object in search.results.objects {
     println!("{}", object.name);

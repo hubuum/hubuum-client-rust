@@ -1,14 +1,73 @@
 use crate::{
     endpoints::Endpoint,
+    resources::ResourceId,
     types::{
         EventSink, EventSinkGet, EventSinkKind, FilterOperator, NewEventSink, QueryFilter,
         UpdateEventSink,
     },
 };
 
+#[derive(
+    Default, Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq, Hash,
+)]
+#[serde(transparent)]
+pub struct EventSinkId(i32);
+
+impl EventSinkId {
+    pub fn new(value: i32) -> Self {
+        Self(value)
+    }
+
+    pub fn get(self) -> i32 {
+        self.0
+    }
+}
+
+impl std::fmt::Display for EventSinkId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::str::FromStr for EventSinkId {
+    type Err = <i32 as std::str::FromStr>::Err;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        value.parse::<i32>().map(Self)
+    }
+}
+
+impl From<i32> for EventSinkId {
+    fn from(value: i32) -> Self {
+        Self(value)
+    }
+}
+
+impl PartialEq<i32> for EventSinkId {
+    fn eq(&self, other: &i32) -> bool {
+        self.0 == *other
+    }
+}
+
+impl PartialEq<EventSinkId> for i32 {
+    fn eq(&self, other: &EventSinkId) -> bool {
+        *self == other.0
+    }
+}
+
+impl ResourceId for EventSinkId {
+    fn new(value: i32) -> Self {
+        Self(value)
+    }
+
+    fn get(self) -> i32 {
+        self.0
+    }
+}
+
 impl crate::client::GetID for EventSink {
-    fn id(&self) -> i32 {
-        self.id
+    fn id(&self) -> Self::Id {
+        EventSinkId::new(self.id)
     }
 }
 
@@ -19,6 +78,7 @@ impl std::fmt::Display for EventSink {
 }
 
 impl crate::resources::ApiResource for EventSink {
+    type Id = EventSinkId;
     type GetParams = EventSinkGet;
     type GetOutput = EventSink;
     type PostParams = NewEventSink;

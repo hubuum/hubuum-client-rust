@@ -13,22 +13,24 @@ mod service_account;
 pub(crate) mod user;
 
 pub use self::class::{
-    Class, ClassGet, ClassPatch, ClassPost, ClassRelation, ClassRelationGet, ClassRelationPatch,
-    ClassRelationPost, ClassWithPath, RelatedClassGraph,
+    Class, ClassGet, ClassId, ClassPatch, ClassPost, ClassRelation, ClassRelationGet,
+    ClassRelationId, ClassRelationPatch, ClassRelationPost, ClassWithPath, RelatedClassGraph,
 };
-pub use self::group::{Group, GroupGet, GroupPatch, GroupPost};
-pub use self::namespace::{Namespace, NamespaceGet, NamespacePatch, NamespacePost};
+pub use self::event_sink::EventSinkId;
+pub use self::group::{Group, GroupGet, GroupId, GroupPatch, GroupPost};
+pub use self::namespace::{Namespace, NamespaceGet, NamespaceId, NamespacePatch, NamespacePost};
 pub use self::object::{
-    Object, ObjectGet, ObjectPatch, ObjectPost, ObjectRelation, ObjectRelationGet,
-    ObjectRelationPatch, ObjectRelationPost, ObjectWithPath, RelatedObjectGraph,
+    Object, ObjectGet, ObjectId, ObjectPatch, ObjectPost, ObjectRelation, ObjectRelationGet,
+    ObjectRelationId, ObjectRelationPatch, ObjectRelationPost, ObjectWithPath, RelatedObjectGraph,
 };
+pub use self::remote_target::RemoteTargetId;
 pub use self::report_template::{
-    ReportTemplate, ReportTemplateGet, ReportTemplatePatch, ReportTemplatePost,
+    ReportTemplate, ReportTemplateGet, ReportTemplateId, ReportTemplatePatch, ReportTemplatePost,
 };
 pub use self::service_account::{
-    ServiceAccount, ServiceAccountGet, ServiceAccountPatch, ServiceAccountPost,
+    ServiceAccount, ServiceAccountGet, ServiceAccountId, ServiceAccountPatch, ServiceAccountPost,
 };
-pub use self::user::{User, UserGet, UserPatch, UserPost};
+pub use self::user::{User, UserGet, UserId, UserPatch, UserPost};
 pub use crate::types::{
     EventSink, FilterOperator, HubuumDateTime, NewEventSink, NewRemoteTarget, QueryFilter,
     RemoteAuthConfig, RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject, RemoteTarget,
@@ -39,7 +41,15 @@ pub use crate::types::{
 use crate::endpoints::Endpoint;
 
 // ApiResource trait
+pub trait ResourceId:
+    Copy + Clone + Debug + Default + PartialEq + Eq + std::fmt::Display + std::str::FromStr
+{
+    fn new(value: i32) -> Self;
+    fn get(self) -> i32;
+}
+
 pub trait ApiResource: Default {
+    type Id: ResourceId;
     type GetParams: Serialize + Debug + Default;
     type GetOutput: DeserializeOwned + Debug;
     type PostParams: Serialize + Debug + Default;

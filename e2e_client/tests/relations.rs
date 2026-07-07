@@ -32,7 +32,7 @@ fn e2e_class_and_object_relations_roundtrip() {
         .create_raw(ObjectPost {
             name: format!("{prefix}-object-b"),
             namespace_id,
-            hubuum_class_id: class_b.id,
+            hubuum_class_id: class_b.id.into(),
             description: "relation target object".to_string(),
             data: Some(json!({ "role": "target" })),
         })

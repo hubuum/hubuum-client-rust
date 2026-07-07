@@ -147,7 +147,7 @@ fn e2e_report_template_update_report_get_and_delete() {
         limits: None,
         missing_data_policy: None,
         output: Some(ReportOutputRequest {
-            template_id: Some(template.id),
+            template_id: Some(template.id.into()),
         }),
         query: None,
         scope: ReportScope {

@@ -108,11 +108,17 @@ impl SyncHandle<Object> {
         )
     }
 
-    pub fn relation_to(
+    pub fn relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<SyncHandle<ObjectRelation>, ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<SyncHandle<ObjectRelation>, ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         let relation = self
             .client()
             .request_with_endpoint::<SyncEmptyPostParams, ObjectRelation>(
@@ -143,11 +149,17 @@ impl SyncHandle<Object> {
         Ok(SyncHandle::new(self.client().clone(), relation))
     }
 
-    pub fn create_relation_to(
+    pub fn create_relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<ObjectRelation, ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<ObjectRelation, ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, ObjectRelation>(
                 reqwest::Method::POST,
@@ -175,7 +187,13 @@ impl SyncHandle<Object> {
             ))
     }
 
-    pub fn delete_relation_to(&self, to_class_id: i32, to_object_id: i32) -> Result<(), ApiError> {
+    pub fn delete_relation_to<C, O>(&self, to_class_id: C, to_object_id: O) -> Result<(), ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,
@@ -288,11 +306,17 @@ impl AsyncHandle<Object> {
         )
     }
 
-    pub async fn relation_to(
+    pub async fn relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<AsyncHandle<ObjectRelation>, ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<AsyncHandle<ObjectRelation>, ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         let relation = self
             .client()
             .request_with_endpoint::<AsyncEmptyPostParams, ObjectRelation>(
@@ -324,11 +348,17 @@ impl AsyncHandle<Object> {
         Ok(AsyncHandle::new(self.client().clone(), relation))
     }
 
-    pub async fn create_relation_to(
+    pub async fn create_relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<ObjectRelation, ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<ObjectRelation, ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, ObjectRelation>(
                 reqwest::Method::POST,
@@ -357,11 +387,17 @@ impl AsyncHandle<Object> {
             ))
     }
 
-    pub async fn delete_relation_to(
+    pub async fn delete_relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<(), ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<(), ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,

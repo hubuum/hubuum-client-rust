@@ -177,7 +177,10 @@ impl SyncHandle<Class> {
         )
     }
 
-    pub fn relation(&self, relation_id: i32) -> Result<SyncHandle<ClassRelation>, ApiError> {
+    pub fn relation<I: ToString>(
+        &self,
+        relation_id: I,
+    ) -> Result<SyncHandle<ClassRelation>, ApiError> {
         let relation = self
             .client()
             .request_with_endpoint::<SyncEmptyPostParams, ClassRelation>(
@@ -194,16 +197,22 @@ impl SyncHandle<Class> {
         Ok(SyncHandle::new(self.client().clone(), relation))
     }
 
-    pub fn create_relation(&self, to_class_id: i32) -> Result<ClassRelation, ApiError> {
+    pub fn create_relation<I: Into<ClassId>>(
+        &self,
+        to_class_id: I,
+    ) -> Result<ClassRelation, ApiError> {
         self.create_relation_with_aliases(to_class_id, None, None)
     }
 
-    pub fn create_relation_with_aliases(
+    pub fn create_relation_with_aliases<I>(
         &self,
-        to_class_id: i32,
+        to_class_id: I,
         forward_template_alias: Option<String>,
         reverse_template_alias: Option<String>,
-    ) -> Result<ClassRelation, ApiError> {
+    ) -> Result<ClassRelation, ApiError>
+    where
+        I: Into<ClassId>,
+    {
         self.client()
             .request_with_endpoint::<NewClassRelationFromClassParams, ClassRelation>(
                 reqwest::Method::POST,
@@ -211,7 +220,7 @@ impl SyncHandle<Class> {
                 vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
                 vec![],
                 NewClassRelationFromClassParams {
-                    to_hubuum_class_id: to_class_id,
+                    to_hubuum_class_id: to_class_id.into().into(),
                     forward_template_alias,
                     reverse_template_alias,
                 },
@@ -221,7 +230,7 @@ impl SyncHandle<Class> {
             ))
     }
 
-    pub fn delete_relation(&self, relation_id: i32) -> Result<(), ApiError> {
+    pub fn delete_relation<I: ToString>(&self, relation_id: I) -> Result<(), ApiError> {
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,
@@ -315,7 +324,10 @@ impl AsyncHandle<Class> {
         )
     }
 
-    pub async fn relation(&self, relation_id: i32) -> Result<AsyncHandle<ClassRelation>, ApiError> {
+    pub async fn relation<I: ToString>(
+        &self,
+        relation_id: I,
+    ) -> Result<AsyncHandle<ClassRelation>, ApiError> {
         let relation = self
             .client()
             .request_with_endpoint::<AsyncEmptyPostParams, ClassRelation>(
@@ -333,17 +345,23 @@ impl AsyncHandle<Class> {
         Ok(AsyncHandle::new(self.client().clone(), relation))
     }
 
-    pub async fn create_relation(&self, to_class_id: i32) -> Result<ClassRelation, ApiError> {
+    pub async fn create_relation<I: Into<ClassId>>(
+        &self,
+        to_class_id: I,
+    ) -> Result<ClassRelation, ApiError> {
         self.create_relation_with_aliases(to_class_id, None, None)
             .await
     }
 
-    pub async fn create_relation_with_aliases(
+    pub async fn create_relation_with_aliases<I>(
         &self,
-        to_class_id: i32,
+        to_class_id: I,
         forward_template_alias: Option<String>,
         reverse_template_alias: Option<String>,
-    ) -> Result<ClassRelation, ApiError> {
+    ) -> Result<ClassRelation, ApiError>
+    where
+        I: Into<ClassId>,
+    {
         self.client()
             .request_with_endpoint::<NewClassRelationFromClassParams, ClassRelation>(
                 reqwest::Method::POST,
@@ -351,7 +369,7 @@ impl AsyncHandle<Class> {
                 vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
                 vec![],
                 NewClassRelationFromClassParams {
-                    to_hubuum_class_id: to_class_id,
+                    to_hubuum_class_id: to_class_id.into().into(),
                     forward_template_alias,
                     reverse_template_alias,
                 },
@@ -362,7 +380,7 @@ impl AsyncHandle<Class> {
             ))
     }
 
-    pub async fn delete_relation(&self, relation_id: i32) -> Result<(), ApiError> {
+    pub async fn delete_relation<I: ToString>(&self, relation_id: I) -> Result<(), ApiError> {
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,

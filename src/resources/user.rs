@@ -80,17 +80,17 @@ impl SyncHandle<User> {
     }
 
     pub fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_sync(self.client(), self.id())
+        principal_tokens_sync(self.client(), self.id().into())
     }
 
     /// Mint a new token for this user. Returns the raw token, shown only once.
     pub fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_sync(self.client(), self.id(), request)
+        principal_token_create_sync(self.client(), self.id().into(), request)
     }
 
     /// Revoke (soft-delete) one of this user's tokens.
     pub fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_sync(self.client(), self.id(), token_id)
+        principal_token_revoke_sync(self.client(), self.id().into(), token_id)
     }
 
     /// Set a new plaintext password for this user.
@@ -164,17 +164,17 @@ impl AsyncHandle<User> {
     }
 
     pub async fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_async(self.client(), self.id()).await
+        principal_tokens_async(self.client(), self.id().into()).await
     }
 
     /// Mint a new token for this user. Returns the raw token, shown only once.
     pub async fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_async(self.client(), self.id(), request).await
+        principal_token_create_async(self.client(), self.id().into(), request).await
     }
 
     /// Revoke (soft-delete) one of this user's tokens.
     pub async fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_async(self.client(), self.id(), token_id).await
+        principal_token_revoke_async(self.client(), self.id().into(), token_id).await
     }
 
     /// Set a new plaintext password for this user.

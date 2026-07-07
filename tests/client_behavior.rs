@@ -498,7 +498,9 @@ fn sync_returns_http_error_with_message_from_json_body() {
         .list()
         .expect_err("request should fail");
     match err {
-        ApiError::HttpWithBody { status, message } => {
+        ApiError::HttpWithBody {
+            status, message, ..
+        } => {
             assert_eq!(status, reqwest::StatusCode::BAD_REQUEST);
             assert_eq!(message, "bad request from server");
         }
@@ -525,7 +527,9 @@ async fn async_returns_http_error_with_message_from_json_body() {
         .await
         .expect_err("request should fail");
     match err {
-        ApiError::HttpWithBody { status, message } => {
+        ApiError::HttpWithBody {
+            status, message, ..
+        } => {
             assert_eq!(status, reqwest::StatusCode::BAD_REQUEST);
             assert_eq!(message, "bad request from server");
         }
@@ -652,6 +656,53 @@ async fn async_get_by_name_applies_name_filter() {
     assert_eq!(class.resource().name, class_name);
 }
 
+#[test]
+fn sync_object_get_by_name_preserves_class_scope() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let object_name = "object-name-1";
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/")
+            .query_param("name__equals", object_name)
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_json(99, 42, object_name)]));
+    });
+    let client = sync_client(&server);
+
+    let object = client
+        .objects(42)
+        .get_by_name(object_name)
+        .expect("scoped object lookup should succeed");
+    assert_eq!(object.resource().name, object_name);
+}
+
+#[tokio::test]
+async fn async_object_get_by_name_preserves_class_scope() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let object_name = "object-name-async";
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/")
+            .query_param("name__equals", object_name)
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_json(100, 42, object_name)]));
+    });
+    let client = async_client(&server).await;
+
+    let object = client
+        .objects(42)
+        .get_by_name(object_name)
+        .await
+        .expect("scoped object lookup should succeed");
+    assert_eq!(object.resource().name, object_name);
+}
+
 #[tokio::test]
 async fn async_new_resource_get_alias_fetches_by_id() {
     let server = MockServer::start();
@@ -767,34 +818,92 @@ fn sync_class_query_builder_supports_eq_contains_and_get_params() {
     let client = sync_client(&server);
     let class_by_eq = client
         .classes()
-        .query()
         .name()
         .eq(by_eq)
         .one()
-        .expect("query().name().eq().one() should succeed");
+        .expect("classes().name().eq().one() should succeed");
     assert_eq!(class_by_eq.name, by_eq);
 
     let class_by_eq_contains = client
         .classes()
-        .query()
         .name()
         .eq(by_eq_contains)
         .description()
         .contains("Clas")
         .one()
-        .expect("query().name().eq().description().contains().one() should succeed");
+        .expect("classes().name().eq().description().contains().one() should succeed");
     assert_eq!(class_by_eq_contains.name, by_eq_contains);
 
     let class_by_params = client
         .classes()
-        .query()
         .params(ClassGet {
             name: Some(by_params.to_string()),
             ..Default::default()
         })
         .one()
-        .expect("query().params().one() should succeed");
+        .expect("classes().params().one() should succeed");
     assert_eq!(class_by_params.name, by_params);
+}
+
+#[test]
+fn sync_resource_all_auto_paginates_and_page_iterates() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("limit", "1")
+            .query_param("cursor", "start-page")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "next-page")
+            .json_body(json!([class_json("first")]));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("limit", "1")
+            .query_param("cursor", "next-page")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("second")]));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("name__equals", "iterated")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("iterated")]));
+    });
+
+    let client = sync_client(&server);
+    let classes = client
+        .classes()
+        .limit(1)
+        .cursor("start-page")
+        .all()
+        .expect("classes().all() should fetch every page");
+    assert_eq!(
+        classes
+            .iter()
+            .map(|class| class.name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["first", "second"]
+    );
+
+    let page = client
+        .classes()
+        .name()
+        .eq("iterated")
+        .page()
+        .expect("classes().page() should succeed");
+    let iterated = page.into_iter().map(|class| class.name).collect::<Vec<_>>();
+    assert_eq!(iterated, vec!["iterated"]);
 }
 
 #[test]
@@ -818,7 +927,6 @@ fn sync_class_query_builder_supports_typed_field_operators() {
     let client = sync_client(&server);
     let class = client
         .classes()
-        .query()
         .name()
         .contains("server")
         .created_at()
@@ -849,14 +957,13 @@ async fn async_class_query_builder_supports_contains() {
     let client = async_client(&server).await;
     let class_by_eq_contains = client
         .classes()
-        .query()
         .name()
         .eq(by_eq_contains)
         .description()
         .contains("Clas")
         .one()
         .await
-        .expect("async query().name().eq().description().contains().one() should succeed");
+        .expect("async classes().name().eq().description().contains().one() should succeed");
     assert_eq!(class_by_eq_contains.name, by_eq_contains);
 }
 
@@ -921,6 +1028,36 @@ fn sync_class_query_builder_supports_sort_and_limit() {
         .one()
         .expect("query with sort+limit should succeed");
     assert_eq!(one.name, "sort-limit-a");
+}
+
+#[test]
+fn sync_query_builder_accepts_owned_dynamic_keys() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("namespace_id__equals", "7")
+            .query_param("include_archived", "false")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("dynamic-key-class")]));
+    });
+
+    let field = String::from("namespace_id");
+    let raw_key = String::from("include_archived");
+    let client = sync_client(&server);
+    let one = client
+        .classes()
+        .query()
+        .filter(field, FilterOperator::Equals { is_negated: false }, 7)
+        .raw_param(raw_key, false)
+        .one()
+        .expect("owned dynamic query keys should be accepted");
+
+    assert_eq!(one.name, "dynamic-key-class");
 }
 
 #[tokio::test]
@@ -2637,7 +2774,7 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
     let class_graph = class
         .related_graph()
         .filter("path", FilterOperator::Contains { is_negated: false }, "42")
-        .fetch()
+        .send()
         .expect("class related graph should succeed");
     assert_eq!(class_graph.classes.len(), 1);
     assert_eq!(class_graph.relations.len(), 1);
@@ -2686,7 +2823,7 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
         .related_graph()
         .filter("depth", FilterOperator::Lte { is_negated: false }, 2)
         .ignore_self_class(false)
-        .fetch()
+        .send()
         .expect("related graph should succeed");
     assert_eq!(graph.objects.len(), 1);
     assert_eq!(graph.relations.len(), 1);
@@ -2782,7 +2919,7 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
         .cursor_objects("obj-cursor")
         .search_class_schema(true)
         .search_object_data(false)
-        .execute()
+        .send()
         .expect("unified search should succeed");
     assert_eq!(response.results.namespaces[0].name, "infra");
     assert_eq!(response.next.objects.as_deref(), Some("obj-cursor"));
@@ -2837,7 +2974,7 @@ async fn async_unified_search_supports_grouped_results_and_stream_events() {
     let response = client
         .search("server")
         .kinds([UnifiedSearchKind::Class])
-        .execute()
+        .send()
         .await
         .expect("async unified search should succeed");
     assert_eq!(response.results.classes[0].name, "servers");

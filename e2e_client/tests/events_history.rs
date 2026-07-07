@@ -433,7 +433,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         template_events
             .iter()
-            .any(|event| event.entity_id == Some(template.id))
+            .any(|event| event.entity_id == Some(template.id.into()))
     );
 
     let user_events = harness

@@ -71,7 +71,7 @@ impl E2EHarness {
 
         let class = self.client.classes().create_raw(ClassPost {
             name: format!("{prefix}-class"),
-            namespace_id: namespace.id,
+            namespace_id: namespace.id.into(),
             description: "e2e class".to_string(),
             json_schema: None,
             validate_schema: None,
@@ -79,13 +79,13 @@ impl E2EHarness {
 
         let object = self.client.objects(class.id).create_raw(ObjectPost {
             name: format!("{prefix}-object"),
-            namespace_id: namespace.id,
-            hubuum_class_id: class.id,
+            namespace_id: namespace.id.into(),
+            hubuum_class_id: class.id.into(),
             description: "e2e object".to_string(),
             data: Some(serde_json::json!({ "source": "e2e-client" })),
         })?;
 
-        Ok((namespace.id, class.id, object.id))
+        Ok((namespace.id.into(), class.id.into(), object.id.into()))
     }
 
     pub fn create_user(&self, case: &str) -> Result<E2EUser, ApiError> {
@@ -100,7 +100,7 @@ impl E2EHarness {
         })?;
 
         Ok(E2EUser {
-            id: user.id,
+            id: user.id.into(),
             username,
             password,
         })
@@ -114,7 +114,7 @@ impl E2EHarness {
             description: "e2e group".to_string(),
         })?;
 
-        Ok((groupname, group.id))
+        Ok((groupname, group.id.into()))
     }
 }
 
@@ -136,5 +136,5 @@ pub fn admin_context(client: &blocking::Client<Authenticated>) -> Result<(i32, i
         Err(err) => return Err(err),
     };
 
-    Ok((admin_id, admin_group_id))
+    Ok((admin_id.into(), admin_group_id.into()))
 }

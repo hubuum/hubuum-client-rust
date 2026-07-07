@@ -10,6 +10,7 @@ use serde_json::Value;
 use std::any::type_name;
 use std::borrow::Cow;
 use std::marker::PhantomData;
+use std::ops::Deref;
 
 use super::{GetID, UrlParams};
 use crate::QueryFilter;
@@ -48,6 +49,24 @@ pub struct Page<T> {
     pub next_cursor: Option<String>,
 }
 
+impl<T> IntoIterator for Page<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items.into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Page<T> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items.iter()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct RawResponse {
     pub status: StatusCode,
@@ -75,6 +94,8 @@ pub(crate) fn build_request_url(
     url_params: &UrlParams,
     query_params: Vec<QueryFilter>,
 ) -> Result<String, ApiError> {
+    ensure_no_unresolved_url_params(&url)?;
+
     if *method == reqwest::Method::GET {
         let query = query_params.into_query_string()?;
         if query.is_empty() {
@@ -95,6 +116,19 @@ pub(crate) fn build_request_url(
     } else {
         Err(ApiError::UnsupportedHttpOperation(method.to_string()))
     }
+}
+
+fn ensure_no_unresolved_url_params(url: &str) -> Result<(), ApiError> {
+    if let Some(start) = url.find('{')
+        && let Some(end_offset) = url[start + 1..].find('}')
+    {
+        let end = start + 1 + end_offset;
+        return Err(ApiError::MissingUrlParameter(
+            url[start + 1..end].to_string(),
+        ));
+    }
+
+    Ok(())
 }
 
 fn append_identifier(url: String, id: &str) -> String {
@@ -200,9 +234,14 @@ pub(crate) fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
 }
 
 pub trait QueryFilterTarget: Sized {
-    fn push_filter<V: ToString>(self, field: &'static str, op: FilterOperator, value: V) -> Self;
+    fn push_filter<K: Into<String>, V: ToString>(
+        self,
+        field: K,
+        op: FilterOperator,
+        value: V,
+    ) -> Self;
 
-    fn push_raw_param<V: ToString>(self, key: &'static str, value: V) -> Self;
+    fn push_raw_param<K: Into<String>, V: ToString>(self, key: K, value: V) -> Self;
 }
 
 #[derive(Debug, Clone)]
@@ -591,7 +630,11 @@ where
         &self.resource
     }
 
-    pub fn id(&self) -> i32 {
+    pub fn into_inner(self) -> T {
+        self.resource
+    }
+
+    pub fn id(&self) -> T::Id {
         self.resource.id()
     }
 
@@ -600,12 +643,27 @@ where
     }
 }
 
-pub(crate) fn select_id_lookup_params(id: i32) -> (UrlParams, Vec<QueryFilter>) {
+impl<C, T> Deref for Handle<C, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.resource
+    }
+}
+
+impl<C, T> AsRef<T> for Handle<C, T> {
+    fn as_ref(&self) -> &T {
+        &self.resource
+    }
+}
+
+pub(crate) fn select_id_lookup_params(id: impl ToString) -> (UrlParams, Vec<QueryFilter>) {
+    let id = id.to_string();
     (
-        vec![(Cow::Borrowed("id"), id.to_string().into())],
+        vec![(Cow::Borrowed("id"), id.clone().into())],
         vec![QueryFilter {
             key: "id".to_string(),
-            value: id.to_string(),
+            value: id,
             operator: FilterOperator::Equals { is_negated: false },
         }],
     )
@@ -671,6 +729,19 @@ mod test {
             url,
             "https://api.example.com/api/v1/classes?name__equals=alpha"
         );
+    }
+
+    #[test]
+    fn build_request_url_rejects_unresolved_placeholders() {
+        let err = build_request_url(
+            &reqwest::Method::GET,
+            "https://api.example.com/api/v1/classes/{class_id}/".to_string(),
+            &vec![],
+            vec![],
+        )
+        .expect_err("unresolved placeholder should fail before request");
+
+        assert!(matches!(err, ApiError::MissingUrlParameter(param) if param == "class_id"));
     }
 
     #[test]

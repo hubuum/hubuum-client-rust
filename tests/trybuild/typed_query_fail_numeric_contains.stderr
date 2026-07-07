@@ -1,0 +1,5 @@
+error[E0599]: no method named `contains` found for struct `QueryNumericField<Q, V>` in the current scope
+ --> tests/trybuild/typed_query_fail_numeric_contains.rs:6:45
+  |
+6 |     let _ = client.classes().namespace_id().contains("7");
+  |                                             ^^^^^^^^ method not found in `QueryNumericField<hubuum_client::blocking::Resource<hubuum_client::Class>, i32>`
