@@ -103,7 +103,13 @@ let result = client
     .send()?;
 ```
 
-The fluent API works across create/update/query flows. If needed, you can still pass raw structs through `create_raw`, `update_raw`, and `query().params(...)`.
+The fluent API works across create, update, and query flows. If needed, you can still pass raw structs through `create_raw`, `update_raw`, and `params(...)`.
+
+Resource identity is typed. Handles and resources expose IDs such as `ClassId`,
+`ObjectId`, and `GroupId`, so accidentally passing a group ID to
+`classes().get(...)` is rejected at compile time. Integer literals and raw `i32`
+values still work at API boundaries through explicit conversion into the
+expected ID type.
 
 #### Searching Resources
 
@@ -157,6 +163,22 @@ Use `list()` for an unfiltered collection request:
 
 ```rust
 let classes = client.classes().list()?;
+```
+
+Use `all()` when you want the client to follow cursor pagination and collect all
+items:
+
+```rust
+let classes = client.classes().limit(100).all()?;
+```
+
+Use `page()` when you need cursor metadata. A page can be iterated directly:
+
+```rust
+let page = client.classes().limit(25).page()?;
+for class in page {
+    println!("{}", class.name);
+}
 ```
 
 Existing `QueryFilter` values can be passed as a batch:
@@ -235,6 +257,9 @@ let graph = object
     )
     .send()?;
 ```
+
+HTTP errors include the request method, URL, status, parsed API message, and raw
+body to make failed requests easier to diagnose.
 
 ### Asynchronous Client
 

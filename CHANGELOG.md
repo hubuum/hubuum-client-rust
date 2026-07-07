@@ -6,6 +6,27 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Breaking
+
+- Resource collections can now be queried directly with calls like
+  `client.classes().name().contains("server").list()`; `query()` remains available
+  as a compatibility escape hatch but is no longer the documented primary path.
+- Resource primary IDs are now strongly typed (`ClassId`, `ObjectId`, `GroupId`,
+  etc.) and generic `get`, `update`, and `delete` operations require values that
+  convert into the correct resource ID type.
+- Graph and unified search request builders now use `.send()` as the primary
+  terminal method; older `.fetch()` / `.execute()` names are compatibility aliases.
+
+### Added
+
+- Cursor-backed resource and request builders support `.all()` to collect all
+  pages, and `Page<T>` can be iterated directly.
+- Handles dereference and `AsRef` to the wrapped resource and support
+  `into_inner()`.
+- HTTP API errors include method, URL, status, parsed message, and raw response
+  body for easier diagnostics.
+- Compile-fail coverage for typed query operators and wrong-resource ID usage.
+
 ## [0.1.0] - 2026-07-05
 
 ### Breaking
