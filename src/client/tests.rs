@@ -138,7 +138,7 @@ fn sync_task_wait_polls_until_terminal() {
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
-                "id": 9, "kind": "report", "status": "succeeded",
+                "id": 9, "kind": "export", "status": "succeeded",
                 "created_at": "2026-03-06T12:00:00Z",
                 "progress": {"total_items":1,"processed_items":1,"success_items":1,"failed_items":0},
                 "links": {"task":"/api/v1/tasks/9","events":"/api/v1/tasks/9/events"}
@@ -164,7 +164,7 @@ fn sync_task_wait_times_out() {
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
-                "id": 9, "kind": "report", "status": "running",
+                "id": 9, "kind": "export", "status": "running",
                 "created_at": "2026-03-06T12:00:00Z",
                 "progress": {"total_items":1,"processed_items":0,"success_items":0,"failed_items":0},
                 "links": {"task":"/api/v1/tasks/9","events":"/api/v1/tasks/9/events"}
@@ -194,7 +194,7 @@ async fn async_task_wait_polls_until_terminal() {
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
-                "id": 9, "kind": "report", "status": "succeeded",
+                "id": 9, "kind": "export", "status": "succeeded",
                 "created_at": "2026-03-06T12:00:00Z",
                 "progress": {"total_items":1,"processed_items":1,"success_items":1,"failed_items":0},
                 "links": {"task":"/api/v1/tasks/9","events":"/api/v1/tasks/9/events"}
@@ -221,7 +221,7 @@ async fn async_task_wait_times_out() {
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
-                "id": 9, "kind": "report", "status": "running",
+                "id": 9, "kind": "export", "status": "running",
                 "created_at": "2026-03-06T12:00:00Z",
                 "progress": {"total_items":1,"processed_items":0,"success_items":0,"failed_items":0},
                 "links": {"task":"/api/v1/tasks/9","events":"/api/v1/tasks/9/events"}
@@ -248,7 +248,7 @@ fn sync_tasks_query_uses_raw_params() {
     let listing = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/tasks")
-            .query_param("kind", "report")
+            .query_param("kind", "export")
             .query_param("status", "succeeded")
             .query_param("submitted_by", "3");
         then.status(200)
@@ -259,7 +259,7 @@ fn sync_tasks_query_uses_raw_params() {
     let _ = client
         .tasks()
         .query()
-        .kind(crate::types::TaskKind::Report)
+        .kind(crate::types::TaskKind::Export)
         .status(crate::types::TaskStatus::Succeeded)
         .submitted_by(3)
         .list()
@@ -274,7 +274,7 @@ async fn async_tasks_query_uses_raw_params() {
     let listing = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/tasks")
-            .query_param("kind", "report")
+            .query_param("kind", "export")
             .query_param("status", "succeeded")
             .query_param("submitted_by", "3");
         then.status(200)
@@ -285,7 +285,7 @@ async fn async_tasks_query_uses_raw_params() {
     let _ = client
         .tasks()
         .query()
-        .kind(crate::types::TaskKind::Report)
+        .kind(crate::types::TaskKind::Export)
         .status(crate::types::TaskStatus::Succeeded)
         .submitted_by(3)
         .list()
@@ -294,25 +294,24 @@ async fn async_tasks_query_uses_raw_params() {
     listing.assert_calls(1);
 }
 
-fn report_task_json(status: &str) -> serde_json::Value {
+fn export_task_json(status: &str) -> serde_json::Value {
     json!({
-        "id": 11, "kind": "report", "status": status,
+        "id": 11, "kind": "export", "status": status,
         "created_at": "2026-03-06T12:00:00Z",
         "progress": {"total_items":1,"processed_items":1,"success_items":1,"failed_items":0},
         "links": {"task":"/api/v1/tasks/11","events":"/api/v1/tasks/11/events",
-                  "report":"/api/v1/reports/11","report_output":"/api/v1/reports/11/output"}
+                  "export":"/api/v1/exports/11","export_output":"/api/v1/exports/11/output"}
     })
 }
 
-fn report_request_value() -> crate::types::ReportRequest {
-    crate::types::ReportRequest {
+fn export_request_value() -> crate::types::ExportRequest {
+    crate::types::ExportRequest {
         limits: None,
         missing_data_policy: None,
-        output: None,
         query: None,
-        scope: crate::types::ReportScope {
+        scope: crate::types::ExportScope {
             class_id: Some(42),
-            kind: crate::types::ReportScopeKind::ObjectsInClass,
+            kind: crate::types::ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
         include: None,
@@ -321,23 +320,23 @@ fn report_request_value() -> crate::types::ReportRequest {
 }
 
 #[test]
-fn sync_report_run_json_output() {
+fn sync_export_run_json_output() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(POST).path("/api/v1/reports");
+        when.method(POST).path("/api/v1/exports");
         then.status(202)
             .header("content-type", "application/json")
-            .json_body(report_task_json("queued"));
+            .json_body(export_task_json("queued"));
     });
     server.mock(|when, then| {
         when.method(GET).path("/api/v1/tasks/11");
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(report_task_json("succeeded"));
+            .json_body(export_task_json("succeeded"));
     });
     server.mock(|when, then| {
-        when.method(GET).path("/api/v1/reports/11/output");
+        when.method(GET).path("/api/v1/exports/11/output");
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({"items": [{"id":1}], "meta": {
@@ -347,31 +346,31 @@ fn sync_report_run_json_output() {
     });
     let client = build_sync_client(&server).unwrap();
     let result = client
-        .reports()
-        .run(report_request_value())
+        .exports()
+        .run(export_request_value())
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
         .unwrap();
     match result {
-        crate::types::ReportResult::Json(body) => assert_eq!(body.meta.count, 1),
+        crate::types::ExportResult::Json(body) => assert_eq!(body.meta.count, 1),
         other => panic!("expected Json, got {other:?}"),
     }
 }
 
 #[test]
-fn sync_report_output_rendered_csv() {
+fn sync_export_output_rendered_csv() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(GET).path("/api/v1/reports/11/output");
+        when.method(GET).path("/api/v1/exports/11/output");
         then.status(200)
             .header("content-type", "text/csv")
             .body("id,name\n1,srv-01\n");
     });
     let client = build_sync_client(&server).unwrap();
-    match client.reports().output(11).unwrap() {
-        crate::types::ReportResult::Rendered { content_type, body } => {
-            assert_eq!(content_type, crate::types::ReportContentType::TextCsv);
+    match client.exports().output(11).unwrap() {
+        crate::types::ExportResult::Rendered { content_type, body } => {
+            assert_eq!(content_type, crate::types::ExportContentType::TextCsv);
             assert!(body.contains("srv-01"));
         }
         other => panic!("expected Rendered, got {other:?}"),
@@ -379,21 +378,21 @@ fn sync_report_output_rendered_csv() {
 }
 
 #[test]
-fn sync_report_run_failed_errors() {
+fn sync_export_run_failed_errors() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(POST).path("/api/v1/reports");
+        when.method(POST).path("/api/v1/exports");
         then.status(202)
             .header("content-type", "application/json")
-            .json_body(report_task_json("queued"));
+            .json_body(export_task_json("queued"));
     });
     server.mock(|when, then| {
         when.method(GET).path("/api/v1/tasks/11");
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
-                "id": 11, "kind":"report", "status":"failed", "summary":"boom",
+                "id": 11, "kind":"export", "status":"failed", "summary":"boom",
                 "created_at":"2026-03-06T12:00:00Z",
                 "progress":{"total_items":1,"processed_items":1,"success_items":0,"failed_items":1},
                 "links":{"task":"/api/v1/tasks/11","events":"/api/v1/tasks/11/events"}
@@ -401,8 +400,8 @@ fn sync_report_run_failed_errors() {
     });
     let client = build_sync_client(&server).unwrap();
     let err = client
-        .reports()
-        .run(report_request_value())
+        .exports()
+        .run(export_request_value())
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
         .unwrap_err();
@@ -410,23 +409,23 @@ fn sync_report_run_failed_errors() {
 }
 
 #[tokio::test]
-async fn async_report_run_json_output() {
+async fn async_export_run_json_output() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(POST).path("/api/v1/reports");
+        when.method(POST).path("/api/v1/exports");
         then.status(202)
             .header("content-type", "application/json")
-            .json_body(report_task_json("queued"));
+            .json_body(export_task_json("queued"));
     });
     server.mock(|when, then| {
         when.method(GET).path("/api/v1/tasks/11");
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(report_task_json("succeeded"));
+            .json_body(export_task_json("succeeded"));
     });
     server.mock(|when, then| {
-        when.method(GET).path("/api/v1/reports/11/output");
+        when.method(GET).path("/api/v1/exports/11/output");
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({"items": [{"id":1}], "meta": {
@@ -436,54 +435,54 @@ async fn async_report_run_json_output() {
     });
     let client = build_async_client(&server).await.unwrap();
     let result = client
-        .reports()
-        .run(report_request_value())
+        .exports()
+        .run(export_request_value())
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
         .await
         .unwrap();
     match result {
-        crate::types::ReportResult::Json(body) => assert_eq!(body.meta.count, 1),
+        crate::types::ExportResult::Json(body) => assert_eq!(body.meta.count, 1),
         other => panic!("expected Json, got {other:?}"),
     }
 }
 
 #[tokio::test]
-async fn async_report_output_rendered_html() {
+async fn async_export_output_rendered_html() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(GET).path("/api/v1/reports/11/output");
+        when.method(GET).path("/api/v1/exports/11/output");
         then.status(200)
             .header("content-type", "text/html")
-            .body("<p>html report</p>");
+            .body("<p>html export</p>");
     });
     let client = build_async_client(&server).await.unwrap();
-    match client.reports().output(11).await.unwrap() {
-        crate::types::ReportResult::Rendered { content_type, body } => {
-            assert_eq!(content_type, crate::types::ReportContentType::TextHtml);
-            assert_eq!(body, "<p>html report</p>");
+    match client.exports().output(11).await.unwrap() {
+        crate::types::ExportResult::Rendered { content_type, body } => {
+            assert_eq!(content_type, crate::types::ExportContentType::TextHtml);
+            assert_eq!(body, "<p>html export</p>");
         }
         other => panic!("expected Rendered, got {other:?}"),
     }
 }
 
 #[tokio::test]
-async fn async_report_run_failed_errors() {
+async fn async_export_run_failed_errors() {
     let server = MockServer::start();
     mock_login(&server);
     server.mock(|when, then| {
-        when.method(POST).path("/api/v1/reports");
+        when.method(POST).path("/api/v1/exports");
         then.status(202)
             .header("content-type", "application/json")
-            .json_body(report_task_json("queued"));
+            .json_body(export_task_json("queued"));
     });
     server.mock(|when, then| {
         when.method(GET).path("/api/v1/tasks/11");
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
-                "id": 11, "kind":"report", "status":"cancelled", "summary":"stopped",
+                "id": 11, "kind":"export", "status":"cancelled", "summary":"stopped",
                 "created_at":"2026-03-06T12:00:00Z",
                 "progress":{"total_items":1,"processed_items":0,"success_items":0,"failed_items":0},
                 "links":{"task":"/api/v1/tasks/11","events":"/api/v1/tasks/11/events"}
@@ -491,8 +490,8 @@ async fn async_report_run_failed_errors() {
     });
     let client = build_async_client(&server).await.unwrap();
     let err = client
-        .reports()
-        .run(report_request_value())
+        .exports()
+        .run(export_request_value())
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
         .await

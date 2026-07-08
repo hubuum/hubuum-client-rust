@@ -2,18 +2,20 @@ use std::borrow::Cow;
 
 use hubuum_client_derive::ApiResource;
 
+#[cfg(feature = "async")]
+use crate::client::r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle};
+#[cfg(feature = "blocking")]
+use crate::client::sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle};
+#[cfg(feature = "async")]
+use crate::resources::user::{
+    principal_token_create_async, principal_token_revoke_async, principal_tokens_async,
+};
+#[cfg(feature = "blocking")]
+use crate::resources::user::{
+    principal_token_create_sync, principal_token_revoke_sync, principal_tokens_sync,
+};
 use crate::{
-    ApiError, NewTokenRequest, PrincipalTokenMetadata,
-    client::{
-        r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle},
-        sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle},
-    },
-    endpoints::Endpoint,
-    resources::user::{
-        principal_token_create_async, principal_token_create_sync, principal_token_revoke_async,
-        principal_token_revoke_sync, principal_tokens_async, principal_tokens_sync,
-    },
-    types::HubuumDateTime,
+    ApiError, NewTokenRequest, PrincipalTokenMetadata, endpoints::Endpoint, types::HubuumDateTime,
 };
 
 #[allow(dead_code)]
@@ -39,6 +41,7 @@ pub struct ServiceAccountResource {
     pub updated_at: HubuumDateTime,
 }
 
+#[cfg(feature = "blocking")]
 impl SyncHandle<ServiceAccount> {
     /// Disable this service account. Returns the updated service account.
     pub fn disable(&self) -> Result<ServiceAccount, ApiError> {
@@ -60,19 +63,20 @@ impl SyncHandle<ServiceAccount> {
     }
 
     pub fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_sync(self.client(), self.id())
+        principal_tokens_sync(self.client(), self.id().into())
     }
 
     /// Mint a new token for this service account. Returns the raw token, shown once.
     pub fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_sync(self.client(), self.id(), request)
+        principal_token_create_sync(self.client(), self.id().into(), request)
     }
 
     pub fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_sync(self.client(), self.id(), token_id)
+        principal_token_revoke_sync(self.client(), self.id().into(), token_id)
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncHandle<ServiceAccount> {
     /// Disable this service account. Returns the updated service account.
     pub async fn disable(&self) -> Result<ServiceAccount, ApiError> {
@@ -95,15 +99,15 @@ impl AsyncHandle<ServiceAccount> {
     }
 
     pub async fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_async(self.client(), self.id()).await
+        principal_tokens_async(self.client(), self.id().into()).await
     }
 
     /// Mint a new token for this service account. Returns the raw token, shown once.
     pub async fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_async(self.client(), self.id(), request).await
+        principal_token_create_async(self.client(), self.id().into(), request).await
     }
 
     pub async fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_async(self.client(), self.id(), token_id).await
+        principal_token_revoke_async(self.client(), self.id().into(), token_id).await
     }
 }

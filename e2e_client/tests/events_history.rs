@@ -1,8 +1,8 @@
 use std::{thread, time::Duration};
 
 use hubuum_client::{
-    ClassPatch, EventDeliveryStatus, EventSinkKind, GroupPatch, NewEventSink, NewEventSubscription,
-    ObjectPatch, ReportContentType, ReportTemplateKind, ReportTemplatePost,
+    ClassPatch, EventDeliveryStatus, EventSinkKind, ExportContentType, ExportTemplateKind,
+    ExportTemplatePost, GroupPatch, NewEventSink, NewEventSubscription, ObjectPatch,
     UpdateEventSubscription, UserPatch,
 };
 use serde_json::json;
@@ -16,9 +16,9 @@ fn e2e_event_subscriptions_create_delivery_rows() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (namespace_id, class_id, _object_id) = harness
-        .create_namespace_class_object("events-history", admin_group_id)
-        .expect("failed to create namespace/class/object");
+    let (collection_id, class_id, _object_id) = harness
+        .create_collection_class_object("events-history", admin_group_id)
+        .expect("failed to create collection/class/object");
     let prefix = unique_case_prefix("events-history");
 
     let first_class_name = format!("{prefix}-class-events-1");
@@ -30,7 +30,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
             ClassPatch {
                 name: Some(first_class_name.clone()),
                 description: Some("e2e class update for audit event".to_string()),
-                namespace_id,
+                collection_id,
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -54,7 +54,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
 
     let subscription = harness
         .client
-        .event_subscriptions(namespace_id)
+        .event_subscriptions(collection_id)
         .create(NewEventSubscription {
             sink_id: sink.id,
             name: format!("{prefix}-class-updates"),
@@ -70,7 +70,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
 
     let listed_subscriptions = harness
         .client
-        .event_subscriptions(namespace_id)
+        .event_subscriptions(collection_id)
         .query()
         .list()
         .expect("event subscriptions should list");
@@ -89,7 +89,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
             ClassPatch {
                 name: Some(second_class_name),
                 description: Some("e2e class update for delivery fanout".to_string()),
-                namespace_id,
+                collection_id,
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -152,7 +152,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
 
     let disabled_subscription = harness
         .client
-        .event_subscriptions(namespace_id)
+        .event_subscriptions(collection_id)
         .update(
             subscription.id,
             UpdateEventSubscription {
@@ -165,7 +165,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
 
     harness
         .client
-        .event_subscriptions(namespace_id)
+        .event_subscriptions(collection_id)
         .delete(subscription.id)
         .expect("event subscription should delete");
     harness
@@ -181,9 +181,9 @@ fn e2e_events_and_history_cover_core_and_templates() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (admin_id, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (namespace_id, class_id, object_id) = harness
-        .create_namespace_class_object("events-history-read", admin_group_id)
-        .expect("failed to create namespace/class/object");
+    let (collection_id, class_id, object_id) = harness
+        .create_collection_class_object("events-history-read", admin_group_id)
+        .expect("failed to create collection/class/object");
     let prefix = unique_case_prefix("events-history-read");
 
     let updated_class_name = format!("{prefix}-class-history-updated");
@@ -195,7 +195,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
             ClassPatch {
                 name: Some(updated_class_name.clone()),
                 description: Some("e2e class history update".to_string()),
-                namespace_id,
+                collection_id,
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -210,7 +210,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
             object_id,
             ObjectPatch {
                 name: Some(updated_object_name.clone()),
-                namespace_id: Some(namespace_id),
+                collection_id: Some(collection_id),
                 hubuum_class_id: Some(class_id),
                 description: Some("e2e object history update".to_string()),
                 data: Some(json!({"source": "e2e-client", "history": true})),
@@ -220,14 +220,14 @@ fn e2e_events_and_history_cover_core_and_templates() {
 
     let template = harness
         .client
-        .templates()
-        .create_raw(ReportTemplatePost {
-            namespace_id,
+        .export_templates()
+        .create_raw(ExportTemplatePost {
+            collection_id,
             name: format!("{prefix}-template"),
-            description: "e2e report template".to_string(),
-            content_type: ReportContentType::TextPlain,
+            description: "e2e export template".to_string(),
+            content_type: ExportContentType::TextPlain,
             template: "count={{ meta.count }}".to_string(),
-            kind: ReportTemplateKind::Fragment,
+            kind: ExportTemplateKind::Fragment,
             scope_kind: None,
             class_id: None,
             default_query: None,
@@ -268,25 +268,25 @@ fn e2e_events_and_history_cover_core_and_templates() {
         )
         .expect("group update should produce audit event");
 
-    let namespace_history = harness
+    let collection_history = harness
         .client
-        .namespace_history(namespace_id)
+        .collection_history(collection_id)
         .limit(20)
         .list()
-        .expect("namespace history should list");
+        .expect("collection history should list");
     assert!(
-        namespace_history
+        collection_history
             .iter()
-            .any(|entry| entry.id == namespace_id && !entry.history.op.is_empty())
+            .any(|entry| entry.id == collection_id && !entry.history.op.is_empty())
     );
-    let namespace_as_of = harness
+    let collection_as_of = harness
         .client
-        .namespace_history_as_of(
-            namespace_id,
-            namespace_history[0].history.valid_from.clone(),
+        .collection_history_as_of(
+            collection_id,
+            collection_history[0].history.valid_from.clone(),
         )
-        .expect("namespace history as-of should fetch");
-    assert_eq!(namespace_as_of.id, namespace_id);
+        .expect("collection history as-of should fetch");
+    assert_eq!(collection_as_of.id, collection_id);
 
     let class_history = harness
         .client
@@ -335,7 +335,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         template_history
             .iter()
-            .any(|entry| entry.id == template.id && entry.namespace_id == namespace_id)
+            .any(|entry| entry.id == template.id && entry.collection_id == collection_id)
     );
     let template_as_of = harness
         .client
@@ -347,7 +347,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
         .client
         .events()
         .actor_user_id(admin_id)
-        .namespace_id(namespace_id)
+        .collection_id(collection_id)
         .limit(100)
         .list()
         .expect("global event listing should support filters");
@@ -386,16 +386,16 @@ fn e2e_events_and_history_cover_core_and_templates() {
             .any(|event| event.entity_type == "group" && event.entity_id == Some(group_id))
     );
 
-    let namespace_events = harness
+    let collection_events = harness
         .client
-        .namespace_events(namespace_id)
+        .collection_events(collection_id)
         .limit(100)
         .list()
-        .expect("namespace events should list");
+        .expect("collection events should list");
     assert!(
-        namespace_events
+        collection_events
             .iter()
-            .any(|event| event.namespace_id == Some(namespace_id))
+            .any(|event| event.collection_id == Some(collection_id))
     );
 
     let class_events = harness
@@ -433,7 +433,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         template_events
             .iter()
-            .any(|event| event.entity_id == Some(template.id))
+            .any(|event| event.entity_id == Some(template.id.into()))
     );
 
     let user_events = harness

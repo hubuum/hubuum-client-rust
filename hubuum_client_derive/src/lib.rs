@@ -4,7 +4,7 @@
 //     pub id: i32,
 //     pub name: String,
 //     pub description: String,
-//     pub namespace_id: i32,
+//     pub collection_id: i32,
 //     pub json_schema: Option<serde_json::Value>,
 //     pub validate_schema: Option<bool>,
 //     #[api(read_only)]
@@ -41,6 +41,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         panic!("ApiResource only supports structs with names ending in 'Resource'");
     }
     let name = format_ident!("{}", base_name.trim_end_matches("Resource"));
+    let id_name = format_ident!("{}Id", name);
     let plural_name = format_ident!("{}", pluralize(&name));
 
     let name_field = match base_name.trim_end_matches("Resource") {
@@ -56,7 +57,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         _ => panic!("ApiResource only supports structs"),
     };
 
-    let (main_fields, get_fields, post_fields, patch_fields) = process_fields(fields);
+    let (main_fields, get_fields, post_fields, patch_fields) = process_fields(fields, &id_name);
 
     let mut get_param_filters = proc_macro2::TokenStream::new();
     let mut create_sync_methods = proc_macro2::TokenStream::new();
@@ -65,6 +66,8 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let mut update_async_methods = proc_macro2::TokenStream::new();
     let mut query_sync_methods = proc_macro2::TokenStream::new();
     let mut query_async_methods = proc_macro2::TokenStream::new();
+    let mut resource_sync_query_methods = proc_macro2::TokenStream::new();
+    let mut resource_async_query_methods = proc_macro2::TokenStream::new();
 
     for field in fields {
         let field_ident = field
@@ -97,39 +100,27 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
                 }
             });
 
-            let method_ident = format_ident!("{}_eq", post_patch_field_ident);
+            let field_wrapper = query_field_wrapper(field_ty, is_as_id);
             query_sync_methods.extend(quote! {
-                pub fn #method_ident<V: ToString>(self, value: V) -> Self {
-                    self.add_filter_equals(stringify!(#post_patch_field_ident), value)
+                pub fn #post_patch_field_ident(self) -> #field_wrapper {
+                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
                 }
             });
             query_async_methods.extend(quote! {
-                pub fn #method_ident<V: ToString>(self, value: V) -> Self {
-                    self.add_filter_equals(stringify!(#post_patch_field_ident), value)
+                pub fn #post_patch_field_ident(self) -> #field_wrapper {
+                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
                 }
             });
-
-            if !is_as_id && is_string_type(field_ty) {
-                let contains_method_ident = format_ident!("{}_contains", post_patch_field_ident);
-                query_sync_methods.extend(quote! {
-                    pub fn #contains_method_ident<V: ToString>(self, value: V) -> Self {
-                        self.add_filter(
-                            stringify!(#post_patch_field_ident),
-                            crate::types::FilterOperator::Contains { is_negated: false },
-                            value,
-                        )
-                    }
-                });
-                query_async_methods.extend(quote! {
-                    pub fn #contains_method_ident<V: ToString>(self, value: V) -> Self {
-                        self.add_filter(
-                            stringify!(#post_patch_field_ident),
-                            crate::types::FilterOperator::Contains { is_negated: false },
-                            value,
-                        )
-                    }
-                });
-            }
+            resource_sync_query_methods.extend(quote! {
+                pub fn #post_patch_field_ident(self) -> #field_wrapper {
+                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
+                }
+            });
+            resource_async_query_methods.extend(quote! {
+                pub fn #post_patch_field_ident(self) -> #field_wrapper {
+                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
+                }
+            });
         }
 
         if is_post_only || !is_read_only {
@@ -195,6 +186,8 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let post_name = format_ident!("{}Post", name);
     let patch_name = format_ident!("{}Patch", name);
     let endpoint = format_ident!("{}", plural_name);
+    let item_endpoint = format_ident!("{}ById", plural_name);
+    let id_param = id_param_name(&name.to_string());
 
     // List of field names to check for Display implementation, in order of preference
     let display_field_options = &[
@@ -220,13 +213,75 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     };
 
     let expanded = quote! {
+        #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
+        #[serde(transparent)]
+        pub struct #id_name(i32);
+
+        impl #id_name {
+            pub fn new(value: i32) -> Self {
+                Self(value)
+            }
+
+            pub fn get(self) -> i32 {
+                self.0
+            }
+        }
+
+        impl std::fmt::Display for #id_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+
+        impl std::str::FromStr for #id_name {
+            type Err = <i32 as std::str::FromStr>::Err;
+
+            fn from_str(value: &str) -> Result<Self, Self::Err> {
+                value.parse::<i32>().map(Self)
+            }
+        }
+
+        impl From<i32> for #id_name {
+            fn from(value: i32) -> Self {
+                Self(value)
+            }
+        }
+
+        impl From<#id_name> for i32 {
+            fn from(value: #id_name) -> Self {
+                value.0
+            }
+        }
+
+        impl PartialEq<i32> for #id_name {
+            fn eq(&self, other: &i32) -> bool {
+                self.0 == *other
+            }
+        }
+
+        impl PartialEq<#id_name> for i32 {
+            fn eq(&self, other: &#id_name) -> bool {
+                *self == other.0
+            }
+        }
+
+        impl crate::resources::ResourceId for #id_name {
+            fn new(value: i32) -> Self {
+                Self(value)
+            }
+
+            fn get(self) -> i32 {
+                self.0
+            }
+        }
+
         #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
         pub struct #name {
             #main_fields
         }
 
         impl crate::client::GetID for #name {
-            fn id(&self) -> i32 {
+            fn id(&self) -> Self::Id {
                 self.id
             }
         }
@@ -249,6 +304,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         #display_impl
 
         impl crate::resources::ApiResource for #name {
+            type Id = #id_name;
             type GetParams = #get_name;
             type GetOutput = #name;
             type PostParams = #post_name;
@@ -259,9 +315,12 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             type DeleteOutput = ();
 
             const NAME_FIELD: &'static str = stringify!(#name_field);
+            const COLLECTION_ENDPOINT: crate::endpoints::Endpoint = crate::endpoints::Endpoint::#endpoint;
+            const ITEM_ENDPOINT: Option<crate::endpoints::Endpoint> = Some(crate::endpoints::Endpoint::#item_endpoint);
+            const ID_PARAM: &'static str = #id_param;
 
             fn endpoint(&self) -> crate::endpoints::Endpoint {
-                crate::endpoints::Endpoint::#endpoint
+                Self::COLLECTION_ENDPOINT
             }
 
             fn build_params(filters: Vec<(String, crate::types::FilterOperator, String)>) -> Vec<crate::types::QueryFilter> {
@@ -283,28 +342,44 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             }
         }
 
+        #[cfg(feature = "blocking")]
         impl crate::client::sync::CreateOp<#name> {
             #create_sync_methods
         }
 
+        #[cfg(feature = "async")]
         impl crate::client::r#async::CreateOp<#name> {
             #create_async_methods
         }
 
+        #[cfg(feature = "blocking")]
         impl crate::client::sync::UpdateOp<#name> {
             #update_sync_methods
         }
 
+        #[cfg(feature = "async")]
         impl crate::client::r#async::UpdateOp<#name> {
             #update_async_methods
         }
 
+        #[cfg(feature = "blocking")]
         impl crate::client::sync::QueryOp<#name> {
             #query_sync_methods
         }
 
+        #[cfg(feature = "async")]
         impl crate::client::r#async::QueryOp<#name> {
             #query_async_methods
+        }
+
+        #[cfg(feature = "blocking")]
+        impl crate::client::sync::Resource<#name> {
+            #resource_sync_query_methods
+        }
+
+        #[cfg(feature = "async")]
+        impl crate::client::r#async::Resource<#name> {
+            #resource_async_query_methods
         }
     };
 
@@ -346,6 +421,7 @@ fn option_inner_type(ty: &Type) -> Option<&Type> {
 }
 
 fn is_string_type(ty: &Type) -> bool {
+    let ty = option_inner_type(ty).unwrap_or(ty);
     let Type::Path(type_path) = ty else {
         return false;
     };
@@ -355,6 +431,96 @@ fn is_string_type(ty: &Type) -> bool {
         .last()
         .map(|segment| segment.ident == "String")
         .unwrap_or(false)
+}
+
+fn is_bool_type(ty: &Type) -> bool {
+    let ty = option_inner_type(ty).unwrap_or(ty);
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
+    type_path
+        .path
+        .segments
+        .last()
+        .map(|segment| segment.ident == "bool")
+        .unwrap_or(false)
+}
+
+fn is_json_value_type(ty: &Type) -> bool {
+    let ty = option_inner_type(ty).unwrap_or(ty);
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
+    let segments = &type_path.path.segments;
+    let last = segments.last().map(|segment| segment.ident.to_string());
+    last.as_deref() == Some("Value")
+}
+
+fn is_numeric_or_datetime_type(ty: &Type) -> bool {
+    let ty = option_inner_type(ty).unwrap_or(ty);
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
+    let Some(segment) = type_path.path.segments.last() else {
+        return false;
+    };
+    matches!(
+        segment.ident.to_string().as_str(),
+        "i8" | "i16"
+            | "i32"
+            | "i64"
+            | "i128"
+            | "isize"
+            | "u8"
+            | "u16"
+            | "u32"
+            | "u64"
+            | "u128"
+            | "usize"
+            | "f32"
+            | "f64"
+            | "HubuumDateTime"
+            | "DateTime"
+            | "NaiveDateTime"
+    )
+}
+
+fn query_value_type(field_ty: &Type, is_as_id: bool) -> proc_macro2::TokenStream {
+    if is_as_id {
+        quote!(i32)
+    } else {
+        let ty = option_inner_type(field_ty).unwrap_or(field_ty);
+        quote!(#ty)
+    }
+}
+
+fn query_field_wrapper(field_ty: &Type, is_as_id: bool) -> proc_macro2::TokenStream {
+    let value_ty = query_value_type(field_ty, is_as_id);
+    if is_as_id || is_numeric_or_datetime_type(field_ty) {
+        quote!(crate::client::QueryNumericField<Self, #value_ty>)
+    } else if is_string_type(field_ty) {
+        quote!(crate::client::QueryTextField<Self>)
+    } else if is_bool_type(field_ty) {
+        quote!(crate::client::QueryBoolField<Self>)
+    } else if is_json_value_type(field_ty) {
+        quote!(crate::client::QueryJsonField<Self>)
+    } else {
+        quote!(crate::client::QueryValueField<Self, #value_ty>)
+    }
+}
+
+fn id_param_name(name: &str) -> &'static str {
+    match name {
+        "User" => "user_id",
+        "Group" => "group_id",
+        "Class" => "class_id",
+        "Collection" => "collection_id",
+        "Object" => "object_id",
+        "ExportTemplate" => "template_id",
+        "ServiceAccount" => "service_account_id",
+        "ClassRelation" | "ObjectRelation" => "relation_id",
+        _ => "id",
+    }
 }
 
 fn fluent_arg_and_assign(
@@ -377,6 +543,7 @@ fn fluent_arg_and_assign(
 
 fn process_fields(
     fields: &Punctuated<syn::Field, syn::Token![,]>,
+    id_name: &syn::Ident,
 ) -> (
     proc_macro2::TokenStream,
     proc_macro2::TokenStream,
@@ -407,7 +574,9 @@ fn process_fields(
         let id_field_ident = syn::Ident::new(&id_field_name, proc_macro2::Span::call_site());
 
         if !is_post_only {
-            let main_field_ty = if is_optional {
+            let main_field_ty = if fieldname == "id" {
+                quote!(#id_name)
+            } else if is_optional {
                 quote!(Option<#ty>)
             } else {
                 quote!(#ty)

@@ -2,21 +2,17 @@ use std::borrow::Cow;
 
 use hubuum_client_derive::ApiResource;
 
-use crate::{
-    ApiError, PrincipalMember,
-    client::{
-        r#async::{
-            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-            Handle as AsyncHandle,
-        },
-        sync::{
-            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            Handle as SyncHandle,
-        },
-    },
-    endpoints::Endpoint,
-    types::HubuumDateTime,
+#[cfg(feature = "async")]
+use crate::client::r#async::{
+    CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+    Handle as AsyncHandle,
 };
+#[cfg(feature = "blocking")]
+use crate::client::sync::{
+    CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+    Handle as SyncHandle,
+};
+use crate::{ApiError, PrincipalMember, endpoints::Endpoint, types::HubuumDateTime};
 
 #[allow(dead_code)]
 #[derive(ApiResource)]
@@ -31,6 +27,7 @@ pub struct GroupResource {
     pub updated_at: HubuumDateTime,
 }
 
+#[cfg(feature = "blocking")]
 impl SyncHandle<Group> {
     pub fn add_member(&self, principal_id: i32) -> Result<(), ApiError> {
         let url_params = vec![
@@ -108,6 +105,7 @@ impl SyncHandle<Group> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncHandle<Group> {
     pub async fn add_member(&self, principal_id: i32) -> Result<(), ApiError> {
         let url_params = vec![

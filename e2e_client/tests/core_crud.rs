@@ -6,20 +6,20 @@ use e2e_client::naming::unique_case_prefix;
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn e2e_core_namespace_class_object_crud_and_query() {
+fn e2e_core_collection_class_object_crud_and_query() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (namespace_id, class_id, object_id) = harness
-        .create_namespace_class_object("core", admin_group_id)
-        .expect("failed to create namespace/class/object");
+    let (collection_id, class_id, object_id) = harness
+        .create_collection_class_object("core", admin_group_id)
+        .expect("failed to create collection/class/object");
 
-    let namespace = harness
+    let collection = harness
         .client
-        .namespaces()
-        .select(namespace_id)
-        .expect("namespace should be fetchable");
-    assert_eq!(namespace.id(), namespace_id);
+        .collections()
+        .get(collection_id)
+        .expect("collection should be fetchable");
+    assert_eq!(collection.id(), collection_id);
 
     let updated_class_name = format!("{}-class-updated", unique_case_prefix("core"));
     let updated_class = harness
@@ -30,7 +30,7 @@ fn e2e_core_namespace_class_object_crud_and_query() {
             ClassPatch {
                 name: Some(updated_class_name.clone()),
                 description: Some("updated e2e class".to_string()),
-                namespace_id,
+                collection_id,
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -47,7 +47,7 @@ fn e2e_core_namespace_class_object_crud_and_query() {
             object_id,
             ObjectPatch {
                 name: Some(updated_object_name.clone()),
-                namespace_id: Some(namespace_id),
+                collection_id: Some(collection_id),
                 hubuum_class_id: Some(class_id),
                 description: Some("updated e2e object".to_string()),
                 data: Some(updated_data.clone()),
@@ -60,14 +60,14 @@ fn e2e_core_namespace_class_object_crud_and_query() {
     let selected = harness
         .client
         .objects(class_id)
-        .select(object_id)
+        .get(object_id)
         .expect("object should be selectable by id");
     assert_eq!(selected.id(), object_id);
 
     let class = harness
         .client
         .classes()
-        .select(class_id)
+        .get(class_id)
         .expect("class should be selectable by id");
     let by_name = class
         .object_by_name(&updated_object_name)
@@ -78,7 +78,8 @@ fn e2e_core_namespace_class_object_crud_and_query() {
         .client
         .objects(class_id)
         .query()
-        .add_filter_equals("name", &updated_object_name)
+        .name()
+        .eq(&updated_object_name)
         .limit(5)
         .page()
         .expect("object query should succeed");

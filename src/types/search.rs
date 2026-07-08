@@ -3,28 +3,28 @@ use strum::{Display, EnumString};
 
 use crate::{
     ApiError,
-    resources::{Class, Namespace, Object},
+    resources::{Class, Collection, Object},
 };
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, EnumString, Display, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum UnifiedSearchKind {
-    Namespace,
+    Collection,
     Class,
     Object,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UnifiedSearchResults {
-    pub namespaces: Vec<Namespace>,
+    pub collections: Vec<Collection>,
     pub classes: Vec<Class>,
     pub objects: Vec<Object>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UnifiedSearchNext {
-    pub namespaces: Option<String>,
+    pub collections: Option<String>,
     pub classes: Option<String>,
     pub objects: Option<String>,
 }
@@ -39,7 +39,7 @@ pub struct UnifiedSearchResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UnifiedSearchBatchResponse {
     pub kind: String,
-    pub namespaces: Vec<Namespace>,
+    pub collections: Vec<Collection>,
     pub classes: Vec<Class>,
     pub objects: Vec<Object>,
     pub next: Option<String>,
@@ -142,7 +142,7 @@ mod tests {
             "event: started\n",
             "data: {\"query\":\"server\"}\n\n",
             "event: batch\n",
-            "data: {\"kind\":\"object\",\"namespaces\":[],\"classes\":[],\"objects\":[],\"next\":null}\n\n",
+            "data: {\"kind\":\"object\",\"collections\":[],\"classes\":[],\"objects\":[],\"next\":null}\n\n",
             "event: done\n",
             "data: {\"query\":\"server\"}\n\n",
         );
@@ -160,7 +160,7 @@ mod tests {
             events[1],
             UnifiedSearchEvent::Batch(UnifiedSearchBatchResponse {
                 kind: "object".to_string(),
-                namespaces: vec![],
+                collections: vec![],
                 classes: vec![],
                 objects: vec![],
                 next: None,

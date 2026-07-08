@@ -2,13 +2,12 @@ use std::str::FromStr;
 
 use httpmock::prelude::*;
 use hubuum_client::types::{
-    EventSinkKind, FilterOperator, HubuumDateTime, ImportGraph, ImportRequest, NewEventSink,
-    NewEventSubscription, Permissions, ReportContentType, ReportRequest, ReportScope,
-    ReportScopeKind, SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
+    EventSinkKind, ExportContentType, ExportRequest, ExportScope, ExportScopeKind,
+    ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportGraph, ImportRequest,
+    NewEventSink, NewEventSubscription, Permissions, SortDirection, UnifiedSearchEvent,
+    UnifiedSearchKind, UpdateEventSubscription,
 };
-use hubuum_client::{
-    ApiError, AsyncClient, BaseUrl, ClassGet, Credentials, ReportResult, SyncClient,
-};
+use hubuum_client::{ApiError, BaseUrl, ClassGet, Client, Credentials, ExportResult, blocking};
 use serde_json::json;
 
 const USERNAME: &str = "tester";
@@ -24,10 +23,10 @@ fn class_json(name: &str) -> serde_json::Value {
         "id": 42,
         "name": name,
         "description": "Class",
-        "namespace": {
+        "collection": {
             "id": 7,
-            "name": "namespace-1",
-            "description": "Namespace",
+            "name": "collection-1",
+            "description": "Collection",
             "created_at": ts(),
             "updated_at": ts()
         },
@@ -67,11 +66,11 @@ fn principal_member_json(principal_id: i32, name: &str) -> serde_json::Value {
     })
 }
 
-fn namespace_json(namespace_id: i32, name: &str) -> serde_json::Value {
+fn collection_json(collection_id: i32, name: &str) -> serde_json::Value {
     json!({
-        "id": namespace_id,
+        "id": collection_id,
         "name": name,
-        "description": "Namespace",
+        "description": "Collection",
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -81,7 +80,7 @@ fn object_json(object_id: i32, class_id: i32, name: &str) -> serde_json::Value {
     json!({
         "id": object_id,
         "name": name,
-        "namespace_id": 7,
+        "collection_id": 7,
         "hubuum_class_id": class_id,
         "description": "Object",
         "data": { "owner": "infra" },
@@ -90,15 +89,15 @@ fn object_json(object_id: i32, class_id: i32, name: &str) -> serde_json::Value {
     })
 }
 
-fn permission_json(namespace_id: i32, group_id: i32) -> serde_json::Value {
+fn permission_json(collection_id: i32, group_id: i32) -> serde_json::Value {
     json!({
         "id": 77,
-        "namespace_id": namespace_id,
+        "collection_id": collection_id,
         "group_id": group_id,
-        "has_read_namespace": true,
-        "has_update_namespace": false,
-        "has_delete_namespace": false,
-        "has_delegate_namespace": false,
+        "has_read_collection": true,
+        "has_update_collection": false,
+        "has_delete_collection": false,
+        "has_delegate_collection": false,
         "has_create_class": false,
         "has_read_class": false,
         "has_update_class": false,
@@ -120,17 +119,17 @@ fn permission_json(namespace_id: i32, group_id: i32) -> serde_json::Value {
     })
 }
 
-fn group_permission_json(namespace_id: i32, group_id: i32, groupname: &str) -> serde_json::Value {
+fn group_permission_json(collection_id: i32, group_id: i32, groupname: &str) -> serde_json::Value {
     json!({
         "group": group_json(group_id, groupname),
-        "permission": permission_json(namespace_id, group_id)
+        "permission": permission_json(collection_id, group_id)
     })
 }
 
-fn report_template_json(template_id: i32, name: &str) -> serde_json::Value {
+fn export_template_json(template_id: i32, name: &str) -> serde_json::Value {
     json!({
         "id": template_id,
-        "namespace_id": 7,
+        "collection_id": 7,
         "name": name,
         "description": "Template",
         "content_type": "text/plain",
@@ -148,15 +147,14 @@ fn report_template_json(template_id: i32, name: &str) -> serde_json::Value {
     })
 }
 
-fn report_request() -> ReportRequest {
-    ReportRequest {
+fn export_request() -> ExportRequest {
+    ExportRequest {
         limits: None,
         missing_data_policy: None,
-        output: None,
         query: Some("name__icontains=server".to_string()),
-        scope: ReportScope {
+        scope: ExportScope {
             class_id: Some(42),
-            kind: ReportScopeKind::ObjectsInClass,
+            kind: ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
         include: None,
@@ -204,10 +202,10 @@ fn task_response_json(task_id: i32, status: &str) -> serde_json::Value {
     })
 }
 
-fn report_task_json(task_id: i32, status: &str) -> serde_json::Value {
+fn export_task_json(task_id: i32, status: &str) -> serde_json::Value {
     json!({
         "id": task_id,
-        "kind": "report",
+        "kind": "export",
         "status": status,
         "submitted_by": 7,
         "created_at": ts(),
@@ -224,8 +222,8 @@ fn report_task_json(task_id: i32, status: &str) -> serde_json::Value {
         "links": {
             "task": format!("/api/v1/tasks/{task_id}"),
             "events": format!("/api/v1/tasks/{task_id}/events"),
-            "report": format!("/api/v1/reports/{task_id}"),
-            "report_output": format!("/api/v1/reports/{task_id}/output")
+            "export": format!("/api/v1/exports/{task_id}"),
+            "export_output": format!("/api/v1/exports/{task_id}/output")
         }
     })
 }
@@ -246,7 +244,7 @@ fn import_result_json(result_id: i32) -> serde_json::Value {
         "id": result_id,
         "task_id": 12,
         "item_ref": "ns:infra",
-        "entity_kind": "namespace",
+        "entity_kind": "collection",
         "action": "create",
         "identifier": "infra",
         "outcome": "succeeded",
@@ -271,8 +269,7 @@ fn task_queue_json() -> serde_json::Value {
         "partially_succeeded_tasks": 0,
         "cancelled_tasks": 0,
         "import_tasks": 9,
-        "report_tasks": 1,
-        "export_tasks": 0,
+        "export_tasks": 1,
         "reindex_tasks": 0,
         "total_task_events": 12,
         "total_import_result_rows": 7,
@@ -281,11 +278,11 @@ fn task_queue_json() -> serde_json::Value {
     })
 }
 
-fn class_with_path_json(class_id: i32, namespace_id: i32, path: &[i32]) -> serde_json::Value {
+fn class_with_path_json(class_id: i32, collection_id: i32, path: &[i32]) -> serde_json::Value {
     json!({
         "id": class_id,
         "name": format!("class-{class_id}"),
-        "namespace_id": namespace_id,
+        "collection_id": collection_id,
         "description": "Class",
         "json_schema": { "type": "object" },
         "validate_schema": true,
@@ -329,7 +326,7 @@ fn object_with_path_json(object_id: i32, class_id: i32, path: &[i32]) -> serde_j
     json!({
         "id": object_id,
         "name": format!("object-{object_id}"),
-        "namespace_id": 7,
+        "collection_id": 7,
         "hubuum_class_id": class_id,
         "description": "Object",
         "data": { "owner": "infra" },
@@ -357,12 +354,12 @@ fn unified_search_response_json() -> serde_json::Value {
     json!({
         "query": "server",
         "results": {
-            "namespaces": [namespace_json(7, "infra")],
+            "collections": [collection_json(7, "infra")],
             "classes": [class_json("servers")],
             "objects": [object_json(9, 42, "server-9")]
         },
         "next": {
-            "namespaces": "ns-cursor",
+            "collections": "ns-cursor",
             "classes": null,
             "objects": "obj-cursor"
         }
@@ -377,7 +374,7 @@ fn audit_event_json(event_id: i64, entity_type: &str, action: &str) -> serde_jso
         "entity_type": entity_type,
         "entity_id": 42,
         "entity_name": "servers",
-        "namespace_id": 7,
+        "collection_id": 7,
         "action": action,
         "actor_kind": "human",
         "actor_user_id": 3,
@@ -395,7 +392,7 @@ fn class_history_json() -> serde_json::Value {
     json!({
         "id": 42,
         "name": "servers",
-        "namespace_id": 7,
+        "collection_id": 7,
         "validate_schema": true,
         "description": "Class",
         "json_schema": {"type": "object"},
@@ -426,7 +423,7 @@ fn event_sink_json() -> serde_json::Value {
 fn event_subscription_json() -> serde_json::Value {
     json!({
         "id": 8,
-        "namespace_id": 7,
+        "collection_id": 7,
         "sink_id": 5,
         "name": "class-updates",
         "description": "Class update events",
@@ -467,16 +464,16 @@ fn mock_login(server: &MockServer) {
     });
 }
 
-fn sync_client(server: &MockServer) -> SyncClient<hubuum_client::Authenticated> {
+fn sync_client(server: &MockServer) -> blocking::Client<hubuum_client::Authenticated> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    SyncClient::new_with_certificate_validation(base_url, true)
+    blocking::Client::new_with_certificate_validation(base_url, true)
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .expect("sync login should succeed")
 }
 
-async fn async_client(server: &MockServer) -> AsyncClient<hubuum_client::Authenticated> {
+async fn async_client(server: &MockServer) -> Client<hubuum_client::Authenticated> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    AsyncClient::new_with_certificate_validation(base_url, true)
+    Client::new_with_certificate_validation(base_url, true)
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .await
         .expect("async login should succeed")
@@ -496,10 +493,13 @@ fn sync_returns_http_error_with_message_from_json_body() {
 
     let err = client
         .classes()
-        .filter(())
+        .query()
+        .list()
         .expect_err("request should fail");
     match err {
-        ApiError::HttpWithBody { status, message } => {
+        ApiError::HttpWithBody {
+            status, message, ..
+        } => {
             assert_eq!(status, reqwest::StatusCode::BAD_REQUEST);
             assert_eq!(message, "bad request from server");
         }
@@ -521,11 +521,14 @@ async fn async_returns_http_error_with_message_from_json_body() {
 
     let err = client
         .classes()
-        .filter(())
+        .query()
+        .list()
         .await
         .expect_err("request should fail");
     match err {
-        ApiError::HttpWithBody { status, message } => {
+        ApiError::HttpWithBody {
+            status, message, ..
+        } => {
             assert_eq!(status, reqwest::StatusCode::BAD_REQUEST);
             assert_eq!(message, "bad request from server");
         }
@@ -583,7 +586,7 @@ async fn async_delete_rejects_non_empty_response_body() {
 }
 
 #[test]
-fn sync_select_by_name_applies_name_filter() {
+fn sync_get_by_name_applies_name_filter() {
     let server = MockServer::start();
     mock_login(&server);
     let class_name = "class-name-1";
@@ -600,13 +603,36 @@ fn sync_select_by_name_applies_name_filter() {
 
     let class = client
         .classes()
-        .select_by_name(class_name)
+        .get_by_name(class_name)
+        .expect("class lookup should succeed");
+    assert_eq!(class.resource().name, class_name);
+}
+
+#[test]
+fn sync_new_resource_get_by_name_alias_applies_name_filter() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let class_name = "class-name-2";
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("name__equals", class_name)
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json(class_name)]));
+    });
+    let client = sync_client(&server);
+
+    let class = client
+        .classes()
+        .get_by_name(class_name)
         .expect("class lookup should succeed");
     assert_eq!(class.resource().name, class_name);
 }
 
 #[tokio::test]
-async fn async_select_by_name_applies_name_filter() {
+async fn async_get_by_name_applies_name_filter() {
     let server = MockServer::start();
     mock_login(&server);
     let class_name = "class-name-1";
@@ -623,10 +649,79 @@ async fn async_select_by_name_applies_name_filter() {
 
     let class = client
         .classes()
-        .select_by_name(class_name)
+        .get_by_name(class_name)
         .await
         .expect("class lookup should succeed");
     assert_eq!(class.resource().name, class_name);
+}
+
+#[test]
+fn sync_object_get_by_name_preserves_class_scope() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let object_name = "object-name-1";
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/")
+            .query_param("name__equals", object_name)
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_json(99, 42, object_name)]));
+    });
+    let client = sync_client(&server);
+
+    let object = client
+        .objects(42)
+        .get_by_name(object_name)
+        .expect("scoped object lookup should succeed");
+    assert_eq!(object.resource().name, object_name);
+}
+
+#[tokio::test]
+async fn async_object_get_by_name_preserves_class_scope() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let object_name = "object-name-async";
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/")
+            .query_param("name__equals", object_name)
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_json(100, 42, object_name)]));
+    });
+    let client = async_client(&server).await;
+
+    let object = client
+        .objects(42)
+        .get_by_name(object_name)
+        .await
+        .expect("scoped object lookup should succeed");
+    assert_eq!(object.resource().name, object_name);
+}
+
+#[tokio::test]
+async fn async_new_resource_get_alias_fetches_by_id() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("class-by-id"));
+    });
+    let client = async_client(&server).await;
+
+    let class = client
+        .classes()
+        .get(42)
+        .await
+        .expect("class lookup should succeed");
+    assert_eq!(class.resource().name, "class-by-id");
 }
 
 #[test]
@@ -648,7 +743,7 @@ fn sync_class_create_fluent_builder_posts_resource() {
         .create()
         .name("fluent-class")
         .description("Fluent class")
-        .namespace_id(7)
+        .collection_id(7)
         .send()
         .expect("create fluent builder should succeed");
 
@@ -674,7 +769,7 @@ async fn async_class_update_fluent_builder_patches_resource() {
         .update(42)
         .name("updated-class")
         .description("Updated class")
-        .namespace_id(7)
+        .collection_id(7)
         .send()
         .await
         .expect("update fluent builder should succeed");
@@ -722,31 +817,123 @@ fn sync_class_query_builder_supports_eq_contains_and_get_params() {
     let client = sync_client(&server);
     let class_by_eq = client
         .classes()
-        .query()
-        .name_eq(by_eq)
+        .name()
+        .eq(by_eq)
         .one()
-        .expect("query().name_eq().one() should succeed");
+        .expect("classes().name().eq().one() should succeed");
     assert_eq!(class_by_eq.name, by_eq);
 
     let class_by_eq_contains = client
         .classes()
-        .query()
-        .name_eq(by_eq_contains)
-        .description_contains("Clas")
+        .name()
+        .eq(by_eq_contains)
+        .description()
+        .contains("Clas")
         .one()
-        .expect("query().name_eq().description_contains().one() should succeed");
+        .expect("classes().name().eq().description().contains().one() should succeed");
     assert_eq!(class_by_eq_contains.name, by_eq_contains);
 
     let class_by_params = client
         .classes()
-        .query()
         .params(ClassGet {
             name: Some(by_params.to_string()),
             ..Default::default()
         })
         .one()
-        .expect("query().params().one() should succeed");
+        .expect("classes().params().one() should succeed");
     assert_eq!(class_by_params.name, by_params);
+}
+
+#[test]
+fn sync_resource_all_auto_paginates_and_page_iterates() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("limit", "1")
+            .query_param("cursor", "start-page")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "next-page")
+            .json_body(json!([class_json("first")]));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("limit", "1")
+            .query_param("cursor", "next-page")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("second")]));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("name__equals", "iterated")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("iterated")]));
+    });
+
+    let client = sync_client(&server);
+    let classes = client
+        .classes()
+        .limit(1)
+        .cursor("start-page")
+        .all()
+        .expect("classes().all() should fetch every page");
+    assert_eq!(
+        classes
+            .iter()
+            .map(|class| class.name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["first", "second"]
+    );
+
+    let page = client
+        .classes()
+        .name()
+        .eq("iterated")
+        .page()
+        .expect("classes().page() should succeed");
+    let iterated = page.into_iter().map(|class| class.name).collect::<Vec<_>>();
+    assert_eq!(iterated, vec!["iterated"]);
+}
+
+#[test]
+fn sync_class_query_builder_supports_typed_field_operators() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("name__contains", "server")
+            .query_param("created_at__gte", "2024-01-01T00:00:00+00:00")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("server-class")]));
+    });
+
+    let since: HubuumDateTime =
+        serde_json::from_str(r#""2024-01-01T00:00:00Z""#).expect("timestamp should parse");
+    let client = sync_client(&server);
+    let class = client
+        .classes()
+        .name()
+        .contains("server")
+        .created_at()
+        .gte(since)
+        .one()
+        .expect("typed field query should succeed");
+
+    assert_eq!(class.name, "server-class");
 }
 
 #[tokio::test]
@@ -769,13 +956,43 @@ async fn async_class_query_builder_supports_contains() {
     let client = async_client(&server).await;
     let class_by_eq_contains = client
         .classes()
-        .query()
-        .name_eq(by_eq_contains)
-        .description_contains("Clas")
+        .name()
+        .eq(by_eq_contains)
+        .description()
+        .contains("Clas")
         .one()
         .await
-        .expect("async query().name_eq().description_contains().one() should succeed");
+        .expect("async classes().name().eq().description().contains().one() should succeed");
     assert_eq!(class_by_eq_contains.name, by_eq_contains);
+}
+
+#[tokio::test]
+async fn async_class_query_builder_supports_typed_json_path_operator() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("json_schema__lt", "properties,latitude,minimum=0")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("geo-class")]));
+    });
+
+    let client = async_client(&server).await;
+    let class = client
+        .classes()
+        .query()
+        .json_schema()
+        .path(["properties", "latitude", "minimum"])
+        .lt(0)
+        .one()
+        .await
+        .expect("typed json path query should succeed");
+
+    assert_eq!(class.name, "geo-class");
 }
 
 #[test]
@@ -800,7 +1017,8 @@ fn sync_class_query_builder_supports_sort_and_limit() {
     let one = client
         .classes()
         .query()
-        .add_filter_startswith("name", starts_with)
+        .name()
+        .starts_with(starts_with)
         .sort_by_fields(vec![
             ("name", SortDirection::Asc),
             ("created_at", SortDirection::Desc),
@@ -809,6 +1027,36 @@ fn sync_class_query_builder_supports_sort_and_limit() {
         .one()
         .expect("query with sort+limit should succeed");
     assert_eq!(one.name, "sort-limit-a");
+}
+
+#[test]
+fn sync_query_builder_accepts_owned_dynamic_keys() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("collection_id__equals", "7")
+            .query_param("include_archived", "false")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_json("dynamic-key-class")]));
+    });
+
+    let field = String::from("collection_id");
+    let raw_key = String::from("include_archived");
+    let client = sync_client(&server);
+    let one = client
+        .classes()
+        .query()
+        .filter(field, FilterOperator::Equals { is_negated: false }, 7)
+        .raw_param(raw_key, false)
+        .one()
+        .expect("owned dynamic query keys should be accepted");
+
+    assert_eq!(one.name, "dynamic-key-class");
 }
 
 #[tokio::test]
@@ -834,13 +1082,11 @@ async fn async_class_query_builder_supports_json_path_and_order_by_alias() {
     let one = client
         .classes()
         .query()
-        .add_filter_not_iequals("name", "legacy")
-        .add_json_path_filter(
-            "json_schema",
-            vec!["properties", "latitude", "minimum"],
-            FilterOperator::Lt { is_negated: false },
-            0,
-        )
+        .name()
+        .not_ieq("legacy")
+        .json_schema()
+        .path(["properties", "latitude", "minimum"])
+        .lt(0)
         .order_by("name.desc")
         .limit(1)
         .one()
@@ -982,7 +1228,7 @@ fn sync_supports_meta_endpoints() {
             .json_body(json!({
                 "total_objects": 12,
                 "total_classes": 3,
-                "total_namespaces": 2,
+                "total_collections": 2,
                 "objects_per_class": [
                     { "hubuum_class_id": 10, "count": 5 },
                     { "hubuum_class_id": 20, "count": 7 }
@@ -1011,7 +1257,7 @@ fn sync_supports_meta_endpoints() {
         .expect("meta_counts request should succeed");
     assert_eq!(counts_response.total_objects, 12);
     assert_eq!(counts_response.total_classes, 3);
-    assert_eq!(counts_response.total_namespaces, 2);
+    assert_eq!(counts_response.total_collections, 2);
     assert_eq!(counts_response.objects_per_class.len(), 2);
     assert_eq!(counts_response.objects_per_class[0].hubuum_class_id, 10);
     assert_eq!(counts_response.objects_per_class[0].count, 5);
@@ -1043,7 +1289,7 @@ async fn async_supports_meta_endpoints() {
             .json_body(json!({
                 "total_objects": 12,
                 "total_classes": 3,
-                "total_namespaces": 2,
+                "total_collections": 2,
                 "objects_per_class": [
                     { "hubuum_class_id": 10, "count": 5 },
                     { "hubuum_class_id": 20, "count": 7 }
@@ -1073,7 +1319,7 @@ async fn async_supports_meta_endpoints() {
         .expect("meta_counts request should succeed");
     assert_eq!(counts_response.total_objects, 12);
     assert_eq!(counts_response.total_classes, 3);
-    assert_eq!(counts_response.total_namespaces, 2);
+    assert_eq!(counts_response.total_collections, 2);
     assert_eq!(counts_response.objects_per_class.len(), 2);
     assert_eq!(counts_response.objects_per_class[0].hubuum_class_id, 10);
     assert_eq!(counts_response.objects_per_class[0].count, 5);
@@ -1151,7 +1397,7 @@ fn sync_supports_user_group_and_token_endpoints() {
 
     let user = client
         .users()
-        .select(11)
+        .get(11)
         .expect("user by id request should succeed");
     assert_eq!(user.resource().id, 11);
 
@@ -1168,7 +1414,7 @@ fn sync_supports_user_group_and_token_endpoints() {
 
     let group = client
         .groups()
-        .select(10)
+        .get(10)
         .expect("group by id request should succeed");
     assert_eq!(group.resource().id, 10);
     assert_eq!(group.resource().groupname, "admins");
@@ -1230,7 +1476,7 @@ async fn async_supports_user_group_and_token_endpoints() {
 
     let user = client
         .users()
-        .select(11)
+        .get(11)
         .await
         .expect("user by id request should succeed");
     assert_eq!(user.resource().id, 11);
@@ -1252,7 +1498,7 @@ async fn async_supports_user_group_and_token_endpoints() {
 
     let group = client
         .groups()
-        .select(10)
+        .get(10)
         .await
         .expect("group by id request should succeed");
     assert_eq!(group.resource().id, 10);
@@ -1356,18 +1602,18 @@ fn sync_handle_list_requests_support_sorting() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
-    let namespace_permissions = server.mock(|when, then| {
+    let collection_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions")
+            .path("/api/v1/collections/7/permissions")
             .query_param("sort", "group.groupname.asc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1376,9 +1622,9 @@ fn sync_handle_list_requests_support_sorting() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_user_permissions = server.mock(|when, then| {
+    let collection_user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/principal/11")
+            .path("/api/v1/collections/7/permissions/principal/11")
             .query_param("sort", "group.groupname.desc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1389,10 +1635,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let client = sync_client(&server);
 
-    let user = client
-        .users()
-        .select(11)
-        .expect("user lookup should succeed");
+    let user = client.users().get(11).expect("user lookup should succeed");
     let user_group_page = user
         .groups_request()
         .sort("groupname", SortDirection::Asc)
@@ -1411,7 +1654,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let group = client
         .groups()
-        .select(10)
+        .get(10)
         .expect("group lookup should succeed");
     let member_page = group
         .members_request()
@@ -1423,7 +1666,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .expect("class lookup should succeed");
     let object_page = class
         .objects_query()
@@ -1441,26 +1684,26 @@ fn sync_handle_list_requests_support_sorting() {
         .expect("class permissions request builder should succeed");
     assert_eq!(class_permission_page.items[0].permission.group_id, 10);
 
-    let namespace = client
-        .namespaces()
-        .select(7)
-        .expect("namespace lookup should succeed");
-    let namespace_permission_page = namespace
+    let collection = client
+        .collections()
+        .get(7)
+        .expect("collection lookup should succeed");
+    let collection_permission_page = collection
         .permissions_request()
         .sort("group.groupname", SortDirection::Asc)
         .limit(1)
         .page()
-        .expect("namespace permissions request builder should succeed");
-    assert_eq!(namespace_permission_page.items[0].permission.group_id, 10);
+        .expect("collection permissions request builder should succeed");
+    assert_eq!(collection_permission_page.items[0].permission.group_id, 10);
 
-    let namespace_user_permission_page = namespace
+    let collection_user_permission_page = collection
         .principal_permissions_request(11)
         .sort("group.groupname", SortDirection::Desc)
         .limit(1)
         .page()
-        .expect("namespace user permissions request builder should succeed");
+        .expect("collection user permissions request builder should succeed");
     assert_eq!(
-        namespace_user_permission_page.items[0].permission.group_id,
+        collection_user_permission_page.items[0].permission.group_id,
         10
     );
 
@@ -1472,9 +1715,9 @@ fn sync_handle_list_requests_support_sorting() {
     class_by_id.assert_calls(1);
     class_objects.assert_calls(1);
     class_permissions.assert_calls(1);
-    namespace_by_id.assert_calls(1);
-    namespace_permissions.assert_calls(1);
-    namespace_user_permissions.assert_calls(1);
+    collection_by_id.assert_calls(1);
+    collection_permissions.assert_calls(1);
+    collection_user_permissions.assert_calls(1);
 }
 
 #[tokio::test]
@@ -1569,18 +1812,18 @@ async fn async_handle_list_requests_support_sorting() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
-    let namespace_permissions = server.mock(|when, then| {
+    let collection_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions")
+            .path("/api/v1/collections/7/permissions")
             .query_param("sort", "group.groupname.asc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1589,9 +1832,9 @@ async fn async_handle_list_requests_support_sorting() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_user_permissions = server.mock(|when, then| {
+    let collection_user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/principal/11")
+            .path("/api/v1/collections/7/permissions/principal/11")
             .query_param("sort", "group.groupname.desc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1604,7 +1847,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let user = client
         .users()
-        .select(11)
+        .get(11)
         .await
         .expect("user lookup should succeed");
     let user_group_page = user
@@ -1627,7 +1870,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let group = client
         .groups()
-        .select(10)
+        .get(10)
         .await
         .expect("group lookup should succeed");
     let member_page = group
@@ -1641,7 +1884,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .await
         .expect("class lookup should succeed");
     let object_page = class
@@ -1662,29 +1905,29 @@ async fn async_handle_list_requests_support_sorting() {
         .expect("class permissions request builder should succeed");
     assert_eq!(class_permission_page.items[0].permission.group_id, 10);
 
-    let namespace = client
-        .namespaces()
-        .select(7)
+    let collection = client
+        .collections()
+        .get(7)
         .await
-        .expect("namespace lookup should succeed");
-    let namespace_permission_page = namespace
+        .expect("collection lookup should succeed");
+    let collection_permission_page = collection
         .permissions_request()
         .sort("group.groupname", SortDirection::Asc)
         .limit(1)
         .page()
         .await
-        .expect("namespace permissions request builder should succeed");
-    assert_eq!(namespace_permission_page.items[0].permission.group_id, 10);
+        .expect("collection permissions request builder should succeed");
+    assert_eq!(collection_permission_page.items[0].permission.group_id, 10);
 
-    let namespace_user_permission_page = namespace
+    let collection_user_permission_page = collection
         .principal_permissions_request(11)
         .sort("group.groupname", SortDirection::Desc)
         .limit(1)
         .page()
         .await
-        .expect("namespace user permissions request builder should succeed");
+        .expect("collection user permissions request builder should succeed");
     assert_eq!(
-        namespace_user_permission_page.items[0].permission.group_id,
+        collection_user_permission_page.items[0].permission.group_id,
         10
     );
 
@@ -1696,13 +1939,13 @@ async fn async_handle_list_requests_support_sorting() {
     class_by_id.assert_calls(1);
     class_objects.assert_calls(1);
     class_permissions.assert_calls(1);
-    namespace_by_id.assert_calls(1);
-    namespace_permissions.assert_calls(1);
-    namespace_user_permissions.assert_calls(1);
+    collection_by_id.assert_calls(1);
+    collection_permissions.assert_calls(1);
+    collection_user_permissions.assert_calls(1);
 }
 
 #[test]
-fn sync_supports_class_and_namespace_permission_endpoints() {
+fn sync_supports_class_and_collection_permission_endpoints() {
     let server = MockServer::start();
     mock_login(&server);
 
@@ -1724,41 +1967,41 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
-    let namespace_group_permissions = server.mock(|when, then| {
+    let collection_group_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10")
+            .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!(permission_json(7, 10)));
     });
 
-    let namespace_revoke_permissions = server.mock(|when, then| {
+    let collection_revoke_permissions = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/namespaces/7/permissions/group/10")
+            .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let has_read_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let has_delete_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10/DeleteCollection")
+            .path("/api/v1/collections/7/permissions/group/10/DeleteCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(404)
             .header("content-type", "application/json")
@@ -1767,21 +2010,21 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     let grant_permission = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201);
     });
 
     let revoke_permission = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/principal/11")
+            .path("/api/v1/collections/7/permissions/principal/11")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -1792,7 +2035,7 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .expect("class lookup should succeed");
     let class_permission_rows = class
         .permissions()
@@ -1800,34 +2043,34 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
     assert_eq!(class_permission_rows.len(), 1);
     assert_eq!(class_permission_rows[0].permission.group_id, 10);
 
-    let namespace = client
-        .namespaces()
-        .select(7)
-        .expect("namespace lookup should succeed");
-    let group_permission = namespace
+    let collection = client
+        .collections()
+        .get(7)
+        .expect("collection lookup should succeed");
+    let group_permission = collection
         .group_permissions(10)
-        .expect("namespace group permissions should succeed");
+        .expect("collection group permissions should succeed");
     assert_eq!(group_permission.group_id, 10);
-    namespace
+    collection
         .revoke_permissions(10)
         .expect("revoke_permissions should succeed");
     assert!(
-        namespace
+        collection
             .has_group_permission(10, Permissions::ReadCollection)
             .expect("has_group_permission should succeed")
     );
     assert!(
-        !namespace
+        !collection
             .has_group_permission(10, Permissions::DeleteCollection)
             .expect("has_group_permission should map 404 to false")
     );
-    namespace
+    collection
         .grant_permission(10, Permissions::ReadCollection)
         .expect("grant_permission should succeed");
-    namespace
+    collection
         .revoke_permission(10, Permissions::ReadCollection)
         .expect("revoke_permission should succeed");
-    let user_permissions_rows = namespace
+    let user_permissions_rows = collection
         .principal_permissions(11)
         .expect("user_permissions should succeed");
     assert_eq!(user_permissions_rows.len(), 1);
@@ -1835,9 +2078,9 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     class_by_id.assert_calls(1);
     class_permissions.assert_calls(1);
-    namespace_by_id.assert_calls(1);
-    namespace_group_permissions.assert_calls(1);
-    namespace_revoke_permissions.assert_calls(1);
+    collection_by_id.assert_calls(1);
+    collection_group_permissions.assert_calls(1);
+    collection_revoke_permissions.assert_calls(1);
     has_read_permission.assert_calls(1);
     has_delete_permission.assert_calls(1);
     grant_permission.assert_calls(1);
@@ -1846,7 +2089,7 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 }
 
 #[tokio::test]
-async fn async_supports_class_and_namespace_permission_endpoints() {
+async fn async_supports_class_and_collection_permission_endpoints() {
     let server = MockServer::start();
     mock_login(&server);
 
@@ -1868,41 +2111,41 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
-    let namespace_group_permissions = server.mock(|when, then| {
+    let collection_group_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10")
+            .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!(permission_json(7, 10)));
     });
 
-    let namespace_revoke_permissions = server.mock(|when, then| {
+    let collection_revoke_permissions = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/namespaces/7/permissions/group/10")
+            .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let has_read_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let has_delete_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10/DeleteCollection")
+            .path("/api/v1/collections/7/permissions/group/10/DeleteCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(404)
             .header("content-type", "application/json")
@@ -1911,21 +2154,21 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     let grant_permission = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201);
     });
 
     let revoke_permission = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/principal/11")
+            .path("/api/v1/collections/7/permissions/principal/11")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -1936,7 +2179,7 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .await
         .expect("class lookup should succeed");
     let class_permission_rows = class
@@ -1946,41 +2189,41 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
     assert_eq!(class_permission_rows.len(), 1);
     assert_eq!(class_permission_rows[0].permission.group_id, 10);
 
-    let namespace = client
-        .namespaces()
-        .select(7)
+    let collection = client
+        .collections()
+        .get(7)
         .await
-        .expect("namespace lookup should succeed");
-    let group_permission = namespace
+        .expect("collection lookup should succeed");
+    let group_permission = collection
         .group_permissions(10)
         .await
-        .expect("namespace group permissions should succeed");
+        .expect("collection group permissions should succeed");
     assert_eq!(group_permission.group_id, 10);
-    namespace
+    collection
         .revoke_permissions(10)
         .await
         .expect("revoke_permissions should succeed");
     assert!(
-        namespace
+        collection
             .has_group_permission(10, Permissions::ReadCollection)
             .await
             .expect("has_group_permission should succeed")
     );
     assert!(
-        !namespace
+        !collection
             .has_group_permission(10, Permissions::DeleteCollection)
             .await
             .expect("has_group_permission should map 404 to false")
     );
-    namespace
+    collection
         .grant_permission(10, Permissions::ReadCollection)
         .await
         .expect("grant_permission should succeed");
-    namespace
+    collection
         .revoke_permission(10, Permissions::ReadCollection)
         .await
         .expect("revoke_permission should succeed");
-    let user_permissions_rows = namespace
+    let user_permissions_rows = collection
         .principal_permissions(11)
         .await
         .expect("user_permissions should succeed");
@@ -1989,9 +2232,9 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     class_by_id.assert_calls(1);
     class_permissions.assert_calls(1);
-    namespace_by_id.assert_calls(1);
-    namespace_group_permissions.assert_calls(1);
-    namespace_revoke_permissions.assert_calls(1);
+    collection_by_id.assert_calls(1);
+    collection_group_permissions.assert_calls(1);
+    collection_revoke_permissions.assert_calls(1);
     has_read_permission.assert_calls(1);
     has_delete_permission.assert_calls(1);
     grant_permission.assert_calls(1);
@@ -2000,31 +2243,31 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 }
 
 #[test]
-fn sync_reports_and_templates_cover_new_server_surface() {
+fn sync_exports_and_templates_cover_new_server_surface() {
     let server = MockServer::start();
     mock_login(&server);
 
-    let report_submit = server.mock(|when, then| {
+    let export_submit = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/reports")
+            .path("/api/v1/exports")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(202)
             .header("content-type", "application/json")
-            .json_body(report_task_json(11, "succeeded"));
+            .json_body(export_task_json(11, "succeeded"));
     });
 
-    let report_task = server.mock(|when, then| {
+    let export_task = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/tasks/11")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(report_task_json(11, "succeeded"));
+            .json_body(export_task_json(11, "succeeded"));
     });
 
-    let report_output = server.mock(|when, then| {
+    let export_output = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/reports/11/output")
+            .path("/api/v1/exports/11/output")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -2046,66 +2289,82 @@ fn sync_reports_and_templates_cover_new_server_surface() {
 
     let templates_page = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/templates")
+            .path("/api/v1/export-templates")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .header("x-next-cursor", "cursor-2")
-            .json_body(json!([report_template_json(1, "owners")]));
+            .json_body(json!([export_template_json(1, "owners")]));
     });
 
     let template_get = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/templates/1")
+            .path("/api/v1/export-templates/1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(report_template_json(1, "owners"));
+            .json_body(export_template_json(1, "owners"));
     });
 
     let template_create = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/templates")
+            .path("/api/v1/export-templates")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201)
             .header("content-type", "application/json")
-            .json_body(report_template_json(2, "created-template"));
+            .json_body(export_template_json(2, "created-template"));
     });
 
     let template_patch = server.mock(|when, then| {
         when.method(PATCH)
-            .path("/api/v1/templates/2")
+            .path("/api/v1/export-templates/2")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(report_template_json(2, "updated-template"));
+            .json_body(export_template_json(2, "updated-template"));
     });
 
     let template_delete = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/templates/2")
+            .path("/api/v1/export-templates/2")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
+    let template_export_submit = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/export-templates/1/exports")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .header("idempotency-key", "template-export")
+            .json_body(json!({
+                "query": "name__icontains=server",
+                "object_id": null,
+                "missing_data_policy": null,
+                "limits": null
+            }));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(export_task_json(12, "queued"));
+    });
+
     let client = sync_client(&server);
-    let report = client
-        .reports()
-        .run(report_request())
+    let export = client
+        .exports()
+        .run(export_request())
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
-        .expect("JSON report should succeed");
-    match report {
-        ReportResult::Json(report) => assert_eq!(report.items.len(), 1),
-        other => panic!("expected JSON report, got {other:?}"),
+        .expect("JSON export should succeed");
+    match export {
+        ExportResult::Json(export) => assert_eq!(export.items.len(), 1),
+        other => panic!("expected JSON export, got {other:?}"),
     }
-    report_submit.assert_calls(1);
-    report_task.assert_calls(1);
-    report_output.assert_calls(1);
+    export_submit.assert_calls(1);
+    export_task.assert_calls(1);
+    export_output.assert_calls(1);
 
     let page = client
-        .templates()
+        .export_templates()
         .query()
         .limit(1)
         .page()
@@ -2114,26 +2373,40 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     assert_eq!(page.next_cursor.as_deref(), Some("cursor-2"));
 
     let selected = client
-        .templates()
-        .select(1)
+        .export_templates()
+        .get(1)
         .expect("template select should succeed");
     assert_eq!(selected.resource().id, 1);
 
+    let templated_task = client
+        .export_templates()
+        .submit_export(
+            1,
+            ExportTemplateRunRequest {
+                query: Some("name__icontains=server".to_string()),
+                ..Default::default()
+            },
+        )
+        .idempotency_key("template-export")
+        .send()
+        .expect("template export submit should succeed");
+    assert_eq!(templated_task.id, 12);
+
     let created = client
-        .templates()
+        .export_templates()
         .create()
-        .namespace_id(7)
+        .collection_id(7)
         .name("created-template")
         .description("Template")
-        .content_type(ReportContentType::TextPlain)
+        .content_type(ExportContentType::TextPlain)
         .template("{{name}}")
-        .kind(hubuum_client::ReportTemplateKind::Fragment)
+        .kind(hubuum_client::ExportTemplateKind::Fragment)
         .send()
         .expect("template create should succeed");
     assert_eq!(created.id, 2);
 
     let updated = client
-        .templates()
+        .export_templates()
         .update(2)
         .name("updated-template")
         .send()
@@ -2141,7 +2414,7 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     assert_eq!(updated.name, "updated-template");
 
     client
-        .templates()
+        .export_templates()
         .delete(2)
         .expect("template delete should succeed");
 
@@ -2150,12 +2423,13 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     template_create.assert_calls(1);
     template_patch.assert_calls(1);
     template_delete.assert_calls(1);
+    template_export_submit.assert_calls(1);
 }
 
 #[test]
-fn report_template_patch_omits_content_type() {
-    let patch = hubuum_client::ReportTemplatePatch {
-        namespace_id: None,
+fn export_template_patch_omits_content_type() {
+    let patch = hubuum_client::ExportTemplatePatch {
+        collection_id: None,
         name: Some("updated-template".to_string()),
         description: None,
         template: None,
@@ -2173,7 +2447,7 @@ fn report_template_patch_omits_content_type() {
     assert_eq!(
         body,
         json!({
-            "namespace_id": null,
+            "collection_id": null,
             "name": "updated-template",
             "description": null,
             "template": null,
@@ -2190,33 +2464,33 @@ fn report_template_patch_omits_content_type() {
 }
 
 #[tokio::test]
-async fn async_reports_support_rendered_outputs() {
+async fn async_exports_support_rendered_outputs() {
     for (expected_type, expected_body) in [
-        (ReportContentType::TextPlain, "plain report"),
-        (ReportContentType::TextHtml, "<p>html report</p>"),
-        (ReportContentType::TextCsv, "name\nsrv-01\n"),
+        (ExportContentType::TextPlain, "plain export"),
+        (ExportContentType::TextHtml, "<p>html export</p>"),
+        (ExportContentType::TextCsv, "name\nsrv-01\n"),
     ] {
         let server = MockServer::start();
         mock_login(&server);
-        let report_submit = server.mock(|when, then| {
+        let export_submit = server.mock(|when, then| {
             when.method(POST)
-                .path("/api/v1/reports")
+                .path("/api/v1/exports")
                 .header("authorization", format!("Bearer {}", TOKEN));
             then.status(202)
                 .header("content-type", "application/json")
-                .json_body(report_task_json(11, "succeeded"));
+                .json_body(export_task_json(11, "succeeded"));
         });
-        let report_task = server.mock(|when, then| {
+        let export_task = server.mock(|when, then| {
             when.method(GET)
                 .path("/api/v1/tasks/11")
                 .header("authorization", format!("Bearer {}", TOKEN));
             then.status(200)
                 .header("content-type", "application/json")
-                .json_body(report_task_json(11, "succeeded"));
+                .json_body(export_task_json(11, "succeeded"));
         });
-        let report_output = server.mock(|when, then| {
+        let export_output = server.mock(|when, then| {
             when.method(GET)
-                .path("/api/v1/reports/11/output")
+                .path("/api/v1/exports/11/output")
                 .header("authorization", format!("Bearer {}", TOKEN));
             then.status(200)
                 .header("content-type", expected_type.to_string())
@@ -2225,22 +2499,22 @@ async fn async_reports_support_rendered_outputs() {
 
         let client = async_client(&server).await;
         let result = client
-            .reports()
-            .run(report_request())
+            .exports()
+            .run(export_request())
             .poll_interval(std::time::Duration::from_millis(1))
             .send()
             .await
-            .expect("rendered report should succeed");
+            .expect("rendered export should succeed");
         match result {
-            ReportResult::Rendered { content_type, body } => {
+            ExportResult::Rendered { content_type, body } => {
                 assert_eq!(content_type, expected_type);
                 assert_eq!(body, expected_body);
             }
-            other => panic!("expected rendered report, got {other:?}"),
+            other => panic!("expected rendered export, got {other:?}"),
         }
-        report_submit.assert_calls(1);
-        report_task.assert_calls(1);
-        report_output.assert_calls(1);
+        export_submit.assert_calls(1);
+        export_task.assert_calls(1);
+        export_output.assert_calls(1);
     }
 }
 
@@ -2258,18 +2532,18 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
             .json_body(task_queue_json());
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
     let groups_with_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/has_permissions/ReadTemplate")
+            .path("/api/v1/collections/7/has_permissions/ReadTemplate")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -2303,11 +2577,11 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
     let meta = client.meta_tasks().expect("meta_tasks should succeed");
     assert_eq!(meta.total_import_result_rows, 7);
 
-    let namespace = client
-        .namespaces()
-        .select(7)
-        .expect("namespace select should succeed");
-    let group_page = namespace
+    let collection = client
+        .collections()
+        .get(7)
+        .expect("collection select should succeed");
+    let group_page = collection
         .groups_with_permission(Permissions::ReadTemplate)
         .limit(1)
         .page()
@@ -2317,11 +2591,11 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .expect("class select should succeed");
     let related_page = class
         .related_classes()
-        .add_filter("path", FilterOperator::Contains { is_negated: false }, "42")
+        .filter("path", FilterOperator::Contains { is_negated: false }, "42")
         .limit(1)
         .page()
         .expect("related_classes should succeed");
@@ -2329,7 +2603,7 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
     assert_eq!(related_page.next_cursor.as_deref(), Some("rel-cursor"));
 
     meta_tasks.assert_calls(1);
-    namespace_by_id.assert_calls(1);
+    collection_by_id.assert_calls(1);
     groups_with_permission.assert_calls(1);
     class_by_id.assert_calls(1);
     related_classes.assert_calls(1);
@@ -2498,11 +2772,15 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let class = client
         .classes()
-        .select(42)
+        .get(42)
         .expect("class select should use by-id endpoint");
     let class_related_page = class
         .related_classes()
-        .add_filter_equals("from_classes", 42)
+        .filter(
+            "from_classes",
+            FilterOperator::Equals { is_negated: false },
+            42,
+        )
         .limit(1)
         .page()
         .expect("class related classes should succeed");
@@ -2514,15 +2792,19 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let class_relation_page = class
         .related_relations()
-        .add_filter_equals("to_classes", 77)
+        .filter(
+            "to_classes",
+            FilterOperator::Equals { is_negated: false },
+            77,
+        )
         .page()
         .expect("class related relations should succeed");
     assert_eq!(class_relation_page.items[0].id, 55);
 
     let class_graph = class
         .related_graph()
-        .add_filter("path", FilterOperator::Contains { is_negated: false }, "42")
-        .fetch()
+        .filter("path", FilterOperator::Contains { is_negated: false }, "42")
+        .send()
         .expect("class related graph should succeed");
     assert_eq!(class_graph.classes.len(), 1);
     assert_eq!(class_graph.relations.len(), 1);
@@ -2543,13 +2825,13 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let object = client
         .objects(42)
-        .select(9)
+        .get(9)
         .expect("object select should use by-id endpoint");
     let related_page = object
         .related_objects()
         .ignore_classes([42, 99])
         .ignore_self_class(false)
-        .add_filter("depth", FilterOperator::Gte { is_negated: false }, 1)
+        .filter("depth", FilterOperator::Gte { is_negated: false }, 1)
         .limit(1)
         .page()
         .expect("related objects should succeed");
@@ -2558,16 +2840,20 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let related_relations_page = object
         .related_relations()
-        .add_filter_equals("class_relation", 55)
+        .filter(
+            "class_relation",
+            FilterOperator::Equals { is_negated: false },
+            55,
+        )
         .page()
         .expect("related relations should succeed");
     assert_eq!(related_relations_page.items[0].id, 66);
 
     let graph = object
         .related_graph()
-        .add_filter("depth", FilterOperator::Lte { is_negated: false }, 2)
+        .filter("depth", FilterOperator::Lte { is_negated: false }, 2)
         .ignore_self_class(false)
-        .fetch()
+        .send()
         .expect("related graph should succeed");
     assert_eq!(graph.objects.len(), 1);
     assert_eq!(graph.relations.len(), 1);
@@ -2588,13 +2874,13 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let selected_class_relation = client
         .class_relation()
-        .select(56)
+        .get(56)
         .expect("class relation select should use direct endpoint");
     assert_eq!(selected_class_relation.id(), 56);
 
     let selected_object_relation = client
         .object_relation()
-        .select(66)
+        .get(66)
         .expect("object relation select should use direct endpoint");
     assert_eq!(selected_object_relation.id(), 66);
 
@@ -2625,7 +2911,7 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
         when.method(GET)
             .path("/api/v1/search")
             .query_param("q", "server")
-            .query_param("kinds", "namespace,object")
+            .query_param("kinds", "collection,object")
             .query_param("limit_per_kind", "2")
             .query_param("cursor_objects", "obj-cursor")
             .query_param("search_class_schema", "true")
@@ -2640,7 +2926,7 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
         when.method(GET)
             .path("/api/v1/search/stream")
             .query_param("q", "server")
-            .query_param("kinds", "namespace,object")
+            .query_param("kinds", "collection,object")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "text/event-stream")
@@ -2648,7 +2934,7 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
                 "event: started\n",
                 "data: {\"query\":\"server\"}\n\n",
                 "event: batch\n",
-                "data: {\"kind\":\"object\",\"namespaces\":[],\"classes\":[],\"objects\":[],\"next\":null}\n\n",
+                "data: {\"kind\":\"object\",\"collections\":[],\"classes\":[],\"objects\":[],\"next\":null}\n\n",
                 "event: done\n",
                 "data: {\"query\":\"server\"}\n\n",
             ));
@@ -2658,19 +2944,19 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
 
     let response = client
         .search("server")
-        .kinds([UnifiedSearchKind::Namespace, UnifiedSearchKind::Object])
+        .kinds([UnifiedSearchKind::Collection, UnifiedSearchKind::Object])
         .limit_per_kind(2)
         .cursor_objects("obj-cursor")
         .search_class_schema(true)
         .search_object_data(false)
-        .execute()
+        .send()
         .expect("unified search should succeed");
-    assert_eq!(response.results.namespaces[0].name, "infra");
+    assert_eq!(response.results.collections[0].name, "infra");
     assert_eq!(response.next.objects.as_deref(), Some("obj-cursor"));
 
     let events = client
         .search("server")
-        .kinds([UnifiedSearchKind::Namespace, UnifiedSearchKind::Object])
+        .kinds([UnifiedSearchKind::Collection, UnifiedSearchKind::Object])
         .stream()
         .expect("unified search stream should succeed");
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
@@ -2718,7 +3004,7 @@ async fn async_unified_search_supports_grouped_results_and_stream_events() {
     let response = client
         .search("server")
         .kinds([UnifiedSearchKind::Class])
-        .execute()
+        .send()
         .await
         .expect("async unified search should succeed");
     assert_eq!(response.results.classes[0].name, "servers");
@@ -2881,7 +3167,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
             .query_param("entity_id", "42")
             .query_param("action", "updated")
             .query_param("actor_kind", "human")
-            .query_param("namespace_id", "7")
+            .query_param("collection_id", "7")
             .query_param("limit", "1")
             .query_param("sort", "occurred_at.desc")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -2949,7 +3235,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
 
     let subscription_create = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/namespaces/7/event-subscriptions")
+            .path("/api/v1/collections/7/event-subscriptions")
             .json_body(json!({
                 "sink_id": 5,
                 "name": "class-updates",
@@ -2965,7 +3251,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
 
     let subscription_update = server.mock(|when, then| {
         when.method(PATCH)
-            .path("/api/v1/namespaces/7/event-subscriptions/8")
+            .path("/api/v1/collections/7/event-subscriptions/8")
             .json_body(json!({"enabled": false}))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -2989,7 +3275,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
         .entity_id(42)
         .action("updated")
         .actor_kind("human")
-        .namespace_id(7)
+        .collection_id(7)
         .limit(1)
         .sort("occurred_at", SortDirection::Desc)
         .page()
@@ -3303,7 +3589,7 @@ fn sync_service_account_create_and_disable() {
 
     let sa = client
         .service_accounts()
-        .select(5)
+        .get(5)
         .expect("service account select should succeed");
     let disabled = sa.disable().expect("disable should succeed");
     assert!(disabled.disabled_at.is_some());
@@ -3343,10 +3629,7 @@ fn sync_user_token_create_with_scopes_returns_raw_token() {
     });
 
     let client = sync_client(&server);
-    let user = client
-        .users()
-        .select(11)
-        .expect("user select should succeed");
+    let user = client.users().get(11).expect("user select should succeed");
     let raw = user
         .tokens_create(
             NewTokenRequest::new()
@@ -3375,7 +3658,7 @@ fn sync_remote_target_invoke_returns_task() {
             .header("content-type", "application/json")
             .json_body(json!({
                 "id": 3,
-                "namespace_id": 7,
+                "collection_id": 7,
                 "name": "webhook",
                 "description": "",
                 "method": "post",
@@ -3407,7 +3690,7 @@ fn sync_remote_target_invoke_returns_task() {
     let client = sync_client(&server);
     let target = client
         .remote_targets()
-        .select(3)
+        .get(3)
         .expect("remote target select should succeed");
     let task = target
         .invoke(RemoteTargetInvokeRequest::new(
@@ -3470,7 +3753,7 @@ fn sync_healthz_probe_succeeds_without_auth() {
     });
 
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    let client = SyncClient::new_with_certificate_validation(base_url, true);
+    let client = blocking::Client::new_with_certificate_validation(base_url, true);
     let probe = client.healthz().expect("healthz should succeed");
     assert_eq!(probe.status, "ok");
 

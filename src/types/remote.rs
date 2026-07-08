@@ -19,7 +19,7 @@ pub enum RemoteHttpMethod {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum RemoteTargetSubjectType {
-    Namespace,
+    Collection,
     Class,
     Object,
     ClassRelation,
@@ -50,7 +50,7 @@ pub enum RemoteAuthConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RemoteInvocationSubject {
-    Namespace { namespace_id: i32 },
+    Collection { collection_id: i32 },
     Class { class_id: i32 },
     Object { class_id: i32, object_id: i32 },
     ClassRelation { relation_id: i32 },
@@ -61,7 +61,7 @@ pub enum RemoteInvocationSubject {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct RemoteTarget {
     pub id: i32,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub name: String,
     pub description: String,
     pub method: RemoteHttpMethod,
@@ -83,7 +83,7 @@ pub struct RemoteTarget {
 /// Request body to create a remote target.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct NewRemoteTarget {
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub name: String,
     pub description: String,
     pub method: RemoteHttpMethod,
@@ -111,7 +111,7 @@ pub struct UpdateRemoteTarget {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub namespace_id: Option<i32>,
+    pub collection_id: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub method: Option<RemoteHttpMethod>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -137,7 +137,7 @@ pub struct UpdateRemoteTarget {
 pub struct RemoteTargetGet {
     pub id: Option<i32>,
     pub name: Option<String>,
-    pub namespace_id: Option<i32>,
+    pub collection_id: Option<i32>,
     pub enabled: Option<bool>,
 }
 

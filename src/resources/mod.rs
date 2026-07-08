@@ -2,33 +2,37 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::fmt::Debug;
 
 mod class;
+mod collection;
 mod event_sink;
+mod export_template;
 mod group;
-mod namespace;
 mod object;
 mod permission;
 mod remote_target;
-mod report_template;
 mod service_account;
 pub(crate) mod user;
 
 pub use self::class::{
-    Class, ClassGet, ClassPatch, ClassPost, ClassRelation, ClassRelationGet, ClassRelationPatch,
-    ClassRelationPost, ClassWithPath, RelatedClassGraph,
+    Class, ClassGet, ClassId, ClassPatch, ClassPost, ClassRelation, ClassRelationGet,
+    ClassRelationId, ClassRelationPatch, ClassRelationPost, ClassWithPath, RelatedClassGraph,
 };
-pub use self::group::{Group, GroupGet, GroupPatch, GroupPost};
-pub use self::namespace::{Namespace, NamespaceGet, NamespacePatch, NamespacePost};
+pub use self::collection::{
+    Collection, CollectionGet, CollectionId, CollectionPatch, CollectionPost,
+};
+pub use self::event_sink::EventSinkId;
+pub use self::export_template::{
+    ExportTemplate, ExportTemplateGet, ExportTemplateId, ExportTemplatePatch, ExportTemplatePost,
+};
+pub use self::group::{Group, GroupGet, GroupId, GroupPatch, GroupPost};
 pub use self::object::{
-    Object, ObjectGet, ObjectPatch, ObjectPost, ObjectRelation, ObjectRelationGet,
-    ObjectRelationPatch, ObjectRelationPost, ObjectWithPath, RelatedObjectGraph,
+    Object, ObjectGet, ObjectId, ObjectPatch, ObjectPost, ObjectRelation, ObjectRelationGet,
+    ObjectRelationId, ObjectRelationPatch, ObjectRelationPost, ObjectWithPath, RelatedObjectGraph,
 };
-pub use self::report_template::{
-    ReportTemplate, ReportTemplateGet, ReportTemplatePatch, ReportTemplatePost,
-};
+pub use self::remote_target::RemoteTargetId;
 pub use self::service_account::{
-    ServiceAccount, ServiceAccountGet, ServiceAccountPatch, ServiceAccountPost,
+    ServiceAccount, ServiceAccountGet, ServiceAccountId, ServiceAccountPatch, ServiceAccountPost,
 };
-pub use self::user::{User, UserGet, UserPatch, UserPost};
+pub use self::user::{User, UserGet, UserId, UserPatch, UserPost};
 pub use crate::types::{
     EventSink, FilterOperator, HubuumDateTime, NewEventSink, NewRemoteTarget, QueryFilter,
     RemoteAuthConfig, RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject, RemoteTarget,
@@ -39,7 +43,15 @@ pub use crate::types::{
 use crate::endpoints::Endpoint;
 
 // ApiResource trait
+pub trait ResourceId:
+    Copy + Clone + Debug + Default + PartialEq + Eq + std::fmt::Display + std::str::FromStr
+{
+    fn new(value: i32) -> Self;
+    fn get(self) -> i32;
+}
+
 pub trait ApiResource: Default {
+    type Id: ResourceId;
     type GetParams: Serialize + Debug + Default;
     type GetOutput: DeserializeOwned + Debug;
     type PostParams: Serialize + Debug + Default;
@@ -50,19 +62,22 @@ pub trait ApiResource: Default {
     type DeleteOutput: DeserializeOwned + Debug;
 
     const NAME_FIELD: &'static str = "name";
+    const COLLECTION_ENDPOINT: Endpoint;
+    const ITEM_ENDPOINT: Option<Endpoint> = None;
+    const ID_PARAM: &'static str = "id";
 
     fn endpoint(&self) -> Endpoint;
     fn build_params(filters: Vec<(String, FilterOperator, String)>) -> Vec<QueryFilter>;
     fn filters_from_get(params: Self::GetParams) -> Vec<QueryFilter>;
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GroupPermissionsResult {
     pub group: GroupResult,
     pub permission: PermissionResult,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GroupResult {
     pub id: i32,
     pub groupname: String,
@@ -71,15 +86,15 @@ pub struct GroupResult {
     pub updated_at: HubuumDateTime,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PermissionResult {
     pub id: i32,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub group_id: i32,
-    pub has_read_namespace: bool,
-    pub has_update_namespace: bool,
-    pub has_delete_namespace: bool,
-    pub has_delegate_namespace: bool,
+    pub has_read_collection: bool,
+    pub has_update_collection: bool,
+    pub has_delete_collection: bool,
+    pub has_delegate_collection: bool,
     pub has_create_class: bool,
     pub has_read_class: bool,
     pub has_update_class: bool,
@@ -114,6 +129,10 @@ pub struct PermissionResult {
     pub has_delete_remote_target: bool,
     #[serde(default)]
     pub has_execute_remote_target: bool,
+    #[serde(default)]
+    pub has_read_audit: bool,
+    #[serde(default)]
+    pub has_manage_event_subscription: bool,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
 }
@@ -146,7 +165,7 @@ pub struct PrincipalMember {
     pub name: String,
 }
 
-/// One group's contribution to a principal's effective permissions on a namespace.
+/// One group's contribution to a principal's effective permissions on a collection.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GroupGrant {
     pub group_id: i32,
@@ -154,13 +173,23 @@ pub struct GroupGrant {
     pub permissions: Vec<crate::types::Permissions>,
 }
 
-/// A principal's effective permissions on a single namespace, broken down by the
+/// A principal's effective permissions on a single collection, broken down by the
 /// group that grants them.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PrincipalNamespacePermissions {
-    pub namespace_id: i32,
-    pub namespace_name: String,
+pub struct PrincipalCollectionPermissions {
+    pub collection_id: i32,
+    pub collection_name: String,
     pub grants: Vec<GroupGrant>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct EffectiveGroupPermission {
+    pub target_collection: Collection,
+    pub source_collection: Collection,
+    pub depth: i32,
+    pub inherited: bool,
+    pub group: Group,
+    pub permission: PermissionResult,
 }
 
 /// Metadata for the token presented on the current request (the caller's own

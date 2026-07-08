@@ -1,6 +1,6 @@
 use hubuum_client::{
-    ApiError, BaseUrl, ClassPost, ClassRelationPost, GroupPatch, NamespacePatch, NamespacePost,
-    ObjectPatch, ObjectRelationPost, QueryFilter, SyncClient, Token, UserPatch,
+    ApiError, BaseUrl, ClassPost, ClassRelationPost, CollectionPatch, CollectionPost, GroupPatch,
+    ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch, blocking,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -41,14 +41,14 @@ fn assert_missing_resource(err: ApiError) {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_meta_counts_total_namespaces_non_negative() {
+fn sync_meta_counts_total_collections_non_negative() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let counts = harness
         .client
         .meta_counts()
         .expect("sync meta_counts failed");
 
-    assert!(counts.total_namespaces >= 0);
+    assert!(counts.total_collections >= 0);
 }
 
 #[test]
@@ -68,13 +68,13 @@ fn sync_users_select_by_id_returns_same_user() {
     let admin_by_name = harness
         .client
         .users()
-        .select_by_name(ADMIN_USERNAME)
-        .expect("sync users().select_by_name(admin) failed");
+        .get_by_name(ADMIN_USERNAME)
+        .expect("sync users().get_by_name(admin) failed");
     let admin_by_id = harness
         .client
         .users()
-        .select(admin_by_name.id())
-        .expect("sync users().select(id) failed");
+        .get(admin_by_name.id())
+        .expect("sync users().get(id) failed");
 
     assert_eq!(admin_by_name.id(), admin_by_id.id());
 }
@@ -87,8 +87,8 @@ fn sync_user_groups_endpoint_returns_group_or_legacy_fallback() {
     let admin = harness
         .client
         .users()
-        .select_by_name(ADMIN_USERNAME)
-        .expect("sync users().select_by_name(admin) failed");
+        .get_by_name(ADMIN_USERNAME)
+        .expect("sync users().get_by_name(admin) failed");
 
     match admin.groups() {
         Ok(groups) => assert!(!groups.is_empty()),
@@ -96,9 +96,9 @@ fn sync_user_groups_endpoint_returns_group_or_legacy_fallback() {
             let fallback = harness
                 .client
                 .groups()
-                .select_by_name(ADMIN_USERNAME)
-                .expect("sync groups().select_by_name(admin) fallback failed");
-            assert!(fallback.id() > 0);
+                .get_by_name(ADMIN_USERNAME)
+                .expect("sync groups().get_by_name(admin) fallback failed");
+            assert!(fallback.id().get() > 0);
         }
         Err(err) => panic!("sync admin.groups() failed: {err}"),
     }
@@ -112,8 +112,8 @@ fn sync_user_tokens_endpoint_returns_admin_token_or_legacy_404() {
     let admin = harness
         .client
         .users()
-        .select_by_name(ADMIN_USERNAME)
-        .expect("sync users().select_by_name(admin) failed");
+        .get_by_name(ADMIN_USERNAME)
+        .expect("sync users().get_by_name(admin) failed");
 
     match admin.tokens() {
         Ok(tokens) => assert!(tokens.iter().any(|token| token.principal_id == admin.id())),
@@ -137,8 +137,8 @@ fn sync_class_permissions_endpoint_returns_non_empty() {
     let class = harness
         .client
         .classes()
-        .select(class_id)
-        .expect("sync classes().select(class_id) failed");
+        .get(class_id)
+        .expect("sync classes().get(class_id) failed");
     let permissions = class
         .permissions()
         .expect("sync class.permissions() failed");
@@ -148,22 +148,22 @@ fn sync_class_permissions_endpoint_returns_non_empty() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_namespace_group_permissions_endpoint_matches_group() {
+fn sync_collection_group_permissions_endpoint_matches_group() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, _) =
+    let (collection_id, _) =
         create_sync_permission_sandbox(&harness.client, admin_group_id, "sync-group-permissions")
             .expect("failed to create sync permission sandbox");
 
-    let namespace = harness
+    let collection = harness
         .client
-        .namespaces()
-        .select(namespace_id)
-        .expect("sync namespaces().select(namespace_id) failed");
-    let group_permissions = namespace
+        .collections()
+        .get(collection_id)
+        .expect("sync collections().get(collection_id) failed");
+    let group_permissions = collection
         .group_permissions(admin_group_id)
-        .expect("sync namespace.group_permissions(group_id) failed");
+        .expect("sync collection.group_permissions(group_id) failed");
 
     assert_eq!(group_permissions.group_id, admin_group_id);
 }
@@ -172,31 +172,31 @@ fn sync_namespace_group_permissions_endpoint_matches_group() {
 #[case("existing-group", true)]
 #[case("missing-group", false)]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_namespace_has_group_permission_returns_expected(
+fn sync_collection_has_group_permission_returns_expected(
     #[case] case_name: &str,
     #[case] existing_group: bool,
 ) {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, _) =
+    let (collection_id, _) =
         create_sync_permission_sandbox(&harness.client, admin_group_id, case_name)
             .expect("failed to create sync permission sandbox");
 
-    let namespace = harness
+    let collection = harness
         .client
-        .namespaces()
-        .select(namespace_id)
-        .expect("sync namespaces().select(namespace_id) failed");
+        .collections()
+        .get(collection_id)
+        .expect("sync collections().get(collection_id) failed");
 
     let target_group_id = if existing_group {
         admin_group_id
     } else {
         i32::MAX
     };
-    let has_permission = namespace
+    let has_permission = collection
         .has_group_permission(target_group_id, Permissions::ReadCollection)
-        .expect("sync namespace.has_group_permission() failed");
+        .expect("sync collection.has_group_permission() failed");
 
     assert_eq!(has_permission, existing_group);
 }
@@ -206,65 +206,65 @@ fn sync_namespace_has_group_permission_returns_expected(
 #[case("replace-batch", SyncMutationCase::ReplaceBatch)]
 #[case("revoke-batch", SyncMutationCase::RevokeBatch)]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_namespace_permission_mutation_endpoint_succeeds(
+fn sync_collection_permission_mutation_endpoint_succeeds(
     #[case] case_name: &str,
     #[case] mutation: SyncMutationCase,
 ) {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, _) =
+    let (collection_id, _) =
         create_sync_permission_sandbox(&harness.client, admin_group_id, case_name)
             .expect("failed to create sync permission sandbox");
 
-    let namespace = harness
+    let collection = harness
         .client
-        .namespaces()
-        .select(namespace_id)
-        .expect("sync namespaces().select(namespace_id) failed");
+        .collections()
+        .get(collection_id)
+        .expect("sync collections().get(collection_id) failed");
 
     match mutation {
-        SyncMutationCase::GrantSingle => namespace
+        SyncMutationCase::GrantSingle => collection
             .grant_permission(admin_group_id, Permissions::ReadCollection)
-            .expect("sync namespace.grant_permission() failed"),
-        SyncMutationCase::ReplaceBatch => namespace
+            .expect("sync collection.grant_permission() failed"),
+        SyncMutationCase::ReplaceBatch => collection
             .replace_permissions(
                 admin_group_id,
                 vec![Permissions::ReadCollection.to_string()],
             )
-            .expect("sync namespace.replace_permissions() failed"),
+            .expect("sync collection.replace_permissions() failed"),
         SyncMutationCase::RevokeBatch => {
-            namespace
+            collection
                 .grant_permissions(
                     admin_group_id,
                     vec![Permissions::ReadCollection.to_string()],
                 )
-                .expect("sync namespace.grant_permissions() setup failed");
-            namespace
+                .expect("sync collection.grant_permissions() setup failed");
+            collection
                 .revoke_permissions(admin_group_id)
-                .expect("sync namespace.revoke_permissions() failed");
+                .expect("sync collection.revoke_permissions() failed");
         }
     }
 }
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_namespace_user_permissions_endpoint_returns_non_empty() {
+fn sync_collection_user_permissions_endpoint_returns_non_empty() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (admin_id, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, _) =
+    let (collection_id, _) =
         create_sync_permission_sandbox(&harness.client, admin_group_id, "sync-user-permissions")
             .expect("failed to create sync permission sandbox");
 
-    let namespace = harness
+    let collection = harness
         .client
-        .namespaces()
-        .select(namespace_id)
-        .expect("sync namespaces().select(namespace_id) failed");
-    let principal_permissions = namespace
+        .collections()
+        .get(collection_id)
+        .expect("sync collections().get(collection_id) failed");
+    let principal_permissions = collection
         .principal_permissions(admin_id)
-        .expect("sync namespace.principal_permissions(principal_id) failed");
+        .expect("sync collection.principal_permissions(principal_id) failed");
 
     assert!(!principal_permissions.is_empty());
 }
@@ -282,7 +282,7 @@ fn sync_auth_login_with_token_accepts_valid_token() {
         login_sync(base_url.clone(), &stack.admin_password).expect("failed to login for token");
     let token = logged_in.get_token().to_string();
 
-    let validated = SyncClient::new(base_url)
+    let validated = blocking::Client::new(base_url)
         .login_with_token(Token::new(token.clone()))
         .expect("sync login_with_token(valid) failed");
 
@@ -298,7 +298,7 @@ fn sync_auth_login_with_token_rejects_invalid_token() {
         .parse::<BaseUrl>()
         .expect("stack base URL should parse as BaseUrl");
 
-    let err = SyncClient::new(base_url)
+    let err = blocking::Client::new(base_url)
         .login_with_token(Token::new("invalid-token".to_string()))
         .expect_err("login_with_token should fail for invalid token");
 
@@ -402,7 +402,7 @@ fn sync_auth_logout_all_revokes_existing_tokens() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_users_create_and_select_by_name_roundtrip() {
+fn sync_users_create_and_get_by_name_roundtrip() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (username, user_id) = create_sync_user(&harness.client, "sync-users-create-select")
         .expect("user creation failed");
@@ -410,8 +410,8 @@ fn sync_users_create_and_select_by_name_roundtrip() {
     let selected = harness
         .client
         .users()
-        .select_by_name(&username)
-        .expect("sync users().select_by_name(created) failed");
+        .get_by_name(&username)
+        .expect("sync users().get_by_name(created) failed");
 
     assert_eq!(selected.id(), user_id);
 }
@@ -456,7 +456,7 @@ fn sync_users_delete_removes_resource() {
         .delete(user_id)
         .expect("sync users().delete() failed");
 
-    let err = match harness.client.users().select(user_id) {
+    let err = match harness.client.users().get(user_id) {
         Ok(_) => panic!("deleted user should not be selectable"),
         Err(err) => err,
     };
@@ -465,7 +465,7 @@ fn sync_users_delete_removes_resource() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_groups_create_and_select_by_name_roundtrip() {
+fn sync_groups_create_and_get_by_name_roundtrip() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (groupname, group_id) = create_sync_group(&harness.client, "sync-groups-create-select")
         .expect("group creation failed");
@@ -473,8 +473,8 @@ fn sync_groups_create_and_select_by_name_roundtrip() {
     let selected = harness
         .client
         .groups()
-        .select_by_name(&groupname)
-        .expect("sync groups().select_by_name(created) failed");
+        .get_by_name(&groupname)
+        .expect("sync groups().get_by_name(created) failed");
 
     assert_eq!(selected.id(), group_id);
 }
@@ -520,7 +520,7 @@ fn sync_groups_delete_removes_resource() {
         .delete(group_id)
         .expect("sync groups().delete() failed");
 
-    let err = match harness.client.groups().select(group_id) {
+    let err = match harness.client.groups().get(group_id) {
         Ok(_) => panic!("deleted group should not be selectable"),
         Err(err) => err,
     };
@@ -538,8 +538,8 @@ fn sync_group_membership_add_remove_roundtrip() {
     let group = harness
         .client
         .groups()
-        .select(group_id)
-        .expect("sync groups().select(group_id) failed");
+        .get(group_id)
+        .expect("sync groups().get(group_id) failed");
 
     group
         .add_member(user_id)
@@ -563,39 +563,39 @@ fn sync_group_membership_add_remove_roundtrip() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_namespace_update_changes_fields() {
+fn sync_collection_update_changes_fields() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, _) =
-        create_sync_permission_sandbox(&harness.client, admin_group_id, "sync-namespace-update")
-            .expect("failed to create namespace sandbox");
-    let prefix = unique_case_prefix("sync-namespace-update");
-    let updated_name = format!("{prefix}-updated-namespace");
+    let (collection_id, _) =
+        create_sync_permission_sandbox(&harness.client, admin_group_id, "sync-collection-update")
+            .expect("failed to create collection sandbox");
+    let prefix = unique_case_prefix("sync-collection-update");
+    let updated_name = format!("{prefix}-updated-collection");
     let updated_description = format!("{prefix} updated description");
 
     let updated = harness
         .client
-        .namespaces()
+        .collections()
         .update_raw(
-            namespace_id,
-            NamespacePatch {
+            collection_id,
+            CollectionPatch {
                 name: Some(updated_name.clone()),
                 description: Some(updated_description.clone()),
             },
         )
-        .expect("sync namespaces().update_raw() failed");
+        .expect("sync collections().update_raw() failed");
 
-    assert_eq!(updated.id, namespace_id);
+    assert_eq!(updated.id, collection_id);
     assert_eq!(updated.name, updated_name.clone());
     assert_eq!(updated.description, updated_description);
 
     let selected = harness
         .client
-        .namespaces()
-        .select_by_name(&updated_name)
-        .expect("updated namespace should be selectable by new name");
-    assert_eq!(selected.id(), namespace_id);
+        .collections()
+        .get_by_name(&updated_name)
+        .expect("updated collection should be selectable by new name");
+    assert_eq!(selected.id(), collection_id);
 }
 
 #[test]
@@ -604,12 +604,12 @@ fn sync_class_objects_lists_created_object() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, class_id) =
+    let (collection_id, class_id) =
         create_sync_permission_sandbox(&harness.client, admin_group_id, "sync-class-objects")
             .expect("failed to create class sandbox");
     let (_, object_id) = create_sync_object(
         &harness.client,
-        namespace_id,
+        collection_id,
         class_id,
         "sync-class-objects-created",
     )
@@ -618,8 +618,8 @@ fn sync_class_objects_lists_created_object() {
     let class = harness
         .client
         .classes()
-        .select(class_id)
-        .expect("sync classes().select(class_id) failed");
+        .get(class_id)
+        .expect("sync classes().get(class_id) failed");
     let objects = class.objects().expect("sync class.objects() failed");
 
     assert!(objects.iter().any(|object| object.id() == object_id));
@@ -631,7 +631,7 @@ fn sync_class_object_by_name_returns_matching_object() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, class_id) = create_sync_permission_sandbox(
+    let (collection_id, class_id) = create_sync_permission_sandbox(
         &harness.client,
         admin_group_id,
         "sync-class-object-by-name",
@@ -639,7 +639,7 @@ fn sync_class_object_by_name_returns_matching_object() {
     .expect("failed to create class sandbox");
     let (object_name, object_id) = create_sync_object(
         &harness.client,
-        namespace_id,
+        collection_id,
         class_id,
         "sync-class-object-by-name-created",
     )
@@ -648,8 +648,8 @@ fn sync_class_object_by_name_returns_matching_object() {
     let class = harness
         .client
         .classes()
-        .select(class_id)
-        .expect("sync classes().select(class_id) failed");
+        .get(class_id)
+        .expect("sync classes().get(class_id) failed");
     let object = class
         .object_by_name(&object_name)
         .expect("sync class.object_by_name() failed");
@@ -670,11 +670,11 @@ fn sync_class_handle_delete_removes_resource() {
     let class = harness
         .client
         .classes()
-        .select(class_id)
-        .expect("sync classes().select(class_id) failed");
+        .get(class_id)
+        .expect("sync classes().get(class_id) failed");
     class.delete().expect("sync class.delete() failed");
 
-    let err = match harness.client.classes().select(class_id) {
+    let err = match harness.client.classes().get(class_id) {
         Ok(_) => panic!("deleted class should not be selectable"),
         Err(err) => err,
     };
@@ -687,12 +687,12 @@ fn sync_object_update_changes_fields() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, class_id) =
+    let (collection_id, class_id) =
         create_sync_permission_sandbox(&harness.client, admin_group_id, "sync-object-update")
             .expect("failed to create class sandbox");
     let (_, object_id) = create_sync_object(
         &harness.client,
-        namespace_id,
+        collection_id,
         class_id,
         "sync-object-update-initial",
     )
@@ -709,7 +709,7 @@ fn sync_object_update_changes_fields() {
             object_id,
             ObjectPatch {
                 name: Some(updated_name.clone()),
-                namespace_id: Some(namespace_id),
+                collection_id: Some(collection_id),
                 hubuum_class_id: Some(class_id),
                 description: Some(updated_description.clone()),
                 data: Some(updated_data.clone()),
@@ -729,12 +729,12 @@ fn sync_object_delete_removes_resource() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, class_id) =
+    let (collection_id, class_id) =
         create_sync_permission_sandbox(&harness.client, admin_group_id, "sync-object-delete")
             .expect("failed to create class sandbox");
     let (_, object_id) = create_sync_object(
         &harness.client,
-        namespace_id,
+        collection_id,
         class_id,
         "sync-object-delete-initial",
     )
@@ -746,7 +746,7 @@ fn sync_object_delete_removes_resource() {
         .delete(object_id)
         .expect("sync objects().delete() failed");
 
-    let err = match harness.client.objects(class_id).select(object_id) {
+    let err = match harness.client.objects(class_id).get(object_id) {
         Ok(_) => panic!("deleted object should not be selectable"),
         Err(err) => err,
     };
@@ -759,7 +759,7 @@ fn sync_class_relation_create_delete_roundtrip() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, class_a_id) =
+    let (collection_id, class_a_id) =
         create_sync_permission_sandbox(&harness.client, admin_group_id, "sync-class-relation-a")
             .expect("failed to create base class sandbox");
     let class_b = harness
@@ -768,7 +768,7 @@ fn sync_class_relation_create_delete_roundtrip() {
         .create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("sync-class-relation")),
             description: "integration class relation target".to_string(),
-            namespace_id,
+            collection_id,
             json_schema: None,
             validate_schema: None,
         })
@@ -779,7 +779,7 @@ fn sync_class_relation_create_delete_roundtrip() {
         .class_relation()
         .create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id,
+            to_hubuum_class_id: class_b.id.into(),
             forward_template_alias: None,
             reverse_template_alias: None,
         })
@@ -788,8 +788,8 @@ fn sync_class_relation_create_delete_roundtrip() {
     let selected = harness
         .client
         .class_relation()
-        .select(relation.id)
-        .expect("sync class_relation().select(id) failed");
+        .get(relation.id)
+        .expect("sync class_relation().get(id) failed");
     assert_eq!(selected.id(), relation.id);
 
     harness
@@ -797,7 +797,7 @@ fn sync_class_relation_create_delete_roundtrip() {
         .class_relation()
         .delete(relation.id)
         .expect("sync class_relation().delete() failed");
-    let err = match harness.client.class_relation().select(relation.id) {
+    let err = match harness.client.class_relation().get(relation.id) {
         Ok(_) => panic!("deleted class relation should not be selectable"),
         Err(err) => err,
     };
@@ -810,7 +810,7 @@ fn sync_object_relation_create_delete_roundtrip() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
-    let (namespace_id, class_a_id) = create_sync_permission_sandbox(
+    let (collection_id, class_a_id) = create_sync_permission_sandbox(
         &harness.client,
         admin_group_id,
         "sync-object-relation-class",
@@ -822,22 +822,22 @@ fn sync_object_relation_create_delete_roundtrip() {
         .create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("sync-object-relation")),
             description: "integration object relation class target".to_string(),
-            namespace_id,
+            collection_id,
             json_schema: None,
             validate_schema: None,
         })
         .expect("failed to create object-relation target class");
     let (_, object_a_id) = create_sync_object(
         &harness.client,
-        namespace_id,
+        collection_id,
         class_a_id,
         "sync-object-relation-a",
     )
     .expect("failed to create relation object A");
     let (_, object_b_id) = create_sync_object(
         &harness.client,
-        namespace_id,
-        class_b.id,
+        collection_id,
+        class_b.id.into(),
         "sync-object-relation-b",
     )
     .expect("failed to create relation object B");
@@ -846,7 +846,7 @@ fn sync_object_relation_create_delete_roundtrip() {
         .class_relation()
         .create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id,
+            to_hubuum_class_id: class_b.id.into(),
             forward_template_alias: None,
             reverse_template_alias: None,
         })
@@ -858,15 +858,15 @@ fn sync_object_relation_create_delete_roundtrip() {
         .create_raw(ObjectRelationPost {
             from_hubuum_object_id: object_a_id,
             to_hubuum_object_id: object_b_id,
-            class_relation_id: class_relation.id,
+            class_relation_id: class_relation.id.into(),
         })
         .expect("sync object_relation().create_raw() failed");
 
     let selected = harness
         .client
         .object_relation()
-        .select(relation.id)
-        .expect("sync object_relation().select(id) failed");
+        .get(relation.id)
+        .expect("sync object_relation().get(id) failed");
     assert_eq!(selected.id(), relation.id);
 
     harness
@@ -874,7 +874,7 @@ fn sync_object_relation_create_delete_roundtrip() {
         .object_relation()
         .delete(relation.id)
         .expect("sync object_relation().delete() failed");
-    let err = match harness.client.object_relation().select(relation.id) {
+    let err = match harness.client.object_relation().get(relation.id) {
         Ok(_) => panic!("deleted object relation should not be selectable"),
         Err(err) => err,
     };
@@ -896,24 +896,29 @@ fn sync_groups_filter_helpers_return_expected_group() {
     let listed = harness
         .client
         .groups()
-        .filter(vec![filter.clone()])
-        .expect("sync groups().filter() failed");
+        .query()
+        .filters(vec![filter.clone()])
+        .list()
+        .expect("sync groups().query().list() failed");
     assert!(listed.iter().any(|group| group.id == group_id));
 
     let single = harness
         .client
         .groups()
-        .filter_expecting_single_result(vec![filter])
-        .expect("sync groups().filter_expecting_single_result() failed");
+        .query()
+        .filters(vec![filter])
+        .one()
+        .expect("sync groups().query().one() failed");
     assert_eq!(single.id, group_id);
 
     let found = harness
         .client
         .groups()
-        .find()
-        .add_filter_name_exact(&groupname)
-        .execute_expecting_single_result()
-        .expect("sync groups().find().add_filter_name_exact() failed");
+        .query()
+        .groupname()
+        .eq(&groupname)
+        .one()
+        .expect("sync groups().query().groupname().eq().one() failed");
     assert_eq!(found.id, group_id);
 }
 
@@ -928,7 +933,11 @@ fn sync_query_iequals_supports_case_insensitive_match() {
         .client
         .users()
         .query()
-        .add_filter_iequals("username", username.to_uppercase())
+        .filter(
+            "username",
+            FilterOperator::IEquals { is_negated: false },
+            username.to_uppercase(),
+        )
         .one();
 
     let found = match found {
@@ -937,7 +946,7 @@ fn sync_query_iequals_supports_case_insensitive_match() {
             eprintln!("skipping: server does not support iequals for username ({err})");
             return;
         }
-        Err(err) => panic!("sync users().query().add_filter_iequals().one() failed: {err}"),
+        Err(err) => panic!("sync users().query().filter(iequals).one() failed: {err}"),
     };
 
     assert_eq!(found.id, user_id);
@@ -950,22 +959,23 @@ fn sync_query_sort_and_limit_returns_expected_class() {
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
     let prefix = unique_case_prefix("sync-query-sort-limit");
-    let namespace = harness
+    let collection = harness
         .client
-        .namespaces()
-        .create_raw(NamespacePost {
-            name: format!("{prefix}-namespace"),
-            description: "query sort namespace".to_string(),
+        .collections()
+        .create_raw(CollectionPost {
+            name: format!("{prefix}-collection"),
+            description: "query sort collection".to_string(),
             group_id: admin_group_id,
+            parent_collection_id: None,
         })
-        .expect("failed to create namespace for sort/limit test");
+        .expect("failed to create collection for sort/limit test");
     let class_a = harness
         .client
         .classes()
         .create_raw(ClassPost {
             name: format!("{prefix}-sort-a"),
             description: "query sort class a".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id.into(),
             json_schema: None,
             validate_schema: None,
         })
@@ -976,7 +986,7 @@ fn sync_query_sort_and_limit_returns_expected_class() {
         .create_raw(ClassPost {
             name: format!("{prefix}-sort-b"),
             description: "query sort class b".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id.into(),
             json_schema: None,
             validate_schema: None,
         })
@@ -986,7 +996,8 @@ fn sync_query_sort_and_limit_returns_expected_class() {
         .client
         .classes()
         .query()
-        .add_filter_startswith("name", format!("{prefix}-sort-"))
+        .name()
+        .starts_with(format!("{prefix}-sort-"))
         .sort_by_fields(vec![("name", SortDirection::Asc)])
         .limit(1)
         .one()
@@ -1002,22 +1013,23 @@ fn sync_query_json_path_lt_filters_json_schema() {
     let (_, admin_group_id) =
         sync_admin_context(&harness.client).expect("sync admin context lookup failed");
     let prefix = unique_case_prefix("sync-query-json");
-    let namespace = harness
+    let collection = harness
         .client
-        .namespaces()
-        .create_raw(NamespacePost {
-            name: format!("{prefix}-namespace"),
-            description: "query json namespace".to_string(),
+        .collections()
+        .create_raw(CollectionPost {
+            name: format!("{prefix}-collection"),
+            description: "query json collection".to_string(),
             group_id: admin_group_id,
+            parent_collection_id: None,
         })
-        .expect("failed to create namespace for json query test");
+        .expect("failed to create collection for json query test");
     let south = harness
         .client
         .classes()
         .create_raw(ClassPost {
             name: format!("{prefix}-geo-south"),
             description: "geo south".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id.into(),
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": -90 }
@@ -1032,7 +1044,7 @@ fn sync_query_json_path_lt_filters_json_schema() {
         .create_raw(ClassPost {
             name: format!("{prefix}-geo-north"),
             description: "geo north".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id.into(),
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": 10 }
@@ -1046,10 +1058,13 @@ fn sync_query_json_path_lt_filters_json_schema() {
         .client
         .classes()
         .query()
-        .add_filter_startswith("name", format!("{prefix}-geo-"))
-        .add_json_path_lt("json_schema", vec!["properties", "latitude", "minimum"], 0)
+        .name()
+        .starts_with(format!("{prefix}-geo-"))
+        .json_schema()
+        .path(["properties", "latitude", "minimum"])
+        .lt(0)
         .list()
-        .expect("sync classes().query().add_json_path_lt().list() failed");
+        .expect("sync classes().query().json_schema().path().lt().list() failed");
 
     assert!(matched.iter().any(|class| class.id == south.id));
     assert!(!matched.iter().any(|class| class.id == north.id));

@@ -9,6 +9,8 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::any::type_name;
 use std::borrow::Cow;
+use std::marker::PhantomData;
+use std::ops::Deref;
 
 use super::{GetID, UrlParams};
 use crate::QueryFilter;
@@ -16,7 +18,7 @@ use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::ApiResource;
 use crate::types::FilterOperator;
-use crate::types::{BaseUrl, IntoQueryTuples, ReportContentType};
+use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 
@@ -47,12 +49,30 @@ pub struct Page<T> {
     pub next_cursor: Option<String>,
 }
 
+impl<T> IntoIterator for Page<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items.into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Page<T> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items.iter()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct RawResponse {
     pub status: StatusCode,
     pub body: String,
     pub next_cursor: Option<String>,
-    pub content_type: Option<ReportContentType>,
+    pub content_type: Option<ExportContentType>,
 }
 
 pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: UrlParams) -> String {
@@ -74,6 +94,8 @@ pub(crate) fn build_request_url(
     url_params: &UrlParams,
     query_params: Vec<QueryFilter>,
 ) -> Result<String, ApiError> {
+    ensure_no_unresolved_url_params(&url)?;
+
     if *method == reqwest::Method::GET {
         let query = query_params.into_query_string()?;
         if query.is_empty() {
@@ -96,6 +118,19 @@ pub(crate) fn build_request_url(
     }
 }
 
+fn ensure_no_unresolved_url_params(url: &str) -> Result<(), ApiError> {
+    if let Some(start) = url.find('{')
+        && let Some(end_offset) = url[start + 1..].find('}')
+    {
+        let end = start + 1 + end_offset;
+        return Err(ApiError::MissingUrlParameter(
+            url[start + 1..end].to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
 fn append_identifier(url: String, id: &str) -> String {
     if url.ends_with('/') {
         format!("{url}{id}")
@@ -113,7 +148,7 @@ fn url_param<'a>(url_params: &'a UrlParams, key: &str) -> Option<&'a str> {
 
 pub(crate) fn response_metadata(
     headers: &HeaderMap,
-) -> (Option<String>, Option<ReportContentType>) {
+) -> (Option<String>, Option<ExportContentType>) {
     let next_cursor = headers
         .get(NEXT_CURSOR_HEADER)
         .and_then(|value| value.to_str().ok())
@@ -121,7 +156,7 @@ pub(crate) fn response_metadata(
     let content_type = headers
         .get(CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
-        .and_then(ReportContentType::from_header);
+        .and_then(ExportContentType::from_header);
     (next_cursor, content_type)
 }
 
@@ -198,6 +233,383 @@ pub(crate) fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
     }
 }
 
+pub trait QueryFilterTarget: Sized {
+    fn push_filter<K: Into<String>, V: ToString>(
+        self,
+        field: K,
+        op: FilterOperator,
+        value: V,
+    ) -> Self;
+
+    fn push_raw_param<K: Into<String>, V: ToString>(self, key: K, value: V) -> Self;
+}
+
+#[derive(Debug, Clone)]
+pub struct QueryValueField<Q, V> {
+    query: Q,
+    field: &'static str,
+    _phantom: PhantomData<V>,
+}
+
+impl<Q, V> QueryValueField<Q, V> {
+    pub(crate) fn new(query: Q, field: &'static str) -> Self {
+        Self {
+            query,
+            field,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<Q: QueryFilterTarget, V: ToString> QueryValueField<Q, V> {
+    pub fn eq(self, value: V) -> Q {
+        self.query.push_filter(
+            self.field,
+            FilterOperator::Equals { is_negated: false },
+            value,
+        )
+    }
+
+    pub fn ne(self, value: V) -> Q {
+        self.query.push_filter(
+            self.field,
+            FilterOperator::Equals { is_negated: true },
+            value,
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct QueryTextField<Q>(QueryValueField<Q, String>);
+
+impl<Q> QueryTextField<Q> {
+    pub(crate) fn new(query: Q, field: &'static str) -> Self {
+        Self(QueryValueField::new(query, field))
+    }
+}
+
+impl<Q: QueryFilterTarget> QueryTextField<Q> {
+    pub fn eq(self, value: impl AsRef<str>) -> Q {
+        self.0.eq(value.as_ref().to_string())
+    }
+
+    pub fn ne(self, value: impl AsRef<str>) -> Q {
+        self.0.ne(value.as_ref().to_string())
+    }
+
+    pub fn ieq(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::IEquals { is_negated: false },
+            value.as_ref(),
+        )
+    }
+
+    pub fn not_ieq(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::IEquals { is_negated: true },
+            value.as_ref(),
+        )
+    }
+
+    pub fn contains(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Contains { is_negated: false },
+            value.as_ref(),
+        )
+    }
+
+    pub fn not_contains(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Contains { is_negated: true },
+            value.as_ref(),
+        )
+    }
+
+    pub fn icontains(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::IContains { is_negated: false },
+            value.as_ref(),
+        )
+    }
+
+    pub fn not_icontains(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::IContains { is_negated: true },
+            value.as_ref(),
+        )
+    }
+
+    pub fn starts_with(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::StartsWith { is_negated: false },
+            value.as_ref(),
+        )
+    }
+
+    pub fn not_starts_with(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::StartsWith { is_negated: true },
+            value.as_ref(),
+        )
+    }
+
+    pub fn istarts_with(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::IStartsWith { is_negated: false },
+            value.as_ref(),
+        )
+    }
+
+    pub fn not_istarts_with(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::IStartsWith { is_negated: true },
+            value.as_ref(),
+        )
+    }
+
+    pub fn ends_with(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::EndsWith { is_negated: false },
+            value.as_ref(),
+        )
+    }
+
+    pub fn not_ends_with(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::EndsWith { is_negated: true },
+            value.as_ref(),
+        )
+    }
+
+    pub fn iends_with(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::IEndsWith { is_negated: false },
+            value.as_ref(),
+        )
+    }
+
+    pub fn not_iends_with(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::IEndsWith { is_negated: true },
+            value.as_ref(),
+        )
+    }
+
+    pub fn like(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Like { is_negated: false },
+            value.as_ref(),
+        )
+    }
+
+    pub fn not_like(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Like { is_negated: true },
+            value.as_ref(),
+        )
+    }
+
+    pub fn regex(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Regex { is_negated: false },
+            value.as_ref(),
+        )
+    }
+
+    pub fn not_regex(self, value: impl AsRef<str>) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Regex { is_negated: true },
+            value.as_ref(),
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct QueryNumericField<Q, V>(QueryValueField<Q, V>);
+
+impl<Q, V> QueryNumericField<Q, V> {
+    pub(crate) fn new(query: Q, field: &'static str) -> Self {
+        Self(QueryValueField::new(query, field))
+    }
+}
+
+impl<Q: QueryFilterTarget, V: ToString> QueryNumericField<Q, V> {
+    pub fn eq(self, value: V) -> Q {
+        self.0.eq(value)
+    }
+
+    pub fn ne(self, value: V) -> Q {
+        self.0.ne(value)
+    }
+
+    pub fn gt(self, value: V) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Gt { is_negated: false },
+            value,
+        )
+    }
+
+    pub fn gte(self, value: V) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Gte { is_negated: false },
+            value,
+        )
+    }
+
+    pub fn lt(self, value: V) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Lt { is_negated: false },
+            value,
+        )
+    }
+
+    pub fn lte(self, value: V) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Lte { is_negated: false },
+            value,
+        )
+    }
+
+    pub fn between(self, start: V, end: V) -> Q {
+        self.0.query.push_filter(
+            self.0.field,
+            FilterOperator::Between { is_negated: false },
+            format!("{},{}", start.to_string(), end.to_string()),
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct QueryBoolField<Q>(QueryValueField<Q, bool>);
+
+impl<Q> QueryBoolField<Q> {
+    pub(crate) fn new(query: Q, field: &'static str) -> Self {
+        Self(QueryValueField::new(query, field))
+    }
+}
+
+impl<Q: QueryFilterTarget> QueryBoolField<Q> {
+    pub fn eq(self, value: bool) -> Q {
+        self.0.eq(value)
+    }
+
+    pub fn ne(self, value: bool) -> Q {
+        self.0.ne(value)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct QueryJsonField<Q> {
+    query: Q,
+    field: &'static str,
+    path: Vec<String>,
+}
+
+impl<Q> QueryJsonField<Q> {
+    pub(crate) fn new(query: Q, field: &'static str) -> Self {
+        Self {
+            query,
+            field,
+            path: Vec::new(),
+        }
+    }
+}
+
+impl<Q: QueryFilterTarget> QueryJsonField<Q> {
+    pub fn path<I, S>(mut self, path: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        self.path = path
+            .into_iter()
+            .map(|segment| segment.as_ref().to_string())
+            .collect();
+        self
+    }
+
+    fn encoded_value<V: ToString>(&self, value: V) -> String {
+        if self.path.is_empty() {
+            value.to_string()
+        } else {
+            format!("{}={}", self.path.join(","), value.to_string())
+        }
+    }
+
+    pub fn eq<V: ToString>(self, value: V) -> Q {
+        let value = self.encoded_value(value);
+        self.query.push_filter(
+            self.field,
+            FilterOperator::Equals { is_negated: false },
+            value,
+        )
+    }
+
+    pub fn ne<V: ToString>(self, value: V) -> Q {
+        let value = self.encoded_value(value);
+        self.query.push_filter(
+            self.field,
+            FilterOperator::Equals { is_negated: true },
+            value,
+        )
+    }
+
+    pub fn gt<V: ToString>(self, value: V) -> Q {
+        let value = self.encoded_value(value);
+        self.query
+            .push_filter(self.field, FilterOperator::Gt { is_negated: false }, value)
+    }
+
+    pub fn gte<V: ToString>(self, value: V) -> Q {
+        let value = self.encoded_value(value);
+        self.query
+            .push_filter(self.field, FilterOperator::Gte { is_negated: false }, value)
+    }
+
+    pub fn lt<V: ToString>(self, value: V) -> Q {
+        let value = self.encoded_value(value);
+        self.query
+            .push_filter(self.field, FilterOperator::Lt { is_negated: false }, value)
+    }
+
+    pub fn lte<V: ToString>(self, value: V) -> Q {
+        let value = self.encoded_value(value);
+        self.query
+            .push_filter(self.field, FilterOperator::Lte { is_negated: false }, value)
+    }
+
+    pub fn between<V: ToString>(self, start: V, end: V) -> Q {
+        let value = self.encoded_value(format!("{},{}", start.to_string(), end.to_string()));
+        self.query.push_filter(
+            self.field,
+            FilterOperator::Between { is_negated: false },
+            value,
+        )
+    }
+}
+
 #[derive(Clone, Serialize)]
 pub struct Handle<C, T> {
     #[serde(skip)]
@@ -218,7 +630,11 @@ where
         &self.resource
     }
 
-    pub fn id(&self) -> i32 {
+    pub fn into_inner(self) -> T {
+        self.resource
+    }
+
+    pub fn id(&self) -> T::Id {
         self.resource.id()
     }
 
@@ -227,12 +643,27 @@ where
     }
 }
 
-pub(crate) fn select_id_lookup_params(id: i32) -> (UrlParams, Vec<QueryFilter>) {
+impl<C, T> Deref for Handle<C, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.resource
+    }
+}
+
+impl<C, T> AsRef<T> for Handle<C, T> {
+    fn as_ref(&self) -> &T {
+        &self.resource
+    }
+}
+
+pub(crate) fn select_id_lookup_params(id: impl ToString) -> (UrlParams, Vec<QueryFilter>) {
+    let id = id.to_string();
     (
-        vec![(Cow::Borrowed("id"), id.to_string().into())],
+        vec![(Cow::Borrowed("id"), id.clone().into())],
         vec![QueryFilter {
             key: "id".to_string(),
-            value: id.to_string(),
+            value: id,
             operator: FilterOperator::Equals { is_negated: false },
         }],
     )
@@ -301,6 +732,19 @@ mod test {
     }
 
     #[test]
+    fn build_request_url_rejects_unresolved_placeholders() {
+        let err = build_request_url(
+            &reqwest::Method::GET,
+            "https://api.example.com/api/v1/classes/{class_id}/".to_string(),
+            &vec![],
+            vec![],
+        )
+        .expect_err("unresolved placeholder should fail before request");
+
+        assert!(matches!(err, ApiError::MissingUrlParameter(param) if param == "class_id"));
+    }
+
+    #[test]
     fn build_request_url_for_patch_requires_patch_id() {
         let err = build_request_url(
             &reqwest::Method::PATCH,
@@ -317,7 +761,7 @@ mod test {
     fn build_request_url_for_put_keeps_base_url() {
         let url = build_request_url(
             &reqwest::Method::PUT,
-            "https://api.example.com/api/v1/namespaces/1/permissions/group/2".to_string(),
+            "https://api.example.com/api/v1/collections/1/permissions/group/2".to_string(),
             &vec![],
             vec![],
         )
@@ -325,7 +769,7 @@ mod test {
 
         assert_eq!(
             url,
-            "https://api.example.com/api/v1/namespaces/1/permissions/group/2"
+            "https://api.example.com/api/v1/collections/1/permissions/group/2"
         );
     }
 
@@ -333,13 +777,13 @@ mod test {
     fn build_request_url_for_patch_inserts_separator_when_missing() {
         let url = build_request_url(
             &reqwest::Method::PATCH,
-            "https://api.example.com/api/v1/templates".to_string(),
+            "https://api.example.com/api/v1/export-templates".to_string(),
             &vec![(Cow::Borrowed("patch_id"), Cow::Borrowed("12"))],
             vec![],
         )
         .expect("PATCH URL should build");
 
-        assert_eq!(url, "https://api.example.com/api/v1/templates/12");
+        assert_eq!(url, "https://api.example.com/api/v1/export-templates/12");
     }
 
     #[test]
@@ -405,7 +849,7 @@ mod test {
                 status: StatusCode::OK,
                 body: "[{\"id\":1}]".to_string(),
                 next_cursor: Some("abc".to_string()),
-                content_type: Some(ReportContentType::ApplicationJson),
+                content_type: Some(ExportContentType::ApplicationJson),
             },
         )
         .expect("page should parse");

@@ -2,13 +2,13 @@ mod auth;
 mod baseurl;
 mod datetime;
 mod event;
+mod export;
 mod filter;
 mod history;
 mod import;
 mod meta;
 mod params;
 mod remote;
-mod report;
 mod search;
 mod task;
 
@@ -26,33 +26,33 @@ pub use event::{
     EventWorkerWakeupStats, NewEventSink, NewEventSubscription, UpdateEventSink,
     UpdateEventSubscription,
 };
+pub use export::{
+    ExportContentType, ExportInclude, ExportIncludeRelatedDirection, ExportIncludeRelatedObject,
+    ExportIncludeRelatedSort, ExportJsonResponse, ExportLimits, ExportMeta,
+    ExportMissingDataPolicy, ExportRelationContext, ExportRequest, ExportResult, ExportScope,
+    ExportScopeKind, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning,
+};
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
 pub use history::{
-    ClassHistory, HistoryMetadata, NamespaceHistory, ObjectHistory, RemoteTargetHistory,
-    ReportTemplateHistory,
+    ClassHistory, CollectionHistory, ExportTemplateHistory, HistoryMetadata, ObjectHistory,
+    RemoteTargetHistory,
 };
 pub use import::{
-    CURRENT_IMPORT_VERSION, ClassKey, GroupKey, ImportAtomicity, ImportClassInput,
-    ImportClassRelationInput, ImportCollisionPolicy, ImportGraph, ImportMode, ImportNamespaceInput,
-    ImportNamespacePermissionInput, ImportObjectInput, ImportObjectRelationInput,
-    ImportPermissionPolicy, ImportRequest, NamespaceKey, ObjectKey,
+    CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, GroupKey, ImportAtomicity, ImportClassInput,
+    ImportClassRelationInput, ImportCollectionInput, ImportCollectionPermissionInput,
+    ImportCollisionPolicy, ImportGraph, ImportMode, ImportObjectInput, ImportObjectRelationInput,
+    ImportPermissionPolicy, ImportRequest, ObjectKey,
 };
 pub use meta::{
     ClearRateLimitResponse, CountsResponse, DbStateResponse, LoginRateLimitConfig,
     LoginRateLimitEntry, LoginRateLimitState, ObjectsByClass, ProbeResponse,
     ReleaseRateLimitResponse,
 };
-pub use params::{ClassParams, NamespacePermissionsGrantParams, UserParams};
+pub use params::{ClassParams, CollectionPermissionsGrantParams, UserParams};
 pub use remote::{
     NewRemoteTarget, RemoteAuthConfig, RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject,
     RemoteTarget, RemoteTargetGet, RemoteTargetInvokeRequest, RemoteTargetSubjectType,
     UpdateRemoteTarget,
-};
-pub use report::{
-    ReportContentType, ReportInclude, ReportIncludeRelatedDirection, ReportIncludeRelatedObject,
-    ReportIncludeRelatedSort, ReportJsonResponse, ReportLimits, ReportMeta,
-    ReportMissingDataPolicy, ReportOutputRequest, ReportRelationContext, ReportRequest,
-    ReportResult, ReportScope, ReportScopeKind, ReportTemplateKind, ReportWarning,
 };
 pub use search::{
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
@@ -60,7 +60,7 @@ pub use search::{
     UnifiedSearchResults, UnifiedSearchStartedEvent,
 };
 pub use task::{
-    ImportTaskDetails, ImportTaskResultResponse, ReportTaskDetails, TaskDetails, TaskEventResponse,
+    ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse, TaskDetails, TaskEventResponse,
     TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
 };
 

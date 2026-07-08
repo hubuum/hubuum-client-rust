@@ -1,23 +1,23 @@
 use hubuum_client_derive::ApiResource;
 
 use crate::types::{
-    HubuumDateTime, ReportContentType, ReportMissingDataPolicy, ReportScopeKind, ReportTemplateKind,
+    ExportContentType, ExportMissingDataPolicy, ExportScopeKind, ExportTemplateKind, HubuumDateTime,
 };
 
 #[allow(dead_code)]
 #[derive(ApiResource)]
-pub struct ReportTemplateResource {
+pub struct ExportTemplateResource {
     #[api(read_only)]
     pub id: i32,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub name: String,
     pub description: String,
     #[api(skip_patch)]
-    pub content_type: ReportContentType,
+    pub content_type: ExportContentType,
     pub template: String,
-    pub kind: ReportTemplateKind,
+    pub kind: ExportTemplateKind,
     #[api(optional)]
-    pub scope_kind: ReportScopeKind,
+    pub scope_kind: ExportScopeKind,
     #[api(optional)]
     pub class_id: i32,
     #[api(optional)]
@@ -27,7 +27,7 @@ pub struct ReportTemplateResource {
     #[api(optional)]
     pub relation_context: serde_json::Value,
     #[api(optional)]
-    pub default_missing_data_policy: ReportMissingDataPolicy,
+    pub default_missing_data_policy: ExportMissingDataPolicy,
     #[api(optional)]
     pub default_limits: serde_json::Value,
     #[api(read_only)]

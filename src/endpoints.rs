@@ -1,5 +1,6 @@
 use crate::types::BaseUrl;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Endpoint {
     Login,
     LoginWithToken,
@@ -41,18 +42,23 @@ pub enum Endpoint {
     ClassRelatedGraph,
     ClassRelationsFromClass,
     ClassRelationFromClassById,
-    Namespaces,
-    NamespacesById,
-    NamespacePermissions,
-    NamespaceEvents,
-    NamespaceHistory,
-    NamespaceHistoryAsOf,
-    NamespaceEventSubscriptions,
-    NamespaceEventSubscriptionsById,
-    NamespacePermissionsGrant,
-    NamespacePermissionGrant,
-    NamespacePrincipalPermissions,
-    NamespaceHasPermissions,
+    Collections,
+    CollectionsById,
+    CollectionPermissions,
+    CollectionEvents,
+    CollectionHistory,
+    CollectionHistoryAsOf,
+    CollectionChildren,
+    CollectionAncestors,
+    CollectionParent,
+    CollectionEventSubscriptions,
+    CollectionEventSubscriptionsById,
+    CollectionPermissionsGrant,
+    CollectionPermissionGrant,
+    CollectionPrincipalPermissions,
+    CollectionEffectiveGroupPermissions,
+    CollectionEffectivePrincipalPermissions,
+    CollectionHasPermissions,
     Objects,
     ObjectsById,
     ObjectRelatedObjects,
@@ -69,14 +75,15 @@ pub enum Endpoint {
     ObjectRelationsById,
     Search,
     SearchStream,
-    ReportTemplates,
-    ReportTemplatesById,
-    ReportTemplateEvents,
-    ReportTemplateHistory,
-    ReportTemplateHistoryAsOf,
-    Reports,
-    ReportById,
-    ReportOutput,
+    ExportTemplates,
+    ExportTemplatesById,
+    ExportTemplateExports,
+    ExportTemplateEvents,
+    ExportTemplateHistory,
+    ExportTemplateHistoryAsOf,
+    Exports,
+    ExportById,
+    ExportOutput,
     Tasks,
     TasksById,
     TaskEvents,
@@ -154,30 +161,39 @@ impl Endpoint {
             Endpoint::ClassRelationFromClassById => {
                 "/api/v1/classes/{class_id}/relations/{relation_id}"
             }
-            Endpoint::Namespaces => "/api/v1/namespaces",
-            Endpoint::NamespacesById => "/api/v1/namespaces/{namespace_id}",
+            Endpoint::Collections => "/api/v1/collections",
+            Endpoint::CollectionsById => "/api/v1/collections/{collection_id}",
 
-            Endpoint::NamespacePermissions => "/api/v1/namespaces/{namespace_id}/permissions",
-            Endpoint::NamespaceEvents => "/api/v1/namespaces/{namespace_id}/events",
-            Endpoint::NamespaceHistory => "/api/v1/namespaces/{namespace_id}/history",
-            Endpoint::NamespaceHistoryAsOf => "/api/v1/namespaces/{namespace_id}/history/as-of",
-            Endpoint::NamespaceEventSubscriptions => {
-                "/api/v1/namespaces/{namespace_id}/event-subscriptions"
+            Endpoint::CollectionPermissions => "/api/v1/collections/{collection_id}/permissions",
+            Endpoint::CollectionEvents => "/api/v1/collections/{collection_id}/events",
+            Endpoint::CollectionHistory => "/api/v1/collections/{collection_id}/history",
+            Endpoint::CollectionHistoryAsOf => "/api/v1/collections/{collection_id}/history/as-of",
+            Endpoint::CollectionChildren => "/api/v1/collections/{collection_id}/children",
+            Endpoint::CollectionAncestors => "/api/v1/collections/{collection_id}/ancestors",
+            Endpoint::CollectionParent => "/api/v1/collections/{collection_id}/parent",
+            Endpoint::CollectionEventSubscriptions => {
+                "/api/v1/collections/{collection_id}/event-subscriptions"
             }
-            Endpoint::NamespaceEventSubscriptionsById => {
-                "/api/v1/namespaces/{namespace_id}/event-subscriptions/{subscription_id}"
+            Endpoint::CollectionEventSubscriptionsById => {
+                "/api/v1/collections/{collection_id}/event-subscriptions/{subscription_id}"
             }
-            Endpoint::NamespacePermissionsGrant => {
-                "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}"
+            Endpoint::CollectionPermissionsGrant => {
+                "/api/v1/collections/{collection_id}/permissions/group/{group_id}"
             }
-            Endpoint::NamespacePermissionGrant => {
-                "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}"
+            Endpoint::CollectionPermissionGrant => {
+                "/api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}"
             }
-            Endpoint::NamespacePrincipalPermissions => {
-                "/api/v1/namespaces/{namespace_id}/permissions/principal/{principal_id}"
+            Endpoint::CollectionPrincipalPermissions => {
+                "/api/v1/collections/{collection_id}/permissions/principal/{principal_id}"
             }
-            Endpoint::NamespaceHasPermissions => {
-                "/api/v1/namespaces/{namespace_id}/has_permissions/{permission}"
+            Endpoint::CollectionEffectiveGroupPermissions => {
+                "/api/v1/collections/{collection_id}/permissions/effective/group/{group_id}"
+            }
+            Endpoint::CollectionEffectivePrincipalPermissions => {
+                "/api/v1/collections/{collection_id}/permissions/effective/principal/{principal_id}"
+            }
+            Endpoint::CollectionHasPermissions => {
+                "/api/v1/collections/{collection_id}/has_permissions/{permission}"
             }
 
             Endpoint::Objects => "/api/v1/classes/{class_id}/",
@@ -204,14 +220,17 @@ impl Endpoint {
             Endpoint::ObjectRelationsById => "/api/v1/relations/objects/{relation_id}",
             Endpoint::Search => "/api/v1/search",
             Endpoint::SearchStream => "/api/v1/search/stream",
-            Endpoint::ReportTemplates => "/api/v1/templates",
-            Endpoint::ReportTemplatesById => "/api/v1/templates/{template_id}",
-            Endpoint::ReportTemplateEvents => "/api/v1/templates/{template_id}/events",
-            Endpoint::ReportTemplateHistory => "/api/v1/templates/{template_id}/history",
-            Endpoint::ReportTemplateHistoryAsOf => "/api/v1/templates/{template_id}/history/as-of",
-            Endpoint::Reports => "/api/v1/reports",
-            Endpoint::ReportById => "/api/v1/reports/{task_id}",
-            Endpoint::ReportOutput => "/api/v1/reports/{task_id}/output",
+            Endpoint::ExportTemplates => "/api/v1/export-templates",
+            Endpoint::ExportTemplatesById => "/api/v1/export-templates/{template_id}",
+            Endpoint::ExportTemplateExports => "/api/v1/export-templates/{template_id}/exports",
+            Endpoint::ExportTemplateEvents => "/api/v1/export-templates/{template_id}/events",
+            Endpoint::ExportTemplateHistory => "/api/v1/export-templates/{template_id}/history",
+            Endpoint::ExportTemplateHistoryAsOf => {
+                "/api/v1/export-templates/{template_id}/history/as-of"
+            }
+            Endpoint::Exports => "/api/v1/exports",
+            Endpoint::ExportById => "/api/v1/exports/{task_id}",
+            Endpoint::ExportOutput => "/api/v1/exports/{task_id}/output",
             Endpoint::Tasks => "/api/v1/tasks",
             Endpoint::TasksById => "/api/v1/tasks/{task_id}",
             Endpoint::TaskEvents => "/api/v1/tasks/{task_id}/events",
@@ -293,11 +312,16 @@ mod test {
         get_class_related_graph = { Endpoint::ClassRelatedGraph, "/api/v1/classes/{class_id}/related/graph" },
         class_relations_from_class = { Endpoint::ClassRelationsFromClass, "/api/v1/classes/{class_id}/relations" },
         class_relation_from_class_by_id = { Endpoint::ClassRelationFromClassById, "/api/v1/classes/{class_id}/relations/{relation_id}" },
-        get_namespace_by_id = { Endpoint::NamespacesById, "/api/v1/namespaces/{namespace_id}" },
-        get_namespace_permission_grant = { Endpoint::NamespacePermissionsGrant, "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}" },
-        get_namespace_single_permission_grant = { Endpoint::NamespacePermissionGrant, "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}" },
-        get_namespace_principal_permissions = { Endpoint::NamespacePrincipalPermissions, "/api/v1/namespaces/{namespace_id}/permissions/principal/{principal_id}" },
-        get_namespace_has_permissions = { Endpoint::NamespaceHasPermissions, "/api/v1/namespaces/{namespace_id}/has_permissions/{permission}" },
+        get_collection_by_id = { Endpoint::CollectionsById, "/api/v1/collections/{collection_id}" },
+        get_collection_children = { Endpoint::CollectionChildren, "/api/v1/collections/{collection_id}/children" },
+        get_collection_ancestors = { Endpoint::CollectionAncestors, "/api/v1/collections/{collection_id}/ancestors" },
+        put_collection_parent = { Endpoint::CollectionParent, "/api/v1/collections/{collection_id}/parent" },
+        get_collection_permission_grant = { Endpoint::CollectionPermissionsGrant, "/api/v1/collections/{collection_id}/permissions/group/{group_id}" },
+        get_collection_single_permission_grant = { Endpoint::CollectionPermissionGrant, "/api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}" },
+        get_collection_principal_permissions = { Endpoint::CollectionPrincipalPermissions, "/api/v1/collections/{collection_id}/permissions/principal/{principal_id}" },
+        get_collection_effective_group_permissions = { Endpoint::CollectionEffectiveGroupPermissions, "/api/v1/collections/{collection_id}/permissions/effective/group/{group_id}" },
+        get_collection_effective_principal_permissions = { Endpoint::CollectionEffectivePrincipalPermissions, "/api/v1/collections/{collection_id}/permissions/effective/principal/{principal_id}" },
+        get_collection_has_permissions = { Endpoint::CollectionHasPermissions, "/api/v1/collections/{collection_id}/has_permissions/{permission}" },
         get_class = { Endpoint::Classes, "/api/v1/classes" },
         get_object_by_id = { Endpoint::ObjectsById, "/api/v1/classes/{class_id}/{object_id}" },
         get_object_related_objects = { Endpoint::ObjectRelatedObjects, "/api/v1/classes/{class_id}/objects/{object_id}/related/objects" },
@@ -308,11 +332,12 @@ mod test {
         object_relation_by_id = { Endpoint::ObjectRelationsById, "/api/v1/relations/objects/{relation_id}" },
         search = { Endpoint::Search, "/api/v1/search" },
         search_stream = { Endpoint::SearchStream, "/api/v1/search/stream" },
-        templates = { Endpoint::ReportTemplates, "/api/v1/templates" },
-        template_by_id = { Endpoint::ReportTemplatesById, "/api/v1/templates/{template_id}" },
-        reports = { Endpoint::Reports, "/api/v1/reports" },
-        report_by_id = { Endpoint::ReportById, "/api/v1/reports/{task_id}" },
-        report_output = { Endpoint::ReportOutput, "/api/v1/reports/{task_id}/output" },
+        export_templates = { Endpoint::ExportTemplates, "/api/v1/export-templates" },
+        export_template_by_id = { Endpoint::ExportTemplatesById, "/api/v1/export-templates/{template_id}" },
+        export_template_exports = { Endpoint::ExportTemplateExports, "/api/v1/export-templates/{template_id}/exports" },
+        exports = { Endpoint::Exports, "/api/v1/exports" },
+        export_by_id = { Endpoint::ExportById, "/api/v1/exports/{task_id}" },
+        export_output = { Endpoint::ExportOutput, "/api/v1/exports/{task_id}/output" },
         tasks_list = { Endpoint::Tasks, "/api/v1/tasks" },
         task_by_id = { Endpoint::TasksById, "/api/v1/tasks/{task_id}" },
         task_events = { Endpoint::TaskEvents, "/api/v1/tasks/{task_id}/events" },
@@ -358,11 +383,16 @@ mod test {
         get_class_related_graph = { Endpoint::ClassRelatedGraph, '/', "api/v1/classes/{class_id}/related/graph" },
         class_relations_from_class = { Endpoint::ClassRelationsFromClass, '/', "api/v1/classes/{class_id}/relations" },
         class_relation_from_class_by_id = { Endpoint::ClassRelationFromClassById, '/', "api/v1/classes/{class_id}/relations/{relation_id}" },
-        get_namespace_by_id = { Endpoint::NamespacesById, '/', "api/v1/namespaces/{namespace_id}" },
-        get_namespace_permission_grant = { Endpoint::NamespacePermissionsGrant, '/', "api/v1/namespaces/{namespace_id}/permissions/group/{group_id}" },
-        get_namespace_single_permission_grant = { Endpoint::NamespacePermissionGrant, '/', "api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}" },
-        get_namespace_principal_permissions = { Endpoint::NamespacePrincipalPermissions, '/', "api/v1/namespaces/{namespace_id}/permissions/principal/{principal_id}" },
-        get_namespace_has_permissions = { Endpoint::NamespaceHasPermissions, '/', "api/v1/namespaces/{namespace_id}/has_permissions/{permission}" },
+        get_collection_by_id = { Endpoint::CollectionsById, '/', "api/v1/collections/{collection_id}" },
+        get_collection_children = { Endpoint::CollectionChildren, '/', "api/v1/collections/{collection_id}/children" },
+        get_collection_ancestors = { Endpoint::CollectionAncestors, '/', "api/v1/collections/{collection_id}/ancestors" },
+        put_collection_parent = { Endpoint::CollectionParent, '/', "api/v1/collections/{collection_id}/parent" },
+        get_collection_permission_grant = { Endpoint::CollectionPermissionsGrant, '/', "api/v1/collections/{collection_id}/permissions/group/{group_id}" },
+        get_collection_single_permission_grant = { Endpoint::CollectionPermissionGrant, '/', "api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}" },
+        get_collection_principal_permissions = { Endpoint::CollectionPrincipalPermissions, '/', "api/v1/collections/{collection_id}/permissions/principal/{principal_id}" },
+        get_collection_effective_group_permissions = { Endpoint::CollectionEffectiveGroupPermissions, '/', "api/v1/collections/{collection_id}/permissions/effective/group/{group_id}" },
+        get_collection_effective_principal_permissions = { Endpoint::CollectionEffectivePrincipalPermissions, '/', "api/v1/collections/{collection_id}/permissions/effective/principal/{principal_id}" },
+        get_collection_has_permissions = { Endpoint::CollectionHasPermissions, '/', "api/v1/collections/{collection_id}/has_permissions/{permission}" },
         get_class = { Endpoint::Classes, '/', "api/v1/classes" },
         get_object_by_id = { Endpoint::ObjectsById, '/', "api/v1/classes/{class_id}/{object_id}" },
         get_object_related_objects = { Endpoint::ObjectRelatedObjects, '/', "api/v1/classes/{class_id}/objects/{object_id}/related/objects" },
@@ -373,11 +403,12 @@ mod test {
         object_relation_by_id = { Endpoint::ObjectRelationsById, '/', "api/v1/relations/objects/{relation_id}" },
         search = { Endpoint::Search, '/', "api/v1/search" },
         search_stream = { Endpoint::SearchStream, '/', "api/v1/search/stream" },
-        templates = { Endpoint::ReportTemplates, '/', "api/v1/templates" },
-        template_by_id = { Endpoint::ReportTemplatesById, '/', "api/v1/templates/{template_id}" },
-        reports = { Endpoint::Reports, '/', "api/v1/reports" },
-        report_by_id = { Endpoint::ReportById, '/', "api/v1/reports/{task_id}" },
-        report_output = { Endpoint::ReportOutput, '/', "api/v1/reports/{task_id}/output" },
+        export_templates = { Endpoint::ExportTemplates, '/', "api/v1/export-templates" },
+        export_template_by_id = { Endpoint::ExportTemplatesById, '/', "api/v1/export-templates/{template_id}" },
+        export_template_exports = { Endpoint::ExportTemplateExports, '/', "api/v1/export-templates/{template_id}/exports" },
+        exports = { Endpoint::Exports, '/', "api/v1/exports" },
+        export_by_id = { Endpoint::ExportById, '/', "api/v1/exports/{task_id}" },
+        export_output = { Endpoint::ExportOutput, '/', "api/v1/exports/{task_id}/output" },
         tasks_list = { Endpoint::Tasks, '/', "api/v1/tasks" },
         task_by_id = { Endpoint::TasksById, '/', "api/v1/tasks/{task_id}" },
         task_events = { Endpoint::TaskEvents, '/', "api/v1/tasks/{task_id}/events" },
@@ -407,9 +438,9 @@ mod test {
         api_get_group_by_id = { Endpoint::GroupsById, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/iam/groups/{group_id}" },
         foo_login_with_token = { Endpoint::LoginWithToken, BaseUrl::from_str("https://foo.bar.com").unwrap(), "https://foo.bar.com/api/v0/auth/validate" },
         api_search = { Endpoint::Search, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/search" },
-        api_reports = { Endpoint::Reports, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/reports" },
-        api_report_by_id = { Endpoint::ReportById, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/reports/{task_id}" },
-        api_report_output = { Endpoint::ReportOutput, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/reports/{task_id}/output" },
+        api_exports = { Endpoint::Exports, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/exports" },
+        api_export_by_id = { Endpoint::ExportById, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/exports/{task_id}" },
+        api_export_output = { Endpoint::ExportOutput, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/exports/{task_id}/output" },
         api_tasks = { Endpoint::Tasks, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/tasks" },
         api_imports = { Endpoint::Imports, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v1/imports" },
         api_meta_login_rate_limit = { Endpoint::MetaLoginRateLimit, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/login-rate-limit" },

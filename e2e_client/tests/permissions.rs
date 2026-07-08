@@ -1,11 +1,11 @@
-use hubuum_client::{NamespacePost, Permissions};
+use hubuum_client::{CollectionPost, Permissions};
 
 use e2e_client::harness::{E2EHarness, admin_context};
 use e2e_client::naming::unique_case_prefix;
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn e2e_namespace_permissions_grant_and_revoke() {
+fn e2e_collection_permissions_grant_and_revoke() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
@@ -19,43 +19,44 @@ fn e2e_namespace_permissions_grant_and_revoke() {
     let group = harness
         .client
         .groups()
-        .select(group_id)
+        .get(group_id)
         .expect("created group should be selectable");
     group.add_member(user.id).expect("group add_member failed");
 
     let prefix = unique_case_prefix("permissions");
-    let namespace = harness
+    let collection = harness
         .client
-        .namespaces()
-        .create_raw(NamespacePost {
-            name: format!("{prefix}-namespace"),
-            description: "permission e2e namespace".to_string(),
+        .collections()
+        .create_raw(CollectionPost {
+            name: format!("{prefix}-collection"),
+            description: "permission e2e collection".to_string(),
             group_id: admin_group_id,
+            parent_collection_id: None,
         })
-        .expect("namespace create should succeed");
-    let namespace_handle = harness
+        .expect("collection create should succeed");
+    let collection_handle = harness
         .client
-        .namespaces()
-        .select(namespace.id)
-        .expect("namespace should be selectable");
+        .collections()
+        .get(collection.id)
+        .expect("collection should be selectable");
 
-    namespace_handle
+    collection_handle
         .grant_permission(group_id, Permissions::ReadCollection)
-        .expect("granting read namespace should succeed");
+        .expect("granting read collection should succeed");
 
     let user_client = user
         .login(harness.base_url.clone())
         .expect("created user login should succeed");
     let selected = user_client
-        .namespaces()
-        .select(namespace.id)
-        .expect("user should read namespace after grant");
-    assert_eq!(selected.id(), namespace.id);
+        .collections()
+        .get(collection.id)
+        .expect("user should read collection after grant");
+    assert_eq!(selected.id(), collection.id);
 
-    namespace_handle
+    collection_handle
         .revoke_permissions(group_id)
         .expect("revoking group permissions should succeed");
-    if user_client.namespaces().select(namespace.id).is_ok() {
-        panic!("user should not read namespace after revoke");
+    if user_client.collections().get(collection.id).is_ok() {
+        panic!("user should not read collection after revoke");
     }
 }

@@ -2,19 +2,18 @@ use hubuum_client_derive::ApiResource;
 
 use std::borrow::Cow;
 
+#[cfg(feature = "async")]
+use crate::client::r#async::{
+    CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+    Handle as AsyncHandle,
+};
+#[cfg(feature = "blocking")]
+use crate::client::sync::{
+    CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+    Handle as SyncHandle,
+};
 use crate::{
-    ApiError, Group, NewTokenRequest, PrincipalTokenMetadata,
-    client::{
-        r#async::{
-            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-            Handle as AsyncHandle,
-        },
-        sync::{
-            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            Handle as SyncHandle,
-        },
-    },
-    endpoints::Endpoint,
+    ApiError, Group, NewTokenRequest, PrincipalTokenMetadata, endpoints::Endpoint,
     types::HubuumDateTime,
 };
 
@@ -41,6 +40,7 @@ pub struct UserResource {
     pub updated_at: HubuumDateTime,
 }
 
+#[cfg(feature = "blocking")]
 impl SyncHandle<User> {
     pub fn groups_request(&self) -> SyncCursorRequest<Group> {
         SyncCursorRequest::new(
@@ -80,17 +80,17 @@ impl SyncHandle<User> {
     }
 
     pub fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_sync(self.client(), self.id())
+        principal_tokens_sync(self.client(), self.id().into())
     }
 
     /// Mint a new token for this user. Returns the raw token, shown only once.
     pub fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_sync(self.client(), self.id(), request)
+        principal_token_create_sync(self.client(), self.id().into(), request)
     }
 
     /// Revoke (soft-delete) one of this user's tokens.
     pub fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_sync(self.client(), self.id(), token_id)
+        principal_token_revoke_sync(self.client(), self.id().into(), token_id)
     }
 
     /// Set a new plaintext password for this user.
@@ -123,6 +123,7 @@ impl SyncHandle<User> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncHandle<User> {
     pub fn groups_request(&self) -> AsyncCursorRequest<Group> {
         AsyncCursorRequest::new(
@@ -163,17 +164,17 @@ impl AsyncHandle<User> {
     }
 
     pub async fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_async(self.client(), self.id()).await
+        principal_tokens_async(self.client(), self.id().into()).await
     }
 
     /// Mint a new token for this user. Returns the raw token, shown only once.
     pub async fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_async(self.client(), self.id(), request).await
+        principal_token_create_async(self.client(), self.id().into(), request).await
     }
 
     /// Revoke (soft-delete) one of this user's tokens.
     pub async fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_async(self.client(), self.id(), token_id).await
+        principal_token_revoke_async(self.client(), self.id().into(), token_id).await
     }
 
     /// Set a new plaintext password for this user.
@@ -216,6 +217,7 @@ struct SetPasswordBody {
 // Shared principal-token helpers, reused by both `User` and `ServiceAccount`
 // handles (a principal id is the user/service-account id).
 
+#[cfg(feature = "blocking")]
 pub(crate) fn principal_tokens_sync(
     client: &crate::client::sync::Client<crate::Authenticated>,
     principal_id: i32,
@@ -234,6 +236,7 @@ pub(crate) fn principal_tokens_sync(
     Ok(res.unwrap_or_default())
 }
 
+#[cfg(feature = "blocking")]
 pub(crate) fn principal_token_create_sync(
     client: &crate::client::sync::Client<crate::Authenticated>,
     principal_id: i32,
@@ -251,6 +254,7 @@ pub(crate) fn principal_token_create_sync(
     )
 }
 
+#[cfg(feature = "blocking")]
 pub(crate) fn principal_token_revoke_sync(
     client: &crate::client::sync::Client<crate::Authenticated>,
     principal_id: i32,
@@ -273,6 +277,7 @@ pub(crate) fn principal_token_revoke_sync(
     Ok(())
 }
 
+#[cfg(feature = "async")]
 pub(crate) async fn principal_tokens_async(
     client: &crate::client::r#async::Client<crate::Authenticated>,
     principal_id: i32,
@@ -293,6 +298,7 @@ pub(crate) async fn principal_tokens_async(
     Ok(res.unwrap_or_default())
 }
 
+#[cfg(feature = "async")]
 pub(crate) async fn principal_token_create_async(
     client: &crate::client::r#async::Client<crate::Authenticated>,
     principal_id: i32,
@@ -312,6 +318,7 @@ pub(crate) async fn principal_token_create_async(
         .await
 }
 
+#[cfg(feature = "async")]
 pub(crate) async fn principal_token_revoke_async(
     client: &crate::client::r#async::Client<crate::Authenticated>,
     principal_id: i32,

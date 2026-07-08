@@ -16,7 +16,7 @@ pub struct HistoryMetadata {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct NamespaceHistory {
+pub struct CollectionHistory {
     pub id: i32,
     pub name: String,
     pub description: String,
@@ -30,7 +30,7 @@ pub struct NamespaceHistory {
 pub struct ClassHistory {
     pub id: i32,
     pub name: String,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub validate_schema: bool,
     pub description: String,
     #[serde(default)]
@@ -45,7 +45,7 @@ pub struct ClassHistory {
 pub struct ObjectHistory {
     pub id: i32,
     pub name: String,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub hubuum_class_id: i32,
     pub data: serde_json::Value,
     pub description: String,
@@ -56,9 +56,9 @@ pub struct ObjectHistory {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ReportTemplateHistory {
+pub struct ExportTemplateHistory {
     pub id: i32,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub name: String,
     pub description: String,
     pub content_type: String,
@@ -87,7 +87,7 @@ pub struct ReportTemplateHistory {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RemoteTargetHistory {
     pub id: i32,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub name: String,
     pub description: String,
     pub method: RemoteHttpMethod,

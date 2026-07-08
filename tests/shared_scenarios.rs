@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use httpmock::prelude::*;
 use hubuum_client::{
-    ApiError, AsyncClient, Authenticated, BaseUrl, Credentials, SyncClient, types::Permissions,
+    ApiError, Authenticated, BaseUrl, Client, Credentials, blocking, types::Permissions,
 };
 use serde_json::json;
 
@@ -21,11 +21,11 @@ fn ts() -> &'static str {
     "2024-01-01T00:00:00"
 }
 
-fn namespace_json() -> serde_json::Value {
+fn collection_json() -> serde_json::Value {
     json!({
         "id": NAMESPACE_ID,
-        "name": "namespace-1",
-        "description": "Namespace",
+        "name": "collection-1",
+        "description": "Collection",
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -36,7 +36,7 @@ fn class_json() -> serde_json::Value {
         "id": CLASS_ID,
         "name": CLASS_NAME,
         "description": "Class",
-        "namespace": namespace_json(),
+        "collection": collection_json(),
         "json_schema": null,
         "validate_schema": null,
         "created_at": ts(),
@@ -48,7 +48,7 @@ fn object_json() -> serde_json::Value {
     json!({
         "id": OBJECT_ID,
         "name": OBJECT_NAME,
-        "namespace_id": NAMESPACE_ID,
+        "collection_id": NAMESPACE_ID,
         "hubuum_class_id": CLASS_ID,
         "description": "Object",
         "data": null,
@@ -78,12 +78,12 @@ fn principal_member_json() -> serde_json::Value {
 fn permissions_json() -> serde_json::Value {
     json!({
         "id": 77,
-        "namespace_id": NAMESPACE_ID,
+        "collection_id": NAMESPACE_ID,
         "group_id": GROUP_ID,
-        "has_read_namespace": true,
-        "has_update_namespace": false,
-        "has_delete_namespace": false,
-        "has_delegate_namespace": false,
+        "has_read_collection": true,
+        "has_update_collection": false,
+        "has_delete_collection": false,
+        "has_delegate_collection": false,
         "has_create_class": false,
         "has_read_class": false,
         "has_update_class": false,
@@ -182,14 +182,14 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/3")
+            .path("/api/v1/collections/3")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(200).json_body(json!(namespace_json()));
+        then.status(200).json_body(json!(collection_json()));
     });
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/3/permissions")
+            .path("/api/v1/collections/3/permissions")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200).json_body(json!([{
             "group": group_json(),
@@ -199,7 +199,7 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(PUT)
-            .path("/api/v1/namespaces/3/permissions/group/10")
+            .path("/api/v1/collections/3/permissions/group/10")
             .json_body(json!(["ReadCollection"]))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200);
@@ -207,112 +207,96 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/namespaces/3/permissions/group/10")
+            .path("/api/v1/collections/3/permissions/group/10")
             .json_body(json!(["ReadCollection"]))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201);
     });
 }
 
-fn run_shared_scenario_sync(client: &SyncClient<Authenticated>) -> Result<(), ApiError> {
+fn run_shared_scenario_sync(client: &blocking::Client<Authenticated>) -> Result<(), ApiError> {
     assert_eq!(
-        client.classes().select(CLASS_ID)?.resource().name,
+        client.classes().get(CLASS_ID)?.resource().name,
         CLASS_NAME.to_string()
     );
-    assert_eq!(client.classes().select_by_name(CLASS_NAME)?.id(), CLASS_ID);
-    assert_eq!(client.classes().select(CLASS_ID)?.objects()?.len(), 1);
+    assert_eq!(client.classes().get_by_name(CLASS_NAME)?.id(), CLASS_ID);
+    assert_eq!(client.classes().get(CLASS_ID)?.objects()?.len(), 1);
     assert_eq!(
         client
             .classes()
-            .select(CLASS_ID)?
+            .get(CLASS_ID)?
             .object_by_name(OBJECT_NAME)?
             .id(),
         OBJECT_ID
     );
-    client.classes().select(CLASS_ID)?.delete()?;
+    client.classes().get(CLASS_ID)?.delete()?;
 
-    assert_eq!(client.groups().select(GROUP_ID)?.members()?.len(), 1);
-    client.groups().select(GROUP_ID)?.add_member(USER_ID)?;
-    client.groups().select(GROUP_ID)?.remove_member(USER_ID)?;
+    assert_eq!(client.groups().get(GROUP_ID)?.members()?.len(), 1);
+    client.groups().get(GROUP_ID)?.add_member(USER_ID)?;
+    client.groups().get(GROUP_ID)?.remove_member(USER_ID)?;
 
     assert_eq!(
-        client
-            .namespaces()
-            .select(NAMESPACE_ID)?
-            .permissions()?
-            .len(),
+        client.collections().get(NAMESPACE_ID)?.permissions()?.len(),
         1
     );
     client
-        .namespaces()
-        .select(NAMESPACE_ID)?
+        .collections()
+        .get(NAMESPACE_ID)?
         .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])?;
     client
-        .namespaces()
-        .select(NAMESPACE_ID)?
+        .collections()
+        .get(NAMESPACE_ID)?
         .grant_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])?;
 
     Ok(())
 }
 
-async fn run_shared_scenario_async(client: &AsyncClient<Authenticated>) -> Result<(), ApiError> {
+async fn run_shared_scenario_async(client: &Client<Authenticated>) -> Result<(), ApiError> {
     assert_eq!(
-        client.classes().select(CLASS_ID).await?.resource().name,
+        client.classes().get(CLASS_ID).await?.resource().name,
         CLASS_NAME.to_string()
     );
     assert_eq!(
-        client.classes().select_by_name(CLASS_NAME).await?.id(),
+        client.classes().get_by_name(CLASS_NAME).await?.id(),
         CLASS_ID
     );
     assert_eq!(
-        client
-            .classes()
-            .select(CLASS_ID)
-            .await?
-            .objects()
-            .await?
-            .len(),
+        client.classes().get(CLASS_ID).await?.objects().await?.len(),
         1
     );
     assert_eq!(
         client
             .classes()
-            .select(CLASS_ID)
+            .get(CLASS_ID)
             .await?
             .object_by_name(OBJECT_NAME)
             .await?
             .id(),
         OBJECT_ID
     );
-    client.classes().select(CLASS_ID).await?.delete().await?;
+    client.classes().get(CLASS_ID).await?.delete().await?;
 
     assert_eq!(
-        client
-            .groups()
-            .select(GROUP_ID)
-            .await?
-            .members()
-            .await?
-            .len(),
+        client.groups().get(GROUP_ID).await?.members().await?.len(),
         1
     );
     client
         .groups()
-        .select(GROUP_ID)
+        .get(GROUP_ID)
         .await?
         .add_member(USER_ID)
         .await?;
     client
         .groups()
-        .select(GROUP_ID)
+        .get(GROUP_ID)
         .await?
         .remove_member(USER_ID)
         .await?;
 
     assert_eq!(
         client
-            .namespaces()
-            .select(NAMESPACE_ID)
+            .collections()
+            .get(NAMESPACE_ID)
             .await?
             .permissions()
             .await?
@@ -320,14 +304,14 @@ async fn run_shared_scenario_async(client: &AsyncClient<Authenticated>) -> Resul
         1
     );
     client
-        .namespaces()
-        .select(NAMESPACE_ID)
+        .collections()
+        .get(NAMESPACE_ID)
         .await?
         .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])
         .await?;
     client
-        .namespaces()
-        .select(NAMESPACE_ID)
+        .collections()
+        .get(NAMESPACE_ID)
         .await?
         .grant_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])
         .await?;
@@ -341,7 +325,7 @@ fn shared_scenario_runs_with_sync_client() {
     setup_scenario_mocks(&server);
 
     let base_url = BaseUrl::from_str(&server.base_url()).expect("valid mock base URL");
-    let client = SyncClient::new_with_certificate_validation(base_url, true)
+    let client = blocking::Client::new_with_certificate_validation(base_url, true)
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .expect("sync login should succeed");
     run_shared_scenario_sync(&client).expect("sync scenario should succeed");
@@ -353,7 +337,7 @@ async fn shared_scenario_runs_with_async_client() {
     setup_scenario_mocks(&server);
 
     let base_url = BaseUrl::from_str(&server.base_url()).expect("valid mock base URL");
-    let client = AsyncClient::new_with_certificate_validation(base_url, true)
+    let client = Client::new_with_certificate_validation(base_url, true)
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .await
         .expect("async login should succeed");

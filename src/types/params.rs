@@ -25,15 +25,15 @@ pub struct UserParams {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct NamespacePermissionsGrantParams(pub Vec<Permissions>);
+pub struct CollectionPermissionsGrantParams(pub Vec<Permissions>);
 
-impl NamespacePermissionsGrantParams {
+impl CollectionPermissionsGrantParams {
     pub fn from_strings(strings: Vec<String>) -> Result<Self, ApiError> {
         let mut perms = Vec::with_capacity(strings.len());
         for s in strings {
             let p = s.parse::<Permissions>()?;
             perms.push(p);
         }
-        Ok(NamespacePermissionsGrantParams(perms))
+        Ok(CollectionPermissionsGrantParams(perms))
     }
 }

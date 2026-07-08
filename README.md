@@ -1,44 +1,17 @@
 # Hubuum client library (Rust)
 
-A Rust client library for interacting with the Hubuum API. The library is designed to be both flexible and safe, employing a type state pattern for authentication and offering both synchronous and asynchronous interfaces.
+A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
 ## Features
 
-- **Type State Pattern for Authentication**:
-
-    The client is built around a type state pattern. A new client instance is initially in an unauthenticated state (i.e. `Client<Unauthenticated>`) and only exposes the login interface. Once authenticated (via username/password or token), the client transitions to `Client<Authenticated>`, unlocking the full range of API operations.
-
-- **Dual-Mode Operation**:
-
-    Choose between a synchronous (blocking) or asynchronous (non-blocking) client depending on your application needs.
-  
-- **Configurable Client Setup**:
-
-    Use `SyncClient::new(base_url)` for secure defaults, or the explicit `new_with_certificate_validation` / `new_without_certificate_validation` constructors when needed.
-
-- **Comprehensive API Access**:
-
-    Easily interact with resources such as classes, class relations, and other Hubuum API endpoints with well-defined method chains for filtering and execution.
-
-- **Reports, Templates, and Imports**:
-
-    Run server-side reports, manage stored report templates, and submit asynchronous imports with typed task polling helpers.
-
-- **Principal-Centric Identity**:
-
-    Users and service accounts are both *principals*. Manage users and service accounts (create, update, disable), group membership by principal id, scoped token minting/revocation, and per-principal effective permissions. The `me()` family exposes the caller's own identity, tokens, groups, and permissions.
-
-- **Remote Targets**:
-
-    Configure hardened outbound HTTP targets and invoke them against namespaces, classes, objects, or relations, returning an async task to poll.
-
-- **Health & Readiness Probes**:
-
-    Unauthenticated `healthz()` / `readyz()` probes for liveness and readiness checks.
-
-- **No Built-In Table Formatting**:
-
-    Models no longer implement built-in table rendering traits. Consumers that want table support should wrap/newtype the exported models in their own crates.
+- **Type-state authentication**: unauthenticated clients can only log in; authenticated clients expose the full API.
+- **Async and blocking clients**: use `hubuum_client::Client` for async code or `hubuum_client::blocking::Client` for synchronous applications.
+- **Configurable setup**: use `Client::new(base_url)` for secure defaults or `Client::builder(base_url)` for certificate validation, timeout, and user-agent controls.
+- **Typed resource access**: collections, classes, objects, relations, users, groups, permissions, remote targets, event sinks, export templates, imports, and tasks use typed request and response models.
+- **Fluent queries and pagination**: chain typed filters directly from resource helpers and choose `list()`, `page()`, `all()`, or `one()` depending on the result shape you need.
+- **Exports, export templates, and imports**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
+- **Principal-centric identity**: users and service accounts are principals, with group membership, scoped tokens, and effective permission helpers.
+- **Health and readiness probes**: unauthenticated `healthz()` and `readyz()` calls are available for operational checks.
 
 ## Installation
 
@@ -46,329 +19,129 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.0.3"
+hubuum_client = "0.1.0"
 ```
 
-If you need unreleased changes, you can still point Cargo at the Git repository:
+If you need unreleased changes, point Cargo at the Git repository:
 
 ```toml
 [dependencies]
-hubuum_client = { git = "https://github.com/terjekv/hubuum-client-rust" }
+hubuum_client = { git = "https://github.com/hubuum/hubuum-client-rust" }
 ```
 
-## Usage
+## Quick Start
 
-The library offers both a sync and an async client. The interface for both is similar, but the async client adds `await` syntax for asynchronous operations.
-
-It is safe to `clone()` the client if need be.
-
-### Synchronous Client
-
-The synchronous client provides a blocking interface that is ideal for simpler or legacy applications.
-
-#### Client Initialization and Authentication
+The root `Client` is asynchronous. Blocking users can use `hubuum_client::blocking::Client`; the blocking API mirrors the async surface without `.await`.
 
 ```rust
 use std::str::FromStr;
-use hubuum_client::{BaseUrl, SyncClient, Token, Credentials};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let baseurl = BaseUrl::from_str("https://server.example.com:443")?;
-
-    // Create a new client in the Unauthenticated state
-    let client = SyncClient::new(baseurl);
-
-    // Log in using username; login returns a Client in the Authenticated state or an error.
-    let password = "secret".to_string();
-    let client = client.login(Credentials::new("foo".to_string(), password))?;
-
-    // Alternatively, log in with a token:
-    // let client = client.login_with_token(Token::new("my-token".to_string()))?;
-
-    Ok(())
-}
-```
-
-#### Making API Calls
-
-Once authenticated, you can perform operations against the API. For example, to create a new class resource:
-
-```rust
-let result = client
-    .classes()
-    .create()
-    .name("example-class")
-    .namespace_id(1)
-    .description("Example class")
-    .send()?;
-```
-
-The fluent API works across create/update/query flows. If needed, you can still pass raw structs through `create_raw`, `update_raw`, and `query().params(...)`.
-
-#### Searching Resources
-
-The client’s API is designed with a fluent query interface. For example, to search for a class by its exact name:
-
-```rust
-let name = "example-class";
-let class = client
-    .classes()
-    .query()
-    .name_eq(name)
-    .one()?;
-```
-
-Or, to find a relation between classes:
-
-```rust
-let relation = client
-        .class_relation()
-        .query()
-        .add_filter_equals("from_classes", 1)
-        .add_filter_equals("to_classes", 2)
-        .one()?;
-```
-
-Related-object traversal now follows the dedicated `related/*` endpoints, including graph fetches and endpoint-specific result filters:
-
-```rust
-let related = object
-    .related_objects()
-    .ignore_classes([42, 99])
-    .ignore_self_class(false)
-    .add_filter_equals("from_classes", 42)
-    .limit(25)
-    .page()?;
-
-let graph = object
-    .related_graph()
-    .add_filter_equals("depth", 2)
-    .fetch()?;
-```
-
-### Asynchronous Client
-
-The asynchronous client leverages Rust’s async/await syntax and is built for high-concurrency applications using runtimes like Tokio.
-
-#### Async Client Initialization and Authentication
-
-```rust
-use std::str::FromStr;
-use hubuum_client::{AsyncClient, BaseUrl, Credentials, Token};
+use hubuum_client::{BaseUrl, Client, Credentials};
 
 #[tokio::main]
-
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let baseurl = BaseUrl::from_str("https://server.example.com:443")?;
-
-    // Create a new asynchronous client in the Unauthenticated state
-    let client = AsyncClient::new(baseurl);
-
-    // Log in using username; login returns a Client in the Authenticated state or an error.
-    let password = "secret".to_string();
-    let client = client
-        .login(Credentials::new("foo".to_string(), password))
+    let base_url = BaseUrl::from_str("https://server.example.com:443")?;
+    let client = Client::new(base_url)
+        .login(Credentials::new("foo".to_string(), "secret".to_string()))
         .await?;
 
-    // Alternatively, log in with a token:
-    // let client = client.login_with_token(Token::new("my-token".to_string())).await?;
+    let class = client
+        .classes()
+        .create()
+        .name("example-class")
+        .collection_id(1)
+        .description("Example class")
+        .send()
+        .await?;
 
+    let matches = client
+        .classes()
+        .name()
+        .contains("server")
+        .limit(25)
+        .list()
+        .await?;
+
+    println!("created class {} and found {} matches", class.id, matches.len());
     Ok(())
 }
 ```
 
-As one can see, the interface is very similar to the synchronous client.
+Resource identity is typed. Handles and resources expose IDs such as `ClassId`, `CollectionId`, `ObjectId`, and `GroupId`, so accidentally passing a group ID to `classes().get(...)` is rejected at compile time. Integer literals and raw `i32` values still work at API boundaries through explicit conversion into the expected ID type.
 
-## Reports and Templates
+## Common Flows
 
-Templates are exposed as a regular resource:
+Collections are the top-level organizational resource for classes, objects, export templates, imports, remote targets, and scoped permissions:
 
 ```rust
-let template = client
-    .templates()
+let collection = client
+    .collections()
     .create()
-    .namespace_id(7)
-    .name("owner-report")
-    .description("Owner listing")
-    .content_type(hubuum_client::ReportContentType::TextPlain)
-    .template("{{#each items}}{{this.name}}\n{{/each}}")
-    .send()?;
-```
-
-Reports are **asynchronous**: submitting one creates a task, and the rendered output is
-fetched once the task finishes. `client.reports().run(...)` is the high-level helper that
-submits, polls the task to completion, and returns a typed `ReportResult`:
-
-```rust
-let request = hubuum_client::ReportRequest {
-    limits: None,
-    missing_data_policy: None,
-    output: None,
-    query: Some("name__icontains=server".to_string()),
-    scope: hubuum_client::ReportScope {
-        class_id: Some(42),
-        kind: hubuum_client::ReportScopeKind::ObjectsInClass,
-        object_id: None,
-    },
-    include: None,
-    relation_context: None,
-};
-
-let report = client.reports().run(request).send()?;
-
-match report {
-    hubuum_client::ReportResult::Json(body) => println!("{} rows", body.items.len()),
-    hubuum_client::ReportResult::Rendered { body, .. } => println!("{body}"),
-}
-```
-
-The polling cadence and deadline are configurable, and the flow can also be driven
-manually with the low-level helpers:
-
-```rust
-use std::time::Duration;
-
-// High-level, with custom polling:
-let report = client
-    .reports()
-    .run(request.clone())
-    .poll_interval(Duration::from_millis(500))
-    .timeout(Some(Duration::from_secs(120)))
+    .name("platform")
+    .description("Platform inventory")
+    .group_id(admin_group_id)
+    .parent_collection_id(parent_collection_id)
     .send()?;
 
-// Low-level: submit, wait, then fetch the output.
-let task = client.reports().submit(request).send()?;
-let task = client.tasks().wait(task.id).send()?;
-let output = client.reports().output(task.id)?;
+let children = collection.children()?;
+let ancestors = collection.ancestors()?;
+let moved = collection.move_parent(new_parent_collection_id)?;
+let effective = collection.effective_group_permissions(admin_group_id)?;
 ```
 
-## Imports and Tasks
-
-Imports return task-shaped responses and can be polled through `client.imports()` and `client.tasks()`:
+Queries compose by chaining field operators. Use `list()` for one page, `page()` when you need cursor metadata, `all()` to follow pagination, and `one()` when exactly one result is expected:
 
 ```rust
-let task = client
-    .imports()
-    .submit(hubuum_client::ImportRequest {
-        version: hubuum_client::CURRENT_IMPORT_VERSION,
-        dry_run: Some(true),
-        mode: None,
-        graph: hubuum_client::ImportGraph::default(),
-    })
-    .idempotency_key("inventory-import-2026-03-07")
-    .send()?;
-
-let task_state = client.tasks().get(task.id)?;
-let event_page = client.tasks().events(task.id).limit(50).page()?;
-let result_page = client.imports().results(task.id).limit(50).page()?;
-```
-
-Tasks can also be listed and filtered (raw query parameters, cursor-paged):
-
-```rust
-let tasks = client
-    .tasks()
-    .query()
-    .kind(hubuum_client::TaskKind::Report)
-    .status(hubuum_client::TaskStatus::Succeeded)
-    .limit(50)
+let classes = client
+    .classes()
+    .name()
+    .icontains("server")
+    .created_at()
+    .gte(since)
+    .validate_schema()
+    .eq(true)
+    .limit(25)
     .list()?;
 ```
 
-Cursor-paged endpoints return `hubuum_client::Page<T>` with `items` and `next_cursor`.
+Exports and imports are task-backed. High-level helpers submit work, poll the task to completion, and return the final output:
 
-## Unified Search
+```rust
+let export = client.exports().run(request).send()?;
 
-Grouped discovery searches are exposed through `client.search(...)`:
+match export {
+    hubuum_client::ExportResult::Json(body) => println!("{} rows", body.items.len()),
+    hubuum_client::ExportResult::Rendered { body, .. } => println!("{body}"),
+}
+```
+
+Unified search is exposed through `client.search(...)`:
 
 ```rust
 let search = client
     .search("server")
     .kinds([
-        hubuum_client::UnifiedSearchKind::Namespace,
+        hubuum_client::UnifiedSearchKind::Collection,
         hubuum_client::UnifiedSearchKind::Object,
     ])
     .limit_per_kind(5)
     .search_object_data(true)
-    .execute()?;
-
-for object in search.results.objects {
-    println!("{}", object.name);
-}
-
-let events = client
-    .search("server")
-    .kinds([hubuum_client::UnifiedSearchKind::Object])
-    .stream()?;
+    .send()?;
 ```
 
-## Integration Tests (Real Server)
+## More Documentation
 
-The repository includes an opt-in Docker-backed integration test suite in
-`tests/container_integration.rs`.
+- [Client setup](docs/client-setup.md): async and blocking initialization, token login, and builder options.
+- [Querying resources](docs/querying.md): resource CRUD, typed filters, pagination, related-object traversal, and error details.
+- [Exports, imports, and tasks](docs/exports-and-tasks.md): export templates, rendered output, task polling, and import results.
+- [Integration tests](docs/integration-tests.md): Docker-backed real-server tests, e2e client tests, seed data, and environment variables.
+- [Release procedure](RELEASING.md): crates.io release checklist and trusted publishing notes.
 
-Recommended entrypoint:
-
-```bash
-./scripts/run-integration-tests.sh
-```
-
-Run both library integration tests and the consumer e2e client suite:
-
-```bash
-./scripts/run-integration-tests.sh --with-e2e-client
-```
-
-Run only the consumer e2e client suite (still provisions server + postgres):
-
-```bash
-./scripts/run-integration-tests.sh --e2e-only
-```
-
-The script starts one PostgreSQL container and one Hubuum server container, waits for readiness,
-optionally applies SQL seed data, runs integration tests, and tears everything down in a shell
-`trap` (unless keep mode is enabled).
-
-Mutating integration tests use unique `itest-<case>-<ts>` resource name prefixes, so they are safe
-to run with default parallel test threads.
-
-Seed behavior:
-
-- default seed file: `tests/container_integration/seed/init.sql`
-- custom seed file: `./scripts/run-integration-tests.sh --seed path/to/seed.sql`
-- disable seeding: `./scripts/run-integration-tests.sh --skip-seed`
-
-External stack mode:
-
-- tests can reuse an externally managed stack when both env vars are set:
-  - `HUBUUM_INTEGRATION_BASE_URL`
-  - `HUBUUM_INTEGRATION_ADMIN_PASSWORD`
-- this is what the wrapper script exports internally before running tests.
-
-Optional environment variables:
-
-- `HUBUUM_INTEGRATION_SERVER_IMAGE` to override the server image
-- `HUBUUM_INTEGRATION_DB_IMAGE` to override the database image
-- `HUBUUM_INTEGRATION_CONTAINER_RUNTIME` to force `docker` or `podman`
-- `HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS` to override startup timeout (default: `300`)
-- `HUBUUM_INTEGRATION_KEEP_CONTAINERS=1` to keep containers running for debugging
-- `HUBUUM_INTEGRATION_SEED_SQL` to override the default seed SQL file
-
-CI runs integration tests against `ghcr.io/hubuum/hubuum-server:main` with
-`--with-e2e-client`, so the consumer e2e suite is validated with the library integration
-tests.
-
-If the server image is private in your environment, authenticate first:
-
-```bash
-docker login ghcr.io
-```
+Release notes live in [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
-Contributions are welcome! If you find issues or have suggestions for improvements, please open an issue or submit a pull request on GitHub.
-
-Release notes live in `CHANGELOG.md`, and the release procedure for crates.io publishing is documented in `RELEASING.md`.
+Contributions are welcome. If you find issues or have suggestions for improvements, please open an issue or submit a pull request on GitHub.
 
 ## License
 

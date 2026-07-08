@@ -13,7 +13,7 @@ pub struct EventResponse {
     #[serde(default)]
     pub entity_name: Option<String>,
     #[serde(default)]
-    pub namespace_id: Option<i32>,
+    pub collection_id: Option<i32>,
     pub action: String,
     pub actor_kind: String,
     #[serde(default)]
@@ -101,9 +101,9 @@ pub struct EventSubscriptionFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entity_names: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub namespace_ids: Option<Vec<i32>>,
+    pub collection_ids: Option<Vec<i32>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub related_namespace_ids: Option<Vec<i32>>,
+    pub related_collection_ids: Option<Vec<i32>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_ids: Option<Vec<String>>,
 }
@@ -111,7 +111,7 @@ pub struct EventSubscriptionFilter {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EventSubscription {
     pub id: i32,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub sink_id: i32,
     pub name: String,
     pub description: String,
@@ -257,7 +257,7 @@ pub struct EventSinkDeliveryHealth {
 pub struct EventSubscriptionDeliveryHealth {
     pub subscription_id: i32,
     pub subscription_name: String,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub sink_id: i32,
     pub sink_name: String,
     pub sink_kind: String,

@@ -1,0 +1,5 @@
+error[E0599]: no method named `gte` found for struct `QueryTextField<Q>` in the current scope
+ --> tests/trybuild/typed_query_fail_text_gte.rs:6:37
+  |
+6 |     let _ = client.classes().name().gte("server");
+  |                                     ^^^ method not found in `QueryTextField<hubuum_client::blocking::Resource<hubuum_client::Class>>`

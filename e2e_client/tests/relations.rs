@@ -10,8 +10,8 @@ fn e2e_class_and_object_relations_roundtrip() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (namespace_id, class_a_id, object_a_id) = harness
-        .create_namespace_class_object("relations-a", admin_group_id)
+    let (collection_id, class_a_id, object_a_id) = harness
+        .create_collection_class_object("relations-a", admin_group_id)
         .expect("failed to create relation source objects");
     let prefix = unique_case_prefix("relations");
 
@@ -20,7 +20,7 @@ fn e2e_class_and_object_relations_roundtrip() {
         .classes()
         .create_raw(ClassPost {
             name: format!("{prefix}-class-b"),
-            namespace_id,
+            collection_id,
             description: "relation target class".to_string(),
             json_schema: None,
             validate_schema: None,
@@ -31,8 +31,8 @@ fn e2e_class_and_object_relations_roundtrip() {
         .objects(class_b.id)
         .create_raw(ObjectPost {
             name: format!("{prefix}-object-b"),
-            namespace_id,
-            hubuum_class_id: class_b.id,
+            collection_id,
+            hubuum_class_id: class_b.id.into(),
             description: "relation target object".to_string(),
             data: Some(json!({ "role": "target" })),
         })
@@ -41,7 +41,7 @@ fn e2e_class_and_object_relations_roundtrip() {
     let class_a = harness
         .client
         .classes()
-        .select(class_a_id)
+        .get(class_a_id)
         .expect("source class should be selectable");
     let class_relation = class_a
         .create_relation_with_aliases(
@@ -101,7 +101,7 @@ fn e2e_class_and_object_relations_roundtrip() {
     let object_a = harness
         .client
         .objects(class_a_id)
-        .select(object_a_id)
+        .get(object_a_id)
         .expect("source object should be selectable");
     let object_relation = object_a
         .create_relation_to(class_b.id, object_b.id)

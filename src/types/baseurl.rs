@@ -44,6 +44,22 @@ impl FromStr for BaseUrl {
     }
 }
 
+impl TryFrom<&str> for BaseUrl {
+    type Error = ApiError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
+    }
+}
+
+impl TryFrom<String> for BaseUrl {
+    type Error = ApiError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_str(&value)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -2,21 +2,17 @@ use std::borrow::Cow;
 
 use hubuum_client_derive::ApiResource;
 
-use crate::{
-    ApiError,
-    client::{
-        r#async::{
-            CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-            GraphRequest as AsyncGraphRequest, Handle as AsyncHandle,
-        },
-        sync::{
-            CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-            GraphRequest as SyncGraphRequest, Handle as SyncHandle,
-        },
-    },
-    endpoints::Endpoint,
-    types::HubuumDateTime,
+#[cfg(feature = "async")]
+use crate::client::r#async::{
+    CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+    GraphRequest as AsyncGraphRequest, Handle as AsyncHandle,
 };
+#[cfg(feature = "blocking")]
+use crate::client::sync::{
+    CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+    GraphRequest as SyncGraphRequest, Handle as SyncHandle,
+};
+use crate::{ApiError, endpoints::Endpoint, types::HubuumDateTime};
 
 #[allow(dead_code)]
 #[derive(ApiResource)]
@@ -24,7 +20,7 @@ pub struct ObjectResource {
     #[api(read_only)]
     pub id: i32,
     pub name: String,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub hubuum_class_id: i32,
     pub description: String,
     #[api(optional)]
@@ -53,7 +49,7 @@ pub struct ObjectRelationResource {
 pub struct ObjectWithPath {
     pub id: i32,
     pub name: String,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub hubuum_class_id: i32,
     pub description: String,
     pub data: serde_json::Value,
@@ -68,6 +64,7 @@ pub struct RelatedObjectGraph {
     pub relations: Vec<ObjectRelation>,
 }
 
+#[cfg(feature = "blocking")]
 impl SyncHandle<Object> {
     pub fn related_objects(&self) -> SyncCursorRequest<ObjectWithPath> {
         SyncCursorRequest::new(
@@ -111,11 +108,17 @@ impl SyncHandle<Object> {
         )
     }
 
-    pub fn relation_to(
+    pub fn relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<SyncHandle<ObjectRelation>, ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<SyncHandle<ObjectRelation>, ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         let relation = self
             .client()
             .request_with_endpoint::<SyncEmptyPostParams, ObjectRelation>(
@@ -146,11 +149,17 @@ impl SyncHandle<Object> {
         Ok(SyncHandle::new(self.client().clone(), relation))
     }
 
-    pub fn create_relation_to(
+    pub fn create_relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<ObjectRelation, ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<ObjectRelation, ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, ObjectRelation>(
                 reqwest::Method::POST,
@@ -178,7 +187,13 @@ impl SyncHandle<Object> {
             ))
     }
 
-    pub fn delete_relation_to(&self, to_class_id: i32, to_object_id: i32) -> Result<(), ApiError> {
+    pub fn delete_relation_to<C, O>(&self, to_class_id: C, to_object_id: O) -> Result<(), ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,
@@ -205,6 +220,7 @@ impl SyncHandle<Object> {
     }
 }
 
+#[cfg(feature = "blocking")]
 impl SyncCursorRequest<ObjectWithPath> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
@@ -225,6 +241,7 @@ impl SyncCursorRequest<ObjectWithPath> {
     }
 }
 
+#[cfg(feature = "blocking")]
 impl SyncGraphRequest<RelatedObjectGraph> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
@@ -245,6 +262,7 @@ impl SyncGraphRequest<RelatedObjectGraph> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncHandle<Object> {
     pub fn related_objects(&self) -> AsyncCursorRequest<ObjectWithPath> {
         AsyncCursorRequest::new(
@@ -288,11 +306,17 @@ impl AsyncHandle<Object> {
         )
     }
 
-    pub async fn relation_to(
+    pub async fn relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<AsyncHandle<ObjectRelation>, ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<AsyncHandle<ObjectRelation>, ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         let relation = self
             .client()
             .request_with_endpoint::<AsyncEmptyPostParams, ObjectRelation>(
@@ -324,11 +348,17 @@ impl AsyncHandle<Object> {
         Ok(AsyncHandle::new(self.client().clone(), relation))
     }
 
-    pub async fn create_relation_to(
+    pub async fn create_relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<ObjectRelation, ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<ObjectRelation, ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, ObjectRelation>(
                 reqwest::Method::POST,
@@ -357,11 +387,17 @@ impl AsyncHandle<Object> {
             ))
     }
 
-    pub async fn delete_relation_to(
+    pub async fn delete_relation_to<C, O>(
         &self,
-        to_class_id: i32,
-        to_object_id: i32,
-    ) -> Result<(), ApiError> {
+        to_class_id: C,
+        to_object_id: O,
+    ) -> Result<(), ApiError>
+    where
+        C: ToString,
+        O: ToString,
+    {
+        let to_class_id = to_class_id.to_string();
+        let to_object_id = to_object_id.to_string();
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,
@@ -389,6 +425,7 @@ impl AsyncHandle<Object> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncCursorRequest<ObjectWithPath> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
@@ -409,6 +446,7 @@ impl AsyncCursorRequest<ObjectWithPath> {
     }
 }
 
+#[cfg(feature = "async")]
 impl AsyncGraphRequest<RelatedObjectGraph> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where

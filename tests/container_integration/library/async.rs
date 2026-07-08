@@ -1,6 +1,6 @@
 use hubuum_client::{
-    ApiError, AsyncClient, BaseUrl, ClassPost, ClassRelationPost, GroupPatch, NamespacePatch,
-    NamespacePost, ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch,
+    ApiError, BaseUrl, ClassPost, ClassRelationPost, Client, CollectionPatch, CollectionPost,
+    GroupPatch, ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -41,14 +41,14 @@ fn assert_missing_resource(err: ApiError) {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_meta_counts_total_namespaces_non_negative() {
+fn async_meta_counts_total_collections_non_negative() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let counts = harness
         .block_on(client.meta_counts())
         .expect("async meta_counts failed");
 
-    assert!(counts.total_namespaces >= 0);
+    assert!(counts.total_collections >= 0);
 }
 
 #[test]
@@ -70,11 +70,11 @@ fn async_users_select_by_id_returns_same_user() {
     let client = harness.client.clone();
 
     let admin_by_name = harness
-        .block_on(client.users().select_by_name(ADMIN_USERNAME))
-        .expect("async users().select_by_name(admin) failed");
+        .block_on(client.users().get_by_name(ADMIN_USERNAME))
+        .expect("async users().get_by_name(admin) failed");
     let admin_by_id = harness
-        .block_on(client.users().select(admin_by_name.id()))
-        .expect("async users().select(id) failed");
+        .block_on(client.users().get(admin_by_name.id()))
+        .expect("async users().get(id) failed");
 
     assert_eq!(admin_by_name.id(), admin_by_id.id());
 }
@@ -86,16 +86,16 @@ fn async_user_groups_endpoint_returns_group_or_legacy_fallback() {
     let client = harness.client.clone();
 
     let admin = harness
-        .block_on(client.users().select_by_name(ADMIN_USERNAME))
-        .expect("async users().select_by_name(admin) failed");
+        .block_on(client.users().get_by_name(ADMIN_USERNAME))
+        .expect("async users().get_by_name(admin) failed");
 
     match harness.block_on(admin.groups()) {
         Ok(groups) => assert!(!groups.is_empty()),
         Err(ApiError::HttpWithBody { status, .. }) if status == reqwest::StatusCode::NOT_FOUND => {
             let fallback = harness
-                .block_on(client.groups().select_by_name(ADMIN_USERNAME))
-                .expect("async groups().select_by_name(admin) fallback failed");
-            assert!(fallback.id() > 0);
+                .block_on(client.groups().get_by_name(ADMIN_USERNAME))
+                .expect("async groups().get_by_name(admin) fallback failed");
+            assert!(fallback.id().get() > 0);
         }
         Err(err) => panic!("async admin.groups() failed: {err}"),
     }
@@ -108,8 +108,8 @@ fn async_user_tokens_endpoint_returns_admin_token_or_legacy_404() {
     let client = harness.client.clone();
 
     let admin = harness
-        .block_on(client.users().select_by_name(ADMIN_USERNAME))
-        .expect("async users().select_by_name(admin) failed");
+        .block_on(client.users().get_by_name(ADMIN_USERNAME))
+        .expect("async users().get_by_name(admin) failed");
 
     match harness.block_on(admin.tokens()) {
         Ok(tokens) => assert!(tokens.iter().any(|token| token.principal_id == admin.id())),
@@ -138,8 +138,8 @@ fn async_class_permissions_endpoint_returns_non_empty() {
         .expect("failed to create async permission sandbox");
 
     let class = harness
-        .block_on(client.classes().select(class_id))
-        .expect("async classes().select(class_id) failed");
+        .block_on(client.classes().get(class_id))
+        .expect("async classes().get(class_id) failed");
     let permissions = harness
         .block_on(class.permissions())
         .expect("async class.permissions() failed");
@@ -149,14 +149,14 @@ fn async_class_permissions_endpoint_returns_non_empty() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_group_permissions_endpoint_matches_group() {
+fn async_collection_group_permissions_endpoint_matches_group() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
 
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -164,12 +164,12 @@ fn async_namespace_group_permissions_endpoint_matches_group() {
         ))
         .expect("failed to create async permission sandbox");
 
-    let namespace = harness
-        .block_on(client.namespaces().select(namespace_id))
-        .expect("async namespaces().select(namespace_id) failed");
+    let collection = harness
+        .block_on(client.collections().get(collection_id))
+        .expect("async collections().get(collection_id) failed");
     let group_permissions = harness
-        .block_on(namespace.group_permissions(admin_group_id))
-        .expect("async namespace.group_permissions(group_id) failed");
+        .block_on(collection.group_permissions(admin_group_id))
+        .expect("async collection.group_permissions(group_id) failed");
 
     assert_eq!(group_permissions.group_id, admin_group_id);
 }
@@ -178,7 +178,7 @@ fn async_namespace_group_permissions_endpoint_matches_group() {
 #[case("existing-group", true)]
 #[case("missing-group", false)]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_has_group_permission_returns_expected(
+fn async_collection_has_group_permission_returns_expected(
     #[case] case_name: &str,
     #[case] existing_group: bool,
 ) {
@@ -188,7 +188,7 @@ fn async_namespace_has_group_permission_returns_expected(
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -196,9 +196,9 @@ fn async_namespace_has_group_permission_returns_expected(
         ))
         .expect("failed to create async permission sandbox");
 
-    let namespace = harness
-        .block_on(client.namespaces().select(namespace_id))
-        .expect("async namespaces().select(namespace_id) failed");
+    let collection = harness
+        .block_on(client.collections().get(collection_id))
+        .expect("async collections().get(collection_id) failed");
 
     let target_group_id = if existing_group {
         admin_group_id
@@ -206,8 +206,8 @@ fn async_namespace_has_group_permission_returns_expected(
         i32::MAX
     };
     let has_permission = harness
-        .block_on(namespace.has_group_permission(target_group_id, Permissions::ReadCollection))
-        .expect("async namespace.has_group_permission() failed");
+        .block_on(collection.has_group_permission(target_group_id, Permissions::ReadCollection))
+        .expect("async collection.has_group_permission() failed");
 
     assert_eq!(has_permission, existing_group);
 }
@@ -217,7 +217,7 @@ fn async_namespace_has_group_permission_returns_expected(
 #[case("replace-batch", AsyncMutationCase::ReplaceBatch)]
 #[case("revoke-batch", AsyncMutationCase::RevokeBatch)]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_permission_mutation_endpoint_succeeds(
+fn async_collection_permission_mutation_endpoint_succeeds(
     #[case] case_name: &str,
     #[case] mutation: AsyncMutationCase,
 ) {
@@ -227,7 +227,7 @@ fn async_namespace_permission_mutation_endpoint_succeeds(
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -235,44 +235,44 @@ fn async_namespace_permission_mutation_endpoint_succeeds(
         ))
         .expect("failed to create async permission sandbox");
 
-    let namespace = harness
-        .block_on(client.namespaces().select(namespace_id))
-        .expect("async namespaces().select(namespace_id) failed");
+    let collection = harness
+        .block_on(client.collections().get(collection_id))
+        .expect("async collections().get(collection_id) failed");
 
     match mutation {
         AsyncMutationCase::GrantSingle => harness
-            .block_on(namespace.grant_permission(admin_group_id, Permissions::ReadCollection))
-            .expect("async namespace.grant_permission() failed"),
+            .block_on(collection.grant_permission(admin_group_id, Permissions::ReadCollection))
+            .expect("async collection.grant_permission() failed"),
         AsyncMutationCase::ReplaceBatch => harness
-            .block_on(namespace.replace_permissions(
+            .block_on(collection.replace_permissions(
                 admin_group_id,
                 vec![Permissions::ReadCollection.to_string()],
             ))
-            .expect("async namespace.replace_permissions() failed"),
+            .expect("async collection.replace_permissions() failed"),
         AsyncMutationCase::RevokeBatch => {
             harness
-                .block_on(namespace.grant_permissions(
+                .block_on(collection.grant_permissions(
                     admin_group_id,
                     vec![Permissions::ReadCollection.to_string()],
                 ))
-                .expect("async namespace.grant_permissions() setup failed");
+                .expect("async collection.grant_permissions() setup failed");
             harness
-                .block_on(namespace.revoke_permissions(admin_group_id))
-                .expect("async namespace.revoke_permissions() failed");
+                .block_on(collection.revoke_permissions(admin_group_id))
+                .expect("async collection.revoke_permissions() failed");
         }
     }
 }
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_user_permissions_endpoint_returns_non_empty() {
+fn async_collection_user_permissions_endpoint_returns_non_empty() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
 
     let (admin_id, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -280,12 +280,12 @@ fn async_namespace_user_permissions_endpoint_returns_non_empty() {
         ))
         .expect("failed to create async permission sandbox");
 
-    let namespace = harness
-        .block_on(client.namespaces().select(namespace_id))
-        .expect("async namespaces().select(namespace_id) failed");
+    let collection = harness
+        .block_on(client.collections().get(collection_id))
+        .expect("async collections().get(collection_id) failed");
     let principal_permissions = harness
-        .block_on(namespace.principal_permissions(admin_id))
-        .expect("async namespace.principal_permissions(principal_id) failed");
+        .block_on(collection.principal_permissions(admin_id))
+        .expect("async collection.principal_permissions(principal_id) failed");
 
     assert!(!principal_permissions.is_empty());
 }
@@ -306,7 +306,7 @@ fn async_auth_login_with_token_accepts_valid_token() {
     let token = logged_in.get_token().to_string();
 
     let validated = runtime
-        .block_on(AsyncClient::new(base_url).login_with_token(Token::new(token.clone())))
+        .block_on(Client::new(base_url).login_with_token(Token::new(token.clone())))
         .expect("async login_with_token(valid) failed");
 
     assert_eq!(validated.get_token(), token);
@@ -323,9 +323,7 @@ fn async_auth_login_with_token_rejects_invalid_token() {
     let runtime = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
 
     let err = runtime
-        .block_on(
-            AsyncClient::new(base_url).login_with_token(Token::new("invalid-token".to_string())),
-        )
+        .block_on(Client::new(base_url).login_with_token(Token::new("invalid-token".to_string())))
         .expect_err("login_with_token should fail for invalid token");
 
     assert!(matches!(err, ApiError::InvalidToken));
@@ -450,7 +448,7 @@ fn async_auth_logout_all_revokes_existing_tokens() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_users_create_and_select_by_name_roundtrip() {
+fn async_users_create_and_get_by_name_roundtrip() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let (username, user_id) = harness
@@ -458,8 +456,8 @@ fn async_users_create_and_select_by_name_roundtrip() {
         .expect("user creation failed");
 
     let selected = harness
-        .block_on(client.users().select_by_name(&username))
-        .expect("async users().select_by_name(created) failed");
+        .block_on(client.users().get_by_name(&username))
+        .expect("async users().get_by_name(created) failed");
 
     assert_eq!(selected.id(), user_id);
 }
@@ -504,7 +502,7 @@ fn async_users_delete_removes_resource() {
         .block_on(client.users().delete(user_id))
         .expect("async users().delete() failed");
 
-    let err = match harness.block_on(client.users().select(user_id)) {
+    let err = match harness.block_on(client.users().get(user_id)) {
         Ok(_) => panic!("deleted user should not be selectable"),
         Err(err) => err,
     };
@@ -513,7 +511,7 @@ fn async_users_delete_removes_resource() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_groups_create_and_select_by_name_roundtrip() {
+fn async_groups_create_and_get_by_name_roundtrip() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let (groupname, group_id) = harness
@@ -521,8 +519,8 @@ fn async_groups_create_and_select_by_name_roundtrip() {
         .expect("group creation failed");
 
     let selected = harness
-        .block_on(client.groups().select_by_name(&groupname))
-        .expect("async groups().select_by_name(created) failed");
+        .block_on(client.groups().get_by_name(&groupname))
+        .expect("async groups().get_by_name(created) failed");
 
     assert_eq!(selected.id(), group_id);
 }
@@ -568,7 +566,7 @@ fn async_groups_delete_removes_resource() {
         .block_on(client.groups().delete(group_id))
         .expect("async groups().delete() failed");
 
-    let err = match harness.block_on(client.groups().select(group_id)) {
+    let err = match harness.block_on(client.groups().get(group_id)) {
         Ok(_) => panic!("deleted group should not be selectable"),
         Err(err) => err,
     };
@@ -587,8 +585,8 @@ fn async_group_membership_add_remove_roundtrip() {
         .block_on(create_async_group(&client, "async-group-membership-group"))
         .expect("group creation failed");
     let group = harness
-        .block_on(client.groups().select(group_id))
-        .expect("async groups().select(group_id) failed");
+        .block_on(client.groups().get(group_id))
+        .expect("async groups().get(group_id) failed");
 
     harness
         .block_on(group.add_member(user_id))
@@ -614,41 +612,41 @@ fn async_group_membership_add_remove_roundtrip() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_update_changes_fields() {
+fn async_collection_update_changes_fields() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
-            "async-namespace-update",
+            "async-collection-update",
         ))
-        .expect("failed to create namespace sandbox");
-    let prefix = unique_case_prefix("async-namespace-update");
-    let updated_name = format!("{prefix}-updated-namespace");
+        .expect("failed to create collection sandbox");
+    let prefix = unique_case_prefix("async-collection-update");
+    let updated_name = format!("{prefix}-updated-collection");
     let updated_description = format!("{prefix} updated description");
 
     let updated = harness
-        .block_on(client.namespaces().update_raw(
-            namespace_id,
-            NamespacePatch {
+        .block_on(client.collections().update_raw(
+            collection_id,
+            CollectionPatch {
                 name: Some(updated_name.clone()),
                 description: Some(updated_description.clone()),
             },
         ))
-        .expect("async namespaces().update_raw() failed");
+        .expect("async collections().update_raw() failed");
 
-    assert_eq!(updated.id, namespace_id);
+    assert_eq!(updated.id, collection_id);
     assert_eq!(updated.name, updated_name.clone());
     assert_eq!(updated.description, updated_description);
 
     let selected = harness
-        .block_on(client.namespaces().select_by_name(&updated_name))
-        .expect("updated namespace should be selectable by new name");
-    assert_eq!(selected.id(), namespace_id);
+        .block_on(client.collections().get_by_name(&updated_name))
+        .expect("updated collection should be selectable by new name");
+    assert_eq!(selected.id(), collection_id);
 }
 
 #[test]
@@ -659,7 +657,7 @@ fn async_class_objects_lists_created_object() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_id) = harness
+    let (collection_id, class_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -669,15 +667,15 @@ fn async_class_objects_lists_created_object() {
     let (_, object_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_id,
             "async-class-objects-created",
         ))
         .expect("failed to create object for class");
 
     let class = harness
-        .block_on(client.classes().select(class_id))
-        .expect("async classes().select(class_id) failed");
+        .block_on(client.classes().get(class_id))
+        .expect("async classes().get(class_id) failed");
     let objects = harness
         .block_on(class.objects())
         .expect("async class.objects() failed");
@@ -693,7 +691,7 @@ fn async_class_object_by_name_returns_matching_object() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_id) = harness
+    let (collection_id, class_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -703,15 +701,15 @@ fn async_class_object_by_name_returns_matching_object() {
     let (object_name, object_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_id,
             "async-class-object-by-name-created",
         ))
         .expect("failed to create object for class");
 
     let class = harness
-        .block_on(client.classes().select(class_id))
-        .expect("async classes().select(class_id) failed");
+        .block_on(client.classes().get(class_id))
+        .expect("async classes().get(class_id) failed");
     let object = harness
         .block_on(class.object_by_name(&object_name))
         .expect("async class.object_by_name() failed");
@@ -736,13 +734,13 @@ fn async_class_handle_delete_removes_resource() {
         .expect("failed to create class sandbox");
 
     let class = harness
-        .block_on(client.classes().select(class_id))
-        .expect("async classes().select(class_id) failed");
+        .block_on(client.classes().get(class_id))
+        .expect("async classes().get(class_id) failed");
     harness
         .block_on(class.delete())
         .expect("async class.delete() failed");
 
-    let err = match harness.block_on(client.classes().select(class_id)) {
+    let err = match harness.block_on(client.classes().get(class_id)) {
         Ok(_) => panic!("deleted class should not be selectable"),
         Err(err) => err,
     };
@@ -757,7 +755,7 @@ fn async_object_update_changes_fields() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_id) = harness
+    let (collection_id, class_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -767,7 +765,7 @@ fn async_object_update_changes_fields() {
     let (_, object_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_id,
             "async-object-update-initial",
         ))
@@ -782,7 +780,7 @@ fn async_object_update_changes_fields() {
             object_id,
             ObjectPatch {
                 name: Some(updated_name.clone()),
-                namespace_id: Some(namespace_id),
+                collection_id: Some(collection_id),
                 hubuum_class_id: Some(class_id),
                 description: Some(updated_description.clone()),
                 data: Some(updated_data.clone()),
@@ -804,7 +802,7 @@ fn async_object_delete_removes_resource() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_id) = harness
+    let (collection_id, class_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -814,7 +812,7 @@ fn async_object_delete_removes_resource() {
     let (_, object_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_id,
             "async-object-delete-initial",
         ))
@@ -824,7 +822,7 @@ fn async_object_delete_removes_resource() {
         .block_on(client.objects(class_id).delete(object_id))
         .expect("async objects().delete() failed");
 
-    let err = match harness.block_on(client.objects(class_id).select(object_id)) {
+    let err = match harness.block_on(client.objects(class_id).get(object_id)) {
         Ok(_) => panic!("deleted object should not be selectable"),
         Err(err) => err,
     };
@@ -839,7 +837,7 @@ fn async_class_relation_create_delete_roundtrip() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_a_id) = harness
+    let (collection_id, class_a_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -850,7 +848,7 @@ fn async_class_relation_create_delete_roundtrip() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("async-class-relation")),
             description: "integration class relation target".to_string(),
-            namespace_id,
+            collection_id,
             json_schema: None,
             validate_schema: None,
         }))
@@ -859,21 +857,21 @@ fn async_class_relation_create_delete_roundtrip() {
     let relation = harness
         .block_on(client.class_relation().create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id,
+            to_hubuum_class_id: class_b.id.into(),
             forward_template_alias: None,
             reverse_template_alias: None,
         }))
         .expect("async class_relation().create_raw() failed");
 
     let selected = harness
-        .block_on(client.class_relation().select(relation.id))
-        .expect("async class_relation().select(id) failed");
+        .block_on(client.class_relation().get(relation.id))
+        .expect("async class_relation().get(id) failed");
     assert_eq!(selected.id(), relation.id);
 
     harness
         .block_on(client.class_relation().delete(relation.id))
         .expect("async class_relation().delete() failed");
-    let err = match harness.block_on(client.class_relation().select(relation.id)) {
+    let err = match harness.block_on(client.class_relation().get(relation.id)) {
         Ok(_) => panic!("deleted class relation should not be selectable"),
         Err(err) => err,
     };
@@ -888,7 +886,7 @@ fn async_object_relation_create_delete_roundtrip() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_a_id) = harness
+    let (collection_id, class_a_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -899,7 +897,7 @@ fn async_object_relation_create_delete_roundtrip() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("async-object-relation")),
             description: "integration object relation class target".to_string(),
-            namespace_id,
+            collection_id,
             json_schema: None,
             validate_schema: None,
         }))
@@ -907,7 +905,7 @@ fn async_object_relation_create_delete_roundtrip() {
     let (_, object_a_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_a_id,
             "async-object-relation-a",
         ))
@@ -915,15 +913,15 @@ fn async_object_relation_create_delete_roundtrip() {
     let (_, object_b_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
-            class_b.id,
+            collection_id,
+            class_b.id.into(),
             "async-object-relation-b",
         ))
         .expect("failed to create relation object B");
     let class_relation = harness
         .block_on(client.class_relation().create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id,
+            to_hubuum_class_id: class_b.id.into(),
             forward_template_alias: None,
             reverse_template_alias: None,
         }))
@@ -933,19 +931,19 @@ fn async_object_relation_create_delete_roundtrip() {
         .block_on(client.object_relation().create_raw(ObjectRelationPost {
             from_hubuum_object_id: object_a_id,
             to_hubuum_object_id: object_b_id,
-            class_relation_id: class_relation.id,
+            class_relation_id: class_relation.id.into(),
         }))
         .expect("async object_relation().create_raw() failed");
 
     let selected = harness
-        .block_on(client.object_relation().select(relation.id))
-        .expect("async object_relation().select(id) failed");
+        .block_on(client.object_relation().get(relation.id))
+        .expect("async object_relation().get(id) failed");
     assert_eq!(selected.id(), relation.id);
 
     harness
         .block_on(client.object_relation().delete(relation.id))
         .expect("async object_relation().delete() failed");
-    let err = match harness.block_on(client.object_relation().select(relation.id)) {
+    let err = match harness.block_on(client.object_relation().get(relation.id)) {
         Ok(_) => panic!("deleted object relation should not be selectable"),
         Err(err) => err,
     };
@@ -967,24 +965,18 @@ fn async_groups_filter_helpers_return_expected_group() {
     };
 
     let listed = harness
-        .block_on(client.groups().filter(vec![filter.clone()]))
-        .expect("async groups().filter() failed");
+        .block_on(client.groups().query().filters(vec![filter.clone()]).list())
+        .expect("async groups().query().list() failed");
     assert!(listed.iter().any(|group| group.id == group_id));
 
     let single = harness
-        .block_on(client.groups().filter_expecting_single_result(vec![filter]))
-        .expect("async groups().filter_expecting_single_result() failed");
+        .block_on(client.groups().query().filters(vec![filter]).one())
+        .expect("async groups().query().one() failed");
     assert_eq!(single.id, group_id);
 
     let found = harness
-        .block_on(
-            client
-                .groups()
-                .find()
-                .add_filter_name_exact(&groupname)
-                .execute_expecting_single_result(),
-        )
-        .expect("async groups().find().add_filter_name_exact() failed");
+        .block_on(client.groups().query().groupname().eq(&groupname).one())
+        .expect("async groups().query().groupname().eq().one() failed");
     assert_eq!(found.id, group_id);
 }
 
@@ -1001,7 +993,11 @@ fn async_query_iequals_supports_case_insensitive_match() {
         client
             .users()
             .query()
-            .add_filter_iequals("username", username.to_uppercase())
+            .filter(
+                "username",
+                FilterOperator::IEquals { is_negated: false },
+                username.to_uppercase(),
+            )
             .one(),
     );
 
@@ -1011,7 +1007,7 @@ fn async_query_iequals_supports_case_insensitive_match() {
             eprintln!("skipping: server does not support iequals for username ({err})");
             return;
         }
-        Err(err) => panic!("async users().query().add_filter_iequals().one() failed: {err}"),
+        Err(err) => panic!("async users().query().filter(iequals).one() failed: {err}"),
     };
 
     assert_eq!(found.id, user_id);
@@ -1026,18 +1022,19 @@ fn async_query_sort_and_limit_returns_expected_class() {
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
     let prefix = unique_case_prefix("async-query-sort-limit");
-    let namespace = harness
-        .block_on(client.namespaces().create_raw(NamespacePost {
-            name: format!("{prefix}-namespace"),
-            description: "query sort namespace".to_string(),
+    let collection = harness
+        .block_on(client.collections().create_raw(CollectionPost {
+            name: format!("{prefix}-collection"),
+            description: "query sort collection".to_string(),
             group_id: admin_group_id,
+            parent_collection_id: None,
         }))
-        .expect("failed to create namespace for sort/limit test");
+        .expect("failed to create collection for sort/limit test");
     let class_a = harness
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-sort-a"),
             description: "query sort class a".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id.into(),
             json_schema: None,
             validate_schema: None,
         }))
@@ -1046,7 +1043,7 @@ fn async_query_sort_and_limit_returns_expected_class() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-sort-b"),
             description: "query sort class b".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id.into(),
             json_schema: None,
             validate_schema: None,
         }))
@@ -1057,7 +1054,8 @@ fn async_query_sort_and_limit_returns_expected_class() {
             client
                 .classes()
                 .query()
-                .add_filter_startswith("name", format!("{prefix}-sort-"))
+                .name()
+                .starts_with(format!("{prefix}-sort-"))
                 .sort_by_fields(vec![("name", SortDirection::Asc)])
                 .limit(1)
                 .one(),
@@ -1076,18 +1074,19 @@ fn async_query_json_path_lt_filters_json_schema() {
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
     let prefix = unique_case_prefix("async-query-json");
-    let namespace = harness
-        .block_on(client.namespaces().create_raw(NamespacePost {
-            name: format!("{prefix}-namespace"),
-            description: "query json namespace".to_string(),
+    let collection = harness
+        .block_on(client.collections().create_raw(CollectionPost {
+            name: format!("{prefix}-collection"),
+            description: "query json collection".to_string(),
             group_id: admin_group_id,
+            parent_collection_id: None,
         }))
-        .expect("failed to create namespace for json query test");
+        .expect("failed to create collection for json query test");
     let south = harness
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-geo-south"),
             description: "geo south".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id.into(),
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": -90 }
@@ -1100,7 +1099,7 @@ fn async_query_json_path_lt_filters_json_schema() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-geo-north"),
             description: "geo north".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id.into(),
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": 10 }
@@ -1115,11 +1114,14 @@ fn async_query_json_path_lt_filters_json_schema() {
             client
                 .classes()
                 .query()
-                .add_filter_startswith("name", format!("{prefix}-geo-"))
-                .add_json_path_lt("json_schema", vec!["properties", "latitude", "minimum"], 0)
+                .name()
+                .starts_with(format!("{prefix}-geo-"))
+                .json_schema()
+                .path(["properties", "latitude", "minimum"])
+                .lt(0)
                 .list(),
         )
-        .expect("async classes().query().add_json_path_lt().list() failed");
+        .expect("async classes().query().json_schema().path().lt().list() failed");
 
     assert!(matched.iter().any(|class| class.id == south.id));
     assert!(!matched.iter().any(|class| class.id == north.id));

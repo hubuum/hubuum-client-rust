@@ -5,25 +5,27 @@ use std::borrow::Cow;
 use std::marker::PhantomData;
 
 use super::{
-    Authenticated, ClientCore, GetID, IntoResourceFilter, Unauthenticated, UrlParams, shared,
+    Authenticated, ClientCore, GetID, IntoQueryFilters, Unauthenticated, UrlParams, shared,
 };
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{
-    ApiResource, Class, ClassRelation, EventSink, Group, Namespace, Object, ReportTemplate, User,
+    ApiResource, Class, ClassRelation, Collection, EventSink, ExportTemplate, Group, Object, User,
 };
 use crate::resources::{
-    MeResponse, PrincipalNamespacePermissions, PrincipalTokenMetadata, RemoteTarget, ServiceAccount,
+    MeResponse, PrincipalCollectionPermissions, PrincipalTokenMetadata, RemoteTarget,
+    ServiceAccount,
 };
 use crate::types::{
-    BaseUrl, ClassHistory, ClearRateLimitResponse, CountsResponse, Credentials, DbStateResponse,
-    EventDelivery, EventDeliveryHealthResponse, EventDeliveryUpdateResponse, EventResponse,
-    EventSubscription, FilterOperator, HubuumDateTime, ImportRequest, ImportTaskResultResponse,
-    LoginRateLimitState, LogoutTokenRequest, NamespaceHistory, NewEventSubscription, ObjectHistory,
-    ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory, ReportContentType,
-    ReportJsonResponse, ReportRequest, ReportResult, ReportTemplateHistory, SortDirection,
-    TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
+    BaseUrl, ClassHistory, ClearRateLimitResponse, CollectionHistory, CountsResponse, Credentials,
+    DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryUpdateResponse,
+    EventResponse, EventSubscription, ExportContentType, ExportJsonResponse, ExportRequest,
+    ExportResult, ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator, HubuumDateTime,
+    ImportRequest, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
+    NewEventSubscription, ObjectHistory, ProbeResponse, ReleaseRateLimitResponse,
+    RemoteTargetHistory, SortDirection, TaskEventResponse, TaskKind, TaskQueueStateResponse,
+    TaskResponse, TaskStatus, Token, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    UpdateEventSubscription,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -46,6 +48,57 @@ pub struct Client<S> {
     state: S,
 }
 
+#[derive(Debug, Clone)]
+pub struct ClientBuilder {
+    base_url: BaseUrl,
+    validate_server_certificate: bool,
+    timeout: Option<std::time::Duration>,
+    user_agent: Option<String>,
+}
+
+impl ClientBuilder {
+    fn new(base_url: BaseUrl) -> Self {
+        Self {
+            base_url,
+            validate_server_certificate: true,
+            timeout: None,
+            user_agent: None,
+        }
+    }
+
+    pub fn validate_certs(mut self, validate: bool) -> Self {
+        self.validate_server_certificate = validate;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
+
+    pub fn user_agent(mut self, user_agent: impl Into<String>) -> Self {
+        self.user_agent = Some(user_agent.into());
+        self
+    }
+
+    pub fn build(self) -> Result<Client<Unauthenticated>, ApiError> {
+        let mut builder = reqwest::blocking::Client::builder()
+            .danger_accept_invalid_certs(!self.validate_server_certificate);
+        if let Some(timeout) = self.timeout {
+            builder = builder.timeout(timeout);
+        }
+        if let Some(user_agent) = self.user_agent {
+            builder = builder.user_agent(user_agent);
+        }
+
+        Ok(Client {
+            http_client: builder.build()?,
+            base_url: self.base_url,
+            state: Unauthenticated,
+        })
+    }
+}
+
 impl<S> ClientCore for Client<S> {
     fn build_url(&self, endpoint: &Endpoint, url_params: UrlParams) -> String {
         shared::build_url(&self.base_url, endpoint, url_params)
@@ -53,18 +106,31 @@ impl<S> ClientCore for Client<S> {
 }
 
 trait ResponseHandler {
-    fn check_success(&self, response: Response) -> Result<Response, ApiError>;
+    fn check_success(
+        &self,
+        method: &reqwest::Method,
+        url: &str,
+        response: Response,
+    ) -> Result<Response, ApiError>;
 }
 
 impl<T> ResponseHandler for Client<T> {
-    fn check_success(&self, response: Response) -> Result<Response, ApiError> {
+    fn check_success(
+        &self,
+        method: &reqwest::Method,
+        url: &str,
+        response: Response,
+    ) -> Result<Response, ApiError> {
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text()?;
             let error_message = shared::parse_http_error_message(&body);
             return Err(ApiError::HttpWithBody {
+                method: method.clone(),
+                url: url.to_string(),
                 status,
                 message: error_message,
+                body,
             });
         }
         Ok(response)
@@ -72,6 +138,10 @@ impl<T> ResponseHandler for Client<T> {
 }
 
 impl Client<Unauthenticated> {
+    pub fn builder(base_url: BaseUrl) -> ClientBuilder {
+        ClientBuilder::new(base_url)
+    }
+
     pub fn new(base_url: BaseUrl) -> Self {
         Self::new_with_certificate_validation(base_url, true)
     }
@@ -84,14 +154,10 @@ impl Client<Unauthenticated> {
         base_url: BaseUrl,
         validate_server_certificate: bool,
     ) -> Self {
-        Client {
-            http_client: reqwest::blocking::Client::builder()
-                .danger_accept_invalid_certs(!validate_server_certificate)
-                .build()
-                .unwrap(),
-            base_url,
-            state: Unauthenticated,
-        }
+        Self::builder(base_url)
+            .validate_certs(validate_server_certificate)
+            .build()
+            .expect("reqwest blocking client should build")
     }
 }
 
@@ -350,7 +416,7 @@ impl Client<Authenticated> {
         let now = std::time::Instant::now();
         let response = request.send()?;
         trace!("Request took {:?}", now.elapsed());
-        let response = self.check_success(response)?;
+        let response = self.check_success(&method, &request_url, response)?;
         let status = response.status();
         let (next_cursor, content_type) = shared::response_metadata(response.headers());
         let body = response.text()?;
@@ -413,7 +479,7 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn get<R: ApiResource, F: IntoResourceFilter<R>>(
+    pub fn get<R: ApiResource, F: IntoQueryFilters<R>>(
         &self,
         resource: R,
         url_params: UrlParams,
@@ -423,7 +489,7 @@ impl Client<Authenticated> {
             reqwest::Method::GET,
             resource,
             url_params,
-            filter.into_resource_filter(),
+            filter.into_query_filters(),
             EmptyPostParams,
         )
         .and_then(|opt| opt.ok_or(ApiError::EmptyResult("GET returned empty result".into())))
@@ -471,25 +537,33 @@ impl Client<Authenticated> {
             .and_then(|opt| opt.ok_or(ApiError::EmptyResult("POST returned empty result".into())))
     }
 
-    pub fn patch<R: ApiResource>(
+    pub fn patch<R: ApiResource, I>(
         &self,
         resource: R,
-        id: i32,
+        id: I,
         url_params: UrlParams,
         params: R::PatchParams,
-    ) -> Result<R::PatchOutput, ApiError> {
+    ) -> Result<R::PatchOutput, ApiError>
+    where
+        I: Into<R::Id>,
+    {
+        let id = id.into();
         let mut url_params = url_params;
         url_params.push(("patch_id".into(), id.to_string().into()));
         self.request(reqwest::Method::PATCH, resource, url_params, vec![], params)
             .and_then(|opt| opt.ok_or(ApiError::EmptyResult("PATCH returned empty result".into())))
     }
 
-    pub fn delete<R: ApiResource>(
+    pub fn delete<R: ApiResource, I>(
         &self,
         resource: R,
-        id: i32,
+        id: I,
         url_params: UrlParams,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), ApiError>
+    where
+        I: Into<R::Id>,
+    {
+        let id = id.into();
         let mut url_params = url_params;
         url_params.push(("delete_id".into(), id.to_string().into()));
         self.request::<_, _, DeleteResponse>(
@@ -590,10 +664,10 @@ impl Client<Authenticated> {
         CursorRequest::new(self.clone(), Endpoint::MeTokens, UrlParams::default())
     }
 
-    /// The authenticated caller's own effective permissions, per namespace.
-    pub fn me_permissions(&self) -> Result<Vec<PrincipalNamespacePermissions>, ApiError> {
+    /// The authenticated caller's own effective permissions, per collection.
+    pub fn me_permissions(&self) -> Result<Vec<PrincipalCollectionPermissions>, ApiError> {
         let res = self
-            .request_with_endpoint::<EmptyPostParams, Vec<PrincipalNamespacePermissions>>(
+            .request_with_endpoint::<EmptyPostParams, Vec<PrincipalCollectionPermissions>>(
                 reqwest::Method::GET,
                 &Endpoint::MePermissions,
                 UrlParams::default(),
@@ -603,7 +677,7 @@ impl Client<Authenticated> {
         Ok(res.unwrap_or_default())
     }
 
-    pub fn me_permissions_request(&self) -> CursorRequest<PrincipalNamespacePermissions> {
+    pub fn me_permissions_request(&self) -> CursorRequest<PrincipalCollectionPermissions> {
         CursorRequest::new(self.clone(), Endpoint::MePermissions, UrlParams::default())
     }
 
@@ -611,57 +685,60 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    pub fn namespaces(&self) -> Resource<Namespace> {
+    pub fn collections(&self) -> Resource<Collection> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    pub fn namespace_events(&self, namespace_id: i32) -> EventListRequest {
+    pub fn collection_events(&self, collection_id: i32) -> EventListRequest {
         EventListRequest::new(
             self.clone(),
-            Endpoint::NamespaceEvents,
+            Endpoint::CollectionEvents,
             vec![(
-                Cow::Borrowed("namespace_id"),
-                namespace_id.to_string().into(),
+                Cow::Borrowed("collection_id"),
+                collection_id.to_string().into(),
             )],
         )
     }
 
-    pub fn namespace_history(&self, namespace_id: i32) -> HistoryRequest<NamespaceHistory> {
+    pub fn collection_history(
+        &self,
+        collection_id: impl ToString,
+    ) -> HistoryRequest<CollectionHistory> {
         HistoryRequest::new(
             self.clone(),
-            Endpoint::NamespaceHistory,
+            Endpoint::CollectionHistory,
             vec![(
-                Cow::Borrowed("namespace_id"),
-                namespace_id.to_string().into(),
+                Cow::Borrowed("collection_id"),
+                collection_id.to_string().into(),
             )],
         )
     }
 
-    pub fn namespace_history_as_of(
+    pub fn collection_history_as_of(
         &self,
-        namespace_id: i32,
+        collection_id: impl ToString,
         at: HubuumDateTime,
-    ) -> Result<NamespaceHistory, ApiError> {
+    ) -> Result<CollectionHistory, ApiError> {
         self.history_as_of(
-            Endpoint::NamespaceHistoryAsOf,
+            Endpoint::CollectionHistoryAsOf,
             vec![(
-                Cow::Borrowed("namespace_id"),
-                namespace_id.to_string().into(),
+                Cow::Borrowed("collection_id"),
+                collection_id.to_string().into(),
             )],
             at,
-            "Namespace history as-of returned empty result",
+            "Collection history as-of returned empty result",
         )
     }
 
-    pub fn event_subscriptions(&self, namespace_id: i32) -> EventSubscriptions {
-        EventSubscriptions::new(self.clone(), namespace_id)
+    pub fn event_subscriptions(&self, collection_id: i32) -> EventSubscriptions {
+        EventSubscriptions::new(self.clone(), collection_id)
     }
 
     pub fn groups(&self) -> Resource<Group> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    pub fn objects(&self, class_id: i32) -> Resource<Object> {
+    pub fn objects(&self, class_id: impl ToString) -> Resource<Object> {
         Resource::new(self.clone(), vec![("class_id", class_id.to_string())])
     }
 
@@ -745,37 +822,63 @@ impl Client<Authenticated> {
         UnifiedSearchRequest::new(self.clone(), query.into())
     }
 
-    pub fn templates(&self) -> Resource<ReportTemplate> {
+    pub fn export_templates(&self) -> Resource<ExportTemplate> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    pub fn template_events(&self, template_id: i32) -> EventListRequest {
+    pub fn templates(&self) -> Resource<ExportTemplate> {
+        self.export_templates()
+    }
+
+    pub fn export_template_events(&self, template_id: impl ToString) -> EventListRequest {
         EventListRequest::new(
             self.clone(),
-            Endpoint::ReportTemplateEvents,
+            Endpoint::ExportTemplateEvents,
             vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
         )
     }
 
-    pub fn template_history(&self, template_id: i32) -> HistoryRequest<ReportTemplateHistory> {
+    pub fn template_events(&self, template_id: impl ToString) -> EventListRequest {
+        self.export_template_events(template_id)
+    }
+
+    pub fn export_template_history(
+        &self,
+        template_id: impl ToString,
+    ) -> HistoryRequest<ExportTemplateHistory> {
         HistoryRequest::new(
             self.clone(),
-            Endpoint::ReportTemplateHistory,
+            Endpoint::ExportTemplateHistory,
             vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
+        )
+    }
+
+    pub fn template_history(
+        &self,
+        template_id: impl ToString,
+    ) -> HistoryRequest<ExportTemplateHistory> {
+        self.export_template_history(template_id)
+    }
+
+    pub fn export_template_history_as_of(
+        &self,
+        template_id: impl ToString,
+        at: HubuumDateTime,
+    ) -> Result<ExportTemplateHistory, ApiError> {
+        self.history_as_of(
+            Endpoint::ExportTemplateHistoryAsOf,
+            vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
+            at,
+            "Export template history as-of returned empty result",
         )
     }
 
     pub fn template_history_as_of(
         &self,
-        template_id: i32,
+        template_id: impl ToString,
         at: HubuumDateTime,
-    ) -> Result<ReportTemplateHistory, ApiError> {
-        self.history_as_of(
-            Endpoint::ReportTemplateHistoryAsOf,
-            vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
-            at,
-            "Template history as-of returned empty result",
-        )
+    ) -> Result<ExportTemplateHistory, ApiError> {
+        self.export_template_history_as_of(template_id, at)
     }
 
     pub fn remote_target_events(&self, target_id: i32) -> EventListRequest {
@@ -816,8 +919,8 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn reports(&self) -> Reports {
-        Reports::new(self.clone())
+    pub fn exports(&self) -> Exports {
+        Exports::new(self.clone())
     }
 
     pub fn imports(&self) -> Imports {
@@ -865,8 +968,8 @@ impl EventListRequest {
         self
     }
 
-    pub fn namespace_id(mut self, namespace_id: i32) -> Self {
-        self.inner = self.inner.query_param("namespace_id", namespace_id);
+    pub fn collection_id(mut self, collection_id: i32) -> Self {
+        self.inner = self.inner.query_param("collection_id", collection_id);
         self
     }
 
@@ -948,29 +1051,29 @@ where
 
 pub struct EventSubscriptions {
     client: Client<Authenticated>,
-    namespace_id: i32,
+    collection_id: i32,
 }
 
 impl EventSubscriptions {
-    fn new(client: Client<Authenticated>, namespace_id: i32) -> Self {
+    fn new(client: Client<Authenticated>, collection_id: i32) -> Self {
         Self {
             client,
-            namespace_id,
+            collection_id,
         }
     }
 
     fn url_params(&self) -> UrlParams {
         vec![(
-            Cow::Borrowed("namespace_id"),
-            self.namespace_id.to_string().into(),
+            Cow::Borrowed("collection_id"),
+            self.collection_id.to_string().into(),
         )]
     }
 
     fn url_params_with_subscription(&self, subscription_id: i32) -> UrlParams {
         vec![
             (
-                Cow::Borrowed("namespace_id"),
-                self.namespace_id.to_string().into(),
+                Cow::Borrowed("collection_id"),
+                self.collection_id.to_string().into(),
             ),
             (
                 Cow::Borrowed("subscription_id"),
@@ -982,7 +1085,7 @@ impl EventSubscriptions {
     pub fn query(&self) -> CursorRequest<EventSubscription> {
         CursorRequest::new(
             self.client.clone(),
-            Endpoint::NamespaceEventSubscriptions,
+            Endpoint::CollectionEventSubscriptions,
             self.url_params(),
         )
     }
@@ -991,7 +1094,7 @@ impl EventSubscriptions {
         self.client
             .request_with_endpoint::<EmptyPostParams, EventSubscription>(
                 reqwest::Method::GET,
-                &Endpoint::NamespaceEventSubscriptionsById,
+                &Endpoint::CollectionEventSubscriptionsById,
                 self.url_params_with_subscription(subscription_id),
                 vec![],
                 EmptyPostParams,
@@ -1005,7 +1108,7 @@ impl EventSubscriptions {
         self.client
             .request_with_endpoint::<NewEventSubscription, EventSubscription>(
                 reqwest::Method::POST,
-                &Endpoint::NamespaceEventSubscriptions,
+                &Endpoint::CollectionEventSubscriptions,
                 self.url_params(),
                 vec![],
                 request,
@@ -1025,7 +1128,7 @@ impl EventSubscriptions {
         self.client
             .request_with_endpoint::<UpdateEventSubscription, EventSubscription>(
                 reqwest::Method::PATCH,
-                &Endpoint::NamespaceEventSubscriptions,
+                &Endpoint::CollectionEventSubscriptions,
                 url_params,
                 vec![],
                 request,
@@ -1041,7 +1144,7 @@ impl EventSubscriptions {
         self.client
             .request_with_endpoint::<EmptyPostParams, serde_json::Value>(
                 reqwest::Method::DELETE,
-                &Endpoint::NamespaceEventSubscriptions,
+                &Endpoint::CollectionEventSubscriptions,
                 url_params,
                 vec![],
                 EmptyPostParams,
@@ -1124,35 +1227,35 @@ impl EventDeliveries {
     }
 }
 
-pub struct Reports {
+pub struct Exports {
     client: Client<Authenticated>,
 }
 
-impl Reports {
+impl Exports {
     fn new(client: Client<Authenticated>) -> Self {
         Self { client }
     }
 
-    pub fn submit(&self, request: ReportRequest) -> ReportSubmitOp {
-        ReportSubmitOp::new(self.client.clone(), request)
+    pub fn submit(&self, request: ExportRequest) -> ExportSubmitOp {
+        ExportSubmitOp::new(self.client.clone(), request)
     }
 
     pub fn get(&self, task_id: i32) -> Result<TaskResponse, ApiError> {
         self.client
             .request_with_endpoint::<EmptyPostParams, TaskResponse>(
                 reqwest::Method::GET,
-                &Endpoint::ReportById,
+                &Endpoint::ExportById,
                 vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
                 vec![],
                 EmptyPostParams,
             )
-            .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Report returned empty result".into())))
+            .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Export returned empty result".into())))
     }
 
-    pub fn output(&self, task_id: i32) -> Result<ReportResult, ApiError> {
+    pub fn output(&self, task_id: i32) -> Result<ExportResult, ApiError> {
         let raw = self.client.request_with_endpoint_raw(
             reqwest::Method::GET,
-            &Endpoint::ReportOutput,
+            &Endpoint::ExportOutput,
             vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
             vec![],
             EmptyPostParams,
@@ -1160,40 +1263,40 @@ impl Reports {
         let content_type = raw
             .content_type
             .clone()
-            .unwrap_or(ReportContentType::ApplicationJson);
+            .unwrap_or(ExportContentType::ApplicationJson);
 
         match content_type {
-            ReportContentType::ApplicationJson => {
-                let body = shared::parse_response::<ReportJsonResponse>(
+            ExportContentType::ApplicationJson => {
+                let body = shared::parse_response::<ExportJsonResponse>(
                     &reqwest::Method::GET,
                     raw.status,
                     raw.body,
                 )?
                 .ok_or(ApiError::EmptyResult(
-                    "Report output returned empty result".into(),
+                    "Export output returned empty result".into(),
                 ))?;
-                Ok(ReportResult::Json(body))
+                Ok(ExportResult::Json(body))
             }
-            _ => Ok(ReportResult::Rendered {
+            _ => Ok(ExportResult::Rendered {
                 content_type,
                 body: raw.body,
             }),
         }
     }
 
-    pub fn run(&self, request: ReportRequest) -> ReportRunOp {
-        ReportRunOp::new(self.client.clone(), request)
+    pub fn run(&self, request: ExportRequest) -> ExportRunOp {
+        ExportRunOp::new(self.client.clone(), request)
     }
 }
 
-pub struct ReportSubmitOp {
+pub struct ExportSubmitOp {
     client: Client<Authenticated>,
-    request: ReportRequest,
+    request: ExportRequest,
     idempotency_key: Option<String>,
 }
 
-impl ReportSubmitOp {
-    fn new(client: Client<Authenticated>, request: ReportRequest) -> Self {
+impl ExportSubmitOp {
+    fn new(client: Client<Authenticated>, request: ExportRequest) -> Self {
         Self {
             client,
             request,
@@ -1214,7 +1317,7 @@ impl ReportSubmitOp {
 
         let raw = self.client.request_with_endpoint_raw_with_headers(
             reqwest::Method::POST,
-            &Endpoint::Reports,
+            &Endpoint::Exports,
             UrlParams::default(),
             vec![],
             self.request,
@@ -1222,21 +1325,21 @@ impl ReportSubmitOp {
         )?;
 
         shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?.ok_or(
-            ApiError::EmptyResult("Report submit returned empty result".into()),
+            ApiError::EmptyResult("Export submit returned empty result".into()),
         )
     }
 }
 
-pub struct ReportRunOp {
+pub struct ExportRunOp {
     client: Client<Authenticated>,
-    request: ReportRequest,
+    request: ExportRequest,
     idempotency_key: Option<String>,
     poll_interval: std::time::Duration,
     timeout: Option<std::time::Duration>,
 }
 
-impl ReportRunOp {
-    fn new(client: Client<Authenticated>, request: ReportRequest) -> Self {
+impl ExportRunOp {
+    fn new(client: Client<Authenticated>, request: ExportRequest) -> Self {
         Self {
             client,
             request,
@@ -1261,9 +1364,9 @@ impl ReportRunOp {
         self
     }
 
-    pub fn send(self) -> Result<ReportResult, ApiError> {
-        let reports = Reports::new(self.client.clone());
-        let mut submit = reports.submit(self.request);
+    pub fn send(self) -> Result<ExportResult, ApiError> {
+        let exports = Exports::new(self.client.clone());
+        let mut submit = exports.submit(self.request);
         if let Some(key) = self.idempotency_key {
             submit = submit.idempotency_key(key);
         }
@@ -1274,7 +1377,128 @@ impl ReportRunOp {
             .timeout(self.timeout)
             .send()?;
         if task.status.is_success() {
-            reports.output(task.id)
+            exports.output(task.id)
+        } else {
+            Err(ApiError::Api(format!(
+                "Task {} {}: {}",
+                task.id,
+                task.status,
+                task.summary.unwrap_or_else(|| "no summary".to_string())
+            )))
+        }
+    }
+}
+
+impl Resource<ExportTemplate> {
+    pub fn submit_export(
+        &self,
+        template_id: impl ToString,
+        request: ExportTemplateRunRequest,
+    ) -> ExportTemplateSubmitOp {
+        ExportTemplateSubmitOp::new(self.client.clone(), template_id.to_string(), request)
+    }
+
+    pub fn run_export(
+        &self,
+        template_id: impl ToString,
+        request: ExportTemplateRunRequest,
+    ) -> ExportTemplateRunOp {
+        ExportTemplateRunOp::new(self.client.clone(), template_id.to_string(), request)
+    }
+}
+
+pub struct ExportTemplateSubmitOp {
+    client: Client<Authenticated>,
+    template_id: String,
+    request: ExportTemplateRunRequest,
+    idempotency_key: Option<String>,
+}
+
+impl ExportTemplateSubmitOp {
+    fn new(
+        client: Client<Authenticated>,
+        template_id: String,
+        request: ExportTemplateRunRequest,
+    ) -> Self {
+        Self {
+            client,
+            template_id,
+            request,
+            idempotency_key: None,
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(idempotency_key.into());
+        self
+    }
+
+    pub fn send(self) -> Result<TaskResponse, ApiError> {
+        let mut headers = Vec::new();
+        if let Some(key) = self.idempotency_key {
+            headers.push(("Idempotency-Key", key));
+        }
+
+        let raw = self.client.request_with_endpoint_raw_with_headers(
+            reqwest::Method::POST,
+            &Endpoint::ExportTemplateExports,
+            vec![(Cow::Borrowed("template_id"), self.template_id.into())],
+            vec![],
+            self.request,
+            &headers,
+        )?;
+
+        shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?.ok_or(
+            ApiError::EmptyResult("Export template submit returned empty result".into()),
+        )
+    }
+}
+
+pub struct ExportTemplateRunOp {
+    client: Client<Authenticated>,
+    submit: ExportTemplateSubmitOp,
+    poll_interval: std::time::Duration,
+    timeout: Option<std::time::Duration>,
+}
+
+impl ExportTemplateRunOp {
+    fn new(
+        client: Client<Authenticated>,
+        template_id: String,
+        request: ExportTemplateRunRequest,
+    ) -> Self {
+        Self {
+            submit: ExportTemplateSubmitOp::new(client.clone(), template_id, request),
+            client,
+            poll_interval: std::time::Duration::from_secs(1),
+            timeout: Some(std::time::Duration::from_secs(300)),
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.submit = self.submit.idempotency_key(idempotency_key);
+        self
+    }
+
+    pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
+        self.poll_interval = interval;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub fn send(self) -> Result<ExportResult, ApiError> {
+        let task = self.submit.send()?;
+        let task = Tasks::new(self.client.clone())
+            .wait(task.id)
+            .poll_interval(self.poll_interval)
+            .timeout(self.timeout)
+            .send()?;
+        if task.status.is_success() {
+            Exports::new(self.client).output(task.id)
         } else {
             Err(ApiError::Api(format!(
                 "Task {} {}: {}",
@@ -1579,9 +1803,9 @@ impl UnifiedSearchRequest {
         self
     }
 
-    pub fn cursor_namespaces(mut self, cursor: impl Into<String>) -> Self {
+    pub fn cursor_collections(mut self, cursor: impl Into<String>) -> Self {
         self.query_params
-            .push(QueryFilter::raw("cursor_namespaces", cursor.into()));
+            .push(QueryFilter::raw("cursor_collections", cursor.into()));
         self
     }
 
@@ -1609,7 +1833,7 @@ impl UnifiedSearchRequest {
         self
     }
 
-    pub fn execute(self) -> Result<UnifiedSearchResponse, ApiError> {
+    pub fn send(self) -> Result<UnifiedSearchResponse, ApiError> {
         let mut query_params = self.query_params;
         query_params.push(QueryFilter::raw("q", self.query));
 
@@ -1624,6 +1848,10 @@ impl UnifiedSearchRequest {
             .ok_or(ApiError::EmptyResult(
                 "Unified search returned empty result".into(),
             ))
+    }
+
+    pub fn execute(self) -> Result<UnifiedSearchResponse, ApiError> {
+        self.send()
     }
 
     pub fn stream(self) -> Result<Vec<UnifiedSearchEvent>, ApiError> {
@@ -1680,14 +1908,14 @@ impl<T: ApiResource> CreateOp<T> {
 
 pub struct UpdateOp<T: ApiResource> {
     client: Client<Authenticated>,
-    id: i32,
+    id: T::Id,
     url_params: UrlParams,
     params: T::PatchParams,
     _phantom: PhantomData<T>,
 }
 
 impl<T: ApiResource> UpdateOp<T> {
-    fn new(client: Client<Authenticated>, id: i32, url_params: UrlParams) -> Self {
+    fn new(client: Client<Authenticated>, id: T::Id, url_params: UrlParams) -> Self {
         Self {
             client,
             id,
@@ -1712,7 +1940,7 @@ impl<T: ApiResource> UpdateOp<T> {
 
     pub fn send(self) -> Result<T::PatchOutput, ApiError> {
         self.client
-            .patch::<T>(T::default(), self.id, self.url_params, self.params)
+            .patch::<T, _>(T::default(), self.id, self.url_params, self.params)
     }
 }
 
@@ -1724,11 +1952,15 @@ pub struct QueryOp<T: ApiResource> {
 }
 
 impl<T: ApiResource> QueryOp<T> {
-    fn new(client: Client<Authenticated>, url_params: UrlParams) -> Self {
+    fn with_query_params(
+        client: Client<Authenticated>,
+        url_params: UrlParams,
+        query_params: Vec<QueryFilter>,
+    ) -> Self {
         QueryOp {
             client,
             url_params,
-            query_params: Vec::new(),
+            query_params,
             _phantom: PhantomData,
         }
     }
@@ -1738,205 +1970,26 @@ impl<T: ApiResource> QueryOp<T> {
         self
     }
 
-    pub fn filters(mut self, filters: impl IntoResourceFilter<T>) -> Self {
-        self.query_params.extend(filters.into_resource_filter());
+    pub fn filters(mut self, filters: impl IntoQueryFilters<T>) -> Self {
+        self.query_params.extend(filters.into_query_filters());
         self
     }
 
-    pub fn add_filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
-        self.query_params
-            .push(QueryFilter::filter(field, op, value.to_string()));
-        self
-    }
-
-    pub fn add_filter_equals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Equals { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_equals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Equals { is_negated: true }, value)
-    }
-
-    pub fn add_filter_iequals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::IEquals { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_iequals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::IEquals { is_negated: true }, value)
-    }
-
-    pub fn add_filter_contains<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Contains { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_contains<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Contains { is_negated: true }, value)
-    }
-
-    pub fn add_filter_icontains<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::IContains { is_negated: false },
-            value,
-        )
-    }
-
-    pub fn add_filter_not_icontains<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::IContains { is_negated: true }, value)
-    }
-
-    pub fn add_filter_startswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::StartsWith { is_negated: false },
-            value,
-        )
-    }
-
-    pub fn add_filter_not_startswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::StartsWith { is_negated: true },
-            value,
-        )
-    }
-
-    pub fn add_filter_istartswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::IStartsWith { is_negated: false },
-            value,
-        )
-    }
-
-    pub fn add_filter_not_istartswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::IStartsWith { is_negated: true },
-            value,
-        )
-    }
-
-    pub fn add_filter_endswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::EndsWith { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_endswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::EndsWith { is_negated: true }, value)
-    }
-
-    pub fn add_filter_iendswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(
-            field,
-            FilterOperator::IEndsWith { is_negated: false },
-            value,
-        )
-    }
-
-    pub fn add_filter_not_iendswith<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::IEndsWith { is_negated: true }, value)
-    }
-
-    pub fn add_filter_like<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Like { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_like<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Like { is_negated: true }, value)
-    }
-
-    pub fn add_filter_regex<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Regex { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_regex<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Regex { is_negated: true }, value)
-    }
-
-    pub fn add_filter_gt<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Gt { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_gt<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Gt { is_negated: true }, value)
-    }
-
-    pub fn add_filter_gte<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Gte { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_gte<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Gte { is_negated: true }, value)
-    }
-
-    pub fn add_filter_lt<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Lt { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_lt<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Lt { is_negated: true }, value)
-    }
-
-    pub fn add_filter_lte<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Lte { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_lte<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Lte { is_negated: true }, value)
-    }
-
-    pub fn add_filter_between<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Between { is_negated: false }, value)
-    }
-
-    pub fn add_filter_not_between<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Between { is_negated: true }, value)
-    }
-
-    pub fn add_filter_id<V: ToString>(self, value: V) -> Self {
-        self.add_filter_equals("id", value)
-    }
-
-    /// Add a filter for the ideomatic `name` field.
-    ///
-    /// For most resources, this will be the `name` field, but for some it may be different.
-    /// This cloaks all `name` fields behind the resource's specific name field.
-    pub fn add_filter_name_exact<V: ToString>(self, value: V) -> Self {
-        self.add_filter_equals(T::NAME_FIELD, value)
-    }
-
-    pub fn add_json_path_filter<I, S, V>(
-        self,
-        field: &str,
-        path: I,
+    pub fn filter<K: Into<String>, V: ToString>(
+        mut self,
+        field: K,
         op: FilterOperator,
         value: V,
-    ) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-        V: ToString,
-    {
-        let path = path
-            .into_iter()
-            .map(|segment| segment.as_ref().to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-        let value = if path.is_empty() {
-            value.to_string()
-        } else {
-            format!("{path}={}", value.to_string())
-        };
-        self.add_filter(field, op, value)
+    ) -> Self {
+        self.query_params
+            .push(QueryFilter::filter(field.into(), op, value.to_string()));
+        self
     }
 
-    pub fn add_json_path_lt<I, S, V>(self, field: &str, path: I, value: V) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-        V: ToString,
-    {
-        self.add_json_path_filter(field, path, FilterOperator::Lt { is_negated: false }, value)
+    pub fn raw_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw(key.into(), value.to_string()));
+        self
     }
 
     pub fn sort_by<V: ToString>(mut self, sort: V) -> Self {
@@ -1980,17 +2033,32 @@ impl<T: ApiResource> QueryOp<T> {
         self
     }
 
-    pub fn execute_expecting_single_result(self) -> Result<T::GetOutput, ApiError> {
-        self.one()
-    }
-
-    pub fn execute(self) -> Result<Vec<T::GetOutput>, ApiError> {
-        self.list()
-    }
-
     pub fn list(self) -> Result<Vec<T::GetOutput>, ApiError> {
         self.client
             .search_resource::<T>(T::default(), self.url_params, self.query_params)
+    }
+
+    pub fn all(self) -> Result<Vec<T::GetOutput>, ApiError> {
+        let mut query = self;
+        let mut items = Vec::new();
+
+        loop {
+            let page = QueryOp::<T>::with_query_params(
+                query.client.clone(),
+                query.url_params.clone(),
+                query.query_params.clone(),
+            )
+            .page()?;
+            items.extend(page.items);
+
+            match page.next_cursor {
+                Some(cursor) => {
+                    query.query_params.retain(|param| param.key != "cursor");
+                    query.query_params.push(QueryFilter::raw("cursor", cursor));
+                }
+                None => return Ok(items),
+            }
+        }
     }
 
     pub fn page(self) -> Result<shared::Page<T::GetOutput>, ApiError> {
@@ -2019,7 +2087,20 @@ impl<T: ApiResource> QueryOp<T> {
     }
 }
 
-pub type FilterBuilder<T> = QueryOp<T>;
+impl<T: ApiResource> shared::QueryFilterTarget for QueryOp<T> {
+    fn push_filter<K: Into<String>, V: ToString>(
+        self,
+        field: K,
+        op: FilterOperator,
+        value: V,
+    ) -> Self {
+        self.filter(field, op, value)
+    }
+
+    fn push_raw_param<K: Into<String>, V: ToString>(self, key: K, value: V) -> Self {
+        self.raw_param(key, value)
+    }
+}
 
 pub struct CursorRequest<T> {
     client: Client<Authenticated>,
@@ -2089,45 +2170,21 @@ impl<T> CursorRequest<T> {
         self
     }
 
-    pub fn query_param<V: ToString>(mut self, key: &str, value: V) -> Self {
+    pub fn query_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
         self.query_params
-            .push(QueryFilter::raw(key, value.to_string()));
+            .push(QueryFilter::raw(key.into(), value.to_string()));
         self
     }
 
-    pub fn add_filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
-        self.query_params
-            .push(QueryFilter::filter(field, op, value.to_string()));
-        self
-    }
-
-    pub fn add_filter_equals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Equals { is_negated: false }, value)
-    }
-
-    pub fn add_json_path_filter<I, S, V>(
-        self,
-        field: &str,
-        path: I,
+    pub fn filter<K: Into<String>, V: ToString>(
+        mut self,
+        field: K,
         op: FilterOperator,
         value: V,
-    ) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-        V: ToString,
-    {
-        let path = path
-            .into_iter()
-            .map(|segment| segment.as_ref().to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-        let value = if path.is_empty() {
-            value.to_string()
-        } else {
-            format!("{path}={}", value.to_string())
-        };
-        self.add_filter(field, op, value)
+    ) -> Self {
+        self.query_params
+            .push(QueryFilter::filter(field.into(), op, value.to_string()));
+        self
     }
 }
 
@@ -2148,6 +2205,33 @@ where
 
     pub fn list(self) -> Result<Vec<T>, ApiError> {
         Ok(self.page()?.items)
+    }
+
+    pub fn all(self) -> Result<Vec<T>, ApiError> {
+        let mut request = self;
+        let mut items = Vec::new();
+
+        loop {
+            let page = CursorRequest::<T> {
+                client: request.client.clone(),
+                endpoint: request.endpoint,
+                query_params: request.query_params.clone(),
+                url_params: request.url_params.clone(),
+                _phantom: PhantomData,
+            }
+            .page()?;
+            items.extend(page.items);
+
+            match page.next_cursor {
+                Some(cursor) => {
+                    request.query_params.retain(|param| param.key != "cursor");
+                    request
+                        .query_params
+                        .push(QueryFilter::raw("cursor", cursor));
+                }
+                None => return Ok(items),
+            }
+        }
     }
 }
 
@@ -2178,45 +2262,21 @@ impl<T> GraphRequest<T> {
         self
     }
 
-    pub fn query_param<V: ToString>(mut self, key: &str, value: V) -> Self {
+    pub fn query_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
         self.query_params
-            .push(QueryFilter::raw(key, value.to_string()));
+            .push(QueryFilter::raw(key.into(), value.to_string()));
         self
     }
 
-    pub fn add_filter<V: ToString>(mut self, field: &str, op: FilterOperator, value: V) -> Self {
-        self.query_params
-            .push(QueryFilter::filter(field, op, value.to_string()));
-        self
-    }
-
-    pub fn add_filter_equals<V: ToString>(self, field: &str, value: V) -> Self {
-        self.add_filter(field, FilterOperator::Equals { is_negated: false }, value)
-    }
-
-    pub fn add_json_path_filter<I, S, V>(
-        self,
-        field: &str,
-        path: I,
+    pub fn filter<K: Into<String>, V: ToString>(
+        mut self,
+        field: K,
         op: FilterOperator,
         value: V,
-    ) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<str>,
-        V: ToString,
-    {
-        let path = path
-            .into_iter()
-            .map(|segment| segment.as_ref().to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-        let value = if path.is_empty() {
-            value.to_string()
-        } else {
-            format!("{path}={}", value.to_string())
-        };
-        self.add_filter(field, op, value)
+    ) -> Self {
+        self.query_params
+            .push(QueryFilter::filter(field.into(), op, value.to_string()));
+        self
     }
 }
 
@@ -2224,7 +2284,7 @@ impl<T> GraphRequest<T>
 where
     T: DeserializeOwned,
 {
-    pub fn fetch(self) -> Result<T, ApiError> {
+    pub fn send(self) -> Result<T, ApiError> {
         self.client
             .request_with_endpoint::<EmptyPostParams, T>(
                 reqwest::Method::GET,
@@ -2237,11 +2297,16 @@ where
                 "Graph request returned empty result".into(),
             ))
     }
+
+    pub fn fetch(self) -> Result<T, ApiError> {
+        self.send()
+    }
 }
 
 pub struct Resource<T: ApiResource> {
     client: Client<Authenticated>,
     url_params: UrlParams,
+    query_params: Vec<QueryFilter>,
     _phantom: PhantomData<T>,
 }
 
@@ -2258,44 +2323,105 @@ impl<T: ApiResource> Resource<T> {
                 .into_iter()
                 .map(|(k, v)| (k.into(), v.into()))
                 .collect(),
+            query_params: Vec::new(),
             _phantom: PhantomData,
         }
     }
 
     pub fn query(&self) -> QueryOp<T> {
-        QueryOp::new(self.client.clone(), self.url_params.clone())
+        QueryOp::with_query_params(
+            self.client.clone(),
+            self.url_params.clone(),
+            self.query_params.clone(),
+        )
     }
 
-    pub fn find(&self) -> QueryOp<T> {
-        self.query()
+    pub fn params(mut self, params: T::GetParams) -> Self {
+        self.query_params.extend(T::filters_from_get(params));
+        self
     }
 
-    pub fn filter_raw(
-        &self,
-        filter: impl IntoResourceFilter<T>,
-    ) -> Result<Vec<T::GetOutput>, ApiError> {
-        self.query().filters(filter).list()
+    pub fn filters(mut self, filters: impl IntoQueryFilters<T>) -> Self {
+        self.query_params.extend(filters.into_query_filters());
+        self
     }
 
-    pub fn filter_one_raw(
-        &self,
-        filter: impl IntoResourceFilter<T>,
-    ) -> Result<T::GetOutput, ApiError> {
-        self.query().filters(filter).one()
+    pub fn filter<K: Into<String>, V: ToString>(
+        mut self,
+        field: K,
+        op: FilterOperator,
+        value: V,
+    ) -> Self {
+        self.query_params
+            .push(QueryFilter::filter(field.into(), op, value.to_string()));
+        self
     }
 
-    pub fn filter(
-        &self,
-        filter: impl IntoResourceFilter<T>,
-    ) -> Result<Vec<T::GetOutput>, ApiError> {
-        self.filter_raw(filter)
+    pub fn raw_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw(key.into(), value.to_string()));
+        self
     }
 
-    pub fn filter_expecting_single_result(
-        &self,
-        filter: impl IntoResourceFilter<T>,
-    ) -> Result<T::GetOutput, ApiError> {
-        self.filter_one_raw(filter)
+    pub fn sort_by<V: ToString>(mut self, sort: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("sort", sort.to_string()));
+        self
+    }
+
+    pub fn order_by<V: ToString>(mut self, sort: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("order_by", sort.to_string()));
+        self
+    }
+
+    pub fn sort<S: AsRef<str>>(self, field: S, direction: SortDirection) -> Self {
+        self.sort_by(format!("{}.{}", field.as_ref(), direction))
+    }
+
+    pub fn sort_by_fields<I, S>(self, fields: I) -> Self
+    where
+        I: IntoIterator<Item = (S, SortDirection)>,
+        S: AsRef<str>,
+    {
+        let sort_spec = fields
+            .into_iter()
+            .map(|(field, direction)| format!("{}.{}", field.as_ref(), direction))
+            .collect::<Vec<_>>()
+            .join(",");
+        self.sort_by(sort_spec)
+    }
+
+    pub fn limit(mut self, limit: usize) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("limit", limit.to_string()));
+        self
+    }
+
+    pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
+        self.query_params
+            .push(QueryFilter::raw("cursor", cursor.to_string()));
+        self
+    }
+
+    pub fn list(self) -> Result<Vec<T::GetOutput>, ApiError> {
+        self.query().list()
+    }
+
+    pub fn page(self) -> Result<shared::Page<T::GetOutput>, ApiError> {
+        self.query().page()
+    }
+
+    pub fn all(self) -> Result<Vec<T::GetOutput>, ApiError> {
+        self.query().all()
+    }
+
+    pub fn one(self) -> Result<T::GetOutput, ApiError> {
+        self.query().one()
+    }
+
+    pub fn optional(self) -> Result<Option<T::GetOutput>, ApiError> {
+        self.query().optional()
     }
 
     pub fn create(&self) -> CreateOp<T> {
@@ -2306,17 +2432,35 @@ impl<T: ApiResource> Resource<T> {
         self.create().params(params).send()
     }
 
-    pub fn update(&self, id: i32) -> UpdateOp<T> {
-        UpdateOp::new(self.client.clone(), id, self.url_params.clone())
+    pub fn update<I: Into<T::Id>>(&self, id: I) -> UpdateOp<T> {
+        UpdateOp::new(self.client.clone(), id.into(), self.url_params.clone())
     }
 
-    pub fn update_raw(&self, id: i32, params: T::PatchParams) -> Result<T::PatchOutput, ApiError> {
+    pub fn update_raw<I>(&self, id: I, params: T::PatchParams) -> Result<T::PatchOutput, ApiError>
+    where
+        I: Into<T::Id>,
+    {
         self.update(id).params(params).send()
     }
 
-    pub fn delete(&self, id: i32) -> Result<(), ApiError> {
+    pub fn delete<I: Into<T::Id>>(&self, id: I) -> Result<(), ApiError> {
         self.client
-            .delete::<T>(T::default(), id, self.url_params.clone())
+            .delete::<T, _>(T::default(), id.into(), self.url_params.clone())
+    }
+}
+
+impl<T: ApiResource> shared::QueryFilterTarget for Resource<T> {
+    fn push_filter<K: Into<String>, V: ToString>(
+        self,
+        field: K,
+        op: FilterOperator,
+        value: V,
+    ) -> Self {
+        self.filter(field, op, value)
+    }
+
+    fn push_raw_param<K: Into<String>, V: ToString>(self, key: K, value: V) -> Self {
+        self.raw_param(key, value)
     }
 }
 
@@ -2330,184 +2474,40 @@ impl<T> Resource<T>
 where
     T: ApiResource<GetOutput = T> + DeserializeOwned + GetID + Default + 'static,
 {
-    pub fn select(&self, id: i32) -> Result<Handle<T>, ApiError> {
-        match T::default().endpoint() {
-            Endpoint::Users => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::UsersById,
-                    vec![(Cow::Borrowed("user_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
+    pub fn get<I: Into<T::Id>>(&self, id: I) -> Result<Handle<T>, ApiError> {
+        let id = id.into();
+        if let Some(endpoint) = T::ITEM_ENDPOINT {
+            let mut url_params = self.url_params.clone();
+            url_params.push((Cow::Borrowed(T::ID_PARAM), id.to_string().into()));
+            match self.client.request_with_endpoint::<EmptyPostParams, T>(
+                reqwest::Method::GET,
+                &endpoint,
+                url_params,
+                vec![],
+                EmptyPostParams,
+            ) {
+                Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                Ok(None) => {}
+                Err(ApiError::HttpWithBody { status, .. })
+                    if status == reqwest::StatusCode::NOT_FOUND => {}
+                Err(err) => return Err(err),
             }
-            Endpoint::Groups => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::GroupsById,
-                    vec![(Cow::Borrowed("group_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::Classes => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ClassesById,
-                    vec![(Cow::Borrowed("class_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::Namespaces => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::NamespacesById,
-                    vec![(Cow::Borrowed("namespace_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::Objects => {
-                let mut url_params = self.url_params.clone();
-                url_params.push((Cow::Borrowed("object_id"), id.to_string().into()));
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ObjectsById,
-                    url_params,
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::ClassRelations => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ClassRelationsById,
-                    vec![(Cow::Borrowed("relation_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::ObjectRelations => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ObjectRelationsById,
-                    vec![(Cow::Borrowed("relation_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::ReportTemplates => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ReportTemplatesById,
-                    vec![(Cow::Borrowed("template_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::ServiceAccounts => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::ServiceAccountsById,
-                    vec![(Cow::Borrowed("service_account_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            Endpoint::RemoteTargets => {
-                match self.client.request_with_endpoint::<EmptyPostParams, T>(
-                    reqwest::Method::GET,
-                    &Endpoint::RemoteTargetsById,
-                    vec![(Cow::Borrowed("target_id"), id.to_string().into())],
-                    vec![],
-                    EmptyPostParams,
-                ) {
-                    Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                    Ok(None) => {}
-                    Err(ApiError::HttpWithBody { status, .. })
-                        if status == reqwest::StatusCode::NOT_FOUND => {}
-                    Err(err) => return Err(err),
-                }
-            }
-            _ => {}
         }
 
         let (id_params, filters) = shared::select_id_lookup_params(id);
-        // Preserve any parametrized path segments (e.g. `class_id` for objects) so the
-        // fallback lookup targets a fully-substituted URL instead of a literal `{class_id}`.
         let mut url_params = self.url_params.clone();
         url_params.extend(id_params);
         let raw: Vec<<T as ApiResource>::GetOutput> =
             self.client.get(T::default(), url_params, filters)?;
 
-        let got = one_or_err(raw)?;
-        let resource: T = got;
+        let resource: T = one_or_err(raw)?;
         Ok(Handle::new(self.client.clone(), resource))
     }
 
-    /// Select a resource by its name.
-    ///
-    /// This will use the appropriate field for the resource type.
-    ///   - Group: groupname
-    ///   - User: name
-    ///   - Everything else: name
-    pub fn select_by_name(&self, name: &str) -> Result<Handle<T>, ApiError> {
-        let (url_params, filters) = shared::select_name_lookup_params::<T>(name);
+    pub fn get_by_name(&self, name: &str) -> Result<Handle<T>, ApiError> {
+        let (name_params, filters) = shared::select_name_lookup_params::<T>(name);
+        let mut url_params = self.url_params.clone();
+        url_params.extend(name_params);
         let raw: Vec<<T as ApiResource>::GetOutput> =
             self.client.get(T::default(), url_params, filters)?;
 
