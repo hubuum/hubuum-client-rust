@@ -32,7 +32,7 @@ pub struct CollectionResource {
     pub description: String,
     #[api(post_only)]
     pub group_id: i32, // This is the group that the collection belongs to and is set on creation.
-    #[api(optional)]
+    #[api(optional, skip_patch)]
     pub parent_collection_id: i32,
     #[api(read_only)]
     pub created_at: HubuumDateTime,

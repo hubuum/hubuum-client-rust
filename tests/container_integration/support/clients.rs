@@ -53,7 +53,7 @@ pub(crate) fn login_sync(
 pub(crate) fn is_unsupported_query_operator(err: &ApiError, operator: &str) -> bool {
     matches!(
         err,
-        ApiError::HttpWithBody { status, message }
+        ApiError::HttpWithBody { status, message, .. }
             if *status == reqwest::StatusCode::BAD_REQUEST
                 && message.contains("not implemented")
                 && message.contains(operator)
@@ -148,7 +148,7 @@ pub(crate) fn sync_admin_context(
         Err(err) => return Err(err),
     };
 
-    Ok((admin_id, admin_group_id))
+    Ok((admin_id.into(), admin_group_id.into()))
 }
 
 pub(crate) fn create_sync_user(
@@ -164,7 +164,7 @@ pub(crate) fn create_sync_user(
         proper_name: None,
     })?;
 
-    Ok((username, user.id))
+    Ok((username, user.id.into()))
 }
 
 pub(crate) fn create_sync_loginable_user(
@@ -182,7 +182,7 @@ pub(crate) fn create_sync_loginable_user(
     })?;
 
     Ok(TestUserCredentials {
-        user_id: user.id,
+        user_id: user.id.into(),
         username,
         password,
     })
@@ -199,7 +199,7 @@ pub(crate) fn create_sync_group(
         description: "integration group".to_string(),
     })?;
 
-    Ok((groupname, group.id))
+    Ok((groupname, group.id.into()))
 }
 
 pub(crate) async fn async_admin_context(
@@ -222,7 +222,7 @@ pub(crate) async fn async_admin_context(
         Err(err) => return Err(err),
     };
 
-    Ok((admin_id, admin_group_id))
+    Ok((admin_id.into(), admin_group_id.into()))
 }
 
 pub(crate) async fn create_async_user(
@@ -241,7 +241,7 @@ pub(crate) async fn create_async_user(
         })
         .await?;
 
-    Ok((username, user.id))
+    Ok((username, user.id.into()))
 }
 
 pub(crate) async fn create_async_loginable_user(
@@ -262,7 +262,7 @@ pub(crate) async fn create_async_loginable_user(
         .await?;
 
     Ok(TestUserCredentials {
-        user_id: user.id,
+        user_id: user.id.into(),
         username,
         password,
     })
@@ -282,7 +282,7 @@ pub(crate) async fn create_async_group(
         })
         .await?;
 
-    Ok((groupname, group.id))
+    Ok((groupname, group.id.into()))
 }
 
 pub(crate) fn create_sync_permission_sandbox(
@@ -301,13 +301,13 @@ pub(crate) fn create_sync_permission_sandbox(
 
     let class = client.classes().create_raw(ClassPost {
         name: format!("{prefix}-class"),
-        collection_id: collection.id,
+        collection_id: collection.id.into(),
         description: "integration class".to_string(),
         json_schema: None,
         validate_schema: None,
     })?;
 
-    Ok((collection.id, class.id))
+    Ok((collection.id.into(), class.id.into()))
 }
 
 pub(crate) fn create_sync_object(
@@ -326,7 +326,7 @@ pub(crate) fn create_sync_object(
         data: None,
     })?;
 
-    Ok((name, object.id))
+    Ok((name, object.id.into()))
 }
 
 pub(crate) async fn create_async_permission_sandbox(
@@ -350,14 +350,14 @@ pub(crate) async fn create_async_permission_sandbox(
         .classes()
         .create_raw(ClassPost {
             name: format!("{prefix}-class"),
-            collection_id: collection.id,
+            collection_id: collection.id.into(),
             description: "integration class".to_string(),
             json_schema: None,
             validate_schema: None,
         })
         .await?;
 
-    Ok((collection.id, class.id))
+    Ok((collection.id.into(), class.id.into()))
 }
 
 pub(crate) async fn create_async_object(
@@ -379,5 +379,5 @@ pub(crate) async fn create_async_object(
         })
         .await?;
 
-    Ok((name, object.id))
+    Ok((name, object.id.into()))
 }

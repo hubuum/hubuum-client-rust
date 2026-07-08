@@ -95,7 +95,7 @@ fn async_user_groups_endpoint_returns_group_or_legacy_fallback() {
             let fallback = harness
                 .block_on(client.groups().get_by_name(ADMIN_USERNAME))
                 .expect("async groups().get_by_name(admin) fallback failed");
-            assert!(fallback.id() > 0);
+            assert!(fallback.id().get() > 0);
         }
         Err(err) => panic!("async admin.groups() failed: {err}"),
     }
@@ -857,7 +857,7 @@ fn async_class_relation_create_delete_roundtrip() {
     let relation = harness
         .block_on(client.class_relation().create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id,
+            to_hubuum_class_id: class_b.id.into(),
             forward_template_alias: None,
             reverse_template_alias: None,
         }))
@@ -914,14 +914,14 @@ fn async_object_relation_create_delete_roundtrip() {
         .block_on(create_async_object(
             &client,
             collection_id,
-            class_b.id,
+            class_b.id.into(),
             "async-object-relation-b",
         ))
         .expect("failed to create relation object B");
     let class_relation = harness
         .block_on(client.class_relation().create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id,
+            to_hubuum_class_id: class_b.id.into(),
             forward_template_alias: None,
             reverse_template_alias: None,
         }))
@@ -931,7 +931,7 @@ fn async_object_relation_create_delete_roundtrip() {
         .block_on(client.object_relation().create_raw(ObjectRelationPost {
             from_hubuum_object_id: object_a_id,
             to_hubuum_object_id: object_b_id,
-            class_relation_id: class_relation.id,
+            class_relation_id: class_relation.id.into(),
         }))
         .expect("async object_relation().create_raw() failed");
 
@@ -1034,7 +1034,7 @@ fn async_query_sort_and_limit_returns_expected_class() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-sort-a"),
             description: "query sort class a".to_string(),
-            collection_id: collection.id,
+            collection_id: collection.id.into(),
             json_schema: None,
             validate_schema: None,
         }))
@@ -1043,7 +1043,7 @@ fn async_query_sort_and_limit_returns_expected_class() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-sort-b"),
             description: "query sort class b".to_string(),
-            collection_id: collection.id,
+            collection_id: collection.id.into(),
             json_schema: None,
             validate_schema: None,
         }))
@@ -1086,7 +1086,7 @@ fn async_query_json_path_lt_filters_json_schema() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-geo-south"),
             description: "geo south".to_string(),
-            collection_id: collection.id,
+            collection_id: collection.id.into(),
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": -90 }
@@ -1099,7 +1099,7 @@ fn async_query_json_path_lt_filters_json_schema() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-geo-north"),
             description: "geo north".to_string(),
-            collection_id: collection.id,
+            collection_id: collection.id.into(),
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": 10 }

@@ -98,7 +98,7 @@ fn sync_user_groups_endpoint_returns_group_or_legacy_fallback() {
                 .groups()
                 .get_by_name(ADMIN_USERNAME)
                 .expect("sync groups().get_by_name(admin) fallback failed");
-            assert!(fallback.id() > 0);
+            assert!(fallback.id().get() > 0);
         }
         Err(err) => panic!("sync admin.groups() failed: {err}"),
     }
@@ -779,7 +779,7 @@ fn sync_class_relation_create_delete_roundtrip() {
         .class_relation()
         .create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id,
+            to_hubuum_class_id: class_b.id.into(),
             forward_template_alias: None,
             reverse_template_alias: None,
         })
@@ -837,7 +837,7 @@ fn sync_object_relation_create_delete_roundtrip() {
     let (_, object_b_id) = create_sync_object(
         &harness.client,
         collection_id,
-        class_b.id,
+        class_b.id.into(),
         "sync-object-relation-b",
     )
     .expect("failed to create relation object B");
@@ -846,7 +846,7 @@ fn sync_object_relation_create_delete_roundtrip() {
         .class_relation()
         .create_raw(ClassRelationPost {
             from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id,
+            to_hubuum_class_id: class_b.id.into(),
             forward_template_alias: None,
             reverse_template_alias: None,
         })
@@ -858,7 +858,7 @@ fn sync_object_relation_create_delete_roundtrip() {
         .create_raw(ObjectRelationPost {
             from_hubuum_object_id: object_a_id,
             to_hubuum_object_id: object_b_id,
-            class_relation_id: class_relation.id,
+            class_relation_id: class_relation.id.into(),
         })
         .expect("sync object_relation().create_raw() failed");
 
@@ -975,7 +975,7 @@ fn sync_query_sort_and_limit_returns_expected_class() {
         .create_raw(ClassPost {
             name: format!("{prefix}-sort-a"),
             description: "query sort class a".to_string(),
-            collection_id: collection.id,
+            collection_id: collection.id.into(),
             json_schema: None,
             validate_schema: None,
         })
@@ -986,7 +986,7 @@ fn sync_query_sort_and_limit_returns_expected_class() {
         .create_raw(ClassPost {
             name: format!("{prefix}-sort-b"),
             description: "query sort class b".to_string(),
-            collection_id: collection.id,
+            collection_id: collection.id.into(),
             json_schema: None,
             validate_schema: None,
         })
@@ -1029,7 +1029,7 @@ fn sync_query_json_path_lt_filters_json_schema() {
         .create_raw(ClassPost {
             name: format!("{prefix}-geo-south"),
             description: "geo south".to_string(),
-            collection_id: collection.id,
+            collection_id: collection.id.into(),
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": -90 }
@@ -1044,7 +1044,7 @@ fn sync_query_json_path_lt_filters_json_schema() {
         .create_raw(ClassPost {
             name: format!("{prefix}-geo-north"),
             description: "geo north".to_string(),
-            collection_id: collection.id,
+            collection_id: collection.id.into(),
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": 10 }
