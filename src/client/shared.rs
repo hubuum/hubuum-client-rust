@@ -18,7 +18,7 @@ use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::ApiResource;
 use crate::types::FilterOperator;
-use crate::types::{BaseUrl, IntoQueryTuples, ReportContentType};
+use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 
@@ -72,7 +72,7 @@ pub(crate) struct RawResponse {
     pub status: StatusCode,
     pub body: String,
     pub next_cursor: Option<String>,
-    pub content_type: Option<ReportContentType>,
+    pub content_type: Option<ExportContentType>,
 }
 
 pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: UrlParams) -> String {
@@ -148,7 +148,7 @@ fn url_param<'a>(url_params: &'a UrlParams, key: &str) -> Option<&'a str> {
 
 pub(crate) fn response_metadata(
     headers: &HeaderMap,
-) -> (Option<String>, Option<ReportContentType>) {
+) -> (Option<String>, Option<ExportContentType>) {
     let next_cursor = headers
         .get(NEXT_CURSOR_HEADER)
         .and_then(|value| value.to_str().ok())
@@ -156,7 +156,7 @@ pub(crate) fn response_metadata(
     let content_type = headers
         .get(CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
-        .and_then(ReportContentType::from_header);
+        .and_then(ExportContentType::from_header);
     (next_cursor, content_type)
 }
 
@@ -777,13 +777,13 @@ mod test {
     fn build_request_url_for_patch_inserts_separator_when_missing() {
         let url = build_request_url(
             &reqwest::Method::PATCH,
-            "https://api.example.com/api/v1/templates".to_string(),
+            "https://api.example.com/api/v1/export-templates".to_string(),
             &vec![(Cow::Borrowed("patch_id"), Cow::Borrowed("12"))],
             vec![],
         )
         .expect("PATCH URL should build");
 
-        assert_eq!(url, "https://api.example.com/api/v1/templates/12");
+        assert_eq!(url, "https://api.example.com/api/v1/export-templates/12");
     }
 
     #[test]
@@ -849,7 +849,7 @@ mod test {
                 status: StatusCode::OK,
                 body: "[{\"id\":1}]".to_string(),
                 next_cursor: Some("abc".to_string()),
-                content_type: Some(ReportContentType::ApplicationJson),
+                content_type: Some(ExportContentType::ApplicationJson),
             },
         )
         .expect("page should parse");

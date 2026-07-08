@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
-pub enum ReportContentType {
+pub enum ExportContentType {
     #[default]
     #[serde(rename = "application/json")]
     #[strum(serialize = "application/json")]
@@ -18,7 +18,7 @@ pub enum ReportContentType {
     TextCsv,
 }
 
-impl ReportContentType {
+impl ExportContentType {
     pub fn from_header(value: &str) -> Option<Self> {
         value.split(';').next()?.trim().parse().ok()
     }
@@ -27,7 +27,7 @@ impl ReportContentType {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-pub enum ReportScopeKind {
+pub enum ExportScopeKind {
     Collections,
     Classes,
     ObjectsInClass,
@@ -39,16 +39,16 @@ pub enum ReportScopeKind {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display, Default)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-pub enum ReportTemplateKind {
+pub enum ExportTemplateKind {
     #[default]
-    Report,
+    Export,
     Fragment,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-pub enum ReportMissingDataPolicy {
+pub enum ExportMissingDataPolicy {
     Strict,
     Null,
     Omit,
@@ -57,7 +57,7 @@ pub enum ReportMissingDataPolicy {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-pub enum ReportIncludeRelatedDirection {
+pub enum ExportIncludeRelatedDirection {
     Any,
     Outgoing,
     Incoming,
@@ -66,88 +66,90 @@ pub enum ReportIncludeRelatedDirection {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-pub enum ReportIncludeRelatedSort {
+pub enum ExportIncludeRelatedSort {
     Path,
     Name,
     CreatedAt,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ReportIncludeRelatedObject {
+pub struct ExportIncludeRelatedObject {
     pub class_id: i32,
     pub class_relation_id: Option<i32>,
-    pub direction: Option<ReportIncludeRelatedDirection>,
+    pub direction: Option<ExportIncludeRelatedDirection>,
     pub limit: Option<i32>,
     pub max_depth: Option<i32>,
-    pub sort: Option<ReportIncludeRelatedSort>,
+    pub sort: Option<ExportIncludeRelatedSort>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub struct ReportInclude {
-    pub related_objects: Option<std::collections::HashMap<String, ReportIncludeRelatedObject>>,
+pub struct ExportInclude {
+    pub related_objects: Option<std::collections::HashMap<String, ExportIncludeRelatedObject>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub struct ReportRelationContext {
+pub struct ExportRelationContext {
     pub depth: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ReportScope {
+pub struct ExportScope {
     pub class_id: Option<i32>,
-    pub kind: ReportScopeKind,
+    pub kind: ExportScopeKind,
     pub object_id: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ReportLimits {
+pub struct ExportLimits {
     pub max_items: Option<u64>,
     pub max_output_bytes: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub struct ReportOutputRequest {
-    pub template_id: Option<i32>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ReportMeta {
-    pub content_type: ReportContentType,
+pub struct ExportMeta {
+    pub content_type: ExportContentType,
     pub count: u64,
-    pub scope: ReportScope,
+    pub scope: ExportScope,
     pub truncated: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ReportWarning {
+pub struct ExportWarning {
     pub code: String,
     pub message: String,
     pub path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ReportJsonResponse {
+pub struct ExportJsonResponse {
     pub items: Vec<serde_json::Value>,
-    pub meta: ReportMeta,
-    pub warnings: Vec<ReportWarning>,
+    pub meta: ExportMeta,
+    pub warnings: Vec<ExportWarning>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ReportRequest {
-    pub limits: Option<ReportLimits>,
-    pub missing_data_policy: Option<ReportMissingDataPolicy>,
-    pub output: Option<ReportOutputRequest>,
+pub struct ExportRequest {
+    pub limits: Option<ExportLimits>,
+    pub missing_data_policy: Option<ExportMissingDataPolicy>,
     pub query: Option<String>,
-    pub scope: ReportScope,
-    pub include: Option<ReportInclude>,
-    pub relation_context: Option<ReportRelationContext>,
+    pub scope: ExportScope,
+    pub include: Option<ExportInclude>,
+    pub relation_context: Option<ExportRelationContext>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct ExportTemplateRunRequest {
+    pub query: Option<String>,
+    pub object_id: Option<i32>,
+    pub missing_data_policy: Option<ExportMissingDataPolicy>,
+    pub limits: Option<ExportLimits>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ReportResult {
-    Json(ReportJsonResponse),
+pub enum ExportResult {
+    Json(ExportJsonResponse),
     Rendered {
-        content_type: ReportContentType,
+        content_type: ExportContentType,
         body: String,
     },
 }
@@ -157,33 +159,32 @@ mod tests {
     use super::*;
 
     #[test]
-    fn report_request_serializes_include_and_relation_context() {
+    fn export_request_serializes_include_and_relation_context() {
         let mut related = std::collections::HashMap::new();
         related.insert(
             "owners".to_string(),
-            ReportIncludeRelatedObject {
+            ExportIncludeRelatedObject {
                 class_id: 7,
                 class_relation_id: None,
-                direction: Some(ReportIncludeRelatedDirection::Outgoing),
+                direction: Some(ExportIncludeRelatedDirection::Outgoing),
                 limit: Some(10),
                 max_depth: None,
-                sort: Some(ReportIncludeRelatedSort::Name),
+                sort: Some(ExportIncludeRelatedSort::Name),
             },
         );
-        let req = ReportRequest {
+        let req = ExportRequest {
             limits: None,
             missing_data_policy: None,
-            output: None,
             query: None,
-            scope: ReportScope {
+            scope: ExportScope {
                 class_id: Some(42),
-                kind: ReportScopeKind::ObjectsInClass,
+                kind: ExportScopeKind::ObjectsInClass,
                 object_id: None,
             },
-            include: Some(ReportInclude {
+            include: Some(ExportInclude {
                 related_objects: Some(related),
             }),
-            relation_context: Some(ReportRelationContext { depth: Some(2) }),
+            relation_context: Some(ExportRelationContext { depth: Some(2) }),
         };
         let value = serde_json::to_value(&req).unwrap();
         assert_eq!(value["include"]["related_objects"]["owners"]["class_id"], 7);
@@ -199,8 +200,8 @@ mod tests {
     }
 
     #[test]
-    fn report_warning_deserializes_path() {
-        let w: ReportWarning = serde_json::from_value(serde_json::json!({
+    fn export_warning_deserializes_path() {
+        let w: ExportWarning = serde_json::from_value(serde_json::json!({
             "code": "missing_value", "message": "x", "path": "item.data.owner"
         }))
         .unwrap();

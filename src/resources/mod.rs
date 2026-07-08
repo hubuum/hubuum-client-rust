@@ -4,11 +4,11 @@ use std::fmt::Debug;
 mod class;
 mod collection;
 mod event_sink;
+mod export_template;
 mod group;
 mod object;
 mod permission;
 mod remote_target;
-mod report_template;
 mod service_account;
 pub(crate) mod user;
 
@@ -20,15 +20,15 @@ pub use self::collection::{
     Collection, CollectionGet, CollectionId, CollectionPatch, CollectionPost,
 };
 pub use self::event_sink::EventSinkId;
+pub use self::export_template::{
+    ExportTemplate, ExportTemplateGet, ExportTemplateId, ExportTemplatePatch, ExportTemplatePost,
+};
 pub use self::group::{Group, GroupGet, GroupId, GroupPatch, GroupPost};
 pub use self::object::{
     Object, ObjectGet, ObjectId, ObjectPatch, ObjectPost, ObjectRelation, ObjectRelationGet,
     ObjectRelationId, ObjectRelationPatch, ObjectRelationPost, ObjectWithPath, RelatedObjectGraph,
 };
 pub use self::remote_target::RemoteTargetId;
-pub use self::report_template::{
-    ReportTemplate, ReportTemplateGet, ReportTemplateId, ReportTemplatePatch, ReportTemplatePost,
-};
 pub use self::service_account::{
     ServiceAccount, ServiceAccountGet, ServiceAccountId, ServiceAccountPatch, ServiceAccountPost,
 };

@@ -63,8 +63,8 @@ pub struct Authenticated {
 mod parity_contract {
     use super::{Authenticated, Unauthenticated, r#async as async_client, sync as sync_client};
     use crate::resources::{
-        Class, ClassId, ClassRelation, ClassRelationId, Collection, Group, Object, ObjectId,
-        ObjectRelation, RemoteTarget, ReportTemplate, ServiceAccount, User,
+        Class, ClassId, ClassRelation, ClassRelationId, Collection, ExportTemplate, Group, Object,
+        ObjectId, ObjectRelation, RemoteTarget, ServiceAccount, User,
     };
     use crate::types::BaseUrl;
 
@@ -91,7 +91,9 @@ mod parity_contract {
                 $module::Client::<Authenticated>::collections;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<Group> =
                 $module::Client::<Authenticated>::groups;
-            let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ReportTemplate> =
+            let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ExportTemplate> =
+                $module::Client::<Authenticated>::export_templates;
+            let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ExportTemplate> =
                 $module::Client::<Authenticated>::templates;
             let _: fn(&$module::Client<Authenticated>, i32) -> $module::Resource<Object> =
                 $module::Client::<Authenticated>::objects;
@@ -99,7 +101,7 @@ mod parity_contract {
                 $module::Client::<Authenticated>::class_relation;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ObjectRelation> =
                 $module::Client::<Authenticated>::object_relation;
-            let _ = $module::Client::<Authenticated>::reports;
+            let _ = $module::Client::<Authenticated>::exports;
             let _ = $module::Client::<Authenticated>::imports;
             let _ = $module::Client::<Authenticated>::tasks;
         };

@@ -8,7 +8,6 @@ use super::HubuumDateTime;
 #[strum(serialize_all = "snake_case")]
 pub enum TaskKind {
     Import,
-    Report,
     Export,
     Reindex,
     RemoteCall,
@@ -60,8 +59,8 @@ pub struct TaskLinks {
     #[serde(rename = "import")]
     pub import_url: Option<String>,
     pub import_results: Option<String>,
-    pub report: Option<String>,
-    pub report_output: Option<String>,
+    pub export: Option<String>,
+    pub export_output: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -70,9 +69,10 @@ pub struct ImportTaskDetails {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ReportTaskDetails {
+pub struct ExportTaskDetails {
     pub output_url: String,
     pub output_available: bool,
+    pub output_expired: bool,
     pub output_content_type: Option<String>,
     pub output_expires_at: Option<HubuumDateTime>,
     pub template_name: Option<String>,
@@ -84,7 +84,7 @@ pub struct ReportTaskDetails {
 pub struct TaskDetails {
     #[serde(rename = "import")]
     pub import_details: Option<ImportTaskDetails>,
-    pub report: Option<ReportTaskDetails>,
+    pub export: Option<ExportTaskDetails>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -142,7 +142,6 @@ pub struct TaskQueueStateResponse {
     pub partially_succeeded_tasks: i64,
     pub cancelled_tasks: i64,
     pub import_tasks: i64,
-    pub report_tasks: i64,
     pub export_tasks: i64,
     pub reindex_tasks: i64,
     pub total_task_events: i64,
@@ -172,32 +171,33 @@ mod tests {
     }
 
     #[test]
-    fn task_links_and_details_deserialize_report_fields() {
+    fn task_links_and_details_deserialize_export_fields() {
         let json = serde_json::json!({
             "task": "/api/v1/tasks/5",
             "events": "/api/v1/tasks/5/events",
-            "report": "/api/v1/reports/5",
-            "report_output": "/api/v1/reports/5/output"
+            "export": "/api/v1/exports/5",
+            "export_output": "/api/v1/exports/5/output"
         });
         let links: TaskLinks = serde_json::from_value(json).unwrap();
-        assert_eq!(links.report.as_deref(), Some("/api/v1/reports/5"));
+        assert_eq!(links.export.as_deref(), Some("/api/v1/exports/5"));
         assert_eq!(
-            links.report_output.as_deref(),
-            Some("/api/v1/reports/5/output")
+            links.export_output.as_deref(),
+            Some("/api/v1/exports/5/output")
         );
         assert!(links.import_url.is_none());
 
         let details: TaskDetails = serde_json::from_value(serde_json::json!({
-            "report": {
-                "output_url": "/api/v1/reports/5/output",
+            "export": {
+                "output_url": "/api/v1/exports/5/output",
                 "output_available": true,
+                "output_expired": false,
                 "warning_count": 0
             }
         }))
         .unwrap();
-        let report = details.report.expect("report details present");
-        assert_eq!(report.output_url, "/api/v1/reports/5/output");
-        assert!(report.output_available);
-        assert_eq!(report.warning_count, Some(0));
+        let export = details.export.expect("export details present");
+        assert_eq!(export.output_url, "/api/v1/exports/5/output");
+        assert!(export.output_available);
+        assert_eq!(export.warning_count, Some(0));
     }
 }

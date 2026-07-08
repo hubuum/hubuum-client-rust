@@ -10,7 +10,7 @@ use super::{
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{
-    ApiResource, Class, ClassRelation, Collection, EventSink, Group, Object, ReportTemplate, User,
+    ApiResource, Class, ClassRelation, Collection, EventSink, ExportTemplate, Group, Object, User,
 };
 use crate::resources::{
     MeResponse, PrincipalCollectionPermissions, PrincipalTokenMetadata, RemoteTarget,
@@ -19,12 +19,13 @@ use crate::resources::{
 use crate::types::{
     BaseUrl, ClassHistory, ClearRateLimitResponse, CollectionHistory, CountsResponse, Credentials,
     DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryUpdateResponse,
-    EventResponse, EventSubscription, FilterOperator, HubuumDateTime, ImportRequest,
-    ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
-    ObjectHistory, ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory, ReportContentType,
-    ReportJsonResponse, ReportRequest, ReportResult, ReportTemplateHistory, SortDirection,
-    TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
+    EventResponse, EventSubscription, ExportContentType, ExportJsonResponse, ExportRequest,
+    ExportResult, ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator, HubuumDateTime,
+    ImportRequest, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
+    NewEventSubscription, ObjectHistory, ProbeResponse, ReleaseRateLimitResponse,
+    RemoteTargetHistory, SortDirection, TaskEventResponse, TaskKind, TaskQueueStateResponse,
+    TaskResponse, TaskStatus, Token, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    UpdateEventSubscription,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -821,14 +822,33 @@ impl Client<Authenticated> {
         UnifiedSearchRequest::new(self.clone(), query.into())
     }
 
-    pub fn templates(&self) -> Resource<ReportTemplate> {
+    pub fn export_templates(&self) -> Resource<ExportTemplate> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    pub fn template_events(&self, template_id: impl ToString) -> EventListRequest {
+    pub fn templates(&self) -> Resource<ExportTemplate> {
+        self.export_templates()
+    }
+
+    pub fn export_template_events(&self, template_id: impl ToString) -> EventListRequest {
         EventListRequest::new(
             self.clone(),
-            Endpoint::ReportTemplateEvents,
+            Endpoint::ExportTemplateEvents,
+            vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
+        )
+    }
+
+    pub fn template_events(&self, template_id: impl ToString) -> EventListRequest {
+        self.export_template_events(template_id)
+    }
+
+    pub fn export_template_history(
+        &self,
+        template_id: impl ToString,
+    ) -> HistoryRequest<ExportTemplateHistory> {
+        HistoryRequest::new(
+            self.clone(),
+            Endpoint::ExportTemplateHistory,
             vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
         )
     }
@@ -836,11 +856,20 @@ impl Client<Authenticated> {
     pub fn template_history(
         &self,
         template_id: impl ToString,
-    ) -> HistoryRequest<ReportTemplateHistory> {
-        HistoryRequest::new(
-            self.clone(),
-            Endpoint::ReportTemplateHistory,
+    ) -> HistoryRequest<ExportTemplateHistory> {
+        self.export_template_history(template_id)
+    }
+
+    pub fn export_template_history_as_of(
+        &self,
+        template_id: impl ToString,
+        at: HubuumDateTime,
+    ) -> Result<ExportTemplateHistory, ApiError> {
+        self.history_as_of(
+            Endpoint::ExportTemplateHistoryAsOf,
             vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
+            at,
+            "Export template history as-of returned empty result",
         )
     }
 
@@ -848,13 +877,8 @@ impl Client<Authenticated> {
         &self,
         template_id: impl ToString,
         at: HubuumDateTime,
-    ) -> Result<ReportTemplateHistory, ApiError> {
-        self.history_as_of(
-            Endpoint::ReportTemplateHistoryAsOf,
-            vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
-            at,
-            "Template history as-of returned empty result",
-        )
+    ) -> Result<ExportTemplateHistory, ApiError> {
+        self.export_template_history_as_of(template_id, at)
     }
 
     pub fn remote_target_events(&self, target_id: i32) -> EventListRequest {
@@ -895,8 +919,8 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn reports(&self) -> Reports {
-        Reports::new(self.clone())
+    pub fn exports(&self) -> Exports {
+        Exports::new(self.clone())
     }
 
     pub fn imports(&self) -> Imports {
@@ -1203,35 +1227,35 @@ impl EventDeliveries {
     }
 }
 
-pub struct Reports {
+pub struct Exports {
     client: Client<Authenticated>,
 }
 
-impl Reports {
+impl Exports {
     fn new(client: Client<Authenticated>) -> Self {
         Self { client }
     }
 
-    pub fn submit(&self, request: ReportRequest) -> ReportSubmitOp {
-        ReportSubmitOp::new(self.client.clone(), request)
+    pub fn submit(&self, request: ExportRequest) -> ExportSubmitOp {
+        ExportSubmitOp::new(self.client.clone(), request)
     }
 
     pub fn get(&self, task_id: i32) -> Result<TaskResponse, ApiError> {
         self.client
             .request_with_endpoint::<EmptyPostParams, TaskResponse>(
                 reqwest::Method::GET,
-                &Endpoint::ReportById,
+                &Endpoint::ExportById,
                 vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
                 vec![],
                 EmptyPostParams,
             )
-            .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Report returned empty result".into())))
+            .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Export returned empty result".into())))
     }
 
-    pub fn output(&self, task_id: i32) -> Result<ReportResult, ApiError> {
+    pub fn output(&self, task_id: i32) -> Result<ExportResult, ApiError> {
         let raw = self.client.request_with_endpoint_raw(
             reqwest::Method::GET,
-            &Endpoint::ReportOutput,
+            &Endpoint::ExportOutput,
             vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
             vec![],
             EmptyPostParams,
@@ -1239,40 +1263,40 @@ impl Reports {
         let content_type = raw
             .content_type
             .clone()
-            .unwrap_or(ReportContentType::ApplicationJson);
+            .unwrap_or(ExportContentType::ApplicationJson);
 
         match content_type {
-            ReportContentType::ApplicationJson => {
-                let body = shared::parse_response::<ReportJsonResponse>(
+            ExportContentType::ApplicationJson => {
+                let body = shared::parse_response::<ExportJsonResponse>(
                     &reqwest::Method::GET,
                     raw.status,
                     raw.body,
                 )?
                 .ok_or(ApiError::EmptyResult(
-                    "Report output returned empty result".into(),
+                    "Export output returned empty result".into(),
                 ))?;
-                Ok(ReportResult::Json(body))
+                Ok(ExportResult::Json(body))
             }
-            _ => Ok(ReportResult::Rendered {
+            _ => Ok(ExportResult::Rendered {
                 content_type,
                 body: raw.body,
             }),
         }
     }
 
-    pub fn run(&self, request: ReportRequest) -> ReportRunOp {
-        ReportRunOp::new(self.client.clone(), request)
+    pub fn run(&self, request: ExportRequest) -> ExportRunOp {
+        ExportRunOp::new(self.client.clone(), request)
     }
 }
 
-pub struct ReportSubmitOp {
+pub struct ExportSubmitOp {
     client: Client<Authenticated>,
-    request: ReportRequest,
+    request: ExportRequest,
     idempotency_key: Option<String>,
 }
 
-impl ReportSubmitOp {
-    fn new(client: Client<Authenticated>, request: ReportRequest) -> Self {
+impl ExportSubmitOp {
+    fn new(client: Client<Authenticated>, request: ExportRequest) -> Self {
         Self {
             client,
             request,
@@ -1293,7 +1317,7 @@ impl ReportSubmitOp {
 
         let raw = self.client.request_with_endpoint_raw_with_headers(
             reqwest::Method::POST,
-            &Endpoint::Reports,
+            &Endpoint::Exports,
             UrlParams::default(),
             vec![],
             self.request,
@@ -1301,21 +1325,21 @@ impl ReportSubmitOp {
         )?;
 
         shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?.ok_or(
-            ApiError::EmptyResult("Report submit returned empty result".into()),
+            ApiError::EmptyResult("Export submit returned empty result".into()),
         )
     }
 }
 
-pub struct ReportRunOp {
+pub struct ExportRunOp {
     client: Client<Authenticated>,
-    request: ReportRequest,
+    request: ExportRequest,
     idempotency_key: Option<String>,
     poll_interval: std::time::Duration,
     timeout: Option<std::time::Duration>,
 }
 
-impl ReportRunOp {
-    fn new(client: Client<Authenticated>, request: ReportRequest) -> Self {
+impl ExportRunOp {
+    fn new(client: Client<Authenticated>, request: ExportRequest) -> Self {
         Self {
             client,
             request,
@@ -1340,9 +1364,9 @@ impl ReportRunOp {
         self
     }
 
-    pub fn send(self) -> Result<ReportResult, ApiError> {
-        let reports = Reports::new(self.client.clone());
-        let mut submit = reports.submit(self.request);
+    pub fn send(self) -> Result<ExportResult, ApiError> {
+        let exports = Exports::new(self.client.clone());
+        let mut submit = exports.submit(self.request);
         if let Some(key) = self.idempotency_key {
             submit = submit.idempotency_key(key);
         }
@@ -1353,7 +1377,128 @@ impl ReportRunOp {
             .timeout(self.timeout)
             .send()?;
         if task.status.is_success() {
-            reports.output(task.id)
+            exports.output(task.id)
+        } else {
+            Err(ApiError::Api(format!(
+                "Task {} {}: {}",
+                task.id,
+                task.status,
+                task.summary.unwrap_or_else(|| "no summary".to_string())
+            )))
+        }
+    }
+}
+
+impl Resource<ExportTemplate> {
+    pub fn submit_export(
+        &self,
+        template_id: impl ToString,
+        request: ExportTemplateRunRequest,
+    ) -> ExportTemplateSubmitOp {
+        ExportTemplateSubmitOp::new(self.client.clone(), template_id.to_string(), request)
+    }
+
+    pub fn run_export(
+        &self,
+        template_id: impl ToString,
+        request: ExportTemplateRunRequest,
+    ) -> ExportTemplateRunOp {
+        ExportTemplateRunOp::new(self.client.clone(), template_id.to_string(), request)
+    }
+}
+
+pub struct ExportTemplateSubmitOp {
+    client: Client<Authenticated>,
+    template_id: String,
+    request: ExportTemplateRunRequest,
+    idempotency_key: Option<String>,
+}
+
+impl ExportTemplateSubmitOp {
+    fn new(
+        client: Client<Authenticated>,
+        template_id: String,
+        request: ExportTemplateRunRequest,
+    ) -> Self {
+        Self {
+            client,
+            template_id,
+            request,
+            idempotency_key: None,
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(idempotency_key.into());
+        self
+    }
+
+    pub fn send(self) -> Result<TaskResponse, ApiError> {
+        let mut headers = Vec::new();
+        if let Some(key) = self.idempotency_key {
+            headers.push(("Idempotency-Key", key));
+        }
+
+        let raw = self.client.request_with_endpoint_raw_with_headers(
+            reqwest::Method::POST,
+            &Endpoint::ExportTemplateExports,
+            vec![(Cow::Borrowed("template_id"), self.template_id.into())],
+            vec![],
+            self.request,
+            &headers,
+        )?;
+
+        shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?.ok_or(
+            ApiError::EmptyResult("Export template submit returned empty result".into()),
+        )
+    }
+}
+
+pub struct ExportTemplateRunOp {
+    client: Client<Authenticated>,
+    submit: ExportTemplateSubmitOp,
+    poll_interval: std::time::Duration,
+    timeout: Option<std::time::Duration>,
+}
+
+impl ExportTemplateRunOp {
+    fn new(
+        client: Client<Authenticated>,
+        template_id: String,
+        request: ExportTemplateRunRequest,
+    ) -> Self {
+        Self {
+            submit: ExportTemplateSubmitOp::new(client.clone(), template_id, request),
+            client,
+            poll_interval: std::time::Duration::from_secs(1),
+            timeout: Some(std::time::Duration::from_secs(300)),
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.submit = self.submit.idempotency_key(idempotency_key);
+        self
+    }
+
+    pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
+        self.poll_interval = interval;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub fn send(self) -> Result<ExportResult, ApiError> {
+        let task = self.submit.send()?;
+        let task = Tasks::new(self.client.clone())
+            .wait(task.id)
+            .poll_interval(self.poll_interval)
+            .timeout(self.timeout)
+            .send()?;
+        if task.status.is_success() {
+            Exports::new(self.client).output(task.id)
         } else {
             Err(ApiError::Api(format!(
                 "Task {} {}: {}",

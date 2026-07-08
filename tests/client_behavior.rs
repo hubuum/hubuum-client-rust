@@ -2,11 +2,12 @@ use std::str::FromStr;
 
 use httpmock::prelude::*;
 use hubuum_client::types::{
-    EventSinkKind, FilterOperator, HubuumDateTime, ImportGraph, ImportRequest, NewEventSink,
-    NewEventSubscription, Permissions, ReportContentType, ReportRequest, ReportScope,
-    ReportScopeKind, SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
+    EventSinkKind, ExportContentType, ExportRequest, ExportScope, ExportScopeKind,
+    ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportGraph, ImportRequest,
+    NewEventSink, NewEventSubscription, Permissions, SortDirection, UnifiedSearchEvent,
+    UnifiedSearchKind, UpdateEventSubscription,
 };
-use hubuum_client::{ApiError, BaseUrl, ClassGet, Client, Credentials, ReportResult, blocking};
+use hubuum_client::{ApiError, BaseUrl, ClassGet, Client, Credentials, ExportResult, blocking};
 use serde_json::json;
 
 const USERNAME: &str = "tester";
@@ -125,7 +126,7 @@ fn group_permission_json(collection_id: i32, group_id: i32, groupname: &str) -> 
     })
 }
 
-fn report_template_json(template_id: i32, name: &str) -> serde_json::Value {
+fn export_template_json(template_id: i32, name: &str) -> serde_json::Value {
     json!({
         "id": template_id,
         "collection_id": 7,
@@ -146,15 +147,14 @@ fn report_template_json(template_id: i32, name: &str) -> serde_json::Value {
     })
 }
 
-fn report_request() -> ReportRequest {
-    ReportRequest {
+fn export_request() -> ExportRequest {
+    ExportRequest {
         limits: None,
         missing_data_policy: None,
-        output: None,
         query: Some("name__icontains=server".to_string()),
-        scope: ReportScope {
+        scope: ExportScope {
             class_id: Some(42),
-            kind: ReportScopeKind::ObjectsInClass,
+            kind: ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
         include: None,
@@ -202,10 +202,10 @@ fn task_response_json(task_id: i32, status: &str) -> serde_json::Value {
     })
 }
 
-fn report_task_json(task_id: i32, status: &str) -> serde_json::Value {
+fn export_task_json(task_id: i32, status: &str) -> serde_json::Value {
     json!({
         "id": task_id,
-        "kind": "report",
+        "kind": "export",
         "status": status,
         "submitted_by": 7,
         "created_at": ts(),
@@ -222,8 +222,8 @@ fn report_task_json(task_id: i32, status: &str) -> serde_json::Value {
         "links": {
             "task": format!("/api/v1/tasks/{task_id}"),
             "events": format!("/api/v1/tasks/{task_id}/events"),
-            "report": format!("/api/v1/reports/{task_id}"),
-            "report_output": format!("/api/v1/reports/{task_id}/output")
+            "export": format!("/api/v1/exports/{task_id}"),
+            "export_output": format!("/api/v1/exports/{task_id}/output")
         }
     })
 }
@@ -269,8 +269,7 @@ fn task_queue_json() -> serde_json::Value {
         "partially_succeeded_tasks": 0,
         "cancelled_tasks": 0,
         "import_tasks": 9,
-        "report_tasks": 1,
-        "export_tasks": 0,
+        "export_tasks": 1,
         "reindex_tasks": 0,
         "total_task_events": 12,
         "total_import_result_rows": 7,
@@ -2244,31 +2243,31 @@ async fn async_supports_class_and_collection_permission_endpoints() {
 }
 
 #[test]
-fn sync_reports_and_templates_cover_new_server_surface() {
+fn sync_exports_and_templates_cover_new_server_surface() {
     let server = MockServer::start();
     mock_login(&server);
 
-    let report_submit = server.mock(|when, then| {
+    let export_submit = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/reports")
+            .path("/api/v1/exports")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(202)
             .header("content-type", "application/json")
-            .json_body(report_task_json(11, "succeeded"));
+            .json_body(export_task_json(11, "succeeded"));
     });
 
-    let report_task = server.mock(|when, then| {
+    let export_task = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/tasks/11")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(report_task_json(11, "succeeded"));
+            .json_body(export_task_json(11, "succeeded"));
     });
 
-    let report_output = server.mock(|when, then| {
+    let export_output = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/reports/11/output")
+            .path("/api/v1/exports/11/output")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -2290,66 +2289,82 @@ fn sync_reports_and_templates_cover_new_server_surface() {
 
     let templates_page = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/templates")
+            .path("/api/v1/export-templates")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .header("x-next-cursor", "cursor-2")
-            .json_body(json!([report_template_json(1, "owners")]));
+            .json_body(json!([export_template_json(1, "owners")]));
     });
 
     let template_get = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/templates/1")
+            .path("/api/v1/export-templates/1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(report_template_json(1, "owners"));
+            .json_body(export_template_json(1, "owners"));
     });
 
     let template_create = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/templates")
+            .path("/api/v1/export-templates")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201)
             .header("content-type", "application/json")
-            .json_body(report_template_json(2, "created-template"));
+            .json_body(export_template_json(2, "created-template"));
     });
 
     let template_patch = server.mock(|when, then| {
         when.method(PATCH)
-            .path("/api/v1/templates/2")
+            .path("/api/v1/export-templates/2")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(report_template_json(2, "updated-template"));
+            .json_body(export_template_json(2, "updated-template"));
     });
 
     let template_delete = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/templates/2")
+            .path("/api/v1/export-templates/2")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
+    let template_export_submit = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/export-templates/1/exports")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .header("idempotency-key", "template-export")
+            .json_body(json!({
+                "query": "name__icontains=server",
+                "object_id": null,
+                "missing_data_policy": null,
+                "limits": null
+            }));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(export_task_json(12, "queued"));
+    });
+
     let client = sync_client(&server);
-    let report = client
-        .reports()
-        .run(report_request())
+    let export = client
+        .exports()
+        .run(export_request())
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
-        .expect("JSON report should succeed");
-    match report {
-        ReportResult::Json(report) => assert_eq!(report.items.len(), 1),
-        other => panic!("expected JSON report, got {other:?}"),
+        .expect("JSON export should succeed");
+    match export {
+        ExportResult::Json(export) => assert_eq!(export.items.len(), 1),
+        other => panic!("expected JSON export, got {other:?}"),
     }
-    report_submit.assert_calls(1);
-    report_task.assert_calls(1);
-    report_output.assert_calls(1);
+    export_submit.assert_calls(1);
+    export_task.assert_calls(1);
+    export_output.assert_calls(1);
 
     let page = client
-        .templates()
+        .export_templates()
         .query()
         .limit(1)
         .page()
@@ -2358,26 +2373,40 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     assert_eq!(page.next_cursor.as_deref(), Some("cursor-2"));
 
     let selected = client
-        .templates()
+        .export_templates()
         .get(1)
         .expect("template select should succeed");
     assert_eq!(selected.resource().id, 1);
 
+    let templated_task = client
+        .export_templates()
+        .submit_export(
+            1,
+            ExportTemplateRunRequest {
+                query: Some("name__icontains=server".to_string()),
+                ..Default::default()
+            },
+        )
+        .idempotency_key("template-export")
+        .send()
+        .expect("template export submit should succeed");
+    assert_eq!(templated_task.id, 12);
+
     let created = client
-        .templates()
+        .export_templates()
         .create()
         .collection_id(7)
         .name("created-template")
         .description("Template")
-        .content_type(ReportContentType::TextPlain)
+        .content_type(ExportContentType::TextPlain)
         .template("{{name}}")
-        .kind(hubuum_client::ReportTemplateKind::Fragment)
+        .kind(hubuum_client::ExportTemplateKind::Fragment)
         .send()
         .expect("template create should succeed");
     assert_eq!(created.id, 2);
 
     let updated = client
-        .templates()
+        .export_templates()
         .update(2)
         .name("updated-template")
         .send()
@@ -2385,7 +2414,7 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     assert_eq!(updated.name, "updated-template");
 
     client
-        .templates()
+        .export_templates()
         .delete(2)
         .expect("template delete should succeed");
 
@@ -2394,11 +2423,12 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     template_create.assert_calls(1);
     template_patch.assert_calls(1);
     template_delete.assert_calls(1);
+    template_export_submit.assert_calls(1);
 }
 
 #[test]
-fn report_template_patch_omits_content_type() {
-    let patch = hubuum_client::ReportTemplatePatch {
+fn export_template_patch_omits_content_type() {
+    let patch = hubuum_client::ExportTemplatePatch {
         collection_id: None,
         name: Some("updated-template".to_string()),
         description: None,
@@ -2434,33 +2464,33 @@ fn report_template_patch_omits_content_type() {
 }
 
 #[tokio::test]
-async fn async_reports_support_rendered_outputs() {
+async fn async_exports_support_rendered_outputs() {
     for (expected_type, expected_body) in [
-        (ReportContentType::TextPlain, "plain report"),
-        (ReportContentType::TextHtml, "<p>html report</p>"),
-        (ReportContentType::TextCsv, "name\nsrv-01\n"),
+        (ExportContentType::TextPlain, "plain export"),
+        (ExportContentType::TextHtml, "<p>html export</p>"),
+        (ExportContentType::TextCsv, "name\nsrv-01\n"),
     ] {
         let server = MockServer::start();
         mock_login(&server);
-        let report_submit = server.mock(|when, then| {
+        let export_submit = server.mock(|when, then| {
             when.method(POST)
-                .path("/api/v1/reports")
+                .path("/api/v1/exports")
                 .header("authorization", format!("Bearer {}", TOKEN));
             then.status(202)
                 .header("content-type", "application/json")
-                .json_body(report_task_json(11, "succeeded"));
+                .json_body(export_task_json(11, "succeeded"));
         });
-        let report_task = server.mock(|when, then| {
+        let export_task = server.mock(|when, then| {
             when.method(GET)
                 .path("/api/v1/tasks/11")
                 .header("authorization", format!("Bearer {}", TOKEN));
             then.status(200)
                 .header("content-type", "application/json")
-                .json_body(report_task_json(11, "succeeded"));
+                .json_body(export_task_json(11, "succeeded"));
         });
-        let report_output = server.mock(|when, then| {
+        let export_output = server.mock(|when, then| {
             when.method(GET)
-                .path("/api/v1/reports/11/output")
+                .path("/api/v1/exports/11/output")
                 .header("authorization", format!("Bearer {}", TOKEN));
             then.status(200)
                 .header("content-type", expected_type.to_string())
@@ -2469,22 +2499,22 @@ async fn async_reports_support_rendered_outputs() {
 
         let client = async_client(&server).await;
         let result = client
-            .reports()
-            .run(report_request())
+            .exports()
+            .run(export_request())
             .poll_interval(std::time::Duration::from_millis(1))
             .send()
             .await
-            .expect("rendered report should succeed");
+            .expect("rendered export should succeed");
         match result {
-            ReportResult::Rendered { content_type, body } => {
+            ExportResult::Rendered { content_type, body } => {
                 assert_eq!(content_type, expected_type);
                 assert_eq!(body, expected_body);
             }
-            other => panic!("expected rendered report, got {other:?}"),
+            other => panic!("expected rendered export, got {other:?}"),
         }
-        report_submit.assert_calls(1);
-        report_task.assert_calls(1);
-        report_output.assert_calls(1);
+        export_submit.assert_calls(1);
+        export_task.assert_calls(1);
+        export_output.assert_calls(1);
     }
 }
 

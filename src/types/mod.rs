@@ -2,13 +2,13 @@ mod auth;
 mod baseurl;
 mod datetime;
 mod event;
+mod export;
 mod filter;
 mod history;
 mod import;
 mod meta;
 mod params;
 mod remote;
-mod report;
 mod search;
 mod task;
 
@@ -26,10 +26,16 @@ pub use event::{
     EventWorkerWakeupStats, NewEventSink, NewEventSubscription, UpdateEventSink,
     UpdateEventSubscription,
 };
+pub use export::{
+    ExportContentType, ExportInclude, ExportIncludeRelatedDirection, ExportIncludeRelatedObject,
+    ExportIncludeRelatedSort, ExportJsonResponse, ExportLimits, ExportMeta,
+    ExportMissingDataPolicy, ExportRelationContext, ExportRequest, ExportResult, ExportScope,
+    ExportScopeKind, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning,
+};
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
 pub use history::{
-    ClassHistory, CollectionHistory, HistoryMetadata, ObjectHistory, RemoteTargetHistory,
-    ReportTemplateHistory,
+    ClassHistory, CollectionHistory, ExportTemplateHistory, HistoryMetadata, ObjectHistory,
+    RemoteTargetHistory,
 };
 pub use import::{
     CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, GroupKey, ImportAtomicity, ImportClassInput,
@@ -48,19 +54,13 @@ pub use remote::{
     RemoteTarget, RemoteTargetGet, RemoteTargetInvokeRequest, RemoteTargetSubjectType,
     UpdateRemoteTarget,
 };
-pub use report::{
-    ReportContentType, ReportInclude, ReportIncludeRelatedDirection, ReportIncludeRelatedObject,
-    ReportIncludeRelatedSort, ReportJsonResponse, ReportLimits, ReportMeta,
-    ReportMissingDataPolicy, ReportOutputRequest, ReportRelationContext, ReportRequest,
-    ReportResult, ReportScope, ReportScopeKind, ReportTemplateKind, ReportWarning,
-};
 pub use search::{
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
     UnifiedSearchResults, UnifiedSearchStartedEvent,
 };
 pub use task::{
-    ImportTaskDetails, ImportTaskResultResponse, ReportTaskDetails, TaskDetails, TaskEventResponse,
+    ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse, TaskDetails, TaskEventResponse,
     TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
 };
 

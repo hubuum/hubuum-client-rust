@@ -12,6 +12,14 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   collections. `Namespace*`, `namespaces()`, `namespace_id`, and
   `/api/v1/namespaces` client surfaces are replaced by `Collection*`,
   `collections()`, `collection_id`, and `/api/v1/collections`.
+- Public report terminology now follows the backend rename to exports:
+  `Report*`, `reports()`, and `/api/v1/reports` are replaced by `Export*`,
+  `exports()`, and `/api/v1/exports`; template routes move from
+  `/api/v1/templates` to `/api/v1/export-templates`.
+- Report task surfaces are now export task surfaces: `TaskKind::Report`,
+  `links.report`, `links.report_output`, and `details.report` are replaced by
+  `TaskKind::Export`, `links.export`, `links.export_output`, and
+  `details.export`.
 - Resource collections can now be queried directly with calls like
   `client.classes().name().contains("server").list()`; `query()` remains available
   as a compatibility escape hatch but is no longer the documented primary path.
@@ -29,7 +37,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Effective collection permission helpers for inherited group and principal
   permissions.
 - Path-aware collection import keys and collection-aware search, remote target,
-  report template, event, and history types.
+  export template, event, and history types.
 - Cursor-backed resource and request builders support `.all()` to collect all
   pages, and `Page<T>` can be iterated directly.
 - Handles dereference and `AsRef` to the wrapped resource and support
@@ -37,6 +45,17 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - HTTP API errors include method, URL, status, parsed message, and raw response
   body for easier diagnostics.
 - Compile-fail coverage for typed query operators and wrong-resource ID usage.
+- Dedicated export-template execution helpers:
+  `client.export_templates().submit_export(template_id, request)` and
+  `.run_export(template_id, request)` target
+  `/api/v1/export-templates/{template_id}/exports`.
+
+### Changed
+
+- Docker-backed e2e coverage now exercises the renamed export/export-template
+  routes and verifies rendered template output metadata from export task details.
+- The README is now a shorter introduction, with detailed client setup,
+  querying, export/import/task, and integration-test guides split into `docs/`.
 
 ## [0.1.0] - 2026-07-05
 

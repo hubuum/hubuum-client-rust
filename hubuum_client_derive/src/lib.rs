@@ -516,7 +516,7 @@ fn id_param_name(name: &str) -> &'static str {
         "Class" => "class_id",
         "Collection" => "collection_id",
         "Object" => "object_id",
-        "ReportTemplate" => "template_id",
+        "ExportTemplate" => "template_id",
         "ServiceAccount" => "service_account_id",
         "ClassRelation" | "ObjectRelation" => "relation_id",
         _ => "id",

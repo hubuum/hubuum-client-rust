@@ -56,7 +56,7 @@ pub struct ObjectHistory {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ReportTemplateHistory {
+pub struct ExportTemplateHistory {
     pub id: i32,
     pub collection_id: i32,
     pub name: String,

@@ -1,8 +1,8 @@
 use std::{thread, time::Duration};
 
 use hubuum_client::{
-    ClassPatch, EventDeliveryStatus, EventSinkKind, GroupPatch, NewEventSink, NewEventSubscription,
-    ObjectPatch, ReportContentType, ReportTemplateKind, ReportTemplatePost,
+    ClassPatch, EventDeliveryStatus, EventSinkKind, ExportContentType, ExportTemplateKind,
+    ExportTemplatePost, GroupPatch, NewEventSink, NewEventSubscription, ObjectPatch,
     UpdateEventSubscription, UserPatch,
 };
 use serde_json::json;
@@ -220,14 +220,14 @@ fn e2e_events_and_history_cover_core_and_templates() {
 
     let template = harness
         .client
-        .templates()
-        .create_raw(ReportTemplatePost {
+        .export_templates()
+        .create_raw(ExportTemplatePost {
             collection_id,
             name: format!("{prefix}-template"),
-            description: "e2e report template".to_string(),
-            content_type: ReportContentType::TextPlain,
+            description: "e2e export template".to_string(),
+            content_type: ExportContentType::TextPlain,
             template: "count={{ meta.count }}".to_string(),
-            kind: ReportTemplateKind::Fragment,
+            kind: ExportTemplateKind::Fragment,
             scope_kind: None,
             class_id: None,
             default_query: None,
