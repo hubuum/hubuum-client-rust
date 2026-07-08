@@ -6,6 +6,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-08
+
 ### Breaking
 
 - Public resource terminology now follows the backend rename from namespaces to
@@ -56,6 +58,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   routes and verifies rendered template output metadata from export task details.
 - The README is now a shorter introduction, with detailed client setup,
   querying, export/import/task, and integration-test guides split into `docs/`.
+- Refreshed the workspace lockfile to current compatible dependency releases.
 
 ## [0.1.0] - 2026-07-05
 

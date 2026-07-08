@@ -19,7 +19,7 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.1.0"
+hubuum_client = "0.2.0"
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
