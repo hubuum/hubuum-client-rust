@@ -10,17 +10,18 @@ use super::{
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{
-    ApiResource, Class, ClassRelation, EventSink, Group, Namespace, Object, ReportTemplate, User,
+    ApiResource, Class, ClassRelation, Collection, EventSink, Group, Object, ReportTemplate, User,
 };
 use crate::resources::{
-    MeResponse, PrincipalNamespacePermissions, PrincipalTokenMetadata, RemoteTarget, ServiceAccount,
+    MeResponse, PrincipalCollectionPermissions, PrincipalTokenMetadata, RemoteTarget,
+    ServiceAccount,
 };
 use crate::types::{
-    BaseUrl, ClassHistory, ClearRateLimitResponse, CountsResponse, Credentials, DbStateResponse,
-    EventDelivery, EventDeliveryHealthResponse, EventDeliveryUpdateResponse, EventResponse,
-    EventSubscription, FilterOperator, HubuumDateTime, ImportRequest, ImportTaskResultResponse,
-    LoginRateLimitState, LogoutTokenRequest, NamespaceHistory, NewEventSubscription, ObjectHistory,
-    ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory, ReportContentType,
+    BaseUrl, ClassHistory, ClearRateLimitResponse, CollectionHistory, CountsResponse, Credentials,
+    DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryUpdateResponse,
+    EventResponse, EventSubscription, FilterOperator, HubuumDateTime, ImportRequest,
+    ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
+    ObjectHistory, ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory, ReportContentType,
     ReportJsonResponse, ReportRequest, ReportResult, ReportTemplateHistory, SortDirection,
     TaskEventResponse, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
@@ -691,10 +692,10 @@ impl Client<Authenticated> {
         CursorRequest::new(self.clone(), Endpoint::MeTokens, UrlParams::default())
     }
 
-    /// The authenticated caller's own effective permissions, per namespace.
-    pub async fn me_permissions(&self) -> Result<Vec<PrincipalNamespacePermissions>, ApiError> {
+    /// The authenticated caller's own effective permissions, per collection.
+    pub async fn me_permissions(&self) -> Result<Vec<PrincipalCollectionPermissions>, ApiError> {
         let res = self
-            .request_with_endpoint::<EmptyPostParams, Vec<PrincipalNamespacePermissions>>(
+            .request_with_endpoint::<EmptyPostParams, Vec<PrincipalCollectionPermissions>>(
                 reqwest::Method::GET,
                 &Endpoint::MePermissions,
                 UrlParams::default(),
@@ -705,7 +706,7 @@ impl Client<Authenticated> {
         Ok(res.unwrap_or_default())
     }
 
-    pub fn me_permissions_request(&self) -> CursorRequest<PrincipalNamespacePermissions> {
+    pub fn me_permissions_request(&self) -> CursorRequest<PrincipalCollectionPermissions> {
         CursorRequest::new(self.clone(), Endpoint::MePermissions, UrlParams::default())
     }
 
@@ -713,54 +714,54 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    pub fn namespaces(&self) -> Resource<Namespace> {
+    pub fn collections(&self) -> Resource<Collection> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    pub fn namespace_events(&self, namespace_id: i32) -> EventListRequest {
+    pub fn collection_events(&self, collection_id: i32) -> EventListRequest {
         EventListRequest::new(
             self.clone(),
-            Endpoint::NamespaceEvents,
+            Endpoint::CollectionEvents,
             vec![(
-                Cow::Borrowed("namespace_id"),
-                namespace_id.to_string().into(),
+                Cow::Borrowed("collection_id"),
+                collection_id.to_string().into(),
             )],
         )
     }
 
-    pub fn namespace_history(
+    pub fn collection_history(
         &self,
-        namespace_id: impl ToString,
-    ) -> HistoryRequest<NamespaceHistory> {
+        collection_id: impl ToString,
+    ) -> HistoryRequest<CollectionHistory> {
         HistoryRequest::new(
             self.clone(),
-            Endpoint::NamespaceHistory,
+            Endpoint::CollectionHistory,
             vec![(
-                Cow::Borrowed("namespace_id"),
-                namespace_id.to_string().into(),
+                Cow::Borrowed("collection_id"),
+                collection_id.to_string().into(),
             )],
         )
     }
 
-    pub async fn namespace_history_as_of(
+    pub async fn collection_history_as_of(
         &self,
-        namespace_id: impl ToString,
+        collection_id: impl ToString,
         at: HubuumDateTime,
-    ) -> Result<NamespaceHistory, ApiError> {
+    ) -> Result<CollectionHistory, ApiError> {
         self.history_as_of(
-            Endpoint::NamespaceHistoryAsOf,
+            Endpoint::CollectionHistoryAsOf,
             vec![(
-                Cow::Borrowed("namespace_id"),
-                namespace_id.to_string().into(),
+                Cow::Borrowed("collection_id"),
+                collection_id.to_string().into(),
             )],
             at,
-            "Namespace history as-of returned empty result",
+            "Collection history as-of returned empty result",
         )
         .await
     }
 
-    pub fn event_subscriptions(&self, namespace_id: i32) -> EventSubscriptions {
-        EventSubscriptions::new(self.clone(), namespace_id)
+    pub fn event_subscriptions(&self, collection_id: i32) -> EventSubscriptions {
+        EventSubscriptions::new(self.clone(), collection_id)
     }
 
     pub fn groups(&self) -> Resource<Group> {
@@ -978,8 +979,8 @@ impl EventListRequest {
         self
     }
 
-    pub fn namespace_id(mut self, namespace_id: i32) -> Self {
-        self.inner = self.inner.query_param("namespace_id", namespace_id);
+    pub fn collection_id(mut self, collection_id: i32) -> Self {
+        self.inner = self.inner.query_param("collection_id", collection_id);
         self
     }
 
@@ -1061,29 +1062,29 @@ where
 
 pub struct EventSubscriptions {
     client: Client<Authenticated>,
-    namespace_id: i32,
+    collection_id: i32,
 }
 
 impl EventSubscriptions {
-    fn new(client: Client<Authenticated>, namespace_id: i32) -> Self {
+    fn new(client: Client<Authenticated>, collection_id: i32) -> Self {
         Self {
             client,
-            namespace_id,
+            collection_id,
         }
     }
 
     fn url_params(&self) -> UrlParams {
         vec![(
-            Cow::Borrowed("namespace_id"),
-            self.namespace_id.to_string().into(),
+            Cow::Borrowed("collection_id"),
+            self.collection_id.to_string().into(),
         )]
     }
 
     fn url_params_with_subscription(&self, subscription_id: i32) -> UrlParams {
         vec![
             (
-                Cow::Borrowed("namespace_id"),
-                self.namespace_id.to_string().into(),
+                Cow::Borrowed("collection_id"),
+                self.collection_id.to_string().into(),
             ),
             (
                 Cow::Borrowed("subscription_id"),
@@ -1095,7 +1096,7 @@ impl EventSubscriptions {
     pub fn query(&self) -> CursorRequest<EventSubscription> {
         CursorRequest::new(
             self.client.clone(),
-            Endpoint::NamespaceEventSubscriptions,
+            Endpoint::CollectionEventSubscriptions,
             self.url_params(),
         )
     }
@@ -1104,7 +1105,7 @@ impl EventSubscriptions {
         self.client
             .request_with_endpoint::<EmptyPostParams, EventSubscription>(
                 reqwest::Method::GET,
-                &Endpoint::NamespaceEventSubscriptionsById,
+                &Endpoint::CollectionEventSubscriptionsById,
                 self.url_params_with_subscription(subscription_id),
                 vec![],
                 EmptyPostParams,
@@ -1122,7 +1123,7 @@ impl EventSubscriptions {
         self.client
             .request_with_endpoint::<NewEventSubscription, EventSubscription>(
                 reqwest::Method::POST,
-                &Endpoint::NamespaceEventSubscriptions,
+                &Endpoint::CollectionEventSubscriptions,
                 self.url_params(),
                 vec![],
                 request,
@@ -1143,7 +1144,7 @@ impl EventSubscriptions {
         self.client
             .request_with_endpoint::<UpdateEventSubscription, EventSubscription>(
                 reqwest::Method::PATCH,
-                &Endpoint::NamespaceEventSubscriptions,
+                &Endpoint::CollectionEventSubscriptions,
                 url_params,
                 vec![],
                 request,
@@ -1160,7 +1161,7 @@ impl EventSubscriptions {
         self.client
             .request_with_endpoint::<EmptyPostParams, serde_json::Value>(
                 reqwest::Method::DELETE,
-                &Endpoint::NamespaceEventSubscriptions,
+                &Endpoint::CollectionEventSubscriptions,
                 url_params,
                 vec![],
                 EmptyPostParams,
@@ -1720,9 +1721,9 @@ impl UnifiedSearchRequest {
         self
     }
 
-    pub fn cursor_namespaces(mut self, cursor: impl Into<String>) -> Self {
+    pub fn cursor_collections(mut self, cursor: impl Into<String>) -> Self {
         self.query_params
-            .push(QueryFilter::raw("cursor_namespaces", cursor.into()));
+            .push(QueryFilter::raw("cursor_collections", cursor.into()));
         self
     }
 

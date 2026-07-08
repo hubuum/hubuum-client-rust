@@ -15,8 +15,8 @@ fn e2e_report_submission_task_wait_output_and_task_listing() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (_namespace_id, class_id, _object_id) = harness
-        .create_namespace_class_object("reports", admin_group_id)
+    let (_collection_id, class_id, _object_id) = harness
+        .create_collection_class_object("reports", admin_group_id)
         .expect("failed to create report source data");
 
     let request = ReportRequest {
@@ -96,8 +96,8 @@ fn e2e_report_template_update_report_get_and_delete() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (namespace_id, class_id, _object_id) = harness
-        .create_namespace_class_object("report-templates", admin_group_id)
+    let (collection_id, class_id, _object_id) = harness
+        .create_collection_class_object("report-templates", admin_group_id)
         .expect("failed to create report template source data");
     let prefix = unique_case_prefix("report-templates");
 
@@ -105,7 +105,7 @@ fn e2e_report_template_update_report_get_and_delete() {
         .client
         .templates()
         .create_raw(ReportTemplatePost {
-            namespace_id,
+            collection_id,
             name: format!("{prefix}-template"),
             description: "e2e executable report template".to_string(),
             content_type: ReportContentType::TextPlain,

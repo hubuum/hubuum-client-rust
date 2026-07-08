@@ -9,21 +9,21 @@ fn e2e_sync_meta_and_crud_lifecycle() {
         .client
         .meta_counts()
         .expect("meta counts endpoint failed");
-    assert!(counts.total_namespaces >= 0);
+    assert!(counts.total_collections >= 0);
 
     let (_admin_id, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
 
-    let (namespace_id, class_id, object_id) = harness
-        .create_namespace_class_object("lifecycle", admin_group_id)
-        .expect("failed to create namespace/class/object");
+    let (collection_id, class_id, object_id) = harness
+        .create_collection_class_object("lifecycle", admin_group_id)
+        .expect("failed to create collection/class/object");
 
-    let namespace = harness
+    let collection = harness
         .client
-        .namespaces()
-        .get(namespace_id)
-        .expect("namespace should be fetchable");
-    assert_eq!(namespace.id(), namespace_id);
+        .collections()
+        .get(collection_id)
+        .expect("collection should be fetchable");
+    assert_eq!(collection.id(), collection_id);
 
     let class = harness
         .client

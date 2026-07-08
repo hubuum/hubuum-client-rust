@@ -28,7 +28,7 @@ impl ReportContentType {
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum ReportScopeKind {
-    Namespaces,
+    Collections,
     Classes,
     ObjectsInClass,
     ClassRelations,

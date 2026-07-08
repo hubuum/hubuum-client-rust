@@ -133,8 +133,8 @@ impl crate::resources::ApiResource for RemoteTarget {
         if let Some(name) = params.name {
             push("name", name);
         }
-        if let Some(namespace_id) = params.namespace_id {
-            push("namespace_id", namespace_id.to_string());
+        if let Some(collection_id) = params.collection_id {
+            push("collection_id", collection_id.to_string());
         }
         if let Some(enabled) = params.enabled {
             push("enabled", enabled.to_string());

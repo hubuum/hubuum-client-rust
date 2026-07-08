@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use hubuum_client::{
-    CURRENT_IMPORT_VERSION, ImportClassInput, ImportGraph, ImportMode, ImportNamespaceInput,
+    CURRENT_IMPORT_VERSION, ImportClassInput, ImportCollectionInput, ImportGraph, ImportMode,
     ImportObjectInput, ImportRequest, TaskKind,
 };
 use serde_json::json;
@@ -14,7 +14,7 @@ use e2e_client::naming::unique_case_prefix;
 fn e2e_import_creates_graph_and_exposes_results() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let prefix = unique_case_prefix("imports");
-    let namespace_name = format!("{prefix}-namespace");
+    let collection_name = format!("{prefix}-collection");
     let class_name = format!("{prefix}-class");
     let object_name = format!("{prefix}-object");
 
@@ -26,10 +26,12 @@ fn e2e_import_creates_graph_and_exposes_results() {
             dry_run: Some(false),
             mode: Some(ImportMode::default()),
             graph: ImportGraph {
-                namespaces: vec![ImportNamespaceInput {
+                collections: vec![ImportCollectionInput {
                     ref_: Some("ns".to_string()),
-                    name: namespace_name.clone(),
-                    description: "e2e imported namespace".to_string(),
+                    name: collection_name.clone(),
+                    description: "e2e imported collection".to_string(),
+                    parent_collection_ref: None,
+                    parent_collection_key: None,
                 }],
                 classes: vec![ImportClassInput {
                     ref_: Some("class".to_string()),
@@ -37,8 +39,8 @@ fn e2e_import_creates_graph_and_exposes_results() {
                     description: "e2e imported class".to_string(),
                     json_schema: None,
                     validate_schema: Some(false),
-                    namespace_ref: Some("ns".to_string()),
-                    namespace_key: None,
+                    collection_ref: Some("ns".to_string()),
+                    collection_key: None,
                 }],
                 objects: vec![ImportObjectInput {
                     ref_: Some("object".to_string()),
@@ -83,7 +85,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
     assert!(
         results
             .iter()
-            .any(|result| result.task_id == submitted.id && result.entity_kind == "namespace")
+            .any(|result| result.task_id == submitted.id && result.entity_kind == "collection")
     );
     assert!(
         results
@@ -101,20 +103,20 @@ fn e2e_import_creates_graph_and_exposes_results() {
         .expect("imported object should be selectable by name");
     assert_eq!(imported_object.resource().name, object_name);
 
-    let imported_namespace = harness
+    let imported_collection = harness
         .client
-        .namespaces()
-        .get_by_name(&namespace_name)
-        .expect("imported namespace should be selectable by name");
-    assert_eq!(imported_namespace.resource().name, namespace_name);
+        .collections()
+        .get_by_name(&collection_name)
+        .expect("imported collection should be selectable by name");
+    assert_eq!(imported_collection.resource().name, collection_name);
 
-    let namespace_history = harness
+    let collection_history = harness
         .client
-        .namespace_history(imported_namespace.id())
+        .collection_history(imported_collection.id())
         .limit(5)
         .list()
-        .expect("imported namespace should have history");
-    assert!(!namespace_history.is_empty());
+        .expect("imported collection should have history");
+    assert!(!collection_history.is_empty());
 
     let imported_classes = harness
         .client

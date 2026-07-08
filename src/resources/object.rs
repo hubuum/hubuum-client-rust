@@ -20,7 +20,7 @@ pub struct ObjectResource {
     #[api(read_only)]
     pub id: i32,
     pub name: String,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub hubuum_class_id: i32,
     pub description: String,
     #[api(optional)]
@@ -49,7 +49,7 @@ pub struct ObjectRelationResource {
 pub struct ObjectWithPath {
     pub id: i32,
     pub name: String,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub hubuum_class_id: i32,
     pub description: String,
     pub data: serde_json::Value,

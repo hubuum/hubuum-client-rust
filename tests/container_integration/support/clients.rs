@@ -1,7 +1,7 @@
 use std::future::Future;
 
 use hubuum_client::{
-    ApiError, Authenticated, BaseUrl, ClassPost, Client, Credentials, GroupPost, NamespacePost,
+    ApiError, Authenticated, BaseUrl, ClassPost, Client, CollectionPost, Credentials, GroupPost,
     ObjectPost, UserPost, blocking,
 };
 
@@ -292,26 +292,27 @@ pub(crate) fn create_sync_permission_sandbox(
 ) -> Result<(i32, i32), ApiError> {
     let prefix = unique_case_prefix(case);
 
-    let namespace = client.namespaces().create_raw(NamespacePost {
-        name: format!("{prefix}-namespace"),
-        description: "integration namespace".to_string(),
+    let collection = client.collections().create_raw(CollectionPost {
+        name: format!("{prefix}-collection"),
+        description: "integration collection".to_string(),
         group_id: admin_group_id,
+        parent_collection_id: None,
     })?;
 
     let class = client.classes().create_raw(ClassPost {
         name: format!("{prefix}-class"),
-        namespace_id: namespace.id,
+        collection_id: collection.id,
         description: "integration class".to_string(),
         json_schema: None,
         validate_schema: None,
     })?;
 
-    Ok((namespace.id, class.id))
+    Ok((collection.id, class.id))
 }
 
 pub(crate) fn create_sync_object(
     client: &blocking::Client<Authenticated>,
-    namespace_id: i32,
+    collection_id: i32,
     class_id: i32,
     case: &str,
 ) -> Result<(String, i32), ApiError> {
@@ -319,7 +320,7 @@ pub(crate) fn create_sync_object(
     let name = format!("{prefix}-object");
     let object = client.objects(class_id).create_raw(ObjectPost {
         name: name.clone(),
-        namespace_id,
+        collection_id,
         hubuum_class_id: class_id,
         description: "integration object".to_string(),
         data: None,
@@ -335,12 +336,13 @@ pub(crate) async fn create_async_permission_sandbox(
 ) -> Result<(i32, i32), ApiError> {
     let prefix = unique_case_prefix(case);
 
-    let namespace = client
-        .namespaces()
-        .create_raw(NamespacePost {
-            name: format!("{prefix}-namespace"),
-            description: "integration namespace".to_string(),
+    let collection = client
+        .collections()
+        .create_raw(CollectionPost {
+            name: format!("{prefix}-collection"),
+            description: "integration collection".to_string(),
             group_id: admin_group_id,
+            parent_collection_id: None,
         })
         .await?;
 
@@ -348,19 +350,19 @@ pub(crate) async fn create_async_permission_sandbox(
         .classes()
         .create_raw(ClassPost {
             name: format!("{prefix}-class"),
-            namespace_id: namespace.id,
+            collection_id: collection.id,
             description: "integration class".to_string(),
             json_schema: None,
             validate_schema: None,
         })
         .await?;
 
-    Ok((namespace.id, class.id))
+    Ok((collection.id, class.id))
 }
 
 pub(crate) async fn create_async_object(
     client: &Client<Authenticated>,
-    namespace_id: i32,
+    collection_id: i32,
     class_id: i32,
     case: &str,
 ) -> Result<(String, i32), ApiError> {
@@ -370,7 +372,7 @@ pub(crate) async fn create_async_object(
         .objects(class_id)
         .create_raw(ObjectPost {
             name: name.clone(),
-            namespace_id,
+            collection_id,
             hubuum_class_id: class_id,
             description: "integration object".to_string(),
             data: None,

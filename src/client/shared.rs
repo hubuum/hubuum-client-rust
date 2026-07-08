@@ -761,7 +761,7 @@ mod test {
     fn build_request_url_for_put_keeps_base_url() {
         let url = build_request_url(
             &reqwest::Method::PUT,
-            "https://api.example.com/api/v1/namespaces/1/permissions/group/2".to_string(),
+            "https://api.example.com/api/v1/collections/1/permissions/group/2".to_string(),
             &vec![],
             vec![],
         )
@@ -769,7 +769,7 @@ mod test {
 
         assert_eq!(
             url,
-            "https://api.example.com/api/v1/namespaces/1/permissions/group/2"
+            "https://api.example.com/api/v1/collections/1/permissions/group/2"
         );
     }
 

@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use hubuum_client::{
-    ApiError, Authenticated, BaseUrl, ClassPost, Credentials, GroupPost, NamespacePost, ObjectPost,
-    UserPost, blocking,
+    ApiError, Authenticated, BaseUrl, ClassPost, CollectionPost, Credentials, GroupPost,
+    ObjectPost, UserPost, blocking,
 };
 
 use crate::naming::unique_case_prefix;
@@ -56,22 +56,23 @@ impl E2EHarness {
         })
     }
 
-    pub fn create_namespace_class_object(
+    pub fn create_collection_class_object(
         &self,
         case: &str,
         admin_group_id: i32,
     ) -> Result<(i32, i32, i32), ApiError> {
         let prefix = unique_case_prefix(case);
 
-        let namespace = self.client.namespaces().create_raw(NamespacePost {
-            name: format!("{prefix}-namespace"),
-            description: "e2e namespace".to_string(),
+        let collection = self.client.collections().create_raw(CollectionPost {
+            name: format!("{prefix}-collection"),
+            description: "e2e collection".to_string(),
             group_id: admin_group_id,
+            parent_collection_id: None,
         })?;
 
         let class = self.client.classes().create_raw(ClassPost {
             name: format!("{prefix}-class"),
-            namespace_id: namespace.id.into(),
+            collection_id: collection.id.into(),
             description: "e2e class".to_string(),
             json_schema: None,
             validate_schema: None,
@@ -79,13 +80,13 @@ impl E2EHarness {
 
         let object = self.client.objects(class.id).create_raw(ObjectPost {
             name: format!("{prefix}-object"),
-            namespace_id: namespace.id.into(),
+            collection_id: collection.id.into(),
             hubuum_class_id: class.id.into(),
             description: "e2e object".to_string(),
             data: Some(serde_json::json!({ "source": "e2e-client" })),
         })?;
 
-        Ok((namespace.id.into(), class.id.into(), object.id.into()))
+        Ok((collection.id.into(), class.id.into(), object.id.into()))
     }
 
     pub fn create_user(&self, case: &str) -> Result<E2EUser, ApiError> {

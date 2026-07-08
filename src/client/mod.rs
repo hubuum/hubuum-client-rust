@@ -63,7 +63,7 @@ pub struct Authenticated {
 mod parity_contract {
     use super::{Authenticated, Unauthenticated, r#async as async_client, sync as sync_client};
     use crate::resources::{
-        Class, ClassId, ClassRelation, ClassRelationId, Group, Namespace, Object, ObjectId,
+        Class, ClassId, ClassRelation, ClassRelationId, Collection, Group, Object, ObjectId,
         ObjectRelation, RemoteTarget, ReportTemplate, ServiceAccount, User,
     };
     use crate::types::BaseUrl;
@@ -87,8 +87,8 @@ mod parity_contract {
                 $module::Client::<Authenticated>::remote_targets;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<Class> =
                 $module::Client::<Authenticated>::classes;
-            let _: fn(&$module::Client<Authenticated>) -> $module::Resource<Namespace> =
-                $module::Client::<Authenticated>::namespaces;
+            let _: fn(&$module::Client<Authenticated>) -> $module::Resource<Collection> =
+                $module::Client::<Authenticated>::collections;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<Group> =
                 $module::Client::<Authenticated>::groups;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ReportTemplate> =
@@ -206,18 +206,18 @@ mod parity_contract {
             let _ = $module::Handle::<Group>::members;
             let _ = $module::Handle::<Group>::members_request;
 
-            let _ = $module::Handle::<Namespace>::permissions;
-            let _ = $module::Handle::<Namespace>::permissions_request;
-            let _ = $module::Handle::<Namespace>::group_permissions;
-            let _ = $module::Handle::<Namespace>::replace_permissions;
-            let _ = $module::Handle::<Namespace>::grant_permissions;
-            let _ = $module::Handle::<Namespace>::revoke_permissions;
-            let _ = $module::Handle::<Namespace>::has_group_permission;
-            let _ = $module::Handle::<Namespace>::grant_permission;
-            let _ = $module::Handle::<Namespace>::revoke_permission;
-            let _ = $module::Handle::<Namespace>::principal_permissions;
-            let _ = $module::Handle::<Namespace>::principal_permissions_request;
-            let _ = $module::Handle::<Namespace>::groups_with_permission;
+            let _ = $module::Handle::<Collection>::permissions;
+            let _ = $module::Handle::<Collection>::permissions_request;
+            let _ = $module::Handle::<Collection>::group_permissions;
+            let _ = $module::Handle::<Collection>::replace_permissions;
+            let _ = $module::Handle::<Collection>::grant_permissions;
+            let _ = $module::Handle::<Collection>::revoke_permissions;
+            let _ = $module::Handle::<Collection>::has_group_permission;
+            let _ = $module::Handle::<Collection>::grant_permission;
+            let _ = $module::Handle::<Collection>::revoke_permission;
+            let _ = $module::Handle::<Collection>::principal_permissions;
+            let _ = $module::Handle::<Collection>::principal_permissions_request;
+            let _ = $module::Handle::<Collection>::groups_with_permission;
         };
     }
 

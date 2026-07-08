@@ -4,7 +4,7 @@
 //     pub id: i32,
 //     pub name: String,
 //     pub description: String,
-//     pub namespace_id: i32,
+//     pub collection_id: i32,
 //     pub json_schema: Option<serde_json::Value>,
 //     pub validate_schema: Option<bool>,
 //     #[api(read_only)]
@@ -514,7 +514,7 @@ fn id_param_name(name: &str) -> &'static str {
         "User" => "user_id",
         "Group" => "group_id",
         "Class" => "class_id",
-        "Namespace" => "namespace_id",
+        "Collection" => "collection_id",
         "Object" => "object_id",
         "ReportTemplate" => "template_id",
         "ServiceAccount" => "service_account_id",

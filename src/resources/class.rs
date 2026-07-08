@@ -16,7 +16,7 @@ use crate::{ApiError, GroupPermissionsResult, Object, endpoints::Endpoint, types
 #[cfg(feature = "blocking")]
 use crate::{FilterOperator, QueryFilter};
 
-use super::Namespace;
+use super::Collection;
 
 #[derive(Debug, Clone, serde::Serialize)]
 struct NewClassRelationFromClassParams {
@@ -35,7 +35,7 @@ pub struct ClassResource {
     pub name: String,
     pub description: String,
     #[api(as_id)]
-    pub namespace: Namespace,
+    pub collection: Collection,
     #[api(optional)]
     pub json_schema: serde_json::Value,
     #[api(optional)]
@@ -67,7 +67,7 @@ pub struct ClassRelationResource {
 pub struct ClassWithPath {
     pub id: i32,
     pub name: String,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub description: String,
     pub json_schema: serde_json::Value,
     pub validate_schema: bool,

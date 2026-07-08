@@ -18,7 +18,7 @@ A Rust client library for interacting with the Hubuum API. The library is design
 
 - **Comprehensive API Access**:
 
-    Easily interact with resources such as classes, class relations, and other Hubuum API endpoints with well-defined method chains for filtering and execution.
+    Easily interact with resources such as collections, classes, class relations, and other Hubuum API endpoints with well-defined method chains for filtering and execution.
 
 - **Reports, Templates, and Imports**:
 
@@ -30,7 +30,7 @@ A Rust client library for interacting with the Hubuum API. The library is design
 
 - **Remote Targets**:
 
-    Configure hardened outbound HTTP targets and invoke them against namespaces, classes, objects, or relations, returning an async task to poll.
+    Configure hardened outbound HTTP targets and invoke them against collections, classes, objects, or relations, returning an async task to poll.
 
 - **Health & Readiness Probes**:
 
@@ -98,7 +98,7 @@ let result = client
     .classes()
     .create()
     .name("example-class")
-    .namespace_id(1)
+    .collection_id(1)
     .description("Example class")
     .send()?;
 ```
@@ -106,10 +106,35 @@ let result = client
 The fluent API works across create, update, and query flows. If needed, you can still pass raw structs through `create_raw`, `update_raw`, and `params(...)`.
 
 Resource identity is typed. Handles and resources expose IDs such as `ClassId`,
-`ObjectId`, and `GroupId`, so accidentally passing a group ID to
+`CollectionId`, `ObjectId`, and `GroupId`, so accidentally passing a group ID to
 `classes().get(...)` is rejected at compile time. Integer literals and raw `i32`
 values still work at API boundaries through explicit conversion into the
 expected ID type.
+
+#### Collections
+
+Collections are the top-level organizational resource for classes, objects,
+templates, imports, remote targets, and scoped permissions:
+
+```rust
+let collection = client
+    .collections()
+    .create()
+    .name("platform")
+    .description("Platform inventory")
+    .group_id(admin_group_id)
+    .parent_collection_id(parent_collection_id)
+    .send()?;
+
+let children = collection.children()?;
+let ancestors = collection.ancestors()?;
+let moved = collection.move_parent(new_parent_collection_id)?;
+let effective = collection.effective_group_permissions(admin_group_id)?;
+```
+
+Omit `parent_collection_id(...)` when creating a root collection. Permission
+helpers include direct grants plus effective inherited permission views for
+groups and principals.
 
 #### Searching Resources
 
@@ -186,7 +211,7 @@ Existing `QueryFilter` values can be passed as a batch:
 ```rust
 let classes = client
     .classes()
-    .filters(vec![name_filter, namespace_filter])
+    .filters(vec![name_filter, collection_filter])
     .list()?;
 ```
 
@@ -199,7 +224,7 @@ let classes = client
     .name()
     .contains("server")
     .filter(
-        "namespace_id",
+        "collection_id",
         hubuum_client::FilterOperator::Equals { is_negated: false },
         42,
     )
@@ -302,7 +327,7 @@ Templates are exposed as a regular resource:
 let template = client
     .templates()
     .create()
-    .namespace_id(7)
+    .collection_id(7)
     .name("owner-report")
     .description("Owner listing")
     .content_type(hubuum_client::ReportContentType::TextPlain)
@@ -400,7 +425,7 @@ Grouped discovery searches are exposed through `client.search(...)`:
 let search = client
     .search("server")
     .kinds([
-        hubuum_client::UnifiedSearchKind::Namespace,
+        hubuum_client::UnifiedSearchKind::Collection,
         hubuum_client::UnifiedSearchKind::Object,
     ])
     .limit_per_kind(5)

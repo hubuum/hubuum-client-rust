@@ -8,6 +8,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Breaking
 
+- Public resource terminology now follows the backend rename from namespaces to
+  collections. `Namespace*`, `namespaces()`, `namespace_id`, and
+  `/api/v1/namespaces` client surfaces are replaced by `Collection*`,
+  `collections()`, `collection_id`, and `/api/v1/collections`.
 - Resource collections can now be queried directly with calls like
   `client.classes().name().contains("server").list()`; `query()` remains available
   as a compatibility escape hatch but is no longer the documented primary path.
@@ -19,6 +23,13 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Collection hierarchy support: create collections with an optional
+  `parent_collection_id`, list `children()` and `ancestors()`, and move a
+  collection with `move_parent(...)`.
+- Effective collection permission helpers for inherited group and principal
+  permissions.
+- Path-aware collection import keys and collection-aware search, remote target,
+  report template, event, and history types.
 - Cursor-backed resource and request builders support `.all()` to collect all
   pages, and `Page<T>` can be iterated directly.
 - Handles dereference and `AsRef` to the wrapped resource and support

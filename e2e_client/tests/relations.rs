@@ -10,8 +10,8 @@ fn e2e_class_and_object_relations_roundtrip() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (namespace_id, class_a_id, object_a_id) = harness
-        .create_namespace_class_object("relations-a", admin_group_id)
+    let (collection_id, class_a_id, object_a_id) = harness
+        .create_collection_class_object("relations-a", admin_group_id)
         .expect("failed to create relation source objects");
     let prefix = unique_case_prefix("relations");
 
@@ -20,7 +20,7 @@ fn e2e_class_and_object_relations_roundtrip() {
         .classes()
         .create_raw(ClassPost {
             name: format!("{prefix}-class-b"),
-            namespace_id,
+            collection_id,
             description: "relation target class".to_string(),
             json_schema: None,
             validate_schema: None,
@@ -31,7 +31,7 @@ fn e2e_class_and_object_relations_roundtrip() {
         .objects(class_b.id)
         .create_raw(ObjectPost {
             name: format!("{prefix}-object-b"),
-            namespace_id,
+            collection_id,
             hubuum_class_id: class_b.id.into(),
             description: "relation target object".to_string(),
             data: Some(json!({ "role": "target" })),

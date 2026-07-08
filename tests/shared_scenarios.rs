@@ -21,11 +21,11 @@ fn ts() -> &'static str {
     "2024-01-01T00:00:00"
 }
 
-fn namespace_json() -> serde_json::Value {
+fn collection_json() -> serde_json::Value {
     json!({
         "id": NAMESPACE_ID,
-        "name": "namespace-1",
-        "description": "Namespace",
+        "name": "collection-1",
+        "description": "Collection",
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -36,7 +36,7 @@ fn class_json() -> serde_json::Value {
         "id": CLASS_ID,
         "name": CLASS_NAME,
         "description": "Class",
-        "namespace": namespace_json(),
+        "collection": collection_json(),
         "json_schema": null,
         "validate_schema": null,
         "created_at": ts(),
@@ -48,7 +48,7 @@ fn object_json() -> serde_json::Value {
     json!({
         "id": OBJECT_ID,
         "name": OBJECT_NAME,
-        "namespace_id": NAMESPACE_ID,
+        "collection_id": NAMESPACE_ID,
         "hubuum_class_id": CLASS_ID,
         "description": "Object",
         "data": null,
@@ -78,12 +78,12 @@ fn principal_member_json() -> serde_json::Value {
 fn permissions_json() -> serde_json::Value {
     json!({
         "id": 77,
-        "namespace_id": NAMESPACE_ID,
+        "collection_id": NAMESPACE_ID,
         "group_id": GROUP_ID,
-        "has_read_namespace": true,
-        "has_update_namespace": false,
-        "has_delete_namespace": false,
-        "has_delegate_namespace": false,
+        "has_read_collection": true,
+        "has_update_collection": false,
+        "has_delete_collection": false,
+        "has_delegate_collection": false,
         "has_create_class": false,
         "has_read_class": false,
         "has_update_class": false,
@@ -182,14 +182,14 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/3")
+            .path("/api/v1/collections/3")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(200).json_body(json!(namespace_json()));
+        then.status(200).json_body(json!(collection_json()));
     });
 
     server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/3/permissions")
+            .path("/api/v1/collections/3/permissions")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200).json_body(json!([{
             "group": group_json(),
@@ -199,7 +199,7 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(PUT)
-            .path("/api/v1/namespaces/3/permissions/group/10")
+            .path("/api/v1/collections/3/permissions/group/10")
             .json_body(json!(["ReadCollection"]))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200);
@@ -207,7 +207,7 @@ fn setup_scenario_mocks(server: &MockServer) {
 
     server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/namespaces/3/permissions/group/10")
+            .path("/api/v1/collections/3/permissions/group/10")
             .json_body(json!(["ReadCollection"]))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201);
@@ -236,15 +236,15 @@ fn run_shared_scenario_sync(client: &blocking::Client<Authenticated>) -> Result<
     client.groups().get(GROUP_ID)?.remove_member(USER_ID)?;
 
     assert_eq!(
-        client.namespaces().get(NAMESPACE_ID)?.permissions()?.len(),
+        client.collections().get(NAMESPACE_ID)?.permissions()?.len(),
         1
     );
     client
-        .namespaces()
+        .collections()
         .get(NAMESPACE_ID)?
         .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])?;
     client
-        .namespaces()
+        .collections()
         .get(NAMESPACE_ID)?
         .grant_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])?;
 
@@ -295,7 +295,7 @@ async fn run_shared_scenario_async(client: &Client<Authenticated>) -> Result<(),
 
     assert_eq!(
         client
-            .namespaces()
+            .collections()
             .get(NAMESPACE_ID)
             .await?
             .permissions()
@@ -304,13 +304,13 @@ async fn run_shared_scenario_async(client: &Client<Authenticated>) -> Result<(),
         1
     );
     client
-        .namespaces()
+        .collections()
         .get(NAMESPACE_ID)
         .await?
         .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])
         .await?;
     client
-        .namespaces()
+        .collections()
         .get(NAMESPACE_ID)
         .await?
         .grant_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])

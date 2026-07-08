@@ -1,6 +1,6 @@
 use hubuum_client::{
-    ApiError, BaseUrl, ClassPost, ClassRelationPost, Client, GroupPatch, NamespacePatch,
-    NamespacePost, ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch,
+    ApiError, BaseUrl, ClassPost, ClassRelationPost, Client, CollectionPatch, CollectionPost,
+    GroupPatch, ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -41,14 +41,14 @@ fn assert_missing_resource(err: ApiError) {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_meta_counts_total_namespaces_non_negative() {
+fn async_meta_counts_total_collections_non_negative() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let counts = harness
         .block_on(client.meta_counts())
         .expect("async meta_counts failed");
 
-    assert!(counts.total_namespaces >= 0);
+    assert!(counts.total_collections >= 0);
 }
 
 #[test]
@@ -149,14 +149,14 @@ fn async_class_permissions_endpoint_returns_non_empty() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_group_permissions_endpoint_matches_group() {
+fn async_collection_group_permissions_endpoint_matches_group() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
 
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -164,12 +164,12 @@ fn async_namespace_group_permissions_endpoint_matches_group() {
         ))
         .expect("failed to create async permission sandbox");
 
-    let namespace = harness
-        .block_on(client.namespaces().get(namespace_id))
-        .expect("async namespaces().get(namespace_id) failed");
+    let collection = harness
+        .block_on(client.collections().get(collection_id))
+        .expect("async collections().get(collection_id) failed");
     let group_permissions = harness
-        .block_on(namespace.group_permissions(admin_group_id))
-        .expect("async namespace.group_permissions(group_id) failed");
+        .block_on(collection.group_permissions(admin_group_id))
+        .expect("async collection.group_permissions(group_id) failed");
 
     assert_eq!(group_permissions.group_id, admin_group_id);
 }
@@ -178,7 +178,7 @@ fn async_namespace_group_permissions_endpoint_matches_group() {
 #[case("existing-group", true)]
 #[case("missing-group", false)]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_has_group_permission_returns_expected(
+fn async_collection_has_group_permission_returns_expected(
     #[case] case_name: &str,
     #[case] existing_group: bool,
 ) {
@@ -188,7 +188,7 @@ fn async_namespace_has_group_permission_returns_expected(
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -196,9 +196,9 @@ fn async_namespace_has_group_permission_returns_expected(
         ))
         .expect("failed to create async permission sandbox");
 
-    let namespace = harness
-        .block_on(client.namespaces().get(namespace_id))
-        .expect("async namespaces().get(namespace_id) failed");
+    let collection = harness
+        .block_on(client.collections().get(collection_id))
+        .expect("async collections().get(collection_id) failed");
 
     let target_group_id = if existing_group {
         admin_group_id
@@ -206,8 +206,8 @@ fn async_namespace_has_group_permission_returns_expected(
         i32::MAX
     };
     let has_permission = harness
-        .block_on(namespace.has_group_permission(target_group_id, Permissions::ReadCollection))
-        .expect("async namespace.has_group_permission() failed");
+        .block_on(collection.has_group_permission(target_group_id, Permissions::ReadCollection))
+        .expect("async collection.has_group_permission() failed");
 
     assert_eq!(has_permission, existing_group);
 }
@@ -217,7 +217,7 @@ fn async_namespace_has_group_permission_returns_expected(
 #[case("replace-batch", AsyncMutationCase::ReplaceBatch)]
 #[case("revoke-batch", AsyncMutationCase::RevokeBatch)]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_permission_mutation_endpoint_succeeds(
+fn async_collection_permission_mutation_endpoint_succeeds(
     #[case] case_name: &str,
     #[case] mutation: AsyncMutationCase,
 ) {
@@ -227,7 +227,7 @@ fn async_namespace_permission_mutation_endpoint_succeeds(
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -235,44 +235,44 @@ fn async_namespace_permission_mutation_endpoint_succeeds(
         ))
         .expect("failed to create async permission sandbox");
 
-    let namespace = harness
-        .block_on(client.namespaces().get(namespace_id))
-        .expect("async namespaces().get(namespace_id) failed");
+    let collection = harness
+        .block_on(client.collections().get(collection_id))
+        .expect("async collections().get(collection_id) failed");
 
     match mutation {
         AsyncMutationCase::GrantSingle => harness
-            .block_on(namespace.grant_permission(admin_group_id, Permissions::ReadCollection))
-            .expect("async namespace.grant_permission() failed"),
+            .block_on(collection.grant_permission(admin_group_id, Permissions::ReadCollection))
+            .expect("async collection.grant_permission() failed"),
         AsyncMutationCase::ReplaceBatch => harness
-            .block_on(namespace.replace_permissions(
+            .block_on(collection.replace_permissions(
                 admin_group_id,
                 vec![Permissions::ReadCollection.to_string()],
             ))
-            .expect("async namespace.replace_permissions() failed"),
+            .expect("async collection.replace_permissions() failed"),
         AsyncMutationCase::RevokeBatch => {
             harness
-                .block_on(namespace.grant_permissions(
+                .block_on(collection.grant_permissions(
                     admin_group_id,
                     vec![Permissions::ReadCollection.to_string()],
                 ))
-                .expect("async namespace.grant_permissions() setup failed");
+                .expect("async collection.grant_permissions() setup failed");
             harness
-                .block_on(namespace.revoke_permissions(admin_group_id))
-                .expect("async namespace.revoke_permissions() failed");
+                .block_on(collection.revoke_permissions(admin_group_id))
+                .expect("async collection.revoke_permissions() failed");
         }
     }
 }
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_user_permissions_endpoint_returns_non_empty() {
+fn async_collection_user_permissions_endpoint_returns_non_empty() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
 
     let (admin_id, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -280,12 +280,12 @@ fn async_namespace_user_permissions_endpoint_returns_non_empty() {
         ))
         .expect("failed to create async permission sandbox");
 
-    let namespace = harness
-        .block_on(client.namespaces().get(namespace_id))
-        .expect("async namespaces().get(namespace_id) failed");
+    let collection = harness
+        .block_on(client.collections().get(collection_id))
+        .expect("async collections().get(collection_id) failed");
     let principal_permissions = harness
-        .block_on(namespace.principal_permissions(admin_id))
-        .expect("async namespace.principal_permissions(principal_id) failed");
+        .block_on(collection.principal_permissions(admin_id))
+        .expect("async collection.principal_permissions(principal_id) failed");
 
     assert!(!principal_permissions.is_empty());
 }
@@ -612,41 +612,41 @@ fn async_group_membership_add_remove_roundtrip() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn async_namespace_update_changes_fields() {
+fn async_collection_update_changes_fields() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, _) = harness
+    let (collection_id, _) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
-            "async-namespace-update",
+            "async-collection-update",
         ))
-        .expect("failed to create namespace sandbox");
-    let prefix = unique_case_prefix("async-namespace-update");
-    let updated_name = format!("{prefix}-updated-namespace");
+        .expect("failed to create collection sandbox");
+    let prefix = unique_case_prefix("async-collection-update");
+    let updated_name = format!("{prefix}-updated-collection");
     let updated_description = format!("{prefix} updated description");
 
     let updated = harness
-        .block_on(client.namespaces().update_raw(
-            namespace_id,
-            NamespacePatch {
+        .block_on(client.collections().update_raw(
+            collection_id,
+            CollectionPatch {
                 name: Some(updated_name.clone()),
                 description: Some(updated_description.clone()),
             },
         ))
-        .expect("async namespaces().update_raw() failed");
+        .expect("async collections().update_raw() failed");
 
-    assert_eq!(updated.id, namespace_id);
+    assert_eq!(updated.id, collection_id);
     assert_eq!(updated.name, updated_name.clone());
     assert_eq!(updated.description, updated_description);
 
     let selected = harness
-        .block_on(client.namespaces().get_by_name(&updated_name))
-        .expect("updated namespace should be selectable by new name");
-    assert_eq!(selected.id(), namespace_id);
+        .block_on(client.collections().get_by_name(&updated_name))
+        .expect("updated collection should be selectable by new name");
+    assert_eq!(selected.id(), collection_id);
 }
 
 #[test]
@@ -657,7 +657,7 @@ fn async_class_objects_lists_created_object() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_id) = harness
+    let (collection_id, class_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -667,7 +667,7 @@ fn async_class_objects_lists_created_object() {
     let (_, object_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_id,
             "async-class-objects-created",
         ))
@@ -691,7 +691,7 @@ fn async_class_object_by_name_returns_matching_object() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_id) = harness
+    let (collection_id, class_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -701,7 +701,7 @@ fn async_class_object_by_name_returns_matching_object() {
     let (object_name, object_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_id,
             "async-class-object-by-name-created",
         ))
@@ -755,7 +755,7 @@ fn async_object_update_changes_fields() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_id) = harness
+    let (collection_id, class_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -765,7 +765,7 @@ fn async_object_update_changes_fields() {
     let (_, object_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_id,
             "async-object-update-initial",
         ))
@@ -780,7 +780,7 @@ fn async_object_update_changes_fields() {
             object_id,
             ObjectPatch {
                 name: Some(updated_name.clone()),
-                namespace_id: Some(namespace_id),
+                collection_id: Some(collection_id),
                 hubuum_class_id: Some(class_id),
                 description: Some(updated_description.clone()),
                 data: Some(updated_data.clone()),
@@ -802,7 +802,7 @@ fn async_object_delete_removes_resource() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_id) = harness
+    let (collection_id, class_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -812,7 +812,7 @@ fn async_object_delete_removes_resource() {
     let (_, object_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_id,
             "async-object-delete-initial",
         ))
@@ -837,7 +837,7 @@ fn async_class_relation_create_delete_roundtrip() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_a_id) = harness
+    let (collection_id, class_a_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -848,7 +848,7 @@ fn async_class_relation_create_delete_roundtrip() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("async-class-relation")),
             description: "integration class relation target".to_string(),
-            namespace_id,
+            collection_id,
             json_schema: None,
             validate_schema: None,
         }))
@@ -886,7 +886,7 @@ fn async_object_relation_create_delete_roundtrip() {
     let (_, admin_group_id) = harness
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
-    let (namespace_id, class_a_id) = harness
+    let (collection_id, class_a_id) = harness
         .block_on(create_async_permission_sandbox(
             &client,
             admin_group_id,
@@ -897,7 +897,7 @@ fn async_object_relation_create_delete_roundtrip() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("async-object-relation")),
             description: "integration object relation class target".to_string(),
-            namespace_id,
+            collection_id,
             json_schema: None,
             validate_schema: None,
         }))
@@ -905,7 +905,7 @@ fn async_object_relation_create_delete_roundtrip() {
     let (_, object_a_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_a_id,
             "async-object-relation-a",
         ))
@@ -913,7 +913,7 @@ fn async_object_relation_create_delete_roundtrip() {
     let (_, object_b_id) = harness
         .block_on(create_async_object(
             &client,
-            namespace_id,
+            collection_id,
             class_b.id,
             "async-object-relation-b",
         ))
@@ -1022,18 +1022,19 @@ fn async_query_sort_and_limit_returns_expected_class() {
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
     let prefix = unique_case_prefix("async-query-sort-limit");
-    let namespace = harness
-        .block_on(client.namespaces().create_raw(NamespacePost {
-            name: format!("{prefix}-namespace"),
-            description: "query sort namespace".to_string(),
+    let collection = harness
+        .block_on(client.collections().create_raw(CollectionPost {
+            name: format!("{prefix}-collection"),
+            description: "query sort collection".to_string(),
             group_id: admin_group_id,
+            parent_collection_id: None,
         }))
-        .expect("failed to create namespace for sort/limit test");
+        .expect("failed to create collection for sort/limit test");
     let class_a = harness
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-sort-a"),
             description: "query sort class a".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id,
             json_schema: None,
             validate_schema: None,
         }))
@@ -1042,7 +1043,7 @@ fn async_query_sort_and_limit_returns_expected_class() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-sort-b"),
             description: "query sort class b".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id,
             json_schema: None,
             validate_schema: None,
         }))
@@ -1073,18 +1074,19 @@ fn async_query_json_path_lt_filters_json_schema() {
         .block_on(async_admin_context(&client))
         .expect("async admin context lookup failed");
     let prefix = unique_case_prefix("async-query-json");
-    let namespace = harness
-        .block_on(client.namespaces().create_raw(NamespacePost {
-            name: format!("{prefix}-namespace"),
-            description: "query json namespace".to_string(),
+    let collection = harness
+        .block_on(client.collections().create_raw(CollectionPost {
+            name: format!("{prefix}-collection"),
+            description: "query json collection".to_string(),
             group_id: admin_group_id,
+            parent_collection_id: None,
         }))
-        .expect("failed to create namespace for json query test");
+        .expect("failed to create collection for json query test");
     let south = harness
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-geo-south"),
             description: "geo south".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id,
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": -90 }
@@ -1097,7 +1099,7 @@ fn async_query_json_path_lt_filters_json_schema() {
         .block_on(client.classes().create_raw(ClassPost {
             name: format!("{prefix}-geo-north"),
             description: "geo north".to_string(),
-            namespace_id: namespace.id,
+            collection_id: collection.id,
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": 10 }

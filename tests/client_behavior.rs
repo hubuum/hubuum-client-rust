@@ -22,10 +22,10 @@ fn class_json(name: &str) -> serde_json::Value {
         "id": 42,
         "name": name,
         "description": "Class",
-        "namespace": {
+        "collection": {
             "id": 7,
-            "name": "namespace-1",
-            "description": "Namespace",
+            "name": "collection-1",
+            "description": "Collection",
             "created_at": ts(),
             "updated_at": ts()
         },
@@ -65,11 +65,11 @@ fn principal_member_json(principal_id: i32, name: &str) -> serde_json::Value {
     })
 }
 
-fn namespace_json(namespace_id: i32, name: &str) -> serde_json::Value {
+fn collection_json(collection_id: i32, name: &str) -> serde_json::Value {
     json!({
-        "id": namespace_id,
+        "id": collection_id,
         "name": name,
-        "description": "Namespace",
+        "description": "Collection",
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -79,7 +79,7 @@ fn object_json(object_id: i32, class_id: i32, name: &str) -> serde_json::Value {
     json!({
         "id": object_id,
         "name": name,
-        "namespace_id": 7,
+        "collection_id": 7,
         "hubuum_class_id": class_id,
         "description": "Object",
         "data": { "owner": "infra" },
@@ -88,15 +88,15 @@ fn object_json(object_id: i32, class_id: i32, name: &str) -> serde_json::Value {
     })
 }
 
-fn permission_json(namespace_id: i32, group_id: i32) -> serde_json::Value {
+fn permission_json(collection_id: i32, group_id: i32) -> serde_json::Value {
     json!({
         "id": 77,
-        "namespace_id": namespace_id,
+        "collection_id": collection_id,
         "group_id": group_id,
-        "has_read_namespace": true,
-        "has_update_namespace": false,
-        "has_delete_namespace": false,
-        "has_delegate_namespace": false,
+        "has_read_collection": true,
+        "has_update_collection": false,
+        "has_delete_collection": false,
+        "has_delegate_collection": false,
         "has_create_class": false,
         "has_read_class": false,
         "has_update_class": false,
@@ -118,17 +118,17 @@ fn permission_json(namespace_id: i32, group_id: i32) -> serde_json::Value {
     })
 }
 
-fn group_permission_json(namespace_id: i32, group_id: i32, groupname: &str) -> serde_json::Value {
+fn group_permission_json(collection_id: i32, group_id: i32, groupname: &str) -> serde_json::Value {
     json!({
         "group": group_json(group_id, groupname),
-        "permission": permission_json(namespace_id, group_id)
+        "permission": permission_json(collection_id, group_id)
     })
 }
 
 fn report_template_json(template_id: i32, name: &str) -> serde_json::Value {
     json!({
         "id": template_id,
-        "namespace_id": 7,
+        "collection_id": 7,
         "name": name,
         "description": "Template",
         "content_type": "text/plain",
@@ -244,7 +244,7 @@ fn import_result_json(result_id: i32) -> serde_json::Value {
         "id": result_id,
         "task_id": 12,
         "item_ref": "ns:infra",
-        "entity_kind": "namespace",
+        "entity_kind": "collection",
         "action": "create",
         "identifier": "infra",
         "outcome": "succeeded",
@@ -279,11 +279,11 @@ fn task_queue_json() -> serde_json::Value {
     })
 }
 
-fn class_with_path_json(class_id: i32, namespace_id: i32, path: &[i32]) -> serde_json::Value {
+fn class_with_path_json(class_id: i32, collection_id: i32, path: &[i32]) -> serde_json::Value {
     json!({
         "id": class_id,
         "name": format!("class-{class_id}"),
-        "namespace_id": namespace_id,
+        "collection_id": collection_id,
         "description": "Class",
         "json_schema": { "type": "object" },
         "validate_schema": true,
@@ -327,7 +327,7 @@ fn object_with_path_json(object_id: i32, class_id: i32, path: &[i32]) -> serde_j
     json!({
         "id": object_id,
         "name": format!("object-{object_id}"),
-        "namespace_id": 7,
+        "collection_id": 7,
         "hubuum_class_id": class_id,
         "description": "Object",
         "data": { "owner": "infra" },
@@ -355,12 +355,12 @@ fn unified_search_response_json() -> serde_json::Value {
     json!({
         "query": "server",
         "results": {
-            "namespaces": [namespace_json(7, "infra")],
+            "collections": [collection_json(7, "infra")],
             "classes": [class_json("servers")],
             "objects": [object_json(9, 42, "server-9")]
         },
         "next": {
-            "namespaces": "ns-cursor",
+            "collections": "ns-cursor",
             "classes": null,
             "objects": "obj-cursor"
         }
@@ -375,7 +375,7 @@ fn audit_event_json(event_id: i64, entity_type: &str, action: &str) -> serde_jso
         "entity_type": entity_type,
         "entity_id": 42,
         "entity_name": "servers",
-        "namespace_id": 7,
+        "collection_id": 7,
         "action": action,
         "actor_kind": "human",
         "actor_user_id": 3,
@@ -393,7 +393,7 @@ fn class_history_json() -> serde_json::Value {
     json!({
         "id": 42,
         "name": "servers",
-        "namespace_id": 7,
+        "collection_id": 7,
         "validate_schema": true,
         "description": "Class",
         "json_schema": {"type": "object"},
@@ -424,7 +424,7 @@ fn event_sink_json() -> serde_json::Value {
 fn event_subscription_json() -> serde_json::Value {
     json!({
         "id": 8,
-        "namespace_id": 7,
+        "collection_id": 7,
         "sink_id": 5,
         "name": "class-updates",
         "description": "Class update events",
@@ -744,7 +744,7 @@ fn sync_class_create_fluent_builder_posts_resource() {
         .create()
         .name("fluent-class")
         .description("Fluent class")
-        .namespace_id(7)
+        .collection_id(7)
         .send()
         .expect("create fluent builder should succeed");
 
@@ -770,7 +770,7 @@ async fn async_class_update_fluent_builder_patches_resource() {
         .update(42)
         .name("updated-class")
         .description("Updated class")
-        .namespace_id(7)
+        .collection_id(7)
         .send()
         .await
         .expect("update fluent builder should succeed");
@@ -1038,7 +1038,7 @@ fn sync_query_builder_accepts_owned_dynamic_keys() {
     server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/classes")
-            .query_param("namespace_id__equals", "7")
+            .query_param("collection_id__equals", "7")
             .query_param("include_archived", "false")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -1046,7 +1046,7 @@ fn sync_query_builder_accepts_owned_dynamic_keys() {
             .json_body(json!([class_json("dynamic-key-class")]));
     });
 
-    let field = String::from("namespace_id");
+    let field = String::from("collection_id");
     let raw_key = String::from("include_archived");
     let client = sync_client(&server);
     let one = client
@@ -1229,7 +1229,7 @@ fn sync_supports_meta_endpoints() {
             .json_body(json!({
                 "total_objects": 12,
                 "total_classes": 3,
-                "total_namespaces": 2,
+                "total_collections": 2,
                 "objects_per_class": [
                     { "hubuum_class_id": 10, "count": 5 },
                     { "hubuum_class_id": 20, "count": 7 }
@@ -1258,7 +1258,7 @@ fn sync_supports_meta_endpoints() {
         .expect("meta_counts request should succeed");
     assert_eq!(counts_response.total_objects, 12);
     assert_eq!(counts_response.total_classes, 3);
-    assert_eq!(counts_response.total_namespaces, 2);
+    assert_eq!(counts_response.total_collections, 2);
     assert_eq!(counts_response.objects_per_class.len(), 2);
     assert_eq!(counts_response.objects_per_class[0].hubuum_class_id, 10);
     assert_eq!(counts_response.objects_per_class[0].count, 5);
@@ -1290,7 +1290,7 @@ async fn async_supports_meta_endpoints() {
             .json_body(json!({
                 "total_objects": 12,
                 "total_classes": 3,
-                "total_namespaces": 2,
+                "total_collections": 2,
                 "objects_per_class": [
                     { "hubuum_class_id": 10, "count": 5 },
                     { "hubuum_class_id": 20, "count": 7 }
@@ -1320,7 +1320,7 @@ async fn async_supports_meta_endpoints() {
         .expect("meta_counts request should succeed");
     assert_eq!(counts_response.total_objects, 12);
     assert_eq!(counts_response.total_classes, 3);
-    assert_eq!(counts_response.total_namespaces, 2);
+    assert_eq!(counts_response.total_collections, 2);
     assert_eq!(counts_response.objects_per_class.len(), 2);
     assert_eq!(counts_response.objects_per_class[0].hubuum_class_id, 10);
     assert_eq!(counts_response.objects_per_class[0].count, 5);
@@ -1603,18 +1603,18 @@ fn sync_handle_list_requests_support_sorting() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
-    let namespace_permissions = server.mock(|when, then| {
+    let collection_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions")
+            .path("/api/v1/collections/7/permissions")
             .query_param("sort", "group.groupname.asc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1623,9 +1623,9 @@ fn sync_handle_list_requests_support_sorting() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_user_permissions = server.mock(|when, then| {
+    let collection_user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/principal/11")
+            .path("/api/v1/collections/7/permissions/principal/11")
             .query_param("sort", "group.groupname.desc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1685,26 +1685,26 @@ fn sync_handle_list_requests_support_sorting() {
         .expect("class permissions request builder should succeed");
     assert_eq!(class_permission_page.items[0].permission.group_id, 10);
 
-    let namespace = client
-        .namespaces()
+    let collection = client
+        .collections()
         .get(7)
-        .expect("namespace lookup should succeed");
-    let namespace_permission_page = namespace
+        .expect("collection lookup should succeed");
+    let collection_permission_page = collection
         .permissions_request()
         .sort("group.groupname", SortDirection::Asc)
         .limit(1)
         .page()
-        .expect("namespace permissions request builder should succeed");
-    assert_eq!(namespace_permission_page.items[0].permission.group_id, 10);
+        .expect("collection permissions request builder should succeed");
+    assert_eq!(collection_permission_page.items[0].permission.group_id, 10);
 
-    let namespace_user_permission_page = namespace
+    let collection_user_permission_page = collection
         .principal_permissions_request(11)
         .sort("group.groupname", SortDirection::Desc)
         .limit(1)
         .page()
-        .expect("namespace user permissions request builder should succeed");
+        .expect("collection user permissions request builder should succeed");
     assert_eq!(
-        namespace_user_permission_page.items[0].permission.group_id,
+        collection_user_permission_page.items[0].permission.group_id,
         10
     );
 
@@ -1716,9 +1716,9 @@ fn sync_handle_list_requests_support_sorting() {
     class_by_id.assert_calls(1);
     class_objects.assert_calls(1);
     class_permissions.assert_calls(1);
-    namespace_by_id.assert_calls(1);
-    namespace_permissions.assert_calls(1);
-    namespace_user_permissions.assert_calls(1);
+    collection_by_id.assert_calls(1);
+    collection_permissions.assert_calls(1);
+    collection_user_permissions.assert_calls(1);
 }
 
 #[tokio::test]
@@ -1813,18 +1813,18 @@ async fn async_handle_list_requests_support_sorting() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
-    let namespace_permissions = server.mock(|when, then| {
+    let collection_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions")
+            .path("/api/v1/collections/7/permissions")
             .query_param("sort", "group.groupname.asc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1833,9 +1833,9 @@ async fn async_handle_list_requests_support_sorting() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_user_permissions = server.mock(|when, then| {
+    let collection_user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/principal/11")
+            .path("/api/v1/collections/7/permissions/principal/11")
             .query_param("sort", "group.groupname.desc")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -1906,29 +1906,29 @@ async fn async_handle_list_requests_support_sorting() {
         .expect("class permissions request builder should succeed");
     assert_eq!(class_permission_page.items[0].permission.group_id, 10);
 
-    let namespace = client
-        .namespaces()
+    let collection = client
+        .collections()
         .get(7)
         .await
-        .expect("namespace lookup should succeed");
-    let namespace_permission_page = namespace
+        .expect("collection lookup should succeed");
+    let collection_permission_page = collection
         .permissions_request()
         .sort("group.groupname", SortDirection::Asc)
         .limit(1)
         .page()
         .await
-        .expect("namespace permissions request builder should succeed");
-    assert_eq!(namespace_permission_page.items[0].permission.group_id, 10);
+        .expect("collection permissions request builder should succeed");
+    assert_eq!(collection_permission_page.items[0].permission.group_id, 10);
 
-    let namespace_user_permission_page = namespace
+    let collection_user_permission_page = collection
         .principal_permissions_request(11)
         .sort("group.groupname", SortDirection::Desc)
         .limit(1)
         .page()
         .await
-        .expect("namespace user permissions request builder should succeed");
+        .expect("collection user permissions request builder should succeed");
     assert_eq!(
-        namespace_user_permission_page.items[0].permission.group_id,
+        collection_user_permission_page.items[0].permission.group_id,
         10
     );
 
@@ -1940,13 +1940,13 @@ async fn async_handle_list_requests_support_sorting() {
     class_by_id.assert_calls(1);
     class_objects.assert_calls(1);
     class_permissions.assert_calls(1);
-    namespace_by_id.assert_calls(1);
-    namespace_permissions.assert_calls(1);
-    namespace_user_permissions.assert_calls(1);
+    collection_by_id.assert_calls(1);
+    collection_permissions.assert_calls(1);
+    collection_user_permissions.assert_calls(1);
 }
 
 #[test]
-fn sync_supports_class_and_namespace_permission_endpoints() {
+fn sync_supports_class_and_collection_permission_endpoints() {
     let server = MockServer::start();
     mock_login(&server);
 
@@ -1968,41 +1968,41 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
-    let namespace_group_permissions = server.mock(|when, then| {
+    let collection_group_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10")
+            .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!(permission_json(7, 10)));
     });
 
-    let namespace_revoke_permissions = server.mock(|when, then| {
+    let collection_revoke_permissions = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/namespaces/7/permissions/group/10")
+            .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let has_read_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let has_delete_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10/DeleteCollection")
+            .path("/api/v1/collections/7/permissions/group/10/DeleteCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(404)
             .header("content-type", "application/json")
@@ -2011,21 +2011,21 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     let grant_permission = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201);
     });
 
     let revoke_permission = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/principal/11")
+            .path("/api/v1/collections/7/permissions/principal/11")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -2044,34 +2044,34 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
     assert_eq!(class_permission_rows.len(), 1);
     assert_eq!(class_permission_rows[0].permission.group_id, 10);
 
-    let namespace = client
-        .namespaces()
+    let collection = client
+        .collections()
         .get(7)
-        .expect("namespace lookup should succeed");
-    let group_permission = namespace
+        .expect("collection lookup should succeed");
+    let group_permission = collection
         .group_permissions(10)
-        .expect("namespace group permissions should succeed");
+        .expect("collection group permissions should succeed");
     assert_eq!(group_permission.group_id, 10);
-    namespace
+    collection
         .revoke_permissions(10)
         .expect("revoke_permissions should succeed");
     assert!(
-        namespace
+        collection
             .has_group_permission(10, Permissions::ReadCollection)
             .expect("has_group_permission should succeed")
     );
     assert!(
-        !namespace
+        !collection
             .has_group_permission(10, Permissions::DeleteCollection)
             .expect("has_group_permission should map 404 to false")
     );
-    namespace
+    collection
         .grant_permission(10, Permissions::ReadCollection)
         .expect("grant_permission should succeed");
-    namespace
+    collection
         .revoke_permission(10, Permissions::ReadCollection)
         .expect("revoke_permission should succeed");
-    let user_permissions_rows = namespace
+    let user_permissions_rows = collection
         .principal_permissions(11)
         .expect("user_permissions should succeed");
     assert_eq!(user_permissions_rows.len(), 1);
@@ -2079,9 +2079,9 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 
     class_by_id.assert_calls(1);
     class_permissions.assert_calls(1);
-    namespace_by_id.assert_calls(1);
-    namespace_group_permissions.assert_calls(1);
-    namespace_revoke_permissions.assert_calls(1);
+    collection_by_id.assert_calls(1);
+    collection_group_permissions.assert_calls(1);
+    collection_revoke_permissions.assert_calls(1);
     has_read_permission.assert_calls(1);
     has_delete_permission.assert_calls(1);
     grant_permission.assert_calls(1);
@@ -2090,7 +2090,7 @@ fn sync_supports_class_and_namespace_permission_endpoints() {
 }
 
 #[tokio::test]
-async fn async_supports_class_and_namespace_permission_endpoints() {
+async fn async_supports_class_and_collection_permission_endpoints() {
     let server = MockServer::start();
     mock_login(&server);
 
@@ -2112,41 +2112,41 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
             .json_body(json!([group_permission_json(7, 10, "admins")]));
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
-    let namespace_group_permissions = server.mock(|when, then| {
+    let collection_group_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10")
+            .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!(permission_json(7, 10)));
     });
 
-    let namespace_revoke_permissions = server.mock(|when, then| {
+    let collection_revoke_permissions = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/namespaces/7/permissions/group/10")
+            .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let has_read_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let has_delete_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/group/10/DeleteCollection")
+            .path("/api/v1/collections/7/permissions/group/10/DeleteCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(404)
             .header("content-type", "application/json")
@@ -2155,21 +2155,21 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     let grant_permission = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201);
     });
 
     let revoke_permission = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/namespaces/7/permissions/group/10/ReadCollection")
+            .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(204);
     });
 
     let user_permissions = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/permissions/principal/11")
+            .path("/api/v1/collections/7/permissions/principal/11")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -2190,41 +2190,41 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
     assert_eq!(class_permission_rows.len(), 1);
     assert_eq!(class_permission_rows[0].permission.group_id, 10);
 
-    let namespace = client
-        .namespaces()
+    let collection = client
+        .collections()
         .get(7)
         .await
-        .expect("namespace lookup should succeed");
-    let group_permission = namespace
+        .expect("collection lookup should succeed");
+    let group_permission = collection
         .group_permissions(10)
         .await
-        .expect("namespace group permissions should succeed");
+        .expect("collection group permissions should succeed");
     assert_eq!(group_permission.group_id, 10);
-    namespace
+    collection
         .revoke_permissions(10)
         .await
         .expect("revoke_permissions should succeed");
     assert!(
-        namespace
+        collection
             .has_group_permission(10, Permissions::ReadCollection)
             .await
             .expect("has_group_permission should succeed")
     );
     assert!(
-        !namespace
+        !collection
             .has_group_permission(10, Permissions::DeleteCollection)
             .await
             .expect("has_group_permission should map 404 to false")
     );
-    namespace
+    collection
         .grant_permission(10, Permissions::ReadCollection)
         .await
         .expect("grant_permission should succeed");
-    namespace
+    collection
         .revoke_permission(10, Permissions::ReadCollection)
         .await
         .expect("revoke_permission should succeed");
-    let user_permissions_rows = namespace
+    let user_permissions_rows = collection
         .principal_permissions(11)
         .await
         .expect("user_permissions should succeed");
@@ -2233,9 +2233,9 @@ async fn async_supports_class_and_namespace_permission_endpoints() {
 
     class_by_id.assert_calls(1);
     class_permissions.assert_calls(1);
-    namespace_by_id.assert_calls(1);
-    namespace_group_permissions.assert_calls(1);
-    namespace_revoke_permissions.assert_calls(1);
+    collection_by_id.assert_calls(1);
+    collection_group_permissions.assert_calls(1);
+    collection_revoke_permissions.assert_calls(1);
     has_read_permission.assert_calls(1);
     has_delete_permission.assert_calls(1);
     grant_permission.assert_calls(1);
@@ -2366,7 +2366,7 @@ fn sync_reports_and_templates_cover_new_server_surface() {
     let created = client
         .templates()
         .create()
-        .namespace_id(7)
+        .collection_id(7)
         .name("created-template")
         .description("Template")
         .content_type(ReportContentType::TextPlain)
@@ -2399,7 +2399,7 @@ fn sync_reports_and_templates_cover_new_server_surface() {
 #[test]
 fn report_template_patch_omits_content_type() {
     let patch = hubuum_client::ReportTemplatePatch {
-        namespace_id: None,
+        collection_id: None,
         name: Some("updated-template".to_string()),
         description: None,
         template: None,
@@ -2417,7 +2417,7 @@ fn report_template_patch_omits_content_type() {
     assert_eq!(
         body,
         json!({
-            "namespace_id": null,
+            "collection_id": null,
             "name": "updated-template",
             "description": null,
             "template": null,
@@ -2502,18 +2502,18 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
             .json_body(task_queue_json());
     });
 
-    let namespace_by_id = server.mock(|when, then| {
+    let collection_by_id = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7")
+            .path("/api/v1/collections/7")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(namespace_json(7, "namespace-1"));
+            .json_body(collection_json(7, "collection-1"));
     });
 
     let groups_with_permission = server.mock(|when, then| {
         when.method(GET)
-            .path("/api/v1/namespaces/7/has_permissions/ReadTemplate")
+            .path("/api/v1/collections/7/has_permissions/ReadTemplate")
             .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -2547,11 +2547,11 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
     let meta = client.meta_tasks().expect("meta_tasks should succeed");
     assert_eq!(meta.total_import_result_rows, 7);
 
-    let namespace = client
-        .namespaces()
+    let collection = client
+        .collections()
         .get(7)
-        .expect("namespace select should succeed");
-    let group_page = namespace
+        .expect("collection select should succeed");
+    let group_page = collection
         .groups_with_permission(Permissions::ReadTemplate)
         .limit(1)
         .page()
@@ -2573,7 +2573,7 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
     assert_eq!(related_page.next_cursor.as_deref(), Some("rel-cursor"));
 
     meta_tasks.assert_calls(1);
-    namespace_by_id.assert_calls(1);
+    collection_by_id.assert_calls(1);
     groups_with_permission.assert_calls(1);
     class_by_id.assert_calls(1);
     related_classes.assert_calls(1);
@@ -2881,7 +2881,7 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
         when.method(GET)
             .path("/api/v1/search")
             .query_param("q", "server")
-            .query_param("kinds", "namespace,object")
+            .query_param("kinds", "collection,object")
             .query_param("limit_per_kind", "2")
             .query_param("cursor_objects", "obj-cursor")
             .query_param("search_class_schema", "true")
@@ -2896,7 +2896,7 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
         when.method(GET)
             .path("/api/v1/search/stream")
             .query_param("q", "server")
-            .query_param("kinds", "namespace,object")
+            .query_param("kinds", "collection,object")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "text/event-stream")
@@ -2904,7 +2904,7 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
                 "event: started\n",
                 "data: {\"query\":\"server\"}\n\n",
                 "event: batch\n",
-                "data: {\"kind\":\"object\",\"namespaces\":[],\"classes\":[],\"objects\":[],\"next\":null}\n\n",
+                "data: {\"kind\":\"object\",\"collections\":[],\"classes\":[],\"objects\":[],\"next\":null}\n\n",
                 "event: done\n",
                 "data: {\"query\":\"server\"}\n\n",
             ));
@@ -2914,19 +2914,19 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
 
     let response = client
         .search("server")
-        .kinds([UnifiedSearchKind::Namespace, UnifiedSearchKind::Object])
+        .kinds([UnifiedSearchKind::Collection, UnifiedSearchKind::Object])
         .limit_per_kind(2)
         .cursor_objects("obj-cursor")
         .search_class_schema(true)
         .search_object_data(false)
         .send()
         .expect("unified search should succeed");
-    assert_eq!(response.results.namespaces[0].name, "infra");
+    assert_eq!(response.results.collections[0].name, "infra");
     assert_eq!(response.next.objects.as_deref(), Some("obj-cursor"));
 
     let events = client
         .search("server")
-        .kinds([UnifiedSearchKind::Namespace, UnifiedSearchKind::Object])
+        .kinds([UnifiedSearchKind::Collection, UnifiedSearchKind::Object])
         .stream()
         .expect("unified search stream should succeed");
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
@@ -3137,7 +3137,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
             .query_param("entity_id", "42")
             .query_param("action", "updated")
             .query_param("actor_kind", "human")
-            .query_param("namespace_id", "7")
+            .query_param("collection_id", "7")
             .query_param("limit", "1")
             .query_param("sort", "occurred_at.desc")
             .header("authorization", format!("Bearer {}", TOKEN));
@@ -3205,7 +3205,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
 
     let subscription_create = server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/namespaces/7/event-subscriptions")
+            .path("/api/v1/collections/7/event-subscriptions")
             .json_body(json!({
                 "sink_id": 5,
                 "name": "class-updates",
@@ -3221,7 +3221,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
 
     let subscription_update = server.mock(|when, then| {
         when.method(PATCH)
-            .path("/api/v1/namespaces/7/event-subscriptions/8")
+            .path("/api/v1/collections/7/event-subscriptions/8")
             .json_body(json!({"enabled": false}))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
@@ -3245,7 +3245,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
         .entity_id(42)
         .action("updated")
         .actor_kind("human")
-        .namespace_id(7)
+        .collection_id(7)
         .limit(1)
         .sort("occurred_at", SortDirection::Desc)
         .page()
@@ -3628,7 +3628,7 @@ fn sync_remote_target_invoke_returns_task() {
             .header("content-type", "application/json")
             .json_body(json!({
                 "id": 3,
-                "namespace_id": 7,
+                "collection_id": 7,
                 "name": "webhook",
                 "description": "",
                 "method": "post",

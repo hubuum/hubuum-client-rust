@@ -15,9 +15,9 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (namespace_id, _class_id, _object_id) = harness
-        .create_namespace_class_object("remote-targets", admin_group_id)
-        .expect("failed to create remote target namespace");
+    let (collection_id, _class_id, _object_id) = harness
+        .create_collection_class_object("remote-targets", admin_group_id)
+        .expect("failed to create remote target collection");
     let prefix = unique_case_prefix("remote-targets");
 
     let target = harness
@@ -25,14 +25,14 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
         .remote_targets()
         .create()
         .params(NewRemoteTarget {
-            namespace_id,
+            collection_id,
             name: format!("{prefix}-target"),
             description: "e2e remote target".to_string(),
             method: RemoteHttpMethod::Post,
             url_template: "http://127.0.0.1:9/e2e/{{ subject.type }}".to_string(),
-            allowed_subject_types: vec![RemoteTargetSubjectType::Namespace],
+            allowed_subject_types: vec![RemoteTargetSubjectType::Collection],
             auth_config: Some(RemoteAuthConfig::None),
-            body_template: Some("{\"namespace_id\": {{ subject.namespace_id }}}".to_string()),
+            body_template: Some("{\"collection_id\": {{ subject.collection_id }}}".to_string()),
             class_id: None,
             enabled: Some(true),
             headers_template: Some(json!({"x-e2e": "hubuum-client"})),
@@ -40,7 +40,7 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
         })
         .send()
         .expect("remote target should create");
-    assert_eq!(target.namespace_id, namespace_id);
+    assert_eq!(target.collection_id, collection_id);
 
     let selected = harness
         .client
@@ -68,9 +68,9 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
         .remote_targets()
         .query()
         .filter(
-            "namespace_id",
+            "collection_id",
             FilterOperator::Equals { is_negated: false },
-            namespace_id,
+            collection_id,
         )
         .filter(
             "name",
@@ -88,7 +88,7 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
 
     let invoked = selected
         .invoke(
-            RemoteTargetInvokeRequest::new(RemoteInvocationSubject::Namespace { namespace_id })
+            RemoteTargetInvokeRequest::new(RemoteInvocationSubject::Collection { collection_id })
                 .parameters(json!({"case": prefix})),
         )
         .expect("remote target invocation should enqueue task");

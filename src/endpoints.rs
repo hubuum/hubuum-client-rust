@@ -42,18 +42,23 @@ pub enum Endpoint {
     ClassRelatedGraph,
     ClassRelationsFromClass,
     ClassRelationFromClassById,
-    Namespaces,
-    NamespacesById,
-    NamespacePermissions,
-    NamespaceEvents,
-    NamespaceHistory,
-    NamespaceHistoryAsOf,
-    NamespaceEventSubscriptions,
-    NamespaceEventSubscriptionsById,
-    NamespacePermissionsGrant,
-    NamespacePermissionGrant,
-    NamespacePrincipalPermissions,
-    NamespaceHasPermissions,
+    Collections,
+    CollectionsById,
+    CollectionPermissions,
+    CollectionEvents,
+    CollectionHistory,
+    CollectionHistoryAsOf,
+    CollectionChildren,
+    CollectionAncestors,
+    CollectionParent,
+    CollectionEventSubscriptions,
+    CollectionEventSubscriptionsById,
+    CollectionPermissionsGrant,
+    CollectionPermissionGrant,
+    CollectionPrincipalPermissions,
+    CollectionEffectiveGroupPermissions,
+    CollectionEffectivePrincipalPermissions,
+    CollectionHasPermissions,
     Objects,
     ObjectsById,
     ObjectRelatedObjects,
@@ -155,30 +160,39 @@ impl Endpoint {
             Endpoint::ClassRelationFromClassById => {
                 "/api/v1/classes/{class_id}/relations/{relation_id}"
             }
-            Endpoint::Namespaces => "/api/v1/namespaces",
-            Endpoint::NamespacesById => "/api/v1/namespaces/{namespace_id}",
+            Endpoint::Collections => "/api/v1/collections",
+            Endpoint::CollectionsById => "/api/v1/collections/{collection_id}",
 
-            Endpoint::NamespacePermissions => "/api/v1/namespaces/{namespace_id}/permissions",
-            Endpoint::NamespaceEvents => "/api/v1/namespaces/{namespace_id}/events",
-            Endpoint::NamespaceHistory => "/api/v1/namespaces/{namespace_id}/history",
-            Endpoint::NamespaceHistoryAsOf => "/api/v1/namespaces/{namespace_id}/history/as-of",
-            Endpoint::NamespaceEventSubscriptions => {
-                "/api/v1/namespaces/{namespace_id}/event-subscriptions"
+            Endpoint::CollectionPermissions => "/api/v1/collections/{collection_id}/permissions",
+            Endpoint::CollectionEvents => "/api/v1/collections/{collection_id}/events",
+            Endpoint::CollectionHistory => "/api/v1/collections/{collection_id}/history",
+            Endpoint::CollectionHistoryAsOf => "/api/v1/collections/{collection_id}/history/as-of",
+            Endpoint::CollectionChildren => "/api/v1/collections/{collection_id}/children",
+            Endpoint::CollectionAncestors => "/api/v1/collections/{collection_id}/ancestors",
+            Endpoint::CollectionParent => "/api/v1/collections/{collection_id}/parent",
+            Endpoint::CollectionEventSubscriptions => {
+                "/api/v1/collections/{collection_id}/event-subscriptions"
             }
-            Endpoint::NamespaceEventSubscriptionsById => {
-                "/api/v1/namespaces/{namespace_id}/event-subscriptions/{subscription_id}"
+            Endpoint::CollectionEventSubscriptionsById => {
+                "/api/v1/collections/{collection_id}/event-subscriptions/{subscription_id}"
             }
-            Endpoint::NamespacePermissionsGrant => {
-                "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}"
+            Endpoint::CollectionPermissionsGrant => {
+                "/api/v1/collections/{collection_id}/permissions/group/{group_id}"
             }
-            Endpoint::NamespacePermissionGrant => {
-                "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}"
+            Endpoint::CollectionPermissionGrant => {
+                "/api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}"
             }
-            Endpoint::NamespacePrincipalPermissions => {
-                "/api/v1/namespaces/{namespace_id}/permissions/principal/{principal_id}"
+            Endpoint::CollectionPrincipalPermissions => {
+                "/api/v1/collections/{collection_id}/permissions/principal/{principal_id}"
             }
-            Endpoint::NamespaceHasPermissions => {
-                "/api/v1/namespaces/{namespace_id}/has_permissions/{permission}"
+            Endpoint::CollectionEffectiveGroupPermissions => {
+                "/api/v1/collections/{collection_id}/permissions/effective/group/{group_id}"
+            }
+            Endpoint::CollectionEffectivePrincipalPermissions => {
+                "/api/v1/collections/{collection_id}/permissions/effective/principal/{principal_id}"
+            }
+            Endpoint::CollectionHasPermissions => {
+                "/api/v1/collections/{collection_id}/has_permissions/{permission}"
             }
 
             Endpoint::Objects => "/api/v1/classes/{class_id}/",
@@ -294,11 +308,16 @@ mod test {
         get_class_related_graph = { Endpoint::ClassRelatedGraph, "/api/v1/classes/{class_id}/related/graph" },
         class_relations_from_class = { Endpoint::ClassRelationsFromClass, "/api/v1/classes/{class_id}/relations" },
         class_relation_from_class_by_id = { Endpoint::ClassRelationFromClassById, "/api/v1/classes/{class_id}/relations/{relation_id}" },
-        get_namespace_by_id = { Endpoint::NamespacesById, "/api/v1/namespaces/{namespace_id}" },
-        get_namespace_permission_grant = { Endpoint::NamespacePermissionsGrant, "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}" },
-        get_namespace_single_permission_grant = { Endpoint::NamespacePermissionGrant, "/api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}" },
-        get_namespace_principal_permissions = { Endpoint::NamespacePrincipalPermissions, "/api/v1/namespaces/{namespace_id}/permissions/principal/{principal_id}" },
-        get_namespace_has_permissions = { Endpoint::NamespaceHasPermissions, "/api/v1/namespaces/{namespace_id}/has_permissions/{permission}" },
+        get_collection_by_id = { Endpoint::CollectionsById, "/api/v1/collections/{collection_id}" },
+        get_collection_children = { Endpoint::CollectionChildren, "/api/v1/collections/{collection_id}/children" },
+        get_collection_ancestors = { Endpoint::CollectionAncestors, "/api/v1/collections/{collection_id}/ancestors" },
+        put_collection_parent = { Endpoint::CollectionParent, "/api/v1/collections/{collection_id}/parent" },
+        get_collection_permission_grant = { Endpoint::CollectionPermissionsGrant, "/api/v1/collections/{collection_id}/permissions/group/{group_id}" },
+        get_collection_single_permission_grant = { Endpoint::CollectionPermissionGrant, "/api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}" },
+        get_collection_principal_permissions = { Endpoint::CollectionPrincipalPermissions, "/api/v1/collections/{collection_id}/permissions/principal/{principal_id}" },
+        get_collection_effective_group_permissions = { Endpoint::CollectionEffectiveGroupPermissions, "/api/v1/collections/{collection_id}/permissions/effective/group/{group_id}" },
+        get_collection_effective_principal_permissions = { Endpoint::CollectionEffectivePrincipalPermissions, "/api/v1/collections/{collection_id}/permissions/effective/principal/{principal_id}" },
+        get_collection_has_permissions = { Endpoint::CollectionHasPermissions, "/api/v1/collections/{collection_id}/has_permissions/{permission}" },
         get_class = { Endpoint::Classes, "/api/v1/classes" },
         get_object_by_id = { Endpoint::ObjectsById, "/api/v1/classes/{class_id}/{object_id}" },
         get_object_related_objects = { Endpoint::ObjectRelatedObjects, "/api/v1/classes/{class_id}/objects/{object_id}/related/objects" },
@@ -359,11 +378,16 @@ mod test {
         get_class_related_graph = { Endpoint::ClassRelatedGraph, '/', "api/v1/classes/{class_id}/related/graph" },
         class_relations_from_class = { Endpoint::ClassRelationsFromClass, '/', "api/v1/classes/{class_id}/relations" },
         class_relation_from_class_by_id = { Endpoint::ClassRelationFromClassById, '/', "api/v1/classes/{class_id}/relations/{relation_id}" },
-        get_namespace_by_id = { Endpoint::NamespacesById, '/', "api/v1/namespaces/{namespace_id}" },
-        get_namespace_permission_grant = { Endpoint::NamespacePermissionsGrant, '/', "api/v1/namespaces/{namespace_id}/permissions/group/{group_id}" },
-        get_namespace_single_permission_grant = { Endpoint::NamespacePermissionGrant, '/', "api/v1/namespaces/{namespace_id}/permissions/group/{group_id}/{permission}" },
-        get_namespace_principal_permissions = { Endpoint::NamespacePrincipalPermissions, '/', "api/v1/namespaces/{namespace_id}/permissions/principal/{principal_id}" },
-        get_namespace_has_permissions = { Endpoint::NamespaceHasPermissions, '/', "api/v1/namespaces/{namespace_id}/has_permissions/{permission}" },
+        get_collection_by_id = { Endpoint::CollectionsById, '/', "api/v1/collections/{collection_id}" },
+        get_collection_children = { Endpoint::CollectionChildren, '/', "api/v1/collections/{collection_id}/children" },
+        get_collection_ancestors = { Endpoint::CollectionAncestors, '/', "api/v1/collections/{collection_id}/ancestors" },
+        put_collection_parent = { Endpoint::CollectionParent, '/', "api/v1/collections/{collection_id}/parent" },
+        get_collection_permission_grant = { Endpoint::CollectionPermissionsGrant, '/', "api/v1/collections/{collection_id}/permissions/group/{group_id}" },
+        get_collection_single_permission_grant = { Endpoint::CollectionPermissionGrant, '/', "api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}" },
+        get_collection_principal_permissions = { Endpoint::CollectionPrincipalPermissions, '/', "api/v1/collections/{collection_id}/permissions/principal/{principal_id}" },
+        get_collection_effective_group_permissions = { Endpoint::CollectionEffectiveGroupPermissions, '/', "api/v1/collections/{collection_id}/permissions/effective/group/{group_id}" },
+        get_collection_effective_principal_permissions = { Endpoint::CollectionEffectivePrincipalPermissions, '/', "api/v1/collections/{collection_id}/permissions/effective/principal/{principal_id}" },
+        get_collection_has_permissions = { Endpoint::CollectionHasPermissions, '/', "api/v1/collections/{collection_id}/has_permissions/{permission}" },
         get_class = { Endpoint::Classes, '/', "api/v1/classes" },
         get_object_by_id = { Endpoint::ObjectsById, '/', "api/v1/classes/{class_id}/{object_id}" },
         get_object_related_objects = { Endpoint::ObjectRelatedObjects, '/', "api/v1/classes/{class_id}/objects/{object_id}/related/objects" },

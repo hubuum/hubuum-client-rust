@@ -107,7 +107,7 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
     assert!(
         me_permissions
             .iter()
-            .all(|entry| !entry.namespace_name.is_empty())
+            .all(|entry| !entry.collection_name.is_empty())
     );
 
     let user_tokens = user_handle.tokens().expect("user tokens should list");

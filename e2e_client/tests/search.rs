@@ -11,8 +11,8 @@ fn e2e_unified_search_finds_created_object() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (_namespace_id, class_id, object_id) = harness
-        .create_namespace_class_object("search", admin_group_id)
+    let (_collection_id, class_id, object_id) = harness
+        .create_collection_class_object("search", admin_group_id)
         .expect("failed to create searchable object");
     let object = harness
         .client

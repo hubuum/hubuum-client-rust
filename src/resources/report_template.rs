@@ -9,7 +9,7 @@ use crate::types::{
 pub struct ReportTemplateResource {
     #[api(read_only)]
     pub id: i32,
-    pub namespace_id: i32,
+    pub collection_id: i32,
     pub name: String,
     pub description: String,
     #[api(skip_patch)]
