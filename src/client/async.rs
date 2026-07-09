@@ -194,27 +194,23 @@ impl Client<Unauthenticated> {
 
     /// Liveness probe (`GET /healthz`). Requires no authentication.
     pub async fn healthz(&self) -> Result<ProbeResponse, ApiError> {
-        Ok(self
-            .http_client
-            .get(self.build_url(&Endpoint::Healthz, UrlParams::default()))
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?)
+        let url = self.build_url(&Endpoint::Healthz, UrlParams::default());
+        let response = self.http_client.get(&url).send().await?;
+        let response = self
+            .check_success(&reqwest::Method::GET, &url, response)
+            .await?;
+        Ok(response.json().await?)
     }
 
     /// Readiness probe (`GET /readyz`). Requires no authentication; a not-ready
     /// server responds with `503`, surfaced here as an error.
     pub async fn readyz(&self) -> Result<ProbeResponse, ApiError> {
-        Ok(self
-            .http_client
-            .get(self.build_url(&Endpoint::Readyz, UrlParams::default()))
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?)
+        let url = self.build_url(&Endpoint::Readyz, UrlParams::default());
+        let response = self.http_client.get(&url).send().await?;
+        let response = self
+            .check_success(&reqwest::Method::GET, &url, response)
+            .await?;
+        Ok(response.json().await?)
     }
 }
 
@@ -431,7 +427,8 @@ impl Client<Authenticated> {
         trace!("Request took {:?}", now.elapsed());
         let response = self.check_success(&method, &request_url, response).await?;
         let status = response.status();
-        let (next_cursor, content_type) = shared::response_metadata(response.headers());
+        let (next_cursor, total_count, content_type) =
+            shared::response_metadata(response.headers());
         let body = response.text().await?;
         debug!("Response: {}", body);
 
@@ -439,6 +436,7 @@ impl Client<Authenticated> {
             status,
             body,
             next_cursor,
+            total_count,
             content_type,
         })
     }
@@ -1044,6 +1042,10 @@ impl EventListRequest {
     pub async fn list(self) -> Result<Vec<EventResponse>, ApiError> {
         self.inner.list().await
     }
+
+    pub async fn all(self) -> Result<Vec<EventResponse>, ApiError> {
+        self.inner.all().await
+    }
 }
 
 pub struct HistoryRequest<T> {
@@ -1081,6 +1083,10 @@ where
 
     pub async fn list(self) -> Result<Vec<T>, ApiError> {
         self.inner.list().await
+    }
+
+    pub async fn all(self) -> Result<Vec<T>, ApiError> {
+        self.inner.all().await
     }
 }
 
@@ -1777,6 +1783,10 @@ impl TaskListRequest {
     pub async fn list(self) -> Result<Vec<TaskResponse>, ApiError> {
         self.inner.list().await
     }
+
+    pub async fn all(self) -> Result<Vec<TaskResponse>, ApiError> {
+        self.inner.all().await
+    }
 }
 
 pub struct TaskWaitOp {
@@ -2115,6 +2125,7 @@ impl<T: ApiResource> QueryOp<T> {
     pub async fn all(self) -> Result<Vec<T::GetOutput>, ApiError> {
         let mut query = self;
         let mut items = Vec::new();
+        let mut seen_cursors = shared::pagination_cursors(&query.query_params);
 
         loop {
             let page = QueryOp::<T>::with_query_params(
@@ -2128,8 +2139,7 @@ impl<T: ApiResource> QueryOp<T> {
 
             match page.next_cursor {
                 Some(cursor) => {
-                    query.query_params.retain(|param| param.key != "cursor");
-                    query.query_params.push(QueryFilter::raw("cursor", cursor));
+                    shared::advance_cursor(&mut query.query_params, &mut seen_cursors, cursor)?;
                 }
                 None => return Ok(items),
             }
@@ -2289,6 +2299,7 @@ where
     pub async fn all(self) -> Result<Vec<T>, ApiError> {
         let mut request = self;
         let mut items = Vec::new();
+        let mut seen_cursors = shared::pagination_cursors(&request.query_params);
 
         loop {
             let page = CursorRequest::<T> {
@@ -2304,10 +2315,7 @@ where
 
             match page.next_cursor {
                 Some(cursor) => {
-                    request.query_params.retain(|param| param.key != "cursor");
-                    request
-                        .query_params
-                        .push(QueryFilter::raw("cursor", cursor));
+                    shared::advance_cursor(&mut request.query_params, &mut seen_cursors, cursor)?;
                 }
                 None => return Ok(items),
             }

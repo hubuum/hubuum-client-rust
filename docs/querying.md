@@ -84,14 +84,22 @@ Use `all()` when you want the client to follow cursor pagination and collect all
 let classes = client.classes().limit(100).all()?;
 ```
 
-Use `page()` when you need cursor metadata. A page can be iterated directly:
+Use `page()` when you need cursor metadata. `Page<T>` exposes `next_cursor`, the
+server's exact `total_count` when available, and convenience methods such as
+`len()`, `is_empty()`, `has_next()`, and `into_items()`. A page can also be
+iterated directly:
 
 ```rust
 let page = client.classes().limit(25).page()?;
+println!("{} total matches", page.total_count.unwrap_or(page.len() as u64));
 for class in page {
     println!("{}", class.name);
 }
 ```
+
+Event, history, task, import-result, and related-resource request builders also
+support `all()`. Automatic pagination returns `ApiError::PaginationCycle` if a
+server repeats a cursor instead of looping forever.
 
 Existing `QueryFilter` values can be passed as a batch:
 
@@ -198,4 +206,8 @@ let events = client
 
 ## Error Details
 
-HTTP errors include the request method, URL, status, parsed API message, and raw body to make failed requests easier to diagnose.
+HTTP errors include the request method, URL, status, parsed API message, and raw
+body to make failed requests easier to diagnose. `ApiError::status()` returns the
+HTTP status, and `ApiError::api_response()` parses the standard server
+`ApiErrorResponse` payload when present. Login and health/readiness probe errors
+use the same detailed representation as authenticated API calls.

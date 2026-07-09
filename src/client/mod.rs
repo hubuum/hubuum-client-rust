@@ -141,6 +141,7 @@ mod parity_contract {
             let _ = $module::QueryOp::<Class>::limit;
             let _ = $module::QueryOp::<Class>::cursor::<&str>;
             let _ = $module::QueryOp::<Class>::list;
+            let _ = $module::QueryOp::<Class>::all;
             let _ = $module::QueryOp::<Class>::page;
             let _ = $module::QueryOp::<Class>::one;
             let _ = $module::QueryOp::<Class>::optional;
@@ -150,6 +151,7 @@ mod parity_contract {
     macro_rules! assert_resource_surface {
         ($module:ident) => {
             let _ = $module::Resource::<Class>::query;
+            let _ = $module::Resource::<Class>::all;
             let _ = $module::Resource::<Class>::create;
             let _ = $module::Resource::<Class>::update::<ClassId>;
             let _ = $module::Resource::<Class>::delete::<ClassId>;
@@ -164,6 +166,15 @@ mod parity_contract {
             let _ = $module::Handle::<Class>::resource;
             let _ = $module::Handle::<Class>::id;
             let _ = $module::Handle::<Class>::client;
+        };
+    }
+
+    macro_rules! assert_cursor_request_surface {
+        ($module:ident) => {
+            let _ = $module::EventListRequest::all;
+            let _ = $module::HistoryRequest::<crate::types::ClassHistory>::all;
+            let _ = $module::TaskListRequest::all;
+            let _ = $module::CursorRequest::<crate::types::TaskEventResponse>::all;
         };
     }
 
@@ -235,6 +246,8 @@ mod parity_contract {
 
         assert_filter_builder_surface!(sync_client);
         assert_filter_builder_surface!(async_client);
+        assert_cursor_request_surface!(sync_client);
+        assert_cursor_request_surface!(async_client);
 
         assert_resource_surface!(sync_client);
         assert_resource_surface!(async_client);

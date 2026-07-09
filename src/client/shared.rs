@@ -9,6 +9,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::any::type_name;
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::marker::PhantomData;
 use std::ops::Deref;
 
@@ -21,6 +22,7 @@ use crate::types::FilterOperator;
 use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
+pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";
 
 /// Characters that must be escaped when interpolating an opaque value into a
 /// single URL path segment. Unreserved characters (including base64url's `-`
@@ -47,6 +49,26 @@ pub(crate) fn encode_path_segment(segment: &str) -> String {
 pub struct Page<T> {
     pub items: Vec<T>,
     pub next_cursor: Option<String>,
+    /// Exact number of matching items across all pages, when supplied by the server.
+    pub total_count: Option<u64>,
+}
+
+impl<T> Page<T> {
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn has_next(&self) -> bool {
+        self.next_cursor.is_some()
+    }
+
+    pub fn into_items(self) -> Vec<T> {
+        self.items
+    }
 }
 
 impl<T> IntoIterator for Page<T> {
@@ -72,6 +94,7 @@ pub(crate) struct RawResponse {
     pub status: StatusCode,
     pub body: String,
     pub next_cursor: Option<String>,
+    pub total_count: Option<u64>,
     pub content_type: Option<ExportContentType>,
 }
 
@@ -148,16 +171,20 @@ fn url_param<'a>(url_params: &'a UrlParams, key: &str) -> Option<&'a str> {
 
 pub(crate) fn response_metadata(
     headers: &HeaderMap,
-) -> (Option<String>, Option<ExportContentType>) {
+) -> (Option<String>, Option<u64>, Option<ExportContentType>) {
     let next_cursor = headers
         .get(NEXT_CURSOR_HEADER)
         .and_then(|value| value.to_str().ok())
         .map(str::to_string);
+    let total_count = headers
+        .get(TOTAL_COUNT_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse().ok());
     let content_type = headers
         .get(CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .and_then(ExportContentType::from_header);
-    (next_cursor, content_type)
+    (next_cursor, total_count, content_type)
 }
 
 pub(crate) fn parse_http_error_message(body: &str) -> String {
@@ -201,9 +228,36 @@ pub(crate) fn parse_page_response<U: DeserializeOwned>(
     raw: RawResponse,
 ) -> Result<Page<U>, ApiError> {
     let next_cursor = raw.next_cursor;
+    let total_count = raw.total_count;
     let items: Vec<U> = parse_response(method, raw.status, raw.body)?
         .ok_or(ApiError::EmptyResult("GET returned empty result".into()))?;
-    Ok(Page { items, next_cursor })
+    Ok(Page {
+        items,
+        next_cursor,
+        total_count,
+    })
+}
+
+pub(crate) fn pagination_cursors(query_params: &[QueryFilter]) -> HashSet<String> {
+    query_params
+        .iter()
+        .filter(|param| param.key == "cursor")
+        .map(|param| param.value.clone())
+        .collect()
+}
+
+pub(crate) fn advance_cursor(
+    query_params: &mut Vec<QueryFilter>,
+    seen_cursors: &mut HashSet<String>,
+    cursor: String,
+) -> Result<(), ApiError> {
+    if !seen_cursors.insert(cursor.clone()) {
+        return Err(ApiError::PaginationCycle(cursor));
+    }
+
+    query_params.retain(|param| param.key != "cursor");
+    query_params.push(QueryFilter::raw("cursor", cursor));
+    Ok(())
 }
 
 /// Decode a raw-text response body (e.g. a freshly-minted token shown once).
@@ -849,12 +903,27 @@ mod test {
                 status: StatusCode::OK,
                 body: "[{\"id\":1}]".to_string(),
                 next_cursor: Some("abc".to_string()),
+                total_count: Some(12),
                 content_type: Some(ExportContentType::ApplicationJson),
             },
         )
         .expect("page should parse");
 
-        assert_eq!(page.items.len(), 1);
+        assert_eq!(page.len(), 1);
+        assert!(!page.is_empty());
+        assert!(page.has_next());
         assert_eq!(page.next_cursor.as_deref(), Some("abc"));
+        assert_eq!(page.total_count, Some(12));
+    }
+
+    #[test]
+    fn advance_cursor_rejects_a_repeated_cursor() {
+        let mut params = vec![QueryFilter::raw("cursor", "abc")];
+        let mut seen = pagination_cursors(&params);
+
+        let err = advance_cursor(&mut params, &mut seen, "abc".to_string())
+            .expect_err("a repeated cursor should stop pagination");
+
+        assert!(matches!(err, ApiError::PaginationCycle(cursor) if cursor == "abc"));
     }
 }

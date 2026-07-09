@@ -163,13 +163,14 @@ impl Client<Unauthenticated> {
 
 impl Client<Unauthenticated> {
     pub fn login(self, credentials: Credentials) -> Result<Client<Authenticated>, ApiError> {
-        let token: Token = self
+        let login_url = self.build_url(&Endpoint::Login, UrlParams::default());
+        let response = self
             .http_client
-            .post(self.build_url(&Endpoint::Login, UrlParams::default()))
+            .post(&login_url)
             .json(&credentials)
-            .send()?
-            .error_for_status()?
-            .json()?;
+            .send()?;
+        let response = self.check_success(&reqwest::Method::POST, &login_url, response)?;
+        let token: Token = response.json()?;
 
         Ok(Client {
             http_client: self.http_client,
@@ -198,23 +199,19 @@ impl Client<Unauthenticated> {
 
     /// Liveness probe (`GET /healthz`). Requires no authentication.
     pub fn healthz(&self) -> Result<ProbeResponse, ApiError> {
-        Ok(self
-            .http_client
-            .get(self.build_url(&Endpoint::Healthz, UrlParams::default()))
-            .send()?
-            .error_for_status()?
-            .json()?)
+        let url = self.build_url(&Endpoint::Healthz, UrlParams::default());
+        let response = self.http_client.get(&url).send()?;
+        let response = self.check_success(&reqwest::Method::GET, &url, response)?;
+        Ok(response.json()?)
     }
 
     /// Readiness probe (`GET /readyz`). Requires no authentication; a not-ready
     /// server responds with `503`, surfaced here as an error.
     pub fn readyz(&self) -> Result<ProbeResponse, ApiError> {
-        Ok(self
-            .http_client
-            .get(self.build_url(&Endpoint::Readyz, UrlParams::default()))
-            .send()?
-            .error_for_status()?
-            .json()?)
+        let url = self.build_url(&Endpoint::Readyz, UrlParams::default());
+        let response = self.http_client.get(&url).send()?;
+        let response = self.check_success(&reqwest::Method::GET, &url, response)?;
+        Ok(response.json()?)
     }
 }
 
@@ -418,7 +415,8 @@ impl Client<Authenticated> {
         trace!("Request took {:?}", now.elapsed());
         let response = self.check_success(&method, &request_url, response)?;
         let status = response.status();
-        let (next_cursor, content_type) = shared::response_metadata(response.headers());
+        let (next_cursor, total_count, content_type) =
+            shared::response_metadata(response.headers());
         let body = response.text()?;
         debug!("Response: {}", body);
 
@@ -426,6 +424,7 @@ impl Client<Authenticated> {
             status,
             body,
             next_cursor,
+            total_count,
             content_type,
         })
     }
@@ -1009,6 +1008,10 @@ impl EventListRequest {
     pub fn list(self) -> Result<Vec<EventResponse>, ApiError> {
         self.inner.list()
     }
+
+    pub fn all(self) -> Result<Vec<EventResponse>, ApiError> {
+        self.inner.all()
+    }
 }
 
 pub struct HistoryRequest<T> {
@@ -1046,6 +1049,10 @@ where
 
     pub fn list(self) -> Result<Vec<T>, ApiError> {
         self.inner.list()
+    }
+
+    pub fn all(self) -> Result<Vec<T>, ApiError> {
+        self.inner.all()
     }
 }
 
@@ -1710,6 +1717,10 @@ impl TaskListRequest {
     pub fn list(self) -> Result<Vec<TaskResponse>, ApiError> {
         self.inner.list()
     }
+
+    pub fn all(self) -> Result<Vec<TaskResponse>, ApiError> {
+        self.inner.all()
+    }
 }
 
 pub struct TaskWaitOp {
@@ -2041,6 +2052,7 @@ impl<T: ApiResource> QueryOp<T> {
     pub fn all(self) -> Result<Vec<T::GetOutput>, ApiError> {
         let mut query = self;
         let mut items = Vec::new();
+        let mut seen_cursors = shared::pagination_cursors(&query.query_params);
 
         loop {
             let page = QueryOp::<T>::with_query_params(
@@ -2053,8 +2065,7 @@ impl<T: ApiResource> QueryOp<T> {
 
             match page.next_cursor {
                 Some(cursor) => {
-                    query.query_params.retain(|param| param.key != "cursor");
-                    query.query_params.push(QueryFilter::raw("cursor", cursor));
+                    shared::advance_cursor(&mut query.query_params, &mut seen_cursors, cursor)?;
                 }
                 None => return Ok(items),
             }
@@ -2210,6 +2221,7 @@ where
     pub fn all(self) -> Result<Vec<T>, ApiError> {
         let mut request = self;
         let mut items = Vec::new();
+        let mut seen_cursors = shared::pagination_cursors(&request.query_params);
 
         loop {
             let page = CursorRequest::<T> {
@@ -2224,10 +2236,7 @@ where
 
             match page.next_cursor {
                 Some(cursor) => {
-                    request.query_params.retain(|param| param.key != "cursor");
-                    request
-                        .query_params
-                        .push(QueryFilter::raw("cursor", cursor));
+                    shared::advance_cursor(&mut request.query_params, &mut seen_cursors, cursor)?;
                 }
                 None => return Ok(items),
             }

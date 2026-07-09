@@ -45,7 +45,7 @@ pub use client::{
     Authenticated, IntoQueryFilters, Page, QueryBoolField, QueryJsonField, QueryNumericField,
     QueryTextField, QueryValueField, Unauthenticated,
 };
-pub use errors::ApiError;
+pub use errors::{ApiError, ApiErrorResponse};
 pub use resources::*;
 pub use types::{
     BaseUrl, CURRENT_IMPORT_VERSION, ClassHistory, ClassKey, ClassParams, ClearRateLimitResponse,

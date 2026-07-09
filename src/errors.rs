@@ -1,5 +1,13 @@
 use reqwest::StatusCode;
+use serde::Deserialize;
 use thiserror::Error;
+
+/// Error payload returned by Hubuum API endpoints.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct ApiErrorResponse {
+    pub error: String,
+    pub message: String,
+}
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -60,6 +68,53 @@ pub enum ApiError {
     #[error("Missing URL parameter: {0}")]
     MissingUrlParameter(String),
 
+    #[error("Pagination cursor repeated: {0}")]
+    PaginationCycle(String),
+
     #[error("Unknown permission `{0}`")]
     UnknownPermission(#[from] strum::ParseError),
+}
+
+impl ApiError {
+    /// HTTP status for API response errors.
+    pub fn status(&self) -> Option<StatusCode> {
+        match self {
+            Self::HttpWithBody { status, .. } => Some(*status),
+            Self::Http(error) => error.status(),
+            _ => None,
+        }
+    }
+
+    /// Parse the standard Hubuum error payload when the response uses it.
+    pub fn api_response(&self) -> Option<ApiErrorResponse> {
+        let Self::HttpWithBody { body, .. } = self else {
+            return None;
+        };
+        serde_json::from_str(body).ok()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exposes_structured_api_error_response() {
+        let error = ApiError::HttpWithBody {
+            method: reqwest::Method::GET,
+            url: "https://api.example.com/api/v1/classes".to_string(),
+            status: StatusCode::UNAUTHORIZED,
+            message: "Authentication failure".to_string(),
+            body: r#"{"error":"Unauthorized","message":"Authentication failure"}"#.to_string(),
+        };
+
+        assert_eq!(error.status(), Some(StatusCode::UNAUTHORIZED));
+        assert_eq!(
+            error.api_response(),
+            Some(ApiErrorResponse {
+                error: "Unauthorized".to_string(),
+                message: "Authentication failure".to_string(),
+            })
+        );
+    }
 }

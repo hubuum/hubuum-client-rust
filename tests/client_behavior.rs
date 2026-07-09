@@ -480,6 +480,64 @@ async fn async_client(server: &MockServer) -> Client<hubuum_client::Authenticate
 }
 
 #[test]
+fn sync_login_preserves_structured_api_error() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(POST).path("/api/v0/auth/login");
+        then.status(401)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "error": "Unauthorized",
+                "message": "Authentication failure"
+            }));
+    });
+    let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
+
+    let error = blocking::Client::new(base_url)
+        .login(Credentials::new(USERNAME.to_string(), "wrong".to_string()))
+        .expect_err("invalid credentials should fail");
+
+    assert_eq!(error.status(), Some(reqwest::StatusCode::UNAUTHORIZED));
+    let response = error
+        .api_response()
+        .expect("standard API error should be available");
+    assert_eq!(response.error, "Unauthorized");
+    assert_eq!(response.message, "Authentication failure");
+}
+
+#[tokio::test]
+async fn async_readyz_preserves_structured_api_error() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/readyz");
+        then.status(503)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "error": "ServiceUnavailable",
+                "message": "Database is unavailable"
+            }));
+    });
+    let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
+
+    let error = Client::new(base_url)
+        .readyz()
+        .await
+        .expect_err("not-ready response should fail");
+
+    assert_eq!(
+        error.status(),
+        Some(reqwest::StatusCode::SERVICE_UNAVAILABLE)
+    );
+    assert_eq!(
+        error
+            .api_response()
+            .expect("standard API error should be available")
+            .message,
+        "Database is unavailable"
+    );
+}
+
+#[test]
 fn sync_returns_http_error_with_message_from_json_body() {
     let server = MockServer::start();
     mock_login(&server);
@@ -877,6 +935,7 @@ fn sync_resource_all_auto_paginates_and_page_iterates() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
+            .header("x-total-count", "37")
             .json_body(json!([class_json("iterated")]));
     });
 
@@ -901,8 +960,43 @@ fn sync_resource_all_auto_paginates_and_page_iterates() {
         .eq("iterated")
         .page()
         .expect("classes().page() should succeed");
-    let iterated = page.into_iter().map(|class| class.name).collect::<Vec<_>>();
+    assert_eq!(page.len(), 1);
+    assert!(!page.is_empty());
+    assert!(!page.has_next());
+    assert_eq!(page.total_count, Some(37));
+    let iterated = page
+        .into_items()
+        .into_iter()
+        .map(|class| class.name)
+        .collect::<Vec<_>>();
     assert_eq!(iterated, vec!["iterated"]);
+}
+
+#[test]
+fn sync_resource_all_stops_when_the_server_repeats_a_cursor() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("cursor", "stuck")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "stuck")
+            .json_body(json!([class_json("first")]));
+    });
+
+    let client = sync_client(&server);
+    let error = client
+        .classes()
+        .cursor("stuck")
+        .all()
+        .expect_err("a repeated cursor should stop pagination");
+
+    assert!(matches!(error, ApiError::PaginationCycle(cursor) if cursor == "stuck"));
+    page.assert_calls(1);
 }
 
 #[test]

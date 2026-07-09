@@ -6,6 +6,22 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- `Page<T>` now preserves the OpenAPI-documented `X-Total-Count` response header
+  and provides `len()`, `is_empty()`, `has_next()`, and `into_items()` helpers.
+- Event, history, and task list builders now support automatic cursor pagination
+  through `all()`.
+- `ApiError::status()` and `ApiError::api_response()` expose HTTP status and the
+  standard structured Hubuum API error payload.
+
+### Fixed
+
+- Automatic pagination now returns `ApiError::PaginationCycle` when a server
+  repeats a cursor instead of requesting the same page forever.
+- Blocking login and sync/async health probes now preserve API error status,
+  message, URL, and response body consistently with authenticated requests.
+
 ## [0.2.0] - 2026-07-08
 
 ### Breaking
