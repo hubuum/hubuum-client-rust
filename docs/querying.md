@@ -19,7 +19,12 @@ let class = client.classes().get(42)?;
 let class = client.classes().get_by_name("example-class")?;
 ```
 
-Resource identity is typed. Handles and resources expose IDs such as `ClassId`, `CollectionId`, `ObjectId`, and `GroupId`, so accidentally passing a group ID to `classes().get(...)` is rejected at compile time. Integer literals and raw `i32` values still work at API boundaries through explicit conversion into the expected ID type.
+Resource identity is typed. Handles and resources expose IDs such as `ClassId`,
+`CollectionId`, `ObjectId`, and `GroupId`, so accidentally passing a group ID to
+`classes().get(...)` or `objects(...)` is rejected at compile time. Nested event,
+history, template, and remote-target helpers use the same typed IDs. Integer
+literals and raw `i32` values still work through conversion into the expected ID
+type.
 
 ## Collections
 
@@ -72,6 +77,13 @@ let classes = client
     .list()?;
 ```
 
+Scalar controls replace their previous value, so `.limit(10).limit(25)` sends
+only `limit=25`. This applies to limits, cursors, sorting, and the typed event,
+task, search, and rate-limit selectors; `sort` and `order_by` also replace each
+other because they are aliases. Resource queries use `raw_param()` to append
+repeated raw keys and `set_raw_param()` to replace a scalar key. Cursor and graph
+requests provide the equivalent `query_param()` and `set_query_param()` methods.
+
 Use `list()` for an unfiltered collection request:
 
 ```rust
@@ -86,8 +98,8 @@ let classes = client.classes().limit(100).all()?;
 
 Use `page()` when you need cursor metadata. `Page<T>` exposes `next_cursor`, the
 server's exact `total_count` when available, and convenience methods such as
-`len()`, `is_empty()`, `has_next()`, and `into_items()`. A page can also be
-iterated directly:
+`len()`, `is_empty()`, `has_next()`, `iter()`, and `into_items()`. It dereferences
+to a slice for methods such as `first()` and can also be iterated directly:
 
 ```rust
 let page = client.classes().limit(25).page()?;

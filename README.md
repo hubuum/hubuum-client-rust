@@ -6,7 +6,7 @@ A Rust client library for the Hubuum API. It provides synchronous and asynchrono
 
 - **Type-state authentication**: unauthenticated clients can only log in; authenticated clients expose the full API.
 - **Async and blocking clients**: use `hubuum_client::Client` for async code or `hubuum_client::blocking::Client` for synchronous applications.
-- **Configurable setup**: use `Client::new(base_url)` for secure defaults or `Client::builder(base_url)` for certificate validation, timeout, and user-agent controls.
+- **Configurable setup**: use `Client::from_url("https://...")` for secure defaults or a client builder for certificate validation, timeout, and user-agent controls.
 - **Typed resource access**: collections, classes, objects, relations, users, groups, permissions, remote targets, event sinks, export templates, imports, and tasks use typed request and response models.
 - **Fluent queries and pagination**: chain typed filters directly from resource helpers and choose `list()`, `page()`, `all()`, or `one()` depending on the result shape you need.
 - **Exports, export templates, and imports**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
@@ -34,15 +34,12 @@ hubuum_client = { git = "https://github.com/hubuum/hubuum-client-rust" }
 The root `Client` is asynchronous. Blocking users can use `hubuum_client::blocking::Client`; the blocking API mirrors the async surface without `.await`.
 
 ```rust
-use std::str::FromStr;
-
-use hubuum_client::{BaseUrl, Client, Credentials};
+use hubuum_client::{Client, Credentials};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let base_url = BaseUrl::from_str("https://server.example.com:443")?;
-    let client = Client::new(base_url)
-        .login(Credentials::new("foo".to_string(), "secret".to_string()))
+    let client = Client::from_url("https://server.example.com:443")?
+        .login(Credentials::new("foo", "secret"))
         .await?;
 
     let class = client

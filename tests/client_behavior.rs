@@ -480,6 +480,27 @@ async fn async_client(server: &MockServer) -> Client<hubuum_client::Authenticate
 }
 
 #[test]
+fn sync_client_can_be_built_from_a_url_string_and_inspected() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let client = blocking::Client::from_url(server.base_url())
+        .expect("client should accept a valid URL string");
+    assert_eq!(
+        client.base_url().as_str(),
+        format!("{}/", server.base_url())
+    );
+    let _http_client = client.http_client();
+
+    let client = client
+        .login(Credentials::new(USERNAME, PASSWORD))
+        .expect("login should succeed");
+    assert_eq!(client.token(), TOKEN);
+    assert_eq!(client.get_token(), client.token());
+    assert!(!format!("{client:?}").contains(TOKEN));
+}
+
+#[test]
 fn sync_login_preserves_structured_api_error() {
     let server = MockServer::start();
     server.mock(|when, then| {

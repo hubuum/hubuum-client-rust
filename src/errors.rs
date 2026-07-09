@@ -1,9 +1,9 @@
 use reqwest::StatusCode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Error payload returned by Hubuum API endpoints.
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ApiErrorResponse {
     pub error: String,
     pub message: String,
@@ -25,6 +25,9 @@ pub enum ApiError {
 
     #[error("URL cannot be a base: {0}")]
     UrlNotBase(String),
+
+    #[error("Invalid base URL: {0}")]
+    InvalidBaseUrl(String),
 
     #[error("Invalid URL: {0}")]
     UrlParse(#[from] url::ParseError),
@@ -92,6 +95,44 @@ impl ApiError {
         };
         serde_json::from_str(body).ok()
     }
+
+    /// Return whether this error represents the supplied HTTP status.
+    pub fn is_status(&self, status: StatusCode) -> bool {
+        self.status() == Some(status)
+    }
+
+    /// Request method associated with a detailed API response error.
+    pub fn request_method(&self) -> Option<&reqwest::Method> {
+        match self {
+            Self::HttpWithBody { method, .. } => Some(method),
+            _ => None,
+        }
+    }
+
+    /// Request URL associated with a detailed API response error.
+    pub fn request_url(&self) -> Option<&str> {
+        match self {
+            Self::HttpWithBody { url, .. } => Some(url),
+            _ => None,
+        }
+    }
+
+    /// Raw response body associated with a detailed API response error.
+    pub fn response_body(&self) -> Option<&str> {
+        match self {
+            Self::HttpWithBody { body, .. } => Some(body),
+            _ => None,
+        }
+    }
+
+    /// Server-provided message for API and detailed HTTP errors.
+    pub fn api_message(&self) -> Option<&str> {
+        match self {
+            Self::HttpWithBody { message, .. } => Some(message),
+            Self::Api(message) => Some(message),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -109,6 +150,14 @@ mod tests {
         };
 
         assert_eq!(error.status(), Some(StatusCode::UNAUTHORIZED));
+        assert!(error.is_status(StatusCode::UNAUTHORIZED));
+        assert_eq!(error.request_method(), Some(&reqwest::Method::GET));
+        assert_eq!(
+            error.request_url(),
+            Some("https://api.example.com/api/v1/classes")
+        );
+        assert_eq!(error.api_message(), Some("Authentication failure"));
+        assert!(error.response_body().is_some());
         assert_eq!(
             error.api_response(),
             Some(ApiErrorResponse {

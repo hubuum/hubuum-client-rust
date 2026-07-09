@@ -9,11 +9,18 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 ### Added
 
 - `Page<T>` now preserves the OpenAPI-documented `X-Total-Count` response header
-  and provides `len()`, `is_empty()`, `has_next()`, and `into_items()` helpers.
+  and provides slice access plus `len()`, `is_empty()`, `has_next()`, `iter()`,
+  and `into_items()` helpers.
 - Event, history, and task list builders now support automatic cursor pagination
   through `all()`.
-- `ApiError::status()` and `ApiError::api_response()` expose HTTP status and the
-  standard structured Hubuum API error payload.
+- `ApiError` accessors expose HTTP status, request context, raw response bodies,
+  API messages, and the standard structured Hubuum error payload.
+- Clients can be constructed directly from URL strings with `from_url()` and
+  `builder_from_url()`, and expose `base_url()`, `http_client()`, and `token()`
+  accessors. `BaseUrl::new()` provides direct validated parsing.
+- Resource queries expose `set_raw_param()`, while cursor and graph requests expose
+  `set_query_param()`, for replacing scalar raw options. The corresponding
+  `raw_param()` and `query_param()` methods remain append-oriented for repeated keys.
 
 ### Fixed
 
@@ -21,6 +28,17 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   repeats a cursor instead of requesting the same page forever.
 - Blocking login and sync/async health probes now preserve API error status,
   message, URL, and response body consistently with authenticated requests.
+- Client debug logging no longer emits serialized request or response bodies,
+  and authentication and remote-target secrets are redacted from `Debug` output.
+- Fluent scalar options now replace earlier values instead of generating
+  duplicate limit, cursor, sort, event, task, search, or rate-limit query keys.
+
+### Changed
+
+- Nested resource, event, history, template, and remote-target helpers now use
+  the corresponding typed resource IDs while continuing to accept `i32` values.
+- Simplified the derive macro by sharing identical generated fluent methods
+  across blocking and async implementations.
 
 ## [0.2.0] - 2026-07-08
 

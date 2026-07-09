@@ -52,14 +52,14 @@ pub trait ResourceId:
 
 pub trait ApiResource: Default {
     type Id: ResourceId;
-    type GetParams: Serialize + Debug + Default;
-    type GetOutput: DeserializeOwned + Debug;
-    type PostParams: Serialize + Debug + Default;
-    type PostOutput: DeserializeOwned + Debug;
-    type PatchParams: Serialize + Debug + Default;
-    type PatchOutput: DeserializeOwned + Debug;
-    type DeleteParams: Serialize + Debug;
-    type DeleteOutput: DeserializeOwned + Debug;
+    type GetParams: Serialize + Default;
+    type GetOutput: DeserializeOwned;
+    type PostParams: Serialize + Default;
+    type PostOutput: DeserializeOwned;
+    type PatchParams: Serialize + Default;
+    type PatchOutput: DeserializeOwned;
+    type DeleteParams: Serialize;
+    type DeleteOutput: DeserializeOwned;
 
     const NAME_FIELD: &'static str = "name";
     const COLLECTION_ENDPOINT: Endpoint;

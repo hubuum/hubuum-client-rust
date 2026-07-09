@@ -1,4 +1,7 @@
-use hubuum_client::{Authenticated, BaseUrl, Credentials, HubuumDateTime, blocking};
+use hubuum_client::{
+    Authenticated, BaseUrl, ClassId, CollectionId, Credentials, ExportTemplateId, GroupId,
+    HubuumDateTime, ObjectId, RemoteTargetId, UserId, blocking,
+};
 use std::str::FromStr;
 
 fn query_contract(client: &blocking::Client<Authenticated>, since: HubuumDateTime) {
@@ -21,6 +24,26 @@ fn query_contract(client: &blocking::Client<Authenticated>, since: HubuumDateTim
         .data()
         .path(["owner"])
         .ne("legacy");
+}
+
+#[allow(clippy::too_many_arguments)]
+fn typed_nested_id_contract(
+    client: &blocking::Client<Authenticated>,
+    user_id: UserId,
+    group_id: GroupId,
+    collection_id: CollectionId,
+    class_id: ClassId,
+    object_id: ObjectId,
+    template_id: ExportTemplateId,
+    target_id: RemoteTargetId,
+) {
+    let _ = client.user_events(user_id);
+    let _ = client.group_events(group_id);
+    let _ = client.collection_history(collection_id);
+    let _ = client.objects(class_id);
+    let _ = client.object_history(class_id, object_id);
+    let _ = client.export_template_history(template_id);
+    let _ = client.remote_target_history(target_id);
 }
 
 fn main() {

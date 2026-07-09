@@ -28,7 +28,7 @@ pub enum RemoteTargetSubjectType {
 
 /// How a remote target authenticates to its upstream. Secrets are write-only on
 /// the wire; the server never echoes them back.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RemoteAuthConfig {
     #[default]
@@ -44,6 +44,28 @@ pub enum RemoteAuthConfig {
         header: String,
         secret: String,
     },
+}
+
+impl std::fmt::Debug for RemoteAuthConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => f.write_str("None"),
+            Self::BearerSecret { .. } => f
+                .debug_struct("BearerSecret")
+                .field("secret", &"[REDACTED]")
+                .finish(),
+            Self::BasicSecret { username, .. } => f
+                .debug_struct("BasicSecret")
+                .field("username", username)
+                .field("secret", &"[REDACTED]")
+                .finish(),
+            Self::ApiKeySecret { header, .. } => f
+                .debug_struct("ApiKeySecret")
+                .field("header", header)
+                .field("secret", &"[REDACTED]")
+                .finish(),
+        }
+    }
 }
 
 /// The subject a remote target is invoked against.
@@ -193,4 +215,22 @@ pub struct RemoteCallResult {
     #[serde(default)]
     pub error: Option<String>,
     pub created_at: HubuumDateTime,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remote_auth_debug_redacts_secrets() {
+        let config = RemoteAuthConfig::BasicSecret {
+            username: "alice".to_string(),
+            secret: "password".to_string(),
+        };
+        let debug = format!("{config:?}");
+
+        assert!(debug.contains("alice"));
+        assert!(debug.contains("[REDACTED]"));
+        assert!(!debug.contains("password"));
+    }
 }

@@ -7,13 +7,11 @@
 //!
 //! async:
 //! ```no_run
-//! use hubuum_client::{BaseUrl, Client};
-//! use std::str::FromStr;
+//! use hubuum_client::Client;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!    let base_url = BaseUrl::from_str("https://api.example.com")?;
-//!     let client = Client::new(base_url);
+//!     let client = Client::from_url("https://api.example.com")?;
 //!     // ... rest of the code
 //!     Ok(())
 //! }
@@ -21,12 +19,10 @@
 //!
 //! sync:
 //! ```no_run
-//! use hubuum_client::{BaseUrl, blocking};
-//! use std::str::FromStr;
+//! use hubuum_client::blocking;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!    let base_url = BaseUrl::from_str("https://api.example.com")?;
-//!    let client = blocking::Client::new(base_url);
+//!    let client = blocking::Client::from_url("https://api.example.com")?;
 //!    // ... rest of the code
 //!    Ok(())
 //! }

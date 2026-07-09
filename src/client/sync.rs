@@ -10,11 +10,12 @@ use super::{
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{
-    ApiResource, Class, ClassRelation, Collection, EventSink, ExportTemplate, Group, Object, User,
+    ApiResource, Class, ClassId, ClassRelation, Collection, CollectionId, EventSink,
+    ExportTemplate, ExportTemplateId, Group, GroupId, Object, ObjectId, User, UserId,
 };
 use crate::resources::{
     MeResponse, PrincipalCollectionPermissions, PrincipalTokenMetadata, RemoteTarget,
-    ServiceAccount,
+    RemoteTargetId, ServiceAccount,
 };
 use crate::types::{
     BaseUrl, ClassHistory, ClearRateLimitResponse, CollectionHistory, CountsResponse, Credentials,
@@ -32,14 +33,8 @@ use crate::{ObjectRelation, QueryFilter};
 #[derive(Deserialize, Debug)]
 struct DeleteResponse;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmptyPostParams;
-
-impl std::fmt::Debug for EmptyPostParams {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("")
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Client<S> {
@@ -105,6 +100,18 @@ impl<S> ClientCore for Client<S> {
     }
 }
 
+impl<S> Client<S> {
+    /// API base URL used by this client.
+    pub fn base_url(&self) -> &BaseUrl {
+        &self.base_url
+    }
+
+    /// Underlying reusable blocking HTTP client.
+    pub fn http_client(&self) -> &reqwest::blocking::Client {
+        &self.http_client
+    }
+}
+
 trait ResponseHandler {
     fn check_success(
         &self,
@@ -142,8 +149,23 @@ impl Client<Unauthenticated> {
         ClientBuilder::new(base_url)
     }
 
+    /// Parse a URL string and create a configurable client builder.
+    pub fn builder_from_url(base_url: impl AsRef<str>) -> Result<ClientBuilder, ApiError> {
+        Ok(Self::builder(BaseUrl::new(base_url)?))
+    }
+
+    /// Build a client with secure defaults without panicking on setup errors.
+    pub fn try_new(base_url: BaseUrl) -> Result<Self, ApiError> {
+        Self::builder(base_url).build()
+    }
+
+    /// Parse a URL string and build a client with secure defaults.
+    pub fn from_url(base_url: impl AsRef<str>) -> Result<Self, ApiError> {
+        Self::try_new(BaseUrl::new(base_url)?)
+    }
+
     pub fn new(base_url: BaseUrl) -> Self {
-        Self::new_with_certificate_validation(base_url, true)
+        Self::try_new(base_url).expect("reqwest blocking client should build")
     }
 
     pub fn new_without_certificate_validation(base_url: BaseUrl) -> Self {
@@ -216,8 +238,13 @@ impl Client<Unauthenticated> {
 }
 
 impl Client<Authenticated> {
-    pub fn get_token(&self) -> &str {
+    /// Bearer token held by this authenticated client.
+    pub fn token(&self) -> &str {
         &self.state.token
+    }
+
+    pub fn get_token(&self) -> &str {
+        self.token()
     }
 
     fn history_as_of<T: DeserializeOwned>(
@@ -254,14 +281,13 @@ impl Client<Authenticated> {
             &Endpoint::LogoutToken,
             UrlParams::default(),
             vec![],
-            LogoutTokenRequest {
-                token: token.to_string(),
-            },
+            LogoutTokenRequest::new(token),
         )
         .map(|_| ())
     }
 
-    pub fn logout_user(&self, user_id: i32) -> Result<(), ApiError> {
+    pub fn logout_user<I: Into<UserId>>(&self, user_id: I) -> Result<(), ApiError> {
+        let user_id = user_id.into();
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
             reqwest::Method::POST,
             &Endpoint::LogoutUser,
@@ -357,7 +383,7 @@ impl Client<Authenticated> {
         serde_json::from_str(&raw.body).map_err(ApiError::from)
     }
 
-    pub(crate) fn request_with_endpoint_raw<T: Serialize + std::fmt::Debug>(
+    pub(crate) fn request_with_endpoint_raw<T: Serialize>(
         &self,
         method: reqwest::Method,
         endpoint: &Endpoint,
@@ -375,7 +401,7 @@ impl Client<Authenticated> {
         )
     }
 
-    pub(crate) fn request_with_endpoint_raw_with_headers<T: Serialize + std::fmt::Debug>(
+    pub(crate) fn request_with_endpoint_raw_with_headers<T: Serialize>(
         &self,
         method: reqwest::Method,
         endpoint: &Endpoint,
@@ -391,13 +417,13 @@ impl Client<Authenticated> {
             debug!("GET {}", request_url);
             self.http_client.get(&request_url)
         } else if method == reqwest::Method::POST {
-            debug!("POST {} with {:?}", &request_url, post_params);
+            debug!("POST {}", &request_url);
             self.http_client.post(&request_url).json(&post_params)
         } else if method == reqwest::Method::PUT {
-            debug!("PUT {} with {:?}", &request_url, post_params);
+            debug!("PUT {}", &request_url);
             self.http_client.put(&request_url).json(&post_params)
         } else if method == reqwest::Method::PATCH {
-            debug!("PATCH {} with {:?}", &request_url, post_params);
+            debug!("PATCH {}", &request_url);
             self.http_client.patch(&request_url).json(&post_params)
         } else if method == reqwest::Method::DELETE {
             debug!("DELETE {}", &request_url);
@@ -418,7 +444,7 @@ impl Client<Authenticated> {
         let (next_cursor, total_count, content_type) =
             shared::response_metadata(response.headers());
         let body = response.text()?;
-        debug!("Response: {}", body);
+        debug!("Response: {} ({} bytes)", status, body.len());
 
         Ok(shared::RawResponse {
             status,
@@ -429,7 +455,7 @@ impl Client<Authenticated> {
         })
     }
 
-    pub fn request_with_endpoint<T: Serialize + std::fmt::Debug, U: DeserializeOwned>(
+    pub fn request_with_endpoint<T: Serialize, U: DeserializeOwned>(
         &self,
         method: reqwest::Method,
         endpoint: &Endpoint,
@@ -449,7 +475,7 @@ impl Client<Authenticated> {
 
     /// Issue a request whose successful response body is an opaque text payload
     /// (e.g. a freshly-minted token), rather than a JSON resource.
-    pub(crate) fn request_raw_text<T: Serialize + std::fmt::Debug>(
+    pub(crate) fn request_raw_text<T: Serialize>(
         &self,
         method: reqwest::Method,
         endpoint: &Endpoint,
@@ -461,7 +487,7 @@ impl Client<Authenticated> {
         Ok(shared::decode_raw_text(raw.body))
     }
 
-    pub fn request<R: ApiResource, T: Serialize + std::fmt::Debug, U: DeserializeOwned>(
+    pub fn request<R: ApiResource, T: Serialize, U: DeserializeOwned>(
         &self,
         method: reqwest::Method,
         resource: R,
@@ -595,7 +621,8 @@ impl Client<Authenticated> {
         EventListRequest::new(self.clone(), Endpoint::Events, UrlParams::default())
     }
 
-    pub fn user_events(&self, user_id: i32) -> EventListRequest {
+    pub fn user_events(&self, user_id: impl Into<UserId>) -> EventListRequest {
+        let user_id = user_id.into();
         EventListRequest::new(
             self.clone(),
             Endpoint::UserEvents,
@@ -603,7 +630,8 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn group_events(&self, group_id: i32) -> EventListRequest {
+    pub fn group_events(&self, group_id: impl Into<GroupId>) -> EventListRequest {
+        let group_id = group_id.into();
         EventListRequest::new(
             self.clone(),
             Endpoint::GroupEvents,
@@ -688,7 +716,8 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    pub fn collection_events(&self, collection_id: i32) -> EventListRequest {
+    pub fn collection_events(&self, collection_id: impl Into<CollectionId>) -> EventListRequest {
+        let collection_id = collection_id.into();
         EventListRequest::new(
             self.clone(),
             Endpoint::CollectionEvents,
@@ -701,8 +730,9 @@ impl Client<Authenticated> {
 
     pub fn collection_history(
         &self,
-        collection_id: impl ToString,
+        collection_id: impl Into<CollectionId>,
     ) -> HistoryRequest<CollectionHistory> {
+        let collection_id = collection_id.into();
         HistoryRequest::new(
             self.clone(),
             Endpoint::CollectionHistory,
@@ -715,9 +745,10 @@ impl Client<Authenticated> {
 
     pub fn collection_history_as_of(
         &self,
-        collection_id: impl ToString,
+        collection_id: impl Into<CollectionId>,
         at: HubuumDateTime,
     ) -> Result<CollectionHistory, ApiError> {
+        let collection_id = collection_id.into();
         self.history_as_of(
             Endpoint::CollectionHistoryAsOf,
             vec![(
@@ -729,19 +760,25 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn event_subscriptions(&self, collection_id: i32) -> EventSubscriptions {
-        EventSubscriptions::new(self.clone(), collection_id)
+    pub fn event_subscriptions(
+        &self,
+        collection_id: impl Into<CollectionId>,
+    ) -> EventSubscriptions {
+        let collection_id: CollectionId = collection_id.into();
+        EventSubscriptions::new(self.clone(), collection_id.get())
     }
 
     pub fn groups(&self) -> Resource<Group> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    pub fn objects(&self, class_id: impl ToString) -> Resource<Object> {
+    pub fn objects(&self, class_id: impl Into<ClassId>) -> Resource<Object> {
+        let class_id = class_id.into();
         Resource::new(self.clone(), vec![("class_id", class_id.to_string())])
     }
 
-    pub fn class_events(&self, class_id: i32) -> EventListRequest {
+    pub fn class_events(&self, class_id: impl Into<ClassId>) -> EventListRequest {
+        let class_id = class_id.into();
         EventListRequest::new(
             self.clone(),
             Endpoint::ClassEvents,
@@ -749,7 +786,8 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn class_history(&self, class_id: i32) -> HistoryRequest<ClassHistory> {
+    pub fn class_history(&self, class_id: impl Into<ClassId>) -> HistoryRequest<ClassHistory> {
+        let class_id = class_id.into();
         HistoryRequest::new(
             self.clone(),
             Endpoint::ClassHistory,
@@ -759,9 +797,10 @@ impl Client<Authenticated> {
 
     pub fn class_history_as_of(
         &self,
-        class_id: i32,
+        class_id: impl Into<ClassId>,
         at: HubuumDateTime,
     ) -> Result<ClassHistory, ApiError> {
+        let class_id = class_id.into();
         self.history_as_of(
             Endpoint::ClassHistoryAsOf,
             vec![(Cow::Borrowed("class_id"), class_id.to_string().into())],
@@ -770,7 +809,13 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn object_events(&self, class_id: i32, object_id: i32) -> EventListRequest {
+    pub fn object_events(
+        &self,
+        class_id: impl Into<ClassId>,
+        object_id: impl Into<ObjectId>,
+    ) -> EventListRequest {
+        let class_id = class_id.into();
+        let object_id = object_id.into();
         EventListRequest::new(
             self.clone(),
             Endpoint::ObjectEvents,
@@ -781,7 +826,13 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn object_history(&self, class_id: i32, object_id: i32) -> HistoryRequest<ObjectHistory> {
+    pub fn object_history(
+        &self,
+        class_id: impl Into<ClassId>,
+        object_id: impl Into<ObjectId>,
+    ) -> HistoryRequest<ObjectHistory> {
+        let class_id = class_id.into();
+        let object_id = object_id.into();
         HistoryRequest::new(
             self.clone(),
             Endpoint::ObjectHistory,
@@ -794,10 +845,12 @@ impl Client<Authenticated> {
 
     pub fn object_history_as_of(
         &self,
-        class_id: i32,
-        object_id: i32,
+        class_id: impl Into<ClassId>,
+        object_id: impl Into<ObjectId>,
         at: HubuumDateTime,
     ) -> Result<ObjectHistory, ApiError> {
+        let class_id = class_id.into();
+        let object_id = object_id.into();
         self.history_as_of(
             Endpoint::ObjectHistoryAsOf,
             vec![
@@ -829,7 +882,11 @@ impl Client<Authenticated> {
         self.export_templates()
     }
 
-    pub fn export_template_events(&self, template_id: impl ToString) -> EventListRequest {
+    pub fn export_template_events(
+        &self,
+        template_id: impl Into<ExportTemplateId>,
+    ) -> EventListRequest {
+        let template_id = template_id.into();
         EventListRequest::new(
             self.clone(),
             Endpoint::ExportTemplateEvents,
@@ -837,14 +894,15 @@ impl Client<Authenticated> {
         )
     }
 
-    pub fn template_events(&self, template_id: impl ToString) -> EventListRequest {
+    pub fn template_events(&self, template_id: impl Into<ExportTemplateId>) -> EventListRequest {
         self.export_template_events(template_id)
     }
 
     pub fn export_template_history(
         &self,
-        template_id: impl ToString,
+        template_id: impl Into<ExportTemplateId>,
     ) -> HistoryRequest<ExportTemplateHistory> {
+        let template_id = template_id.into();
         HistoryRequest::new(
             self.clone(),
             Endpoint::ExportTemplateHistory,
@@ -854,16 +912,17 @@ impl Client<Authenticated> {
 
     pub fn template_history(
         &self,
-        template_id: impl ToString,
+        template_id: impl Into<ExportTemplateId>,
     ) -> HistoryRequest<ExportTemplateHistory> {
         self.export_template_history(template_id)
     }
 
     pub fn export_template_history_as_of(
         &self,
-        template_id: impl ToString,
+        template_id: impl Into<ExportTemplateId>,
         at: HubuumDateTime,
     ) -> Result<ExportTemplateHistory, ApiError> {
+        let template_id = template_id.into();
         self.history_as_of(
             Endpoint::ExportTemplateHistoryAsOf,
             vec![(Cow::Borrowed("template_id"), template_id.to_string().into())],
@@ -874,13 +933,14 @@ impl Client<Authenticated> {
 
     pub fn template_history_as_of(
         &self,
-        template_id: impl ToString,
+        template_id: impl Into<ExportTemplateId>,
         at: HubuumDateTime,
     ) -> Result<ExportTemplateHistory, ApiError> {
         self.export_template_history_as_of(template_id, at)
     }
 
-    pub fn remote_target_events(&self, target_id: i32) -> EventListRequest {
+    pub fn remote_target_events(&self, target_id: impl Into<RemoteTargetId>) -> EventListRequest {
+        let target_id = target_id.into();
         EventListRequest::new(
             self.clone(),
             Endpoint::RemoteTargetEvents,
@@ -890,8 +950,9 @@ impl Client<Authenticated> {
 
     pub fn remote_target_history(
         &self,
-        remote_target_id: i32,
+        remote_target_id: impl Into<RemoteTargetId>,
     ) -> HistoryRequest<RemoteTargetHistory> {
+        let remote_target_id = remote_target_id.into();
         HistoryRequest::new(
             self.clone(),
             Endpoint::RemoteTargetHistory,
@@ -904,9 +965,10 @@ impl Client<Authenticated> {
 
     pub fn remote_target_history_as_of(
         &self,
-        remote_target_id: i32,
+        remote_target_id: impl Into<RemoteTargetId>,
         at: HubuumDateTime,
     ) -> Result<RemoteTargetHistory, ApiError> {
+        let remote_target_id = remote_target_id.into();
         self.history_as_of(
             Endpoint::RemoteTargetHistoryAsOf,
             vec![(
@@ -943,46 +1005,48 @@ impl EventListRequest {
     }
 
     pub fn action(mut self, action: impl Into<String>) -> Self {
-        self.inner = self.inner.query_param("action", action.into());
+        self.inner = self.inner.set_query_param("action", action.into());
         self
     }
 
     pub fn actor_kind(mut self, actor_kind: impl Into<String>) -> Self {
-        self.inner = self.inner.query_param("actor_kind", actor_kind.into());
+        self.inner = self.inner.set_query_param("actor_kind", actor_kind.into());
         self
     }
 
     pub fn actor_user_id(mut self, actor_user_id: i32) -> Self {
-        self.inner = self.inner.query_param("actor_user_id", actor_user_id);
+        self.inner = self.inner.set_query_param("actor_user_id", actor_user_id);
         self
     }
 
     pub fn entity_type(mut self, entity_type: impl Into<String>) -> Self {
-        self.inner = self.inner.query_param("entity_type", entity_type.into());
+        self.inner = self
+            .inner
+            .set_query_param("entity_type", entity_type.into());
         self
     }
 
     pub fn entity_id(mut self, entity_id: i32) -> Self {
-        self.inner = self.inner.query_param("entity_id", entity_id);
+        self.inner = self.inner.set_query_param("entity_id", entity_id);
         self
     }
 
     pub fn collection_id(mut self, collection_id: i32) -> Self {
-        self.inner = self.inner.query_param("collection_id", collection_id);
+        self.inner = self.inner.set_query_param("collection_id", collection_id);
         self
     }
 
     pub fn occurred_after(mut self, occurred_after: impl Into<String>) -> Self {
         self.inner = self
             .inner
-            .query_param("occurred_after", occurred_after.into());
+            .set_query_param("occurred_after", occurred_after.into());
         self
     }
 
     pub fn occurred_before(mut self, occurred_before: impl Into<String>) -> Self {
         self.inner = self
             .inner
-            .query_param("occurred_before", occurred_before.into());
+            .set_query_param("occurred_before", occurred_before.into());
         self
     }
 
@@ -1607,19 +1671,20 @@ impl MetaLoginRateLimitOp {
 
     pub fn include_all(mut self, include_all: bool) -> Self {
         if include_all {
-            self.query_params.push(QueryFilter::raw("include", "all"));
+            shared::set_raw_query_param(&mut self.query_params, "include", "all");
+        } else {
+            shared::remove_raw_query_param(&mut self.query_params, "include");
         }
         self
     }
 
     pub fn scope(mut self, scope: impl Into<String>) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("scope", scope.into()));
+        shared::set_raw_query_param(&mut self.query_params, "scope", scope.into());
         self
     }
 
     pub fn q(mut self, needle: impl Into<String>) -> Self {
-        self.query_params.push(QueryFilter::raw("q", needle.into()));
+        shared::set_raw_query_param(&mut self.query_params, "q", needle.into());
         self
     }
 
@@ -1681,17 +1746,17 @@ pub struct TaskListRequest {
 
 impl TaskListRequest {
     pub fn kind(mut self, kind: TaskKind) -> Self {
-        self.inner = self.inner.query_param("kind", kind);
+        self.inner = self.inner.set_query_param("kind", kind);
         self
     }
 
     pub fn status(mut self, status: TaskStatus) -> Self {
-        self.inner = self.inner.query_param("status", status);
+        self.inner = self.inner.set_query_param("status", status);
         self
     }
 
     pub fn submitted_by(mut self, user_id: i32) -> Self {
-        self.inner = self.inner.query_param("submitted_by", user_id);
+        self.inner = self.inner.set_query_param("submitted_by", user_id);
         self
     }
 
@@ -1803,44 +1868,48 @@ impl UnifiedSearchRequest {
             .join(",");
 
         if !joined.is_empty() {
-            self.query_params.push(QueryFilter::raw("kinds", joined));
+            shared::set_raw_query_param(&mut self.query_params, "kinds", joined);
+        } else {
+            shared::remove_raw_query_param(&mut self.query_params, "kinds");
         }
         self
     }
 
     pub fn limit_per_kind(mut self, limit: usize) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("limit_per_kind", limit.to_string()));
+        shared::set_raw_query_param(&mut self.query_params, "limit_per_kind", limit.to_string());
         self
     }
 
     pub fn cursor_collections(mut self, cursor: impl Into<String>) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("cursor_collections", cursor.into()));
+        shared::set_raw_query_param(&mut self.query_params, "cursor_collections", cursor.into());
         self
     }
 
     pub fn cursor_classes(mut self, cursor: impl Into<String>) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("cursor_classes", cursor.into()));
+        shared::set_raw_query_param(&mut self.query_params, "cursor_classes", cursor.into());
         self
     }
 
     pub fn cursor_objects(mut self, cursor: impl Into<String>) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("cursor_objects", cursor.into()));
+        shared::set_raw_query_param(&mut self.query_params, "cursor_objects", cursor.into());
         self
     }
 
     pub fn search_class_schema(mut self, enabled: bool) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("search_class_schema", enabled.to_string()));
+        shared::set_raw_query_param(
+            &mut self.query_params,
+            "search_class_schema",
+            enabled.to_string(),
+        );
         self
     }
 
     pub fn search_object_data(mut self, enabled: bool) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("search_object_data", enabled.to_string()));
+        shared::set_raw_query_param(
+            &mut self.query_params,
+            "search_object_data",
+            enabled.to_string(),
+        );
         self
     }
 
@@ -2003,15 +2072,19 @@ impl<T: ApiResource> QueryOp<T> {
         self
     }
 
+    /// Set a scalar raw parameter, replacing an earlier value for the key.
+    pub fn set_raw_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
+        shared::set_raw_query_param(&mut self.query_params, key, value.to_string());
+        self
+    }
+
     pub fn sort_by<V: ToString>(mut self, sort: V) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("sort", sort.to_string()));
+        shared::set_sort_query_param(&mut self.query_params, "sort", sort.to_string());
         self
     }
 
     pub fn order_by<V: ToString>(mut self, sort: V) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("order_by", sort.to_string()));
+        shared::set_sort_query_param(&mut self.query_params, "order_by", sort.to_string());
         self
     }
 
@@ -2033,14 +2106,12 @@ impl<T: ApiResource> QueryOp<T> {
     }
 
     pub fn limit(mut self, limit: usize) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("limit", limit.to_string()));
+        shared::set_raw_query_param(&mut self.query_params, "limit", limit.to_string());
         self
     }
 
     pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("cursor", cursor.to_string()));
+        shared::set_raw_query_param(&mut self.query_params, "cursor", cursor.to_string());
         self
     }
 
@@ -2133,14 +2204,12 @@ impl<T> CursorRequest<T> {
     }
 
     pub fn sort_by<V: ToString>(mut self, sort: V) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("sort", sort.to_string()));
+        shared::set_sort_query_param(&mut self.query_params, "sort", sort.to_string());
         self
     }
 
     pub fn order_by<V: ToString>(mut self, sort: V) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("order_by", sort.to_string()));
+        shared::set_sort_query_param(&mut self.query_params, "order_by", sort.to_string());
         self
     }
 
@@ -2162,14 +2231,12 @@ impl<T> CursorRequest<T> {
     }
 
     pub fn limit(mut self, limit: usize) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("limit", limit.to_string()));
+        shared::set_raw_query_param(&mut self.query_params, "limit", limit.to_string());
         self
     }
 
     pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("cursor", cursor.to_string()));
+        shared::set_raw_query_param(&mut self.query_params, "cursor", cursor.to_string());
         self
     }
 
@@ -2184,6 +2251,12 @@ impl<T> CursorRequest<T> {
     pub fn query_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
         self.query_params
             .push(QueryFilter::raw(key.into(), value.to_string()));
+        self
+    }
+
+    /// Set a scalar raw query parameter, replacing an earlier value for the key.
+    pub fn set_query_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
+        shared::set_raw_query_param(&mut self.query_params, key, value.to_string());
         self
     }
 
@@ -2274,6 +2347,12 @@ impl<T> GraphRequest<T> {
     pub fn query_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
         self.query_params
             .push(QueryFilter::raw(key.into(), value.to_string()));
+        self
+    }
+
+    /// Set a scalar raw query parameter, replacing an earlier value for the key.
+    pub fn set_query_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
+        shared::set_raw_query_param(&mut self.query_params, key, value.to_string());
         self
     }
 
@@ -2372,15 +2451,19 @@ impl<T: ApiResource> Resource<T> {
         self
     }
 
+    /// Set a scalar raw parameter, replacing an earlier value for the key.
+    pub fn set_raw_param<K: Into<String>, V: ToString>(mut self, key: K, value: V) -> Self {
+        shared::set_raw_query_param(&mut self.query_params, key, value.to_string());
+        self
+    }
+
     pub fn sort_by<V: ToString>(mut self, sort: V) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("sort", sort.to_string()));
+        shared::set_sort_query_param(&mut self.query_params, "sort", sort.to_string());
         self
     }
 
     pub fn order_by<V: ToString>(mut self, sort: V) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("order_by", sort.to_string()));
+        shared::set_sort_query_param(&mut self.query_params, "order_by", sort.to_string());
         self
     }
 
@@ -2402,14 +2485,12 @@ impl<T: ApiResource> Resource<T> {
     }
 
     pub fn limit(mut self, limit: usize) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("limit", limit.to_string()));
+        shared::set_raw_query_param(&mut self.query_params, "limit", limit.to_string());
         self
     }
 
     pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
-        self.query_params
-            .push(QueryFilter::raw("cursor", cursor.to_string()));
+        shared::set_raw_query_param(&mut self.query_params, "cursor", cursor.to_string());
         self
     }
 

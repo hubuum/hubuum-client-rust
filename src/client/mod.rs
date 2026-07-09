@@ -54,9 +54,17 @@ impl<T: ApiResource> IntoQueryFilters<T> for () {
 #[derive(Debug, Clone)]
 pub struct Unauthenticated;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Authenticated {
     token: String,
+}
+
+impl std::fmt::Debug for Authenticated {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Authenticated")
+            .field("token", &"[REDACTED]")
+            .finish()
+    }
 }
 
 #[cfg(all(test, feature = "async", feature = "blocking"))]
@@ -64,7 +72,7 @@ mod parity_contract {
     use super::{Authenticated, Unauthenticated, r#async as async_client, sync as sync_client};
     use crate::resources::{
         Class, ClassId, ClassRelation, ClassRelationId, Collection, ExportTemplate, Group, Object,
-        ObjectId, ObjectRelation, RemoteTarget, ServiceAccount, User,
+        ObjectId, ObjectRelation, RelatedClassGraph, RemoteTarget, ServiceAccount, User,
     };
     use crate::types::BaseUrl;
 
@@ -72,6 +80,12 @@ mod parity_contract {
         ($module:ident) => {
             let _: fn(BaseUrl, bool) -> $module::Client<Unauthenticated> =
                 $module::Client::<Unauthenticated>::new_with_certificate_validation;
+            let _ = $module::Client::<Unauthenticated>::try_new;
+            let _ = || $module::Client::<Unauthenticated>::from_url("https://example.invalid");
+            let _ =
+                || $module::Client::<Unauthenticated>::builder_from_url("https://example.invalid");
+            let _ = $module::Client::<Unauthenticated>::base_url;
+            let _ = $module::Client::<Unauthenticated>::http_client;
             let _ = $module::Client::<Unauthenticated>::healthz;
             let _ = $module::Client::<Unauthenticated>::readyz;
         };
@@ -110,9 +124,10 @@ mod parity_contract {
     macro_rules! assert_authenticated_client_auth_surface {
         ($module:ident) => {
             let _ = $module::Client::<Authenticated>::get_token;
+            let _ = $module::Client::<Authenticated>::token;
             let _ = $module::Client::<Authenticated>::logout;
             let _ = $module::Client::<Authenticated>::logout_token;
-            let _ = $module::Client::<Authenticated>::logout_user;
+            let _ = $module::Client::<Authenticated>::logout_user::<i32>;
             let _ = $module::Client::<Authenticated>::logout_all;
             let _ = $module::Client::<Authenticated>::meta_counts;
             let _ = $module::Client::<Authenticated>::meta_db;
@@ -131,6 +146,7 @@ mod parity_contract {
         ($module:ident) => {
             let _ = $module::QueryOp::<Class>::filter::<&str, i32>;
             let _ = $module::QueryOp::<Class>::raw_param::<&str, &str>;
+            let _ = $module::QueryOp::<Class>::set_raw_param::<&str, &str>;
             let _ = $module::QueryOp::<Class>::sort_by::<&str>;
             let _ = $module::QueryOp::<Class>::order_by::<&str>;
             let _ = $module::QueryOp::<Class>::sort::<&str>;
@@ -155,6 +171,7 @@ mod parity_contract {
             let _ = $module::Resource::<Class>::create;
             let _ = $module::Resource::<Class>::update::<ClassId>;
             let _ = $module::Resource::<Class>::delete::<ClassId>;
+            let _ = $module::Resource::<Class>::set_raw_param::<&str, &str>;
             let _ = $module::Resource::<Class>::get::<ClassId>;
             let _ = $module::Resource::<Class>::get_by_name;
         };
@@ -175,6 +192,11 @@ mod parity_contract {
             let _ = $module::HistoryRequest::<crate::types::ClassHistory>::all;
             let _ = $module::TaskListRequest::all;
             let _ = $module::CursorRequest::<crate::types::TaskEventResponse>::all;
+            let _ = $module::CursorRequest::<crate::types::TaskEventResponse>::set_query_param::<
+                &str,
+                &str,
+            >;
+            let _ = $module::GraphRequest::<RelatedClassGraph>::set_query_param::<&str, &str>;
         };
     }
 

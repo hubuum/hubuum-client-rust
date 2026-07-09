@@ -1,0 +1,22 @@
+error[E0277]: the trait bound `ClassId: From<GroupId>` is not satisfied
+ --> tests/trybuild/typed_nested_id_fail_wrong_resource.rs:4:28
+  |
+4 |     let _ = client.objects(group_id);
+  |                    ------- ^^^^^^^^ the trait `From<GroupId>` is not implemented for `ClassId`
+  |                    |
+  |                    required by a bound introduced by this call
+  |
+help: the trait `From<GroupId>` is not implemented for `ClassId`
+      but trait `From<i32>` is implemented for it
+ --> src/resources/class.rs
+  |
+  | #[derive(ApiResource)]
+  |          ^^^^^^^^^^^
+  = help: for that trait implementation, expected `i32`, found `GroupId`
+  = note: required for `GroupId` to implement `Into<ClassId>`
+note: required by a bound in `hubuum_client::blocking::Client::<Authenticated>::objects`
+ --> src/client/sync.rs
+  |
+  |     pub fn objects(&self, class_id: impl Into<ClassId>) -> Resource<Object> {
+  |                                          ^^^^^^^^^^^^^ required by this bound in `Client::<Authenticated>::objects`
+  = note: this error originates in the derive macro `ApiResource` (in Nightly builds, run with -Z macro-backtrace for more info)

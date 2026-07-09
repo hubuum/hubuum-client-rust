@@ -54,20 +54,43 @@ pub struct Page<T> {
 }
 
 impl<T> Page<T> {
+    /// Number of items in this page.
     pub fn len(&self) -> usize {
         self.items.len()
     }
 
+    /// Whether this page contains no items.
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
 
+    /// Whether the server supplied a cursor for a following page.
     pub fn has_next(&self) -> bool {
         self.next_cursor.is_some()
     }
 
+    /// Iterate over page items without consuming the page metadata.
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.items.iter()
+    }
+
+    /// Consume the page and return its items.
     pub fn into_items(self) -> Vec<T> {
         self.items
+    }
+}
+
+impl<T> Deref for Page<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &self.items
+    }
+}
+
+impl<T> AsRef<[T]> for Page<T> {
+    fn as_ref(&self) -> &[T] {
+        self
     }
 }
 
@@ -246,6 +269,30 @@ pub(crate) fn pagination_cursors(query_params: &[QueryFilter]) -> HashSet<String
         .collect()
 }
 
+pub(crate) fn set_raw_query_param(
+    query_params: &mut Vec<QueryFilter>,
+    key: impl Into<String>,
+    value: impl Into<String>,
+) {
+    let key = key.into();
+    remove_raw_query_param(query_params, &key);
+    query_params.push(QueryFilter::raw(key, value));
+}
+
+pub(crate) fn remove_raw_query_param(query_params: &mut Vec<QueryFilter>, key: &str) {
+    query_params.retain(|param| param.key != key || !matches!(param.operator, FilterOperator::Raw));
+}
+
+pub(crate) fn set_sort_query_param(
+    query_params: &mut Vec<QueryFilter>,
+    key: &'static str,
+    value: String,
+) {
+    remove_raw_query_param(query_params, "sort");
+    remove_raw_query_param(query_params, "order_by");
+    set_raw_query_param(query_params, key, value);
+}
+
 pub(crate) fn advance_cursor(
     query_params: &mut Vec<QueryFilter>,
     seen_cursors: &mut HashSet<String>,
@@ -255,8 +302,7 @@ pub(crate) fn advance_cursor(
         return Err(ApiError::PaginationCycle(cursor));
     }
 
-    query_params.retain(|param| param.key != "cursor");
-    query_params.push(QueryFilter::raw("cursor", cursor));
+    set_raw_query_param(query_params, "cursor", cursor);
     Ok(())
 }
 
@@ -912,6 +958,9 @@ mod test {
         assert_eq!(page.len(), 1);
         assert!(!page.is_empty());
         assert!(page.has_next());
+        assert_eq!(page.first().and_then(|item| item["id"].as_i64()), Some(1));
+        assert_eq!(page.iter().count(), 1);
+        assert_eq!(AsRef::<[serde_json::Value]>::as_ref(&page).len(), 1);
         assert_eq!(page.next_cursor.as_deref(), Some("abc"));
         assert_eq!(page.total_count, Some(12));
     }
@@ -925,5 +974,43 @@ mod test {
             .expect_err("a repeated cursor should stop pagination");
 
         assert!(matches!(err, ApiError::PaginationCycle(cursor) if cursor == "abc"));
+    }
+
+    #[test]
+    fn set_raw_query_param_replaces_only_the_scalar_value() {
+        let mut params = vec![
+            QueryFilter::raw("limit", "10"),
+            QueryFilter::filter(
+                "limit",
+                FilterOperator::Equals { is_negated: false },
+                "unrelated-filter",
+            ),
+        ];
+
+        set_raw_query_param(&mut params, "limit", "25");
+
+        assert_eq!(params.len(), 2);
+        assert!(params.iter().any(|param| {
+            param.key == "limit"
+                && matches!(param.operator, FilterOperator::Raw)
+                && param.value == "25"
+        }));
+        assert!(params.iter().any(|param| {
+            param.key == "limit"
+                && matches!(param.operator, FilterOperator::Equals { .. })
+                && param.value == "unrelated-filter"
+        }));
+    }
+
+    #[test]
+    fn sort_aliases_replace_each_other() {
+        let mut params = vec![QueryFilter::raw("sort", "name.asc")];
+
+        set_sort_query_param(&mut params, "order_by", "created_at.desc".to_string());
+
+        assert_eq!(
+            params,
+            vec![QueryFilter::raw("order_by", "created_at.desc")]
+        );
     }
 }

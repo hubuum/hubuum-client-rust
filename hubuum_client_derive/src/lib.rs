@@ -60,14 +60,9 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let (main_fields, get_fields, post_fields, patch_fields) = process_fields(fields, &id_name);
 
     let mut get_param_filters = proc_macro2::TokenStream::new();
-    let mut create_sync_methods = proc_macro2::TokenStream::new();
-    let mut create_async_methods = proc_macro2::TokenStream::new();
-    let mut update_sync_methods = proc_macro2::TokenStream::new();
-    let mut update_async_methods = proc_macro2::TokenStream::new();
-    let mut query_sync_methods = proc_macro2::TokenStream::new();
-    let mut query_async_methods = proc_macro2::TokenStream::new();
-    let mut resource_sync_query_methods = proc_macro2::TokenStream::new();
-    let mut resource_async_query_methods = proc_macro2::TokenStream::new();
+    let mut create_methods = proc_macro2::TokenStream::new();
+    let mut update_methods = proc_macro2::TokenStream::new();
+    let mut query_methods = proc_macro2::TokenStream::new();
 
     for field in fields {
         let field_ident = field
@@ -101,22 +96,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             });
 
             let field_wrapper = query_field_wrapper(field_ty, is_as_id);
-            query_sync_methods.extend(quote! {
-                pub fn #post_patch_field_ident(self) -> #field_wrapper {
-                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
-                }
-            });
-            query_async_methods.extend(quote! {
-                pub fn #post_patch_field_ident(self) -> #field_wrapper {
-                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
-                }
-            });
-            resource_sync_query_methods.extend(quote! {
-                pub fn #post_patch_field_ident(self) -> #field_wrapper {
-                    <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
-                }
-            });
-            resource_async_query_methods.extend(quote! {
+            query_methods.extend(quote! {
                 pub fn #post_patch_field_ident(self) -> #field_wrapper {
                     <#field_wrapper>::new(self, stringify!(#post_patch_field_ident))
                 }
@@ -138,14 +118,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
                 quote!(#field_ty)
             };
             let (arg_ty, assign_expr) = fluent_arg_and_assign(&create_field_ty);
-            create_sync_methods.extend(quote! {
-                pub fn #post_patch_field_ident(self, value: #arg_ty) -> Self {
-                    self.edit_params(move |params| {
-                        params.#post_patch_field_ident = #assign_expr;
-                    })
-                }
-            });
-            create_async_methods.extend(quote! {
+            create_methods.extend(quote! {
                 pub fn #post_patch_field_ident(self, value: #arg_ty) -> Self {
                     self.edit_params(move |params| {
                         params.#post_patch_field_ident = #assign_expr;
@@ -165,14 +138,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
                 quote!(Option<#field_ty>)
             };
             let (arg_ty, assign_expr) = fluent_arg_and_assign(&patch_field_ty);
-            update_sync_methods.extend(quote! {
-                pub fn #post_patch_field_ident(self, value: #arg_ty) -> Self {
-                    self.edit_params(move |params| {
-                        params.#post_patch_field_ident = #assign_expr;
-                    })
-                }
-            });
-            update_async_methods.extend(quote! {
+            update_methods.extend(quote! {
                 pub fn #post_patch_field_ident(self, value: #arg_ty) -> Self {
                     self.edit_params(move |params| {
                         params.#post_patch_field_ident = #assign_expr;
@@ -344,42 +310,42 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
 
         #[cfg(feature = "blocking")]
         impl crate::client::sync::CreateOp<#name> {
-            #create_sync_methods
+            #create_methods
         }
 
         #[cfg(feature = "async")]
         impl crate::client::r#async::CreateOp<#name> {
-            #create_async_methods
+            #create_methods
         }
 
         #[cfg(feature = "blocking")]
         impl crate::client::sync::UpdateOp<#name> {
-            #update_sync_methods
+            #update_methods
         }
 
         #[cfg(feature = "async")]
         impl crate::client::r#async::UpdateOp<#name> {
-            #update_async_methods
+            #update_methods
         }
 
         #[cfg(feature = "blocking")]
         impl crate::client::sync::QueryOp<#name> {
-            #query_sync_methods
+            #query_methods
         }
 
         #[cfg(feature = "async")]
         impl crate::client::r#async::QueryOp<#name> {
-            #query_async_methods
+            #query_methods
         }
 
         #[cfg(feature = "blocking")]
         impl crate::client::sync::Resource<#name> {
-            #resource_sync_query_methods
+            #query_methods
         }
 
         #[cfg(feature = "async")]
         impl crate::client::r#async::Resource<#name> {
-            #resource_async_query_methods
+            #query_methods
         }
     };
 
