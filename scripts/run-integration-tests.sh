@@ -325,7 +325,16 @@ export HUBUUM_INTEGRATION_ADMIN_PASSWORD="${ADMIN_PASSWORD}"
 echo "Running integration tests against external stack: ${BASE_URL}"
 
 if [[ "${E2E_ONLY}" != "1" ]]; then
-    CMD=(cargo test --features integration-tests --test container_integration -- --ignored --nocapture)
+    CMD=(
+        cargo test
+        --locked
+        --no-default-features
+        --features async,blocking,integration-tests
+        --test container_integration
+        --
+        --ignored
+        --nocapture
+    )
     if ((${#TEST_ARGS[@]} > 0)); then
         CMD+=("${TEST_ARGS[@]}")
     fi
@@ -334,7 +343,15 @@ if [[ "${E2E_ONLY}" != "1" ]]; then
 fi
 
 if [[ "${RUN_E2E_CLIENT}" == "1" ]]; then
-    E2E_CMD=(cargo test -p e2e_client --features integration-tests -- --ignored --nocapture)
+    E2E_CMD=(
+        cargo test
+        --locked
+        -p e2e_client
+        --features integration-tests
+        --
+        --ignored
+        --nocapture
+    )
     if ((${#TEST_ARGS[@]} > 0)); then
         E2E_CMD+=("${TEST_ARGS[@]}")
     fi
