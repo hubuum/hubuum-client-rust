@@ -304,17 +304,8 @@ mod test {
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();
 
-        let forward_compatible_paths = ["/api/v0/auth/providers"]
-            .into_iter()
-            .collect::<std::collections::BTreeSet<_>>();
-        let undocumented_paths = client_paths
-            .difference(&spec_paths)
-            .copied()
-            .collect::<std::collections::BTreeSet<_>>();
-
-        assert!(spec_paths.is_subset(&client_paths));
-        assert!(undocumented_paths.is_subset(&forward_compatible_paths));
-        assert_eq!(contract["operation_count"], 157);
+        assert_eq!(client_paths, spec_paths);
+        assert_eq!(contract["operation_count"], 158);
     }
     use std::str::FromStr;
     use yare::parameterized;

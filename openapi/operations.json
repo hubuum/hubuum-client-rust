@@ -1,7 +1,7 @@
 {
   "api_version": "0.0.1",
   "openapi": "3.1.0",
-  "operation_count": 157,
+  "operation_count": 158,
   "operations": [
     {
       "method": "POST",
@@ -122,6 +122,22 @@
           "bearer_auth": []
         }
       ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV0AuthProviders",
+      "parameters": [],
+      "path": "/api/v0/auth/providers",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": []
     },
     {
       "method": "GET",
@@ -4403,10 +4419,11 @@
       "security": []
     }
   ],
-  "path_count": 107,
-  "schema_count": 160,
+  "path_count": 108,
+  "schema_count": 161,
   "schema_names": [
     "ApiErrorResponse",
+    "AuthProvidersResponse",
     "ClassKey",
     "ClearRateLimitResponse",
     "Collection",
@@ -4567,5 +4584,5 @@
     "UpdateUser",
     "UserResponse"
   ],
-  "spec_sha256": "1e72330a5784b41ec99cb5f7fea14ad87a1d2f80d30a4ec0239b2325a9fa9326"
+  "spec_sha256": "40f9f9260ebea7a34dce281efeb1076ba1d3424185392c7e2dbcdc7e4573ca2b"
 }

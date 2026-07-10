@@ -63,6 +63,25 @@ fn sync_meta_db_available_connections_non_negative() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
+fn sync_auth_provider_discovery_returns_local_or_legacy_404() {
+    let stack = IntegrationStack::start().expect("failed to start integration stack");
+    let client = blocking::Client::from_url(&stack.base_url)
+        .expect("failed to construct unauthenticated sync client");
+
+    match client.auth_providers() {
+        Ok(providers) => assert!(
+            providers.contains(LOCAL_IDENTITY_SCOPE),
+            "every Hubuum server should advertise the local provider"
+        ),
+        Err(ApiError::HttpWithBody { status, .. }) if status == reqwest::StatusCode::NOT_FOUND => {
+            // Rolling compatibility for the pinned image preceding this endpoint.
+        }
+        Err(err) => panic!("sync auth provider discovery failed: {err}"),
+    }
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
 fn sync_scoped_identity_and_principal_settings_roundtrip() {
     let stack = IntegrationStack::start().expect("failed to start integration stack");
     let base_url = stack
