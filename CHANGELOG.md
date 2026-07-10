@@ -24,6 +24,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Unauthenticated provider discovery through `auth_providers()` for building
+  login selectors and CLI prompts before credentials are collected.
 - Provider-scoped credentials through `Credentials::scoped()` and `in_scope()`,
   plus scope-aware identity queries and import group keys.
 - Identity-provider metadata on users, groups, service accounts, and group

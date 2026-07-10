@@ -10,6 +10,30 @@ This API depends on the scoped identity contract introduced by Hubuum server PR
 
 ## Login
 
+Provider discovery is public, so a login screen or CLI prompt can build its
+provider choices before asking for credentials:
+
+```rust
+use hubuum_client::{Client, Credentials};
+
+let client = Client::from_url("https://hubuum.example")?;
+let providers = client.auth_providers().await?;
+
+for provider in providers.iter() {
+    println!("Available login provider: {provider}");
+}
+
+let client = client
+    .login(Credentials::scoped(selected_provider, username, password))
+    .await?;
+```
+
+`AuthProvidersResponse` preserves server order and provides `contains()`,
+`iter()`, `len()`, `is_empty()`, and `into_providers()` helpers. Provider names
+come from deployment configuration; clients should display the returned values
+rather than hard-code a directory list. The blocking client exposes the same
+`auth_providers()` method without `.await`.
+
 Local login remains unchanged. Omitting `identity_scope` lets the server use its
 `local` default:
 
@@ -19,7 +43,7 @@ let client = hubuum_client::Client::from_url("https://hubuum.example")?
     .await?;
 ```
 
-Select a provider by passing its configured scope:
+Select an advertised provider by passing its configured scope:
 
 ```rust
 use hubuum_client::{Client, Credentials};

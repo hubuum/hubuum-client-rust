@@ -592,6 +592,51 @@ fn sync_scoped_login_and_identity_filter_use_provider_scope() {
     users.assert_calls(1);
 }
 
+#[test]
+fn sync_auth_provider_discovery_is_public_and_preserves_server_order() {
+    let server = MockServer::start();
+    let providers = server.mock(|when, then| {
+        when.method(GET).path("/api/v0/auth/providers");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "providers": ["local", "corp-directory"]
+            }));
+    });
+
+    let client = blocking::Client::from_url(server.base_url()).unwrap();
+    let response = client
+        .auth_providers()
+        .expect("provider discovery should succeed without authentication");
+
+    assert_eq!(
+        response.iter().collect::<Vec<_>>(),
+        ["local", "corp-directory"]
+    );
+    assert!(response.contains("corp-directory"));
+    providers.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_auth_provider_discovery_is_public() {
+    let server = MockServer::start();
+    let providers = server.mock(|when, then| {
+        when.method(GET).path("/api/v0/auth/providers");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "providers": ["local"] }));
+    });
+
+    let client = Client::from_url(server.base_url()).unwrap();
+    let response = client
+        .auth_providers()
+        .await
+        .expect("async provider discovery should succeed without authentication");
+
+    assert_eq!(response.into_providers(), ["local"]);
+    providers.assert_calls(1);
+}
+
 #[tokio::test]
 async fn async_readyz_preserves_structured_api_error() {
     let server = MockServer::start();

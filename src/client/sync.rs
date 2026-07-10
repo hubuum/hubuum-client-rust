@@ -18,11 +18,11 @@ use crate::resources::{
     RemoteTargetId, ServiceAccount,
 };
 use crate::types::{
-    BaseUrl, ClassHistory, ClearRateLimitResponse, CollectionHistory, CountsResponse, Credentials,
-    DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryId,
-    EventDeliveryUpdateResponse, EventResponse, EventSubscription, EventSubscriptionId,
-    ExportContentType, ExportJsonResponse, ExportRequest, ExportResult, ExportTemplateHistory,
-    ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportRequest,
+    AuthProvidersResponse, BaseUrl, ClassHistory, ClearRateLimitResponse, CollectionHistory,
+    CountsResponse, Credentials, DbStateResponse, EventDelivery, EventDeliveryHealthResponse,
+    EventDeliveryId, EventDeliveryUpdateResponse, EventResponse, EventSubscription,
+    EventSubscriptionId, ExportContentType, ExportJsonResponse, ExportRequest, ExportResult,
+    ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportRequest,
     ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
     ObjectHistory, PrincipalId, PrincipalSettings, ProbeResponse, ReleaseRateLimitResponse,
     RemoteTargetHistory, SortDirection, TaskEventResponse, TaskId, TaskKind,
@@ -355,6 +355,19 @@ impl Client<Unauthenticated> {
 }
 
 impl Client<Unauthenticated> {
+    /// List authentication providers available for login without authenticating.
+    pub fn auth_providers(&self) -> Result<AuthProvidersResponse, ApiError> {
+        let url = self.build_url(&Endpoint::AuthProviders, UrlParams::default());
+        let response =
+            self.send_with_retry(&reqwest::Method::GET, false, self.http_client.get(&url))?;
+        let response = self.check_success(&reqwest::Method::GET, &url, response)?;
+        let status = response.status();
+        let body = shared::read_blocking_body(response, self.options.max_response_body_bytes)?;
+        shared::parse_response(&reqwest::Method::GET, status, body)?.ok_or_else(|| {
+            ApiError::EmptyResult("Authentication provider discovery returned no response".into())
+        })
+    }
+
     pub fn login(&self, credentials: Credentials) -> Result<Client<Authenticated>, ApiError> {
         let login_url = self.build_url(&Endpoint::Login, UrlParams::default());
         let response = self

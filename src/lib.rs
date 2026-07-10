@@ -55,11 +55,12 @@ pub use client::{Client, CollectionScope, ExportOutputStream, ItemStream, PageSt
 pub use errors::{ApiError, ApiErrorResponse};
 pub use resources::*;
 pub use types::{
-    BaseUrl, CURRENT_IMPORT_VERSION, ClassHistory, ClassKey, ClassParams, ClearRateLimitResponse,
-    CollectionHistory, CollectionKey, CountsResponse, Credentials, DbStateResponse, EventDelivery,
-    EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryQueueHealth, EventDeliveryStatus,
-    EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
-    EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSubscription,
+    AuthProvidersResponse, BaseUrl, CURRENT_IMPORT_VERSION, ClassHistory, ClassKey, ClassParams,
+    ClearRateLimitResponse, CollectionHistory, CollectionKey, CountsResponse, Credentials,
+    DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryId,
+    EventDeliveryQueueHealth, EventDeliveryStatus, EventDeliveryStatusCounts,
+    EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse, EventSink,
+    EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSubscription,
     EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventSubscriptionId,
     EventWorkerHealth, EventWorkerWakeupStats, ExportContentType, ExportInclude,
     ExportIncludeRelatedDirection, ExportIncludeRelatedObject, ExportIncludeRelatedSort,
@@ -91,9 +92,9 @@ pub mod prelude {
     #[cfg(feature = "async")]
     pub use crate::Client;
     pub use crate::{
-        ApiError, BaseUrl, ClassId, CollectionId, Credentials, GroupId, LDAP_PROVIDER_KIND,
-        LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, MockTransport, ObjectId, PrincipalSettings,
-        RetryPolicy, TaskId, Token, TypedObject,
+        ApiError, AuthProvidersResponse, BaseUrl, ClassId, CollectionId, Credentials, GroupId,
+        LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, MockTransport, ObjectId,
+        PrincipalSettings, RetryPolicy, TaskId, Token, TypedObject,
     };
 }
 

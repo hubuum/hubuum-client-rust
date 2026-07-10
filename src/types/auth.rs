@@ -1,6 +1,36 @@
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
+/// Publicly discoverable authentication providers available for login.
+#[non_exhaustive]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AuthProvidersResponse {
+    pub providers: Vec<String>,
+}
+
+impl AuthProvidersResponse {
+    /// Whether the server advertises the given provider or identity scope.
+    pub fn contains(&self, provider: &str) -> bool {
+        self.providers.iter().any(|candidate| candidate == provider)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &str> {
+        self.providers.iter().map(String::as_str)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.providers.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.providers.len()
+    }
+
+    pub fn into_providers(self) -> Vec<String> {
+        self.providers
+    }
+}
+
 pub(crate) fn serialize_secret<S>(value: &SecretString, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
@@ -191,6 +221,27 @@ mod tests {
                 "name": "alice",
                 "password": "secret"
             })
+        );
+    }
+
+    #[test]
+    fn auth_provider_discovery_preserves_order_and_supports_lookup() {
+        let response: AuthProvidersResponse = serde_json::from_value(serde_json::json!({
+            "providers": ["local", "corp-directory"]
+        }))
+        .unwrap();
+
+        assert_eq!(response.len(), 2);
+        assert!(!response.is_empty());
+        assert!(response.contains("corp-directory"));
+        assert!(!response.contains("missing"));
+        assert_eq!(
+            response.iter().collect::<Vec<_>>(),
+            ["local", "corp-directory"]
+        );
+        assert_eq!(
+            response.into_providers(),
+            ["local".to_string(), "corp-directory".to_string()]
         );
     }
 }

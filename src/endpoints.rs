@@ -4,6 +4,7 @@ use strum::EnumIter;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum Endpoint {
     Login,
+    AuthProviders,
     LoginWithToken,
     Logout,
     LogoutToken,
@@ -117,6 +118,7 @@ impl Endpoint {
     pub fn path(&self) -> &'static str {
         match self {
             Endpoint::Login => "/api/v0/auth/login",
+            Endpoint::AuthProviders => "/api/v0/auth/providers",
             Endpoint::LoginWithToken => "/api/v0/auth/validate",
             Endpoint::Logout => "/api/v0/auth/logout",
             Endpoint::LogoutToken => "/api/v0/auth/logout/token",
@@ -302,7 +304,16 @@ mod test {
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();
 
-        assert_eq!(client_paths, spec_paths);
+        let forward_compatible_paths = ["/api/v0/auth/providers"]
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>();
+        let undocumented_paths = client_paths
+            .difference(&spec_paths)
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>();
+
+        assert!(spec_paths.is_subset(&client_paths));
+        assert!(undocumented_paths.is_subset(&forward_compatible_paths));
         assert_eq!(contract["operation_count"], 157);
     }
     use std::str::FromStr;
@@ -310,6 +321,7 @@ mod test {
 
     #[parameterized(
         login = { Endpoint::Login, "/api/v0/auth/login" },
+        auth_providers = { Endpoint::AuthProviders, "/api/v0/auth/providers" },
         logout = { Endpoint::Logout, "/api/v0/auth/logout" },
         logout_token = { Endpoint::LogoutToken, "/api/v0/auth/logout/token" },
         logout_user = { Endpoint::LogoutUser, "/api/v0/auth/logout/uid/{user_id}" },
@@ -389,6 +401,7 @@ mod test {
 
     #[parameterized(
         login = { Endpoint::Login, '/', "api/v0/auth/login" },
+        auth_providers = { Endpoint::AuthProviders, '/', "api/v0/auth/providers" },
         logout = { Endpoint::Logout, '/', "api/v0/auth/logout" },
         logout_token = { Endpoint::LogoutToken, '/', "api/v0/auth/logout/token" },
         logout_user = { Endpoint::LogoutUser, '/', "api/v0/auth/logout/uid/{user_id}" },
@@ -461,6 +474,7 @@ mod test {
 
     #[parameterized(
         api_login = { Endpoint::Login, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/login" },
+        api_auth_providers = { Endpoint::AuthProviders, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/providers" },
         api_logout = { Endpoint::Logout, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/logout" },
         api_logout_all = { Endpoint::LogoutAll, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/logout_all" },
         api_meta_counts = { Endpoint::MetaCounts, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/counts" },

@@ -19,7 +19,7 @@ mod typed_object;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
 
-pub use auth::{Credentials, LogoutTokenRequest, Token};
+pub use auth::{AuthProvidersResponse, Credentials, LogoutTokenRequest, Token};
 pub use baseurl::BaseUrl;
 pub use datetime::HubuumDateTime;
 pub use event::{

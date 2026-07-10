@@ -14,9 +14,9 @@ A Rust client library for the Hubuum API. It provides synchronous and asynchrono
 - **Typed object payloads**: decode object `data` into application structs and optionally derive JSON Schema with the `typed-schemas` feature.
 - **Exports, export templates, and imports**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
 - **Principal-centric identity**: users and service accounts are principals, with group membership, scoped tokens, and effective permission helpers.
-- **Scoped identity providers**: authenticate against named provider scopes, filter
-  principals by scope, inspect provider ownership, and disambiguate scoped group
-  references in imports.
+- **Scoped identity providers**: discover available providers before login,
+  authenticate against named scopes, filter principals by scope, inspect provider
+  ownership, and disambiguate scoped group references in imports.
 - **Principal settings**: get, replace, merge-patch, or reset object-only preferences for the current or an explicitly selected principal.
 - **Health and readiness probes**: unauthenticated `healthz()` and `readyz()` calls are available for operational checks.
 

@@ -110,6 +110,7 @@ mod parity_contract {
                 || $module::Client::<Unauthenticated>::builder_from_url("https://example.invalid");
             let _ = $module::Client::<Unauthenticated>::base_url;
             let _ = $module::Client::<Unauthenticated>::http_client;
+            let _ = $module::Client::<Unauthenticated>::auth_providers;
             let _ = $module::Client::<Unauthenticated>::healthz;
             let _ = $module::Client::<Unauthenticated>::readyz;
         };
