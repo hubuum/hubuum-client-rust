@@ -65,6 +65,43 @@ fn async_meta_db_available_connections_non_negative() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
+fn async_principal_settings_roundtrip() {
+    let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
+    let client = harness.client.clone();
+
+    harness
+        .block_on(client.settings().reset())
+        .expect("async settings reset failed");
+    let replaced = harness
+        .block_on(client.settings().replace(&json!({
+            "notifications": { "email": true },
+            "theme": "light"
+        })))
+        .expect("async settings replace failed");
+    assert_eq!(replaced.get("theme"), Some(&json!("light")));
+
+    let patched = harness
+        .block_on(client.settings().patch(&json!({
+            "notifications": { "email": false },
+            "theme": null
+        })))
+        .expect("async settings merge patch failed");
+    assert!(patched.get("theme").is_none());
+    assert_eq!(patched.get("notifications").unwrap()["email"], false);
+
+    harness
+        .block_on(client.settings().reset())
+        .expect("async final settings reset failed");
+    assert!(
+        harness
+            .block_on(client.settings().get())
+            .expect("async settings get after reset failed")
+            .is_empty()
+    );
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
 fn async_users_select_by_id_returns_same_user() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();

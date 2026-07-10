@@ -1,6 +1,7 @@
 use hubuum_client::{
-    ApiError, BaseUrl, ClassPost, ClassRelationPost, CollectionPatch, CollectionPost, GroupPatch,
-    ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch, blocking,
+    ApiError, BaseUrl, ClassPost, ClassRelationPost, CollectionPatch, CollectionPost, Credentials,
+    GroupPatch, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, ObjectPatch, ObjectRelationPost,
+    QueryFilter, Token, UserPatch, blocking,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -58,6 +59,95 @@ fn sync_meta_db_available_connections_non_negative() {
     let db = harness.client.meta_db().expect("sync meta_db failed");
 
     assert!(db.available_connections >= 0);
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn sync_scoped_identity_and_principal_settings_roundtrip() {
+    let stack = IntegrationStack::start().expect("failed to start integration stack");
+    let base_url = stack
+        .base_url
+        .parse::<BaseUrl>()
+        .expect("stack base URL should parse as BaseUrl");
+    let client = blocking::Client::try_new(base_url)
+        .expect("failed to construct sync client")
+        .login(Credentials::scoped(
+            LOCAL_IDENTITY_SCOPE,
+            ADMIN_USERNAME,
+            &stack.admin_password,
+        ))
+        .expect("explicit local-scope login failed");
+
+    let admin = client
+        .users()
+        .identity_scope()
+        .eq(LOCAL_IDENTITY_SCOPE)
+        .name()
+        .eq(ADMIN_USERNAME)
+        .one()
+        .expect("scoped admin user query failed");
+    assert_eq!(admin.identity_scope, LOCAL_IDENTITY_SCOPE);
+    assert_eq!(admin.provider_kind, LOCAL_PROVIDER_KIND);
+    assert!(!admin.is_provider_managed());
+
+    let admin_group = client
+        .groups()
+        .identity_scope()
+        .eq(LOCAL_IDENTITY_SCOPE)
+        .groupname()
+        .eq(ADMIN_USERNAME)
+        .one()
+        .expect("scoped admin group query failed");
+    assert_eq!(admin_group.identity_scope, LOCAL_IDENTITY_SCOPE);
+    assert_eq!(admin_group.managed_by, LOCAL_PROVIDER_KIND);
+    assert!(!admin_group.is_provider_managed());
+
+    let admin_group = client
+        .groups()
+        .get(admin_group.id)
+        .expect("admin group handle lookup failed");
+    let member = admin_group
+        .members()
+        .expect("admin group member lookup failed")
+        .into_iter()
+        .find(|member| i32::from(member.principal_id) == admin.id)
+        .expect("admin principal should belong to the admin group");
+    assert_eq!(member.identity_scope, LOCAL_IDENTITY_SCOPE);
+    assert!(member.created_at.is_some());
+    assert!(member.updated_at.is_some());
+
+    client.settings().reset().expect("settings reset failed");
+    let replaced = client
+        .settings()
+        .replace(&json!({
+            "layout": { "columns": 2, "density": "compact" },
+            "theme": "dark"
+        }))
+        .expect("settings replace failed");
+    assert_eq!(replaced.get("theme"), Some(&json!("dark")));
+
+    let patched = client
+        .settings()
+        .patch(&json!({
+            "layout": { "columns": 3 },
+            "theme": null
+        }))
+        .expect("settings merge patch failed");
+    assert!(patched.get("theme").is_none());
+    assert_eq!(patched.get("layout").unwrap()["columns"], 3);
+    assert_eq!(patched.get("layout").unwrap()["density"], "compact");
+
+    client
+        .settings()
+        .reset()
+        .expect("final settings reset failed");
+    assert!(
+        client
+            .settings()
+            .get()
+            .expect("settings get after reset failed")
+            .is_empty()
+    );
 }
 
 #[test]

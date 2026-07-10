@@ -176,4 +176,4 @@ jobs:
       - name: Run Integration Test Suite
         run: ./scripts/run-integration-tests.sh --with-e2e-client -- --test-threads=1
         env:
-          HUBUUM_INTEGRATION_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server@sha256:3f7738fad36bbb06739fa4819a8efad3b03d675e2e2c8cd13012d76c509f571b
+          HUBUUM_INTEGRATION_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server@sha256:05b464b18c0335df825e43c3967d6d02c67db5c5bcce5c4a5d23f2bdf2632fc8
