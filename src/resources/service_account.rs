@@ -31,12 +31,14 @@ use crate::{
 pub struct ServiceAccountResource {
     #[api(read_only)]
     pub id: i32,
+    #[api(post_optional, skip_patch, default_local)]
+    pub identity_scope: String,
     // The principal name. Required on create; renaming lives on the principal, so it
     // is excluded from PATCH.
     #[api(skip_patch)]
     pub name: String,
     // Optional on create, mutable on update; always present in responses.
-    #[api(optional)]
+    #[api(post_optional)]
     pub description: String,
     pub owner_group_id: GroupId,
     #[api(read_only, optional)]
@@ -47,6 +49,12 @@ pub struct ServiceAccountResource {
     pub created_at: HubuumDateTime,
     #[api(read_only)]
     pub updated_at: HubuumDateTime,
+}
+
+impl ServiceAccount {
+    pub fn is_local(&self) -> bool {
+        self.identity_scope == crate::types::LOCAL_IDENTITY_SCOPE
+    }
 }
 
 #[cfg(feature = "blocking")]

@@ -193,6 +193,16 @@ mod parity_contract {
         };
     }
 
+    #[allow(dead_code)]
+    fn scoped_identity_query_surface_compiles() {
+        let _ = async_client::Resource::<User>::identity_scope;
+        let _ = async_client::Resource::<Group>::identity_scope;
+        let _ = async_client::Resource::<ServiceAccount>::identity_scope;
+        let _ = sync_client::Resource::<User>::identity_scope;
+        let _ = sync_client::Resource::<Group>::identity_scope;
+        let _ = sync_client::Resource::<ServiceAccount>::identity_scope;
+    }
+
     macro_rules! assert_resource_surface {
         ($module:ident) => {
             let _ = $module::Resource::<Class>::query;

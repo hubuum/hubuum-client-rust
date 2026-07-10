@@ -158,6 +158,7 @@ pub(crate) fn create_sync_user(
     let prefix = unique_case_prefix(case);
     let username = format!("{prefix}-user");
     let user = client.users().create_raw(UserPost {
+        identity_scope: None,
         name: username.clone(),
         password: format!("{prefix}-Passw0rd!"),
         email: Some(format!("{prefix}@example.test")),
@@ -175,6 +176,7 @@ pub(crate) fn create_sync_loginable_user(
     let username = format!("{prefix}-user");
     let password = format!("{prefix}-Passw0rd!");
     let user = client.users().create_raw(UserPost {
+        identity_scope: None,
         name: username.clone(),
         password: password.clone(),
         email: Some(format!("{prefix}@example.test")),
@@ -195,8 +197,9 @@ pub(crate) fn create_sync_group(
     let prefix = unique_case_prefix(case);
     let groupname = format!("{prefix}-group");
     let group = client.groups().create_raw(GroupPost {
+        identity_scope: None,
         groupname: groupname.clone(),
-        description: "integration group".to_string(),
+        description: Some("integration group".to_string()),
     })?;
 
     Ok((groupname, group.id.into()))
@@ -234,6 +237,7 @@ pub(crate) async fn create_async_user(
     let user = client
         .users()
         .create_raw(UserPost {
+            identity_scope: None,
             name: username.clone(),
             password: format!("{prefix}-Passw0rd!"),
             email: Some(format!("{prefix}@example.test")),
@@ -254,6 +258,7 @@ pub(crate) async fn create_async_loginable_user(
     let user = client
         .users()
         .create_raw(UserPost {
+            identity_scope: None,
             name: username.clone(),
             password: password.clone(),
             email: Some(format!("{prefix}@example.test")),
@@ -277,8 +282,9 @@ pub(crate) async fn create_async_group(
     let group = client
         .groups()
         .create_raw(GroupPost {
+            identity_scope: None,
             groupname: groupname.clone(),
-            description: "integration group".to_string(),
+            description: Some("integration group".to_string()),
         })
         .await?;
 

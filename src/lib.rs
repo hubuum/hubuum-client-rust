@@ -69,16 +69,16 @@ pub use types::{
     HistoryId, HistoryMetadata, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
     ImportCollectionInput, ImportCollectionPermissionInput, ImportCollisionPolicy, ImportGraph,
     ImportMode, ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy,
-    ImportRequest, ImportResultId, ImportTaskDetails, ImportTaskResultResponse,
-    LoginRateLimitConfig, LoginRateLimitEntry, LoginRateLimitState, LogoutTokenRequest,
-    NewEventSink, NewEventSubscription, ObjectHistory, ObjectKey, PermissionId, Permissions,
-    PrincipalId, PrincipalSettings, ProbeResponse, ReleaseRateLimitResponse, RemoteCallResultId,
-    RemoteTargetHistory, TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks,
-    TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TokenId, TypedObject,
-    UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
-    UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
-    UserParams,
+    ImportRequest, ImportResultId, ImportTaskDetails, ImportTaskResultResponse, LDAP_PROVIDER_KIND,
+    LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, LoginRateLimitConfig, LoginRateLimitEntry,
+    LoginRateLimitState, LogoutTokenRequest, NewEventSink, NewEventSubscription, ObjectHistory,
+    ObjectKey, PermissionId, Permissions, PrincipalId, PrincipalSettings, ProbeResponse,
+    ReleaseRateLimitResponse, RemoteCallResultId, RemoteTargetHistory, TaskDetails, TaskEventId,
+    TaskEventResponse, TaskId, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse,
+    TaskResponse, TaskStatus, Token, TokenId, TypedObject, UnifiedSearchBatchResponse,
+    UnifiedSearchDoneEvent, UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind,
+    UnifiedSearchNext, UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent,
+    UpdateEventSink, UpdateEventSubscription, UserParams,
 };
 
 #[cfg(feature = "blocking")]
@@ -91,8 +91,9 @@ pub mod prelude {
     #[cfg(feature = "async")]
     pub use crate::Client;
     pub use crate::{
-        ApiError, BaseUrl, ClassId, CollectionId, Credentials, GroupId, MockTransport, ObjectId,
-        PrincipalSettings, RetryPolicy, TaskId, Token, TypedObject,
+        ApiError, BaseUrl, ClassId, CollectionId, Credentials, GroupId, LDAP_PROVIDER_KIND,
+        LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, MockTransport, ObjectId, PrincipalSettings,
+        RetryPolicy, TaskId, Token, TypedObject,
     };
 }
 

@@ -10,6 +10,8 @@ where
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Credentials {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    identity_scope: Option<String>,
     name: String,
     #[serde(serialize_with = "serialize_secret")]
     password: SecretString,
@@ -19,9 +21,30 @@ impl Credentials {
     /// `name` is the principal name (formerly the username).
     pub fn new(name: impl Into<String>, password: impl Into<String>) -> Self {
         Self {
+            identity_scope: None,
             name: name.into(),
             password: SecretString::from(password.into()),
         }
+    }
+
+    /// Construct credentials for a named identity scope such as an LDAP directory.
+    pub fn scoped(
+        identity_scope: impl Into<String>,
+        name: impl Into<String>,
+        password: impl Into<String>,
+    ) -> Self {
+        Self::new(name, password).in_scope(identity_scope)
+    }
+
+    /// Select the identity scope used to authenticate these credentials.
+    pub fn in_scope(mut self, identity_scope: impl Into<String>) -> Self {
+        self.identity_scope = Some(identity_scope.into());
+        self
+    }
+
+    /// Explicit identity scope, or `None` for the server's local default.
+    pub fn identity_scope(&self) -> Option<&str> {
+        self.identity_scope.as_deref()
     }
 
     /// Principal name used for login.
@@ -32,7 +55,9 @@ impl Credentials {
 
 impl PartialEq for Credentials {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.password.expose_secret() == other.password.expose_secret()
+        self.identity_scope == other.identity_scope
+            && self.name == other.name
+            && self.password.expose_secret() == other.password.expose_secret()
     }
 }
 
@@ -41,6 +66,7 @@ impl Eq for Credentials {}
 impl std::fmt::Debug for Credentials {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Credentials")
+            .field("identity_scope", &self.identity_scope)
             .field("name", &self.name)
             .field("password", &"[REDACTED]")
             .finish()
@@ -146,5 +172,25 @@ mod tests {
         assert!(credentials.contains("[REDACTED]"));
         assert!(token.contains("[REDACTED]"));
         assert!(logout.contains("[REDACTED]"));
+    }
+
+    #[test]
+    fn scoped_credentials_serialize_the_identity_scope() {
+        let local = serde_json::to_value(Credentials::new("alice", "secret")).unwrap();
+        let directory =
+            serde_json::to_value(Credentials::scoped("corp", "alice", "secret")).unwrap();
+
+        assert_eq!(
+            local,
+            serde_json::json!({ "name": "alice", "password": "secret" })
+        );
+        assert_eq!(
+            directory,
+            serde_json::json!({
+                "identity_scope": "corp",
+                "name": "alice",
+                "password": "secret"
+            })
+        );
     }
 }

@@ -14,6 +14,9 @@ A Rust client library for the Hubuum API. It provides synchronous and asynchrono
 - **Typed object payloads**: decode object `data` into application structs and optionally derive JSON Schema with the `typed-schemas` feature.
 - **Exports, export templates, and imports**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
 - **Principal-centric identity**: users and service accounts are principals, with group membership, scoped tokens, and effective permission helpers.
+- **Scoped identity providers**: authenticate against named provider scopes, filter
+  principals by scope, inspect provider ownership, and disambiguate scoped group
+  references in imports.
 - **Principal settings**: get, replace, merge-patch, or reset object-only preferences for the current or an explicitly selected principal.
 - **Health and readiness probes**: unauthenticated `healthz()` and `readyz()` calls are available for operational checks.
 
@@ -157,6 +160,8 @@ let settings = client
 - [Exports, imports, and tasks](docs/exports-and-tasks.md): export templates, rendered output, task polling, and import results.
 - [Advanced usage](docs/advanced.md): lazy streams, retries, body limits, typed payloads, scoped navigation, mock transports, and raw requests.
 - [Principal settings](docs/principal-settings.md): current-principal and administrative preference management with JSON Merge Patch.
+- [Scoped authentication](docs/scoped-auth.md): provider-scoped login, identity
+  metadata, queries, and import references.
 - [Declarative reconciliation](docs/reconciliation.md): previewing and applying desired Hubuum graphs with `hubuum_reconcile`.
 - [Integration tests](docs/integration-tests.md): Docker-backed real-server tests, e2e client tests, seed data, and environment variables.
 - [Release procedure](RELEASING.md): crates.io release checklist and trusted publishing notes.

@@ -95,6 +95,7 @@ impl E2EHarness {
         let username = format!("{prefix}-user");
         let password = format!("{prefix}-Passw0rd!");
         let user = self.client.users().create_raw(UserPost {
+            identity_scope: None,
             name: username.clone(),
             password: password.clone(),
             email: Some(format!("{prefix}@example.test")),
@@ -112,8 +113,9 @@ impl E2EHarness {
         let prefix = unique_case_prefix(case);
         let groupname = format!("{prefix}-group");
         let group = self.client.groups().create_raw(GroupPost {
+            identity_scope: None,
             groupname: groupname.clone(),
-            description: "e2e group".to_string(),
+            description: Some("e2e group".to_string()),
         })?;
 
         Ok((groupname, group.id.into()))

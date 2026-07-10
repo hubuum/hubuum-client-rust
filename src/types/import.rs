@@ -63,7 +63,31 @@ pub struct CollectionKey {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GroupKey {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identity_scope: Option<String>,
     pub groupname: String,
+}
+
+impl GroupKey {
+    pub fn new(groupname: impl Into<String>) -> Self {
+        Self {
+            identity_scope: None,
+            groupname: groupname.into(),
+        }
+    }
+
+    pub fn in_scope(identity_scope: impl Into<String>, groupname: impl Into<String>) -> Self {
+        Self {
+            identity_scope: Some(identity_scope.into()),
+            groupname: groupname.into(),
+        }
+    }
+
+    pub fn identity_scope_name(&self) -> &str {
+        self.identity_scope
+            .as_deref()
+            .unwrap_or(super::LOCAL_IDENTITY_SCOPE)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -176,5 +200,33 @@ impl ImportRequest {
             + self.graph.class_relations.len()
             + self.graph.object_relations.len()
             + self.graph.collection_permissions.len()) as i32
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn group_keys_default_to_local_and_can_disambiguate_scopes() {
+        let local = GroupKey::new("operators");
+        let directory = GroupKey::in_scope("corp-directory", "operators");
+
+        assert_eq!(
+            local.identity_scope_name(),
+            crate::types::LOCAL_IDENTITY_SCOPE
+        );
+        assert_eq!(directory.identity_scope_name(), "corp-directory");
+        assert_eq!(
+            serde_json::to_value(local).unwrap(),
+            serde_json::json!({ "groupname": "operators" })
+        );
+        assert_eq!(
+            serde_json::to_value(directory).unwrap(),
+            serde_json::json!({
+                "identity_scope": "corp-directory",
+                "groupname": "operators"
+            })
+        );
     }
 }

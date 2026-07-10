@@ -24,6 +24,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Provider-scoped credentials through `Credentials::scoped()` and `in_scope()`,
+  plus scope-aware identity queries and import group keys.
+- Identity-provider metadata on users, groups, service accounts, and group
+  members, including helpers for detecting local and provider-managed records.
 - Object-only principal settings with fluent current-principal and
   cross-principal get, replace, merge-patch, and reset operations for both async
   and blocking clients.

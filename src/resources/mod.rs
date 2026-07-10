@@ -177,8 +177,14 @@ pub struct PrincipalTokenMetadata {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrincipalMember {
     pub principal_id: crate::types::PrincipalId,
+    #[serde(default = "crate::types::default_local_identity_value")]
+    pub identity_scope: String,
     pub kind: String,
     pub name: String,
+    #[serde(default)]
+    pub created_at: Option<HubuumDateTime>,
+    #[serde(default)]
+    pub updated_at: Option<HubuumDateTime>,
 }
 
 /// One group's contribution to a principal's effective permissions on a collection.

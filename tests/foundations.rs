@@ -287,3 +287,118 @@ fn unknown_server_enum_values_remain_decodable() {
         Some(ExportContentType::Unknown)
     );
 }
+
+#[test]
+fn scoped_identity_resource_models_preserve_provider_metadata() {
+    let user: hubuum_client::User = serde_json::from_value(json!({
+        "id": 7,
+        "identity_scope": "corp-directory",
+        "provider_kind": "ldap",
+        "provider_managed": true,
+        "name": "alice",
+        "proper_name": "Alice Example",
+        "email": "alice@example.com",
+        "last_sync_attempted_at": "2026-07-10T10:00:00Z",
+        "last_sync_success_at": "2026-07-10T10:00:00Z",
+        "created_at": "2026-07-10T10:00:00Z",
+        "updated_at": "2026-07-10T10:00:00Z"
+    }))
+    .unwrap();
+    let group: hubuum_client::Group = serde_json::from_value(json!({
+        "id": 8,
+        "identity_scope": "corp-directory",
+        "groupname": "operators",
+        "description": "Directory operators",
+        "managed_by": "ldap",
+        "external_key": "cn=operators,dc=example,dc=com",
+        "last_sync_attempted_at": "2026-07-10T10:00:00Z",
+        "last_sync_success_at": "2026-07-10T10:00:00Z",
+        "created_at": "2026-07-10T10:00:00Z",
+        "updated_at": "2026-07-10T10:00:00Z"
+    }))
+    .unwrap();
+    let service_account: hubuum_client::ServiceAccount = serde_json::from_value(json!({
+        "id": 9,
+        "identity_scope": "local",
+        "name": "automation",
+        "description": "Automation",
+        "owner_group_id": 8,
+        "created_by": 7,
+        "disabled_at": null,
+        "created_at": "2026-07-10T10:00:00Z",
+        "updated_at": "2026-07-10T10:00:00Z"
+    }))
+    .unwrap();
+
+    assert!(user.is_provider_managed());
+    assert_eq!(user.provider_kind, hubuum_client::LDAP_PROVIDER_KIND);
+    assert!(group.is_provider_managed());
+    assert_eq!(
+        group.external_key.as_deref(),
+        Some("cn=operators,dc=example,dc=com")
+    );
+    assert!(service_account.is_local());
+}
+
+#[test]
+fn identity_metadata_defaults_to_local_for_older_server_responses() {
+    let user: hubuum_client::User = serde_json::from_value(json!({
+        "id": 7,
+        "name": "alice",
+        "proper_name": null,
+        "email": null,
+        "created_at": "2026-07-10T10:00:00Z",
+        "updated_at": "2026-07-10T10:00:00Z"
+    }))
+    .unwrap();
+    let group: hubuum_client::Group = serde_json::from_value(json!({
+        "id": 8,
+        "groupname": "operators",
+        "description": "Operators",
+        "created_at": "2026-07-10T10:00:00Z",
+        "updated_at": "2026-07-10T10:00:00Z"
+    }))
+    .unwrap();
+
+    assert_eq!(user.identity_scope, hubuum_client::LOCAL_IDENTITY_SCOPE);
+    assert_eq!(user.provider_kind, hubuum_client::LOCAL_PROVIDER_KIND);
+    assert!(!user.is_provider_managed());
+    assert_eq!(group.identity_scope, hubuum_client::LOCAL_IDENTITY_SCOPE);
+    assert_eq!(group.managed_by, hubuum_client::LOCAL_PROVIDER_KIND);
+    assert!(!group.is_provider_managed());
+}
+
+#[test]
+fn scoped_create_requests_serialize_identity_scope() {
+    let user = hubuum_client::UserPost {
+        identity_scope: Some("local".into()),
+        name: "alice".into(),
+        password: "secret".into(),
+        proper_name: None,
+        email: None,
+    };
+    let group = hubuum_client::GroupPost {
+        identity_scope: Some("local".into()),
+        groupname: "operators".into(),
+        description: None,
+    };
+    let service_account = hubuum_client::ServiceAccountPost {
+        identity_scope: Some("local".into()),
+        name: "automation".into(),
+        description: None,
+        owner_group_id: 8.into(),
+    };
+
+    assert_eq!(
+        serde_json::to_value(user).unwrap()["identity_scope"],
+        "local"
+    );
+    assert_eq!(
+        serde_json::to_value(group).unwrap()["identity_scope"],
+        "local"
+    );
+    assert_eq!(
+        serde_json::to_value(service_account).unwrap()["identity_scope"],
+        "local"
+    );
+}

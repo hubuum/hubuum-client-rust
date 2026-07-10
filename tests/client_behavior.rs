@@ -535,6 +535,63 @@ fn sync_login_preserves_structured_api_error() {
     assert_eq!(response.message, "Authentication failure");
 }
 
+#[test]
+fn sync_scoped_login_and_identity_filter_use_provider_scope() {
+    let server = MockServer::start();
+    let login = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v0/auth/login")
+            .json_body(json!({
+                "identity_scope": "corp-directory",
+                "name": USERNAME,
+                "password": PASSWORD
+            }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "token": TOKEN }));
+    });
+    let users = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users")
+            .query_param("identity_scope__equals", "corp-directory")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([{
+                "id": 17,
+                "identity_scope": "corp-directory",
+                "provider_kind": "ldap",
+                "provider_managed": true,
+                "name": USERNAME,
+                "email": "tester@example.com",
+                "proper_name": "Directory Tester",
+                "last_sync_attempted_at": ts(),
+                "last_sync_success_at": ts(),
+                "created_at": ts(),
+                "updated_at": ts()
+            }]));
+    });
+
+    let client = blocking::Client::from_url(server.base_url())
+        .unwrap()
+        .login(Credentials::scoped("corp-directory", USERNAME, PASSWORD))
+        .unwrap();
+    let matches = client
+        .users()
+        .identity_scope()
+        .eq("corp-directory")
+        .list()
+        .unwrap();
+
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].identity_scope, "corp-directory");
+    assert_eq!(matches[0].provider_kind, "ldap");
+    assert!(matches[0].is_provider_managed());
+    assert!(!matches[0].is_local());
+    login.assert_calls(1);
+    users.assert_calls(1);
+}
+
 #[tokio::test]
 async fn async_readyz_preserves_structured_api_error() {
     let server = MockServer::start();
@@ -3713,6 +3770,7 @@ fn sync_service_account_create_and_disable() {
     let created = client
         .service_accounts()
         .create_raw(ServiceAccountPost {
+            identity_scope: None,
             name: "dns-sync".to_string(),
             description: Some("integration service account".to_string()),
             owner_group_id: 10.into(),

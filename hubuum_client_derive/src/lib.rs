@@ -74,7 +74,8 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             let is_read_only = has_attribute(field, "read_only");
             let is_post_only = has_attribute(field, "post_only");
             let is_optional = has_attribute(field, "optional");
-            (is_post_only || !is_read_only) && !is_optional
+            let is_post_optional = has_attribute(field, "post_optional");
+            (is_post_only || !is_read_only) && !is_optional && !is_post_optional
         })
         .collect::<Vec<_>>();
     let required_state_names = required_create_fields
@@ -103,8 +104,10 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         let is_read_only = has_attribute(field, "read_only");
         let is_post_only = has_attribute(field, "post_only");
         let is_optional = has_attribute(field, "optional");
+        let is_post_optional = has_attribute(field, "post_optional");
         let is_as_id = has_attribute(field, "as_id");
         let skip_patch = has_attribute(field, "skip_patch");
+        let skip_query = has_attribute(field, "skip_query");
 
         let post_patch_field_ident = if is_as_id {
             format_ident!("{}_id", field_name)
@@ -112,7 +115,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             field_ident.clone()
         };
 
-        if !is_post_only {
+        if !is_post_only && !skip_query {
             get_param_filters.extend(quote! {
                 if let Some(value) = params.#post_patch_field_ident {
                     queries.push(crate::types::QueryFilter {
@@ -135,12 +138,12 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             let create_field_ty = if is_post_only {
                 quote!(#field_ty)
             } else if is_as_id {
-                if is_optional {
+                if is_optional || is_post_optional {
                     quote!(Option<<#field_ty as crate::resources::ApiResource>::Id>)
                 } else {
                     quote!(<#field_ty as crate::resources::ApiResource>::Id)
                 }
-            } else if is_optional {
+            } else if is_optional || is_post_optional {
                 quote!(Option<#field_ty>)
             } else {
                 quote!(#field_ty)
@@ -676,8 +679,17 @@ fn process_fields(
         let is_read_only = has_attribute(field, "read_only");
         let is_post_only = has_attribute(field, "post_only");
         let is_optional = has_attribute(field, "optional");
+        let is_post_optional = has_attribute(field, "post_optional");
         let is_as_id = has_attribute(field, "as_id");
         let skip_patch = has_attribute(field, "skip_patch");
+        let skip_query = has_attribute(field, "skip_query");
+        let serde_default = if has_attribute(field, "default_local") {
+            quote!(#[serde(default = "crate::types::default_local_identity_value")])
+        } else if has_attribute(field, "default") {
+            quote!(#[serde(default)])
+        } else {
+            quote!()
+        };
 
         let id_field_name = if is_as_id {
             format!("{}_id", fieldname)
@@ -695,22 +707,25 @@ fn process_fields(
                 quote!(#ty)
             };
             main_fields.extend(quote! {
+                #serde_default
                 pub #name: #main_field_ty,
             });
 
-            let get_type = if is_as_id {
-                quote!(Option<<#ty as crate::resources::ApiResource>::Id>)
-            } else {
-                quote!(Option<#ty>)
-            };
-            get_fields.extend(quote! { pub #id_field_ident: #get_type, });
+            if !skip_query {
+                let get_type = if is_as_id {
+                    quote!(Option<<#ty as crate::resources::ApiResource>::Id>)
+                } else {
+                    quote!(Option<#ty>)
+                };
+                get_fields.extend(quote! { pub #id_field_ident: #get_type, });
+            }
         }
 
         if is_post_only {
             post_fields.extend(quote! { pub #id_field_ident: #ty, });
         } else if !is_read_only {
             if is_as_id {
-                let id_type = if is_optional {
+                let id_type = if is_optional || is_post_optional {
                     quote!(Option<<#ty as crate::resources::ApiResource>::Id>)
                 } else {
                     quote!(<#ty as crate::resources::ApiResource>::Id)
@@ -718,17 +733,31 @@ fn process_fields(
                 if !skip_patch {
                     patch_fields.extend(quote! { pub #id_field_ident: #id_type, });
                 }
-                post_fields.extend(quote! { pub #id_field_ident: #id_type, });
+                if is_post_optional {
+                    post_fields.extend(quote! {
+                        #[serde(skip_serializing_if = "Option::is_none")]
+                        pub #id_field_ident: #id_type,
+                    });
+                } else {
+                    post_fields.extend(quote! { pub #id_field_ident: #id_type, });
+                }
             } else {
                 if !skip_patch {
                     patch_fields.extend(quote! { pub #id_field_ident: Option<#ty>, });
                 }
-                let post_type = if is_optional {
+                let post_type = if is_optional || is_post_optional {
                     quote!(Option<#ty>)
                 } else {
                     quote!(#ty)
                 };
-                post_fields.extend(quote! { pub #id_field_ident: #post_type, });
+                if is_post_optional {
+                    post_fields.extend(quote! {
+                        #[serde(skip_serializing_if = "Option::is_none")]
+                        pub #id_field_ident: #post_type,
+                    });
+                } else {
+                    post_fields.extend(quote! { pub #id_field_ident: #post_type, });
+                }
             }
         }
     }

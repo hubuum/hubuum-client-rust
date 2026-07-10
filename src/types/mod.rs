@@ -6,6 +6,7 @@ mod export;
 mod filter;
 mod history;
 mod id;
+mod identity;
 mod import;
 mod meta;
 mod params;
@@ -44,6 +45,8 @@ pub use id::{
     EventDeliveryId, EventSubscriptionId, HistoryId, ImportResultId, PermissionId, PrincipalId,
     RemoteCallResultId, TaskEventId, TaskId, TokenId,
 };
+pub(crate) use identity::default_local_identity_value;
+pub use identity::{LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND};
 pub use import::{
     CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, GroupKey, ImportAtomicity, ImportClassInput,
     ImportClassRelationInput, ImportCollectionInput, ImportCollectionPermissionInput,
