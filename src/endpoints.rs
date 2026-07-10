@@ -23,9 +23,11 @@ pub enum Endpoint {
     PrincipalPermissions,
     PrincipalTokens,
     PrincipalTokenRevoke,
+    PrincipalSettings,
     Me,
     MeGroups,
     MePermissions,
+    MeSettings,
     MeTokens,
     Groups,
     GroupsById,
@@ -138,9 +140,11 @@ impl Endpoint {
             Endpoint::PrincipalTokenRevoke => {
                 "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke"
             }
+            Endpoint::PrincipalSettings => "/api/v1/iam/principals/{principal_id}/settings",
             Endpoint::Me => "/api/v1/iam/me",
             Endpoint::MeGroups => "/api/v1/iam/me/groups",
             Endpoint::MePermissions => "/api/v1/iam/me/permissions",
+            Endpoint::MeSettings => "/api/v1/iam/me/settings",
             Endpoint::MeTokens => "/api/v1/iam/me/tokens",
             Endpoint::Groups => "/api/v1/iam/groups",
             Endpoint::GroupsById => "/api/v1/iam/groups/{group_id}",
@@ -299,7 +303,7 @@ mod test {
             .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(client_paths, spec_paths);
-        assert_eq!(contract["operation_count"], 149);
+        assert_eq!(contract["operation_count"], 157);
     }
     use std::str::FromStr;
     use yare::parameterized;
@@ -323,9 +327,11 @@ mod test {
         principal_permissions = { Endpoint::PrincipalPermissions, "/api/v1/iam/principals/{principal_id}/permissions" },
         principal_tokens = { Endpoint::PrincipalTokens, "/api/v1/iam/principals/{principal_id}/tokens" },
         principal_token_revoke = { Endpoint::PrincipalTokenRevoke, "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke" },
+        principal_settings = { Endpoint::PrincipalSettings, "/api/v1/iam/principals/{principal_id}/settings" },
         me = { Endpoint::Me, "/api/v1/iam/me" },
         me_groups = { Endpoint::MeGroups, "/api/v1/iam/me/groups" },
         me_permissions = { Endpoint::MePermissions, "/api/v1/iam/me/permissions" },
+        me_settings = { Endpoint::MeSettings, "/api/v1/iam/me/settings" },
         me_tokens = { Endpoint::MeTokens, "/api/v1/iam/me/tokens" },
         get_group_by_id = { Endpoint::GroupsById, "/api/v1/iam/groups/{group_id}" },
         group_events = { Endpoint::GroupEvents, "/api/v1/iam/groups/{group_id}/events" },
@@ -397,7 +403,9 @@ mod test {
         service_account_by_id = { Endpoint::ServiceAccountsById, '/', "api/v1/iam/service-accounts/{service_account_id}" },
         principal_tokens = { Endpoint::PrincipalTokens, '/', "api/v1/iam/principals/{principal_id}/tokens" },
         principal_token_revoke = { Endpoint::PrincipalTokenRevoke, '/', "api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke" },
+        principal_settings = { Endpoint::PrincipalSettings, '/', "api/v1/iam/principals/{principal_id}/settings" },
         me = { Endpoint::Me, '/', "api/v1/iam/me" },
+        me_settings = { Endpoint::MeSettings, '/', "api/v1/iam/me/settings" },
         me_tokens = { Endpoint::MeTokens, '/', "api/v1/iam/me/tokens" },
         get_group_by_id = { Endpoint::GroupsById, '/', "api/v1/iam/groups/{group_id}" },
         group_events = { Endpoint::GroupEvents, '/', "api/v1/iam/groups/{group_id}/events" },

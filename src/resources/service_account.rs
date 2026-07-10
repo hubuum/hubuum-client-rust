@@ -3,9 +3,15 @@ use std::borrow::Cow;
 use hubuum_client_derive::ApiResource;
 
 #[cfg(feature = "async")]
-use crate::client::r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle};
+use crate::client::r#async::{
+    EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle,
+    PrincipalSettingsScope as AsyncPrincipalSettingsScope,
+};
 #[cfg(feature = "blocking")]
-use crate::client::sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle};
+use crate::client::sync::{
+    EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle,
+    PrincipalSettingsScope as SyncPrincipalSettingsScope,
+};
 #[cfg(feature = "async")]
 use crate::resources::user::{
     principal_token_create_async, principal_token_revoke_async, principal_tokens_async,
@@ -45,6 +51,10 @@ pub struct ServiceAccountResource {
 
 #[cfg(feature = "blocking")]
 impl SyncHandle<ServiceAccount> {
+    pub fn settings(&self) -> SyncPrincipalSettingsScope {
+        self.client().principal_settings(self.id())
+    }
+
     /// Disable this service account. Returns the updated service account.
     pub fn disable(&self) -> Result<ServiceAccount, ApiError> {
         let url_params = vec![(
@@ -80,6 +90,10 @@ impl SyncHandle<ServiceAccount> {
 
 #[cfg(feature = "async")]
 impl AsyncHandle<ServiceAccount> {
+    pub fn settings(&self) -> AsyncPrincipalSettingsScope {
+        self.client().principal_settings(self.id())
+    }
+
     /// Disable this service account. Returns the updated service account.
     pub async fn disable(&self) -> Result<ServiceAccount, ApiError> {
         let url_params = vec![(

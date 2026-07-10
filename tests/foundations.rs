@@ -76,6 +76,151 @@ fn mock_transport_enforces_body_limits_and_raw_path_boundaries() {
 }
 
 #[test]
+fn raw_requests_cannot_escape_the_base_origin_or_path_prefix() {
+    let transport = MockTransport::default();
+    let client =
+        blocking::Client::builder(BaseUrl::new("https://example.invalid/tenant/hubuum/").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("consumer-secret"));
+
+    for path in [
+        "//attacker.invalid/path",
+        r"\\attacker.invalid/path",
+        "%2e%2e/admin",
+        "api/%2E%2E/%2e%2e/admin",
+        "api/v1/classes?redirect=https://attacker.invalid",
+    ] {
+        assert!(
+            matches!(
+                client.raw(Method::GET, path).send_text(),
+                Err(ApiError::InvalidBaseUrl(_))
+            ),
+            "raw path should be rejected: {path}"
+        );
+    }
+
+    assert!(transport.requests().is_empty());
+}
+
+#[test]
+fn response_and_error_debug_output_redacts_sensitive_values() {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("x-private-token", "header-secret".parse().unwrap());
+    let response = TransportResponse {
+        status: StatusCode::OK,
+        headers,
+        body: b"body-secret".to_vec(),
+    };
+
+    let response_debug = format!("{response:?}");
+    assert!(response_debug.contains("x-private-token"));
+    assert!(response_debug.contains("body_len: 11"));
+    assert!(!response_debug.contains("header-secret"));
+    assert!(!response_debug.contains("body-secret"));
+
+    let error = ApiError::HttpWithBody {
+        method: Method::GET,
+        url: "https://example.invalid/search?q=query-secret&cursor=cursor-secret".into(),
+        status: StatusCode::BAD_REQUEST,
+        message: "invalid query".into(),
+        body: "body-secret".into(),
+    };
+    let error_debug = format!("{error:?}");
+    assert!(error_debug.contains("%5BREDACTED%5D"));
+    assert!(!error_debug.contains("query-secret"));
+    assert!(!error_debug.contains("cursor-secret"));
+    assert!(!error_debug.contains("body-secret"));
+    assert!(!error.to_string().contains("query-secret"));
+}
+
+#[test]
+fn principal_settings_support_get_replace_patch_and_reset() {
+    let transport = MockTransport::default();
+    for response in [
+        json!({ "theme": "light" }),
+        json!({ "theme": "dark" }),
+        json!({ "theme": "dark", "dashboard": { "columns": 3 } }),
+        json!({ "locale": "nb-NO" }),
+    ] {
+        transport.push_response(TransportResponse::json(StatusCode::OK, &response).unwrap());
+    }
+    transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+    let client = blocking_mock_client(transport.clone(), 4096);
+
+    assert_eq!(
+        client.settings().get().unwrap().get("theme"),
+        Some(&json!("light"))
+    );
+    client
+        .settings()
+        .replace(&json!({ "theme": "dark" }))
+        .unwrap();
+    client
+        .settings()
+        .patch(&json!({ "dashboard": { "columns": 3 } }))
+        .unwrap();
+    assert_eq!(
+        client.principal_settings(42).get().unwrap().get("locale"),
+        Some(&json!("nb-NO"))
+    );
+    client.settings().reset().unwrap();
+
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 5);
+    assert_eq!(requests[0].method, Method::GET);
+    assert_eq!(requests[0].url.path(), "/api/v1/iam/me/settings");
+    assert_eq!(requests[1].method, Method::PUT);
+    assert_eq!(requests[1].body(), br#"{"theme":"dark"}"#);
+    assert_eq!(requests[2].method, Method::PATCH);
+    assert_eq!(requests[2].body(), br#"{"dashboard":{"columns":3}}"#);
+    assert_eq!(requests[3].url.path(), "/api/v1/iam/principals/42/settings");
+    assert_eq!(requests[4].method, Method::DELETE);
+}
+
+#[test]
+fn principal_settings_reject_non_object_documents_before_transport() {
+    let transport = MockTransport::default();
+    let client = blocking_mock_client(transport.clone(), 1024);
+
+    assert!(matches!(
+        client.settings().replace(&json!(["invalid"])),
+        Err(ApiError::InvalidPrincipalSettings)
+    ));
+    assert!(matches!(
+        client.settings().patch(&json!(null)),
+        Err(ApiError::InvalidPrincipalSettings)
+    ));
+    assert!(transport.requests().is_empty());
+}
+
+#[tokio::test]
+async fn async_principal_settings_use_the_same_typed_surface() {
+    let transport = MockTransport::default();
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &json!({ "locale": "nb-NO" })).unwrap(),
+    );
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    let settings = client
+        .principal_settings(42)
+        .patch(&json!({ "locale": "nb-NO" }))
+        .await
+        .unwrap();
+
+    assert_eq!(settings.get("locale"), Some(&json!("nb-NO")));
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].method, Method::PATCH);
+    assert_eq!(requests[0].url.path(), "/api/v1/iam/principals/42/settings");
+}
+
+#[test]
 fn raw_json_requests_set_content_type_for_custom_transports() {
     let transport = MockTransport::default();
     transport.push_response(

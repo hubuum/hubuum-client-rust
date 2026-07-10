@@ -94,4 +94,6 @@ let client = hubuum_client::Client::builder_from_url("https://mock.invalid")?
 Implement `AsyncTransport` or `BlockingTransport` to integrate a different HTTP
 stack. The lower-level `client.raw(method, relative_path)` escape hatch can call
 new server routes before the typed library catches up. It rejects absolute URLs,
-parent traversal, and authorization overrides.
+network-path references, decoded parent traversal, query or fragment injection,
+configured base-prefix escapes, and authorization overrides before attaching a
+bearer token.

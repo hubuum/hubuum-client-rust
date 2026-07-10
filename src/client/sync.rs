@@ -24,10 +24,10 @@ use crate::types::{
     ExportContentType, ExportJsonResponse, ExportRequest, ExportResult, ExportTemplateHistory,
     ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportRequest,
     ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
-    ObjectHistory, PrincipalId, ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory,
-    SortDirection, TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse,
-    TaskStatus, Token, TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
-    UpdateEventSubscription,
+    ObjectHistory, PrincipalId, PrincipalSettings, ProbeResponse, ReleaseRateLimitResponse,
+    RemoteTargetHistory, SortDirection, TaskEventResponse, TaskId, TaskKind,
+    TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject, UnifiedSearchEvent,
+    UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -971,6 +971,26 @@ impl Client<Authenticated> {
         CursorRequest::new(self.clone(), Endpoint::MePermissions, UrlParams::default())
     }
 
+    /// Settings belonging to the authenticated principal.
+    pub fn settings(&self) -> PrincipalSettingsScope {
+        PrincipalSettingsScope::new(self.clone(), Endpoint::MeSettings.path().to_string())
+    }
+
+    /// Settings belonging to an explicit principal. Cross-principal access is
+    /// restricted by the server to unscoped human administrators.
+    pub fn principal_settings<I>(&self, principal_id: I) -> PrincipalSettingsScope
+    where
+        I: Into<PrincipalId>,
+    {
+        let principal_id = principal_id.into();
+        PrincipalSettingsScope::new(
+            self.clone(),
+            Endpoint::PrincipalSettings
+                .path()
+                .replace("{principal_id}", &principal_id.to_string()),
+        )
+    }
+
     pub fn classes(&self) -> Resource<Class> {
         Resource::new(self.clone(), UrlParams::default())
     }
@@ -1268,6 +1288,57 @@ impl Client<Authenticated> {
 
     pub fn tasks(&self) -> Tasks {
         Tasks::new(self.clone())
+    }
+}
+
+/// Fluent operations for one principal settings document.
+#[derive(Debug, Clone)]
+#[must_use]
+pub struct PrincipalSettingsScope {
+    client: Client<Authenticated>,
+    path: String,
+}
+
+impl PrincipalSettingsScope {
+    fn new(client: Client<Authenticated>, path: String) -> Self {
+        Self { client, path }
+    }
+
+    pub fn get(&self) -> Result<PrincipalSettings, ApiError> {
+        self.client.raw(reqwest::Method::GET, &self.path).send()
+    }
+
+    /// Replace the complete settings document (`PUT`).
+    pub fn replace<T>(&self, settings: &T) -> Result<PrincipalSettings, ApiError>
+    where
+        T: Serialize + ?Sized,
+    {
+        let settings = PrincipalSettings::from_serializable(settings)?;
+        self.client
+            .raw(reqwest::Method::PUT, &self.path)
+            .json(&settings)?
+            .send()
+    }
+
+    /// Apply recursive JSON Merge Patch semantics (`PATCH`). Null values remove
+    /// keys, object values merge, and all other values replace existing values.
+    pub fn patch<T>(&self, patch: &T) -> Result<PrincipalSettings, ApiError>
+    where
+        T: Serialize + ?Sized,
+    {
+        let patch = PrincipalSettings::from_serializable(patch)?;
+        self.client
+            .raw(reqwest::Method::PATCH, &self.path)
+            .json(&patch)?
+            .send()
+    }
+
+    /// Reset the settings document to an empty object (`DELETE`).
+    pub fn reset(&self) -> Result<(), ApiError> {
+        self.client
+            .raw(reqwest::Method::DELETE, &self.path)
+            .send_optional::<serde_json::Value>()?;
+        Ok(())
     }
 }
 

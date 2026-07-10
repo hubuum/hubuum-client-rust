@@ -1,4 +1,4 @@
-use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
+use percent_encoding::{AsciiSet, CONTROLS, percent_decode_str, utf8_percent_encode};
 use reqwest::{
     Method, StatusCode,
     header::{CONTENT_TYPE, HeaderMap, RETRY_AFTER},
@@ -123,12 +123,43 @@ pub(crate) fn build_relative_url(
     path: &str,
     query: &[(String, String)],
 ) -> Result<url::Url, ApiError> {
-    if path.split('/').any(|segment| segment == "..") || url::Url::parse(path).is_ok() {
-        return Err(ApiError::InvalidBaseUrl(
-            "raw request paths must be relative and cannot contain `..`".into(),
-        ));
+    let invalid_path = || {
+        ApiError::InvalidBaseUrl(
+            "raw request paths must stay within the configured base URL".into(),
+        )
+    };
+    if path
+        .chars()
+        .any(|character| matches!(character, '\\' | '?' | '#'))
+        || url::Url::parse(path).is_ok()
+    {
+        return Err(invalid_path());
     }
-    let mut url = base_url.as_url().join(path.trim_start_matches('/'))?;
+
+    // Accept one leading slash for API-style paths, but reject network-path
+    // references and decoded dot segments before URL resolution.
+    let relative_path = path.strip_prefix('/').unwrap_or(path);
+    if relative_path.starts_with('/') {
+        return Err(invalid_path());
+    }
+    let decoded_path = percent_decode_str(relative_path)
+        .decode_utf8()
+        .map_err(|_| invalid_path())?;
+    if decoded_path.starts_with('/')
+        || decoded_path.starts_with('\\')
+        || decoded_path
+            .split(['/', '\\'])
+            .any(|segment| matches!(segment, "." | ".."))
+    {
+        return Err(invalid_path());
+    }
+
+    let mut url = base_url.as_url().join(relative_path)?;
+    if url.origin() != base_url.as_url().origin()
+        || !url.path().starts_with(base_url.as_url().path())
+    {
+        return Err(invalid_path());
+    }
     if !query.is_empty() {
         let mut pairs = url.query_pairs_mut();
         for (key, value) in query {

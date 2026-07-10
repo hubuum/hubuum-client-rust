@@ -1,7 +1,7 @@
 {
   "api_version": "0.0.1",
   "openapi": "3.1.0",
-  "operation_count": 149,
+  "operation_count": 157,
   "operations": [
     {
       "method": "POST",
@@ -2674,6 +2674,9 @@
         "401": [
           "application/json"
         ],
+        "403": [
+          "application/json"
+        ],
         "404": [
           "application/json"
         ],
@@ -2730,6 +2733,9 @@
           "application/json"
         ],
         "401": [
+          "application/json"
+        ],
+        "403": [
           "application/json"
         ],
         "404": [
@@ -2917,6 +2923,94 @@
       ]
     },
     {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1IamMeSettings",
+      "parameters": [],
+      "path": "/api/v1/iam/me/settings",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamMeSettings",
+      "parameters": [],
+      "path": "/api/v1/iam/me/settings",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1IamMeSettings",
+      "parameters": [],
+      "path": "/api/v1/iam/me/settings",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1IamMeSettings",
+      "parameters": [],
+      "path": "/api/v1/iam/me/settings",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
       "method": "GET",
       "operation_id": "getApiV1IamMeTokens",
       "parameters": [
@@ -2987,6 +3081,114 @@
           "application/json"
         ],
         "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1IamPrincipalsByPrincipalIdSettings",
+      "parameters": [
+        "path:principal_id"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/settings",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamPrincipalsByPrincipalIdSettings",
+      "parameters": [
+        "path:principal_id"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/settings",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1IamPrincipalsByPrincipalIdSettings",
+      "parameters": [
+        "path:principal_id"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/settings",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1IamPrincipalsByPrincipalIdSettings",
+      "parameters": [
+        "path:principal_id"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/settings",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
           "application/json"
         ]
       },
@@ -3322,6 +3524,9 @@
         "401": [
           "application/json"
         ],
+        "403": [
+          "application/json"
+        ],
         "404": [
           "application/json"
         ]
@@ -3378,6 +3583,9 @@
           "application/json"
         ],
         "401": [
+          "application/json"
+        ],
+        "403": [
           "application/json"
         ],
         "404": [
@@ -4195,8 +4403,8 @@
       "security": []
     }
   ],
-  "path_count": 105,
-  "schema_count": 158,
+  "path_count": 107,
+  "schema_count": 160,
   "schema_names": [
     "ApiErrorResponse",
     "ClassKey",
@@ -4250,6 +4458,7 @@
     "GroupGrant",
     "GroupKey",
     "GroupPermission",
+    "GroupResponse",
     "HistoryResponse_CollectionHistory",
     "HistoryResponse_ExportTemplateHistory",
     "HistoryResponse_HubuumClassHistory",
@@ -4310,6 +4519,7 @@
     "Permissions",
     "PrincipalCollectionPermissions",
     "PrincipalMemberResponse",
+    "PrincipalSettings",
     "PrincipalToken",
     "PrincipalTokenMetadata",
     "ProbeResponse",
@@ -4357,5 +4567,5 @@
     "UpdateUser",
     "UserResponse"
   ],
-  "spec_sha256": "6a12d8c35134fcffa23a8e4a57cb063fd28329d3af1c4f79707560f6990aefb1"
+  "spec_sha256": "05704d58197391899bf5211767efb2b00c50d60f946f46dc78b00d6961e6a4eb"
 }

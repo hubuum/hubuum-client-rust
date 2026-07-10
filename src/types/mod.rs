@@ -11,6 +11,7 @@ mod meta;
 mod params;
 mod remote;
 mod search;
+mod settings;
 mod task;
 mod typed_object;
 
@@ -65,6 +66,7 @@ pub use search::{
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
     UnifiedSearchResults, UnifiedSearchStartedEvent,
 };
+pub use settings::PrincipalSettings;
 pub use task::{
     ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse, TaskDetails, TaskEventResponse,
     TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,

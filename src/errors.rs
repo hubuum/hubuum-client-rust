@@ -46,10 +46,13 @@ pub enum ApiError {
     #[error("Query encoding error: {0}")]
     QueryEncoding(String),
 
+    #[error("Principal settings must be a JSON object")]
+    InvalidPrincipalSettings,
+
     #[error("Missing location header for: {0}")]
     MissingLocationHeader(String),
 
-    #[error("HTTP {method} {url} failed with {status}: {message}")]
+    #[error("HTTP {method} request failed with {status}: {message}")]
     HttpWithBody {
         method: reqwest::Method,
         url: String,
@@ -71,6 +74,12 @@ pub enum ApiError {
     TaskTimeout {
         task_id: crate::types::TaskId,
         timeout: std::time::Duration,
+    },
+
+    #[error("Task {task_id} completed unsuccessfully with status {status}")]
+    TaskUnsuccessful {
+        task_id: crate::types::TaskId,
+        status: crate::types::TaskStatus,
     },
 
     #[error("Request retries exhausted after {attempts} attempts: {last_error}")]
@@ -117,6 +126,7 @@ impl std::fmt::Debug for ApiError {
             Self::UrlParse(error) => f.debug_tuple("UrlParse").field(error).finish(),
             Self::UrlSerialize(error) => f.debug_tuple("UrlSerialize").field(error).finish(),
             Self::QueryEncoding(message) => f.debug_tuple("QueryEncoding").field(message).finish(),
+            Self::InvalidPrincipalSettings => f.write_str("InvalidPrincipalSettings"),
             Self::MissingLocationHeader(message) => f
                 .debug_tuple("MissingLocationHeader")
                 .field(message)
@@ -130,7 +140,7 @@ impl std::fmt::Debug for ApiError {
             } => f
                 .debug_struct("HttpWithBody")
                 .field("method", method)
-                .field("url", url)
+                .field("url", &crate::client::redacted_url_for_log(url))
                 .field("status", status)
                 .field("message", message)
                 .field("body", &"[REDACTED]")
@@ -152,6 +162,11 @@ impl std::fmt::Debug for ApiError {
                 .debug_struct("TaskTimeout")
                 .field("task_id", task_id)
                 .field("timeout", timeout)
+                .finish(),
+            Self::TaskUnsuccessful { task_id, status } => f
+                .debug_struct("TaskUnsuccessful")
+                .field("task_id", task_id)
+                .field("status", status)
                 .finish(),
             Self::RetryExhausted {
                 attempts,

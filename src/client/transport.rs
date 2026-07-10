@@ -49,11 +49,22 @@ impl std::fmt::Debug for RequestPlan {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TransportResponse {
     pub status: StatusCode,
     pub headers: HeaderMap,
     pub body: Vec<u8>,
+}
+
+impl std::fmt::Debug for TransportResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TransportResponse")
+            .field("status", &self.status)
+            .field("header_names", &self.headers.keys().collect::<Vec<_>>())
+            .field("body", &"[REDACTED]")
+            .field("body_len", &self.body.len())
+            .finish()
+    }
 }
 
 impl TransportResponse {

@@ -5,12 +5,12 @@ use std::borrow::Cow;
 #[cfg(feature = "async")]
 use crate::client::r#async::{
     CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-    Handle as AsyncHandle,
+    Handle as AsyncHandle, PrincipalSettingsScope as AsyncPrincipalSettingsScope,
 };
 #[cfg(feature = "blocking")]
 use crate::client::sync::{
     CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-    Handle as SyncHandle,
+    Handle as SyncHandle, PrincipalSettingsScope as SyncPrincipalSettingsScope,
 };
 use crate::{
     ApiError, Group, NewTokenRequest, PrincipalTokenMetadata,
@@ -43,6 +43,10 @@ pub struct UserResource {
 
 #[cfg(feature = "blocking")]
 impl SyncHandle<User> {
+    pub fn settings(&self) -> SyncPrincipalSettingsScope {
+        self.client().principal_settings(self.id())
+    }
+
     pub fn groups_request(&self) -> SyncCursorRequest<Group> {
         SyncCursorRequest::new(
             self.client().clone(),
@@ -126,6 +130,10 @@ impl SyncHandle<User> {
 
 #[cfg(feature = "async")]
 impl AsyncHandle<User> {
+    pub fn settings(&self) -> AsyncPrincipalSettingsScope {
+        self.client().principal_settings(self.id())
+    }
+
     pub fn groups_request(&self) -> AsyncCursorRequest<Group> {
         AsyncCursorRequest::new(
             self.client().clone(),

@@ -694,7 +694,10 @@ name = "hubuum_reconcile"
 version = "0.1.0"
 dependencies = [
  "hubuum_client",
+ "reqwest",
  "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

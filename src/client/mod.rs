@@ -15,8 +15,10 @@ pub mod transport;
 
 #[cfg(feature = "async")]
 pub use self::r#async::{
-    Client, CollectionScope, ExportOutputStream, ItemStream, PageStream, TypedClass,
+    Client, CollectionScope, ExportOutputStream, ItemStream, PageStream, PrincipalSettingsScope,
+    TypedClass,
 };
+pub(crate) use self::shared::redacted_url_for_log;
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryNumericField, QueryTextField, QueryValueField,
     RetryPolicy,
@@ -160,6 +162,12 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::me_tokens_request;
             let _ = $module::Client::<Authenticated>::me_permissions;
             let _ = $module::Client::<Authenticated>::me_permissions_request;
+            let _ = $module::Client::<Authenticated>::settings;
+            let _ = $module::Client::<Authenticated>::principal_settings::<i32>;
+            let _ = $module::PrincipalSettingsScope::get;
+            let _ = $module::PrincipalSettingsScope::replace::<serde_json::Value>;
+            let _ = $module::PrincipalSettingsScope::patch::<serde_json::Value>;
+            let _ = $module::PrincipalSettingsScope::reset;
         };
     }
 
@@ -249,10 +257,12 @@ mod parity_contract {
             let _ = $module::Handle::<User>::tokens;
             let _ = $module::Handle::<User>::tokens_request;
             let _ = $module::Handle::<User>::tokens_create;
+            let _ = $module::Handle::<User>::settings;
 
             let _ = $module::Handle::<ServiceAccount>::disable;
             let _ = $module::Handle::<ServiceAccount>::tokens;
             let _ = $module::Handle::<ServiceAccount>::tokens_create;
+            let _ = $module::Handle::<ServiceAccount>::settings;
 
             let _ = $module::Handle::<RemoteTarget>::invoke;
 

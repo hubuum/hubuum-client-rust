@@ -14,9 +14,10 @@ use hubuum_reconcile::{DesiredState, r#async::Reconciler};
 #     graph: hubuum_client::ImportGraph,
 # ) -> Result<(), hubuum_client::ApiError> {
 let desired = DesiredState::new(graph);
-let preview = Reconciler::new(client).preview(&desired).await?;
+let reconciler = Reconciler::new(client).idempotency_key("inventory-2026-07-10");
+let preview = reconciler.preview(&desired).await?;
 if preview.failed() == 0 {
-    Reconciler::new(client).apply(&desired).await?;
+    reconciler.apply(&desired).await?;
 }
 # Ok(())
 # }
@@ -24,3 +25,7 @@ if preview.failed() == 0 {
 
 Async support is enabled by default. Use the `blocking` feature with default
 features disabled for synchronous applications.
+
+The idempotency value is a namespace: preview and apply derive distinct phase
+keys. Failed or cancelled terminal tasks return `ApiError::TaskUnsuccessful`
+instead of an apparently successful result with no failed rows.

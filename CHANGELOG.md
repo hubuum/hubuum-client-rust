@@ -24,6 +24,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Object-only principal settings with fluent current-principal and
+  cross-principal get, replace, merge-patch, and reset operations for both async
+  and blocking clients.
 - True streaming for unified search, cursor pages/items, and export downloads.
 - Compile-time required-field builders through `create_checked()`; `create_raw()`
   remains the explicit request-struct escape hatch.
@@ -39,7 +42,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   `MockTransport`, and authenticated relative `raw()` requests for new routes.
 - The `hubuum_reconcile` workspace crate for dry-run previews and task-backed,
   idempotent desired-state application.
-- A normalized OpenAPI operation snapshot covering 149 operations, executable
+- A normalized OpenAPI operation snapshot covering 157 operations, executable
   endpoint coverage checks, documented upstream gaps, and scheduled drift CI.
 - Strict formatting, clippy, docs, feature-matrix, MSRV, supply-chain, SemVer,
   pinned-server, and latest-server compatibility checks.
@@ -59,6 +62,13 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Raw requests cannot escape the configured origin or path prefix through
+  network-path references, backslashes, or encoded dot segments before bearer
+  authentication is attached.
+- Reconciliation derives distinct preview/apply idempotency keys and returns a
+  structured error for failed or cancelled terminal tasks.
+- Transport response diagnostics redact header values and bodies, and HTTP error
+  diagnostics redact query values.
 - Secret-bearing authentication and remote-target values use zeroizing secret
   storage and redact diagnostics. Request/response bodies and query values are
   no longer emitted through debug formatting or logs.

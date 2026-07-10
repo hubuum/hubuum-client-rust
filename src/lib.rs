@@ -72,9 +72,9 @@ pub use types::{
     ImportRequest, ImportResultId, ImportTaskDetails, ImportTaskResultResponse,
     LoginRateLimitConfig, LoginRateLimitEntry, LoginRateLimitState, LogoutTokenRequest,
     NewEventSink, NewEventSubscription, ObjectHistory, ObjectKey, PermissionId, Permissions,
-    PrincipalId, ProbeResponse, ReleaseRateLimitResponse, RemoteCallResultId, RemoteTargetHistory,
-    TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks, TaskProgress,
-    TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TokenId, TypedObject,
+    PrincipalId, PrincipalSettings, ProbeResponse, ReleaseRateLimitResponse, RemoteCallResultId,
+    RemoteTargetHistory, TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks,
+    TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TokenId, TypedObject,
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
     UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
@@ -92,7 +92,7 @@ pub mod prelude {
     pub use crate::Client;
     pub use crate::{
         ApiError, BaseUrl, ClassId, CollectionId, Credentials, GroupId, MockTransport, ObjectId,
-        RetryPolicy, TaskId, Token, TypedObject,
+        PrincipalSettings, RetryPolicy, TaskId, Token, TypedObject,
     };
 }
 

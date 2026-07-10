@@ -19,3 +19,8 @@ blocking = ["hubuum_client/blocking"]
 [dependencies]
 hubuum_client = { version = "0.3.0", path = "..", default-features = false }
 serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+reqwest = { version = "0.13", default-features = false }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt"] }
