@@ -30,7 +30,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
             ClassPatch {
                 name: Some(first_class_name.clone()),
                 description: Some("e2e class update for audit event".to_string()),
-                collection_id,
+                collection_id: collection_id.into(),
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -41,15 +41,13 @@ fn e2e_event_subscriptions_create_delivery_rows() {
     let sink = harness
         .client
         .event_sinks()
-        .create()
-        .params(NewEventSink {
+        .create_raw(NewEventSink {
             name: format!("{prefix}-sink"),
             kind: EventSinkKind::Webhook,
             config: Some(json!({})),
             enabled: Some(true),
             secret_ref: None,
         })
-        .send()
         .expect("event sink should create");
 
     let subscription = harness
@@ -89,7 +87,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
             ClassPatch {
                 name: Some(second_class_name),
                 description: Some("e2e class update for delivery fanout".to_string()),
-                collection_id,
+                collection_id: collection_id.into(),
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -195,7 +193,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
             ClassPatch {
                 name: Some(updated_class_name.clone()),
                 description: Some("e2e class history update".to_string()),
-                collection_id,
+                collection_id: collection_id.into(),
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -210,8 +208,8 @@ fn e2e_events_and_history_cover_core_and_templates() {
             object_id,
             ObjectPatch {
                 name: Some(updated_object_name.clone()),
-                collection_id: Some(collection_id),
-                hubuum_class_id: Some(class_id),
+                collection_id: Some(collection_id.into()),
+                hubuum_class_id: Some(class_id.into()),
                 description: Some("e2e object history update".to_string()),
                 data: Some(json!({"source": "e2e-client", "history": true})),
             },
@@ -222,7 +220,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
         .client
         .export_templates()
         .create_raw(ExportTemplatePost {
-            collection_id,
+            collection_id: collection_id.into(),
             name: format!("{prefix}-template"),
             description: "e2e export template".to_string(),
             content_type: ExportContentType::TextPlain,
@@ -395,7 +393,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         collection_events
             .iter()
-            .any(|event| event.collection_id == Some(collection_id))
+            .any(|event| event.collection_id == Some(collection_id.into()))
     );
 
     let class_events = harness

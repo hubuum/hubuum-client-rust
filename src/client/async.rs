@@ -19,13 +19,14 @@ use crate::resources::{
 };
 use crate::types::{
     BaseUrl, ClassHistory, ClearRateLimitResponse, CollectionHistory, CountsResponse, Credentials,
-    DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryUpdateResponse,
-    EventResponse, EventSubscription, ExportContentType, ExportJsonResponse, ExportRequest,
-    ExportResult, ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator, HubuumDateTime,
-    ImportRequest, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
-    NewEventSubscription, ObjectHistory, ProbeResponse, ReleaseRateLimitResponse,
-    RemoteTargetHistory, SortDirection, TaskEventResponse, TaskKind, TaskQueueStateResponse,
-    TaskResponse, TaskStatus, Token, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryId,
+    EventDeliveryUpdateResponse, EventResponse, EventSubscription, EventSubscriptionId,
+    ExportContentType, ExportJsonResponse, ExportRequest, ExportResult, ExportTemplateHistory,
+    ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportRequest,
+    ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
+    ObjectHistory, PrincipalId, ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory,
+    SortDirection, TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse,
+    TaskStatus, Token, TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
     UpdateEventSubscription,
 };
 use crate::{ObjectRelation, QueryFilter};
@@ -36,10 +37,64 @@ struct DeleteResponse;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmptyPostParams;
 
+pub type PageStream<T> = std::pin::Pin<
+    Box<dyn futures_core::Stream<Item = Result<shared::Page<T>, ApiError>> + Send + 'static>,
+>;
+pub type ItemStream<T> =
+    std::pin::Pin<Box<dyn futures_core::Stream<Item = Result<T, ApiError>> + Send + 'static>>;
+
+pub struct ExportOutputStream {
+    pub content_type: ExportContentType,
+    pub content_length: Option<u64>,
+    body: std::pin::Pin<
+        Box<dyn futures_core::Stream<Item = Result<bytes::Bytes, ApiError>> + Send + 'static>,
+    >,
+}
+
+impl futures_core::Stream for ExportOutputStream {
+    type Item = Result<bytes::Bytes, ApiError>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        context: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.body.as_mut().poll_next(context)
+    }
+}
+
+impl ExportOutputStream {
+    pub async fn download_to<W>(mut self, writer: &mut W) -> Result<u64, ApiError>
+    where
+        W: tokio::io::AsyncWrite + Unpin,
+    {
+        use futures_util::StreamExt;
+        use tokio::io::AsyncWriteExt;
+
+        let mut written = 0_u64;
+        while let Some(chunk) = self.next().await {
+            let chunk = chunk?;
+            writer.write_all(&chunk).await?;
+            written = written.saturating_add(chunk.len() as u64);
+        }
+        writer.flush().await?;
+        Ok(written)
+    }
+
+    pub async fn download_to_path(
+        self,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<u64, ApiError> {
+        let mut file = tokio::fs::File::create(path).await?;
+        self.download_to(&mut file).await
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Client<S> {
     http_client: reqwest::Client,
+    transport: Option<std::sync::Arc<dyn super::transport::AsyncTransport>>,
     base_url: BaseUrl,
+    options: shared::ClientOptions,
     state: S,
 }
 
@@ -49,6 +104,9 @@ pub struct ClientBuilder {
     validate_server_certificate: bool,
     timeout: Option<std::time::Duration>,
     user_agent: Option<String>,
+    http_client: Option<reqwest::Client>,
+    transport: Option<std::sync::Arc<dyn super::transport::AsyncTransport>>,
+    options: shared::ClientOptions,
 }
 
 impl ClientBuilder {
@@ -58,6 +116,9 @@ impl ClientBuilder {
             validate_server_certificate: true,
             timeout: None,
             user_agent: None,
+            http_client: None,
+            transport: None,
+            options: shared::ClientOptions::default(),
         }
     }
 
@@ -76,19 +137,64 @@ impl ClientBuilder {
         self
     }
 
+    /// Use a preconfigured reqwest client. TLS, proxy, and pool settings on this
+    /// client take precedence over the corresponding builder options.
+    pub fn with_http_client(mut self, http_client: reqwest::Client) -> Self {
+        self.http_client = Some(http_client);
+        self
+    }
+
+    pub fn with_transport(
+        mut self,
+        transport: std::sync::Arc<dyn super::transport::AsyncTransport>,
+    ) -> Self {
+        self.transport = Some(transport);
+        self
+    }
+
+    pub fn max_response_body_bytes(mut self, limit: usize) -> Self {
+        self.options.max_response_body_bytes = limit;
+        self
+    }
+
+    pub fn max_error_body_bytes(mut self, limit: usize) -> Self {
+        self.options.max_error_body_bytes = limit;
+        self
+    }
+
+    pub fn retry_policy(mut self, retry_policy: shared::RetryPolicy) -> Self {
+        self.options.retry_policy = retry_policy;
+        self
+    }
+
+    pub fn auto_pagination_limits(mut self, max_pages: usize, max_items: usize) -> Self {
+        self.options.max_auto_pages = max_pages;
+        self.options.max_auto_items = max_items;
+        self
+    }
+
     pub fn build(self) -> Result<Client<Unauthenticated>, ApiError> {
-        let mut builder = reqwest::Client::builder()
-            .danger_accept_invalid_certs(!self.validate_server_certificate);
-        if let Some(timeout) = self.timeout {
-            builder = builder.timeout(timeout);
-        }
-        if let Some(user_agent) = self.user_agent {
-            builder = builder.user_agent(user_agent);
-        }
+        let http_client = match self.http_client {
+            Some(http_client) => http_client,
+            None => {
+                let mut builder =
+                    reqwest::Client::builder()
+                        .danger_accept_invalid_certs(!self.validate_server_certificate)
+                        .user_agent(self.user_agent.unwrap_or_else(|| {
+                            format!("hubuum-client/{}", env!("CARGO_PKG_VERSION"))
+                        }));
+                if let Some(timeout) = self.timeout {
+                    builder = builder.timeout(timeout);
+                }
+                builder.build()?
+            }
+        };
 
         Ok(Client {
-            http_client: builder.build()?,
+            http_client,
+            transport: self.transport,
             base_url: self.base_url,
+            options: self.options,
             state: Unauthenticated,
         })
     }
@@ -111,6 +217,10 @@ impl<S> Client<S> {
         &self.http_client
     }
 
+    pub fn retry_policy(&self) -> &shared::RetryPolicy {
+        &self.options.retry_policy
+    }
+
     async fn check_success(
         &self,
         method: &reqwest::Method,
@@ -119,7 +229,8 @@ impl<S> Client<S> {
     ) -> Result<Response, ApiError> {
         if !response.status().is_success() {
             let status = response.status();
-            let body = response.text().await?;
+            let body =
+                shared::read_async_body_preview(response, self.options.max_error_body_bytes).await;
             let error_message = shared::parse_http_error_message(&body);
             return Err(ApiError::HttpWithBody {
                 method: method.clone(),
@@ -130,6 +241,84 @@ impl<S> Client<S> {
             });
         }
         Ok(response)
+    }
+
+    async fn send_with_retry(
+        &self,
+        method: &reqwest::Method,
+        has_idempotency_key: bool,
+        request: reqwest::RequestBuilder,
+    ) -> Result<Response, ApiError> {
+        let policy = &self.options.retry_policy;
+        let attempts = if shared::is_replay_safe(method, has_idempotency_key) {
+            policy.max_attempts.max(1)
+        } else {
+            1
+        };
+
+        for attempt in 1..=attempts {
+            let Some(attempt_request) = request.try_clone() else {
+                return Ok(request.send().await?);
+            };
+            match attempt_request.send().await {
+                Ok(response)
+                    if attempt < attempts && policy.should_retry_status(response.status()) =>
+                {
+                    let delay = policy.delay(attempt, Some(response.headers()));
+                    tokio::time::sleep(delay).await;
+                }
+                Ok(response) => return Ok(response),
+                Err(_error) if attempt < attempts => {
+                    let delay = policy.delay(attempt, None);
+                    tokio::time::sleep(delay).await;
+                }
+                Err(error) => {
+                    return Err(ApiError::RetryExhausted {
+                        attempts,
+                        last_error: error.to_string(),
+                    });
+                }
+            }
+        }
+
+        unreachable!("retry loop always returns")
+    }
+
+    async fn execute_transport_with_retry(
+        &self,
+        method: &reqwest::Method,
+        has_idempotency_key: bool,
+        transport: &dyn super::transport::AsyncTransport,
+        request: super::transport::RequestPlan,
+    ) -> Result<super::transport::TransportResponse, ApiError> {
+        let policy = &self.options.retry_policy;
+        let attempts = if shared::is_replay_safe(method, has_idempotency_key) {
+            policy.max_attempts.max(1)
+        } else {
+            1
+        };
+
+        for attempt in 1..=attempts {
+            match transport.execute(request.clone()).await {
+                Ok(response)
+                    if attempt < attempts && policy.should_retry_status(response.status) =>
+                {
+                    tokio::time::sleep(policy.delay(attempt, Some(&response.headers))).await;
+                }
+                Ok(response) => return Ok(response),
+                Err(_error) if attempt < attempts => {
+                    tokio::time::sleep(policy.delay(attempt, None)).await;
+                }
+                Err(error) => {
+                    return Err(ApiError::RetryExhausted {
+                        attempts,
+                        last_error: error.to_string(),
+                    });
+                }
+            }
+        }
+
+        unreachable!("retry loop always returns")
     }
 }
 
@@ -153,14 +342,23 @@ impl Client<Unauthenticated> {
         Self::try_new(BaseUrl::new(base_url)?)
     }
 
+    #[deprecated(since = "0.3.0", note = "use Client::try_new or Client::from_url")]
     pub fn new(base_url: BaseUrl) -> Self {
         Self::try_new(base_url).expect("reqwest client should build")
     }
 
+    #[deprecated(
+        since = "0.3.0",
+        note = "use Client::builder(...).validate_certs(false)"
+    )]
     pub fn new_without_certificate_validation(base_url: BaseUrl) -> Self {
-        Self::new_with_certificate_validation(base_url, false)
+        Self::builder(base_url)
+            .validate_certs(false)
+            .build()
+            .expect("reqwest client should build")
     }
 
+    #[deprecated(since = "0.3.0", note = "use Client::builder(...).validate_certs(...)")]
     pub fn new_with_certificate_validation(
         base_url: BaseUrl,
         validate_server_certificate: bool,
@@ -173,7 +371,7 @@ impl Client<Unauthenticated> {
 }
 
 impl Client<Unauthenticated> {
-    pub async fn login(self, credentials: Credentials) -> Result<Client<Authenticated>, ApiError> {
+    pub async fn login(&self, credentials: Credentials) -> Result<Client<Authenticated>, ApiError> {
         let login_url = self.build_url(&Endpoint::Login, UrlParams::default());
         let response = self
             .http_client
@@ -184,62 +382,104 @@ impl Client<Unauthenticated> {
         let response = self
             .check_success(&reqwest::Method::POST, &login_url, response)
             .await?;
-        let token: Token = response.json().await?;
+        let status = response.status();
+        let body = shared::read_async_body(response, self.options.max_response_body_bytes).await?;
+        let token: Token = shared::parse_response(&reqwest::Method::POST, status, body)?
+            .ok_or_else(|| ApiError::EmptyResult("Login returned no token".into()))?;
 
         Ok(Client {
-            http_client: self.http_client,
-            base_url: self.base_url,
-            state: Authenticated { token: token.token },
+            http_client: self.http_client.clone(),
+            transport: self.transport.clone(),
+            base_url: self.base_url.clone(),
+            options: self.options.clone(),
+            state: Authenticated::new(token),
         })
     }
 
-    pub async fn login_with_token(self, token: Token) -> Result<Client<Authenticated>, ApiError> {
-        let status = self
+    pub async fn login_with_token(&self, token: Token) -> Result<Client<Authenticated>, ApiError> {
+        let url = self.build_url(&Endpoint::LoginWithToken, UrlParams::default());
+        let request = self
             .http_client
-            .get(self.build_url(&Endpoint::LoginWithToken, UrlParams::default()))
-            .header("Authorization", format!("Bearer {}", token.token))
-            .send()
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", token.as_str()));
+        let response = self
+            .send_with_retry(&reqwest::Method::GET, false, request)
+            .await?;
+        self.check_success(&reqwest::Method::GET, &url, response)
             .await?;
 
-        if status.status().is_success() {
-            Ok(Client {
-                http_client: self.http_client,
-                base_url: self.base_url,
-                state: Authenticated { token: token.token },
-            })
-        } else {
-            Err(ApiError::InvalidToken)
+        Ok(Client {
+            http_client: self.http_client.clone(),
+            transport: self.transport.clone(),
+            base_url: self.base_url.clone(),
+            options: self.options.clone(),
+            state: Authenticated::new(token),
+        })
+    }
+
+    /// Attach a token without making a validation request. This is useful with
+    /// rotating credentials and custom transports; the first API request still
+    /// verifies the token at the server boundary.
+    pub fn authenticate(&self, token: Token) -> Client<Authenticated> {
+        Client {
+            http_client: self.http_client.clone(),
+            transport: self.transport.clone(),
+            base_url: self.base_url.clone(),
+            options: self.options.clone(),
+            state: Authenticated::new(token),
         }
     }
 
     /// Liveness probe (`GET /healthz`). Requires no authentication.
     pub async fn healthz(&self) -> Result<ProbeResponse, ApiError> {
         let url = self.build_url(&Endpoint::Healthz, UrlParams::default());
-        let response = self.http_client.get(&url).send().await?;
+        let response = self
+            .send_with_retry(&reqwest::Method::GET, false, self.http_client.get(&url))
+            .await?;
         let response = self
             .check_success(&reqwest::Method::GET, &url, response)
             .await?;
-        Ok(response.json().await?)
+        let status = response.status();
+        let body = shared::read_async_body(response, self.options.max_response_body_bytes).await?;
+        shared::parse_response(&reqwest::Method::GET, status, body)?
+            .ok_or_else(|| ApiError::EmptyResult("Health probe returned no response".into()))
     }
 
     /// Readiness probe (`GET /readyz`). Requires no authentication; a not-ready
     /// server responds with `503`, surfaced here as an error.
     pub async fn readyz(&self) -> Result<ProbeResponse, ApiError> {
         let url = self.build_url(&Endpoint::Readyz, UrlParams::default());
-        let response = self.http_client.get(&url).send().await?;
+        let response = self
+            .send_with_retry(&reqwest::Method::GET, false, self.http_client.get(&url))
+            .await?;
         let response = self
             .check_success(&reqwest::Method::GET, &url, response)
             .await?;
-        Ok(response.json().await?)
+        let status = response.status();
+        let body = shared::read_async_body(response, self.options.max_response_body_bytes).await?;
+        shared::parse_response(&reqwest::Method::GET, status, body)?
+            .ok_or_else(|| ApiError::EmptyResult("Readiness probe returned no response".into()))
     }
 }
 
 impl Client<Authenticated> {
     /// Bearer token held by this authenticated client.
     pub fn token(&self) -> &str {
-        &self.state.token
+        self.state.token()
     }
 
+    pub fn raw(&self, method: reqwest::Method, path: impl Into<String>) -> RawRequest {
+        RawRequest {
+            client: self.clone(),
+            method,
+            path: path.into(),
+            query: Vec::new(),
+            headers: Vec::new(),
+            body: None,
+        }
+    }
+
+    #[deprecated(since = "0.3.0", note = "use token()")]
     pub fn get_token(&self) -> &str {
         self.token()
     }
@@ -262,7 +502,7 @@ impl Client<Authenticated> {
         .ok_or(ApiError::EmptyResult(empty_message.into()))
     }
 
-    pub async fn logout(&self) -> Result<(), ApiError> {
+    pub async fn logout(self) -> Result<Client<Unauthenticated>, ApiError> {
         self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
             reqwest::Method::POST,
             &Endpoint::Logout,
@@ -270,8 +510,15 @@ impl Client<Authenticated> {
             vec![],
             EmptyPostParams,
         )
-        .await
-        .map(|_| ())
+        .await?;
+
+        Ok(Client {
+            http_client: self.http_client,
+            transport: self.transport,
+            base_url: self.base_url,
+            options: self.options,
+            state: Unauthenticated,
+        })
     }
 
     pub async fn logout_token(&self, token: &str) -> Result<(), ApiError> {
@@ -411,6 +658,27 @@ impl Client<Authenticated> {
         .await
     }
 
+    pub(crate) async fn request_stream_with_endpoint(
+        &self,
+        endpoint: &Endpoint,
+        url_params: UrlParams,
+        query_params: Vec<QueryFilter>,
+    ) -> Result<Response, ApiError> {
+        let base_url = self.build_url(endpoint, url_params.clone());
+        let request_url =
+            shared::build_request_url(&reqwest::Method::GET, base_url, &url_params, query_params)?;
+        debug!("GET {}", shared::redacted_url_for_log(&request_url));
+        let request = self
+            .http_client
+            .get(&request_url)
+            .header("Authorization", format!("Bearer {}", self.state.token()));
+        let response = self
+            .send_with_retry(&reqwest::Method::GET, false, request)
+            .await?;
+        self.check_success(&reqwest::Method::GET, &request_url, response)
+            .await
+    }
+
     pub(crate) async fn request_with_endpoint_raw_with_headers<T: Serialize>(
         &self,
         method: reqwest::Method,
@@ -423,37 +691,70 @@ impl Client<Authenticated> {
         let base_url = self.build_url(endpoint, url_params.clone());
         let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
 
+        if let Some(transport) = &self.transport {
+            let plan = shared::build_request_plan(
+                &method,
+                &request_url,
+                &post_params,
+                self.state.token(),
+                headers,
+            )?;
+            let has_idempotency_key = headers
+                .iter()
+                .any(|(name, _)| name.eq_ignore_ascii_case("Idempotency-Key"));
+            let response = self
+                .execute_transport_with_retry(
+                    &method,
+                    has_idempotency_key,
+                    transport.as_ref(),
+                    plan,
+                )
+                .await?;
+            return shared::process_transport_response(
+                &method,
+                &request_url,
+                response,
+                &self.options,
+            );
+        }
+
+        let log_url = shared::redacted_url_for_log(&request_url);
         let request = if method == reqwest::Method::GET {
-            debug!("GET {}", request_url);
+            debug!("GET {}", log_url);
             self.http_client.get(&request_url)
         } else if method == reqwest::Method::POST {
-            debug!("POST {}", &request_url);
+            debug!("POST {}", log_url);
             self.http_client.post(&request_url).json(&post_params)
         } else if method == reqwest::Method::PUT {
-            debug!("PUT {}", &request_url);
+            debug!("PUT {}", log_url);
             self.http_client.put(&request_url).json(&post_params)
         } else if method == reqwest::Method::PATCH {
-            debug!("PATCH {}", &request_url);
+            debug!("PATCH {}", log_url);
             self.http_client.patch(&request_url).json(&post_params)
         } else if method == reqwest::Method::DELETE {
-            debug!("DELETE {}", &request_url);
+            debug!("DELETE {}", log_url);
             self.http_client.delete(&request_url)
         } else {
             return Err(ApiError::UnsupportedHttpOperation(method.to_string()));
         };
         let request = headers.iter().fold(
-            request.header("Authorization", format!("Bearer {}", self.state.token)),
+            request.header("Authorization", format!("Bearer {}", self.state.token())),
             |request, (name, value)| request.header(*name, value),
         );
 
         let now = std::time::Instant::now();
-        let response = request.send().await?;
+        let has_idempotency_key = headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("Idempotency-Key"));
+        let response = self
+            .send_with_retry(&method, has_idempotency_key, request)
+            .await?;
         trace!("Request took {:?}", now.elapsed());
         let response = self.check_success(&method, &request_url, response).await?;
         let status = response.status();
         let (next_cursor, total_count, content_type) =
             shared::response_metadata(response.headers());
-        let body = response.text().await?;
+        let body = shared::read_async_body(response, self.options.max_response_body_bytes).await?;
         debug!("Response: {} ({} bytes)", status, body.len());
 
         Ok(shared::RawResponse {
@@ -743,6 +1044,13 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
+    pub fn collection(&self, collection_id: impl Into<CollectionId>) -> CollectionScope {
+        CollectionScope {
+            client: self.clone(),
+            collection_id: collection_id.into(),
+        }
+    }
+
     pub fn collection_events(&self, collection_id: impl Into<CollectionId>) -> EventListRequest {
         let collection_id = collection_id.into();
         EventListRequest::new(
@@ -793,7 +1101,7 @@ impl Client<Authenticated> {
         collection_id: impl Into<CollectionId>,
     ) -> EventSubscriptions {
         let collection_id: CollectionId = collection_id.into();
-        EventSubscriptions::new(self.clone(), collection_id.get())
+        EventSubscriptions::new(self.clone(), collection_id)
     }
 
     pub fn groups(&self) -> Resource<Group> {
@@ -803,6 +1111,14 @@ impl Client<Authenticated> {
     pub fn objects(&self, class_id: impl Into<ClassId>) -> Resource<Object> {
         let class_id = class_id.into();
         Resource::new(self.clone(), vec![("class_id", class_id.to_string())])
+    }
+
+    pub fn typed_class<T>(&self, class_id: impl Into<ClassId>) -> TypedClass<T> {
+        TypedClass {
+            client: self.clone(),
+            class_id: class_id.into(),
+            _phantom: PhantomData,
+        }
     }
 
     pub fn class_events(&self, class_id: impl Into<ClassId>) -> EventListRequest {
@@ -1025,6 +1341,300 @@ impl Client<Authenticated> {
     }
 }
 
+pub struct RawRequest {
+    client: Client<Authenticated>,
+    method: reqwest::Method,
+    path: String,
+    query: Vec<(String, String)>,
+    headers: Vec<(String, String)>,
+    body: Option<serde_json::Value>,
+}
+
+impl RawRequest {
+    pub fn query_param(mut self, key: impl Into<String>, value: impl ToString) -> Self {
+        self.query.push((key.into(), value.to_string()));
+        self
+    }
+
+    pub fn header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+        self.headers.push((name.into(), value.into()));
+        self
+    }
+
+    pub fn json<T: Serialize>(mut self, value: &T) -> Result<Self, ApiError> {
+        self.body = Some(serde_json::to_value(value)?);
+        Ok(self)
+    }
+
+    async fn execute(self) -> Result<shared::RawResponse, ApiError> {
+        if self
+            .headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("authorization"))
+        {
+            return Err(ApiError::Transport(
+                "raw requests cannot override the Authorization header".into(),
+            ));
+        }
+        let url = shared::build_relative_url(&self.client.base_url, &self.path, &self.query)?;
+        let request_url = url.to_string();
+
+        if let Some(transport) = &self.client.transport {
+            let mut plan = super::transport::RequestPlan::new(self.method.clone(), url);
+            plan.headers.insert(
+                reqwest::header::AUTHORIZATION,
+                reqwest::header::HeaderValue::from_str(&format!(
+                    "Bearer {}",
+                    self.client.state.token()
+                ))
+                .map_err(|error| ApiError::Transport(error.to_string()))?,
+            );
+            for (name, value) in &self.headers {
+                plan.headers.insert(
+                    reqwest::header::HeaderName::from_bytes(name.as_bytes())
+                        .map_err(|error| ApiError::Transport(error.to_string()))?,
+                    reqwest::header::HeaderValue::from_str(value)
+                        .map_err(|error| ApiError::Transport(error.to_string()))?,
+                );
+            }
+            if let Some(body) = self.body {
+                plan.headers.entry(reqwest::header::CONTENT_TYPE).or_insert(
+                    reqwest::header::HeaderValue::from_static("application/json"),
+                );
+                plan = plan.with_body(serde_json::to_vec(&body)?);
+            }
+            let has_idempotency_key = self
+                .headers
+                .iter()
+                .any(|(name, _)| name.eq_ignore_ascii_case("idempotency-key"));
+            let response = self
+                .client
+                .execute_transport_with_retry(
+                    &self.method,
+                    has_idempotency_key,
+                    transport.as_ref(),
+                    plan,
+                )
+                .await?;
+            return shared::process_transport_response(
+                &self.method,
+                &request_url,
+                response,
+                &self.client.options,
+            );
+        }
+
+        debug!(
+            "{} {}",
+            self.method,
+            shared::redacted_url_for_log(&request_url)
+        );
+        let mut request = self
+            .client
+            .http_client
+            .request(self.method.clone(), &request_url)
+            .header(
+                reqwest::header::AUTHORIZATION,
+                format!("Bearer {}", self.client.state.token()),
+            );
+        for (name, value) in &self.headers {
+            request = request.header(name, value);
+        }
+        if let Some(body) = self.body {
+            request = request.json(&body);
+        }
+        let has_idempotency_key = self
+            .headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("idempotency-key"));
+        let response = self
+            .client
+            .send_with_retry(&self.method, has_idempotency_key, request)
+            .await?;
+        let response = self
+            .client
+            .check_success(&self.method, &request_url, response)
+            .await?;
+        let status = response.status();
+        let (next_cursor, total_count, content_type) =
+            shared::response_metadata(response.headers());
+        let body =
+            shared::read_async_body(response, self.client.options.max_response_body_bytes).await?;
+        Ok(shared::RawResponse {
+            status,
+            body,
+            next_cursor,
+            total_count,
+            content_type,
+        })
+    }
+
+    pub async fn send_optional<T: DeserializeOwned>(self) -> Result<Option<T>, ApiError> {
+        let method = self.method.clone();
+        let raw = self.execute().await?;
+        shared::parse_response(&method, raw.status, raw.body)
+    }
+
+    pub async fn send<T: DeserializeOwned>(self) -> Result<T, ApiError> {
+        self.send_optional()
+            .await?
+            .ok_or_else(|| ApiError::EmptyResult("Raw request returned an empty response".into()))
+    }
+
+    pub async fn send_text(self) -> Result<String, ApiError> {
+        Ok(self.execute().await?.body)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CollectionScope {
+    client: Client<Authenticated>,
+    collection_id: CollectionId,
+}
+
+impl CollectionScope {
+    pub fn id(&self) -> CollectionId {
+        self.collection_id
+    }
+
+    pub fn classes(&self) -> Resource<Class> {
+        self.client
+            .classes()
+            .set_raw_param("collection_id", self.collection_id)
+    }
+
+    pub fn export_templates(&self) -> Resource<ExportTemplate> {
+        self.client
+            .export_templates()
+            .set_raw_param("collection_id", self.collection_id)
+    }
+
+    pub fn remote_targets(&self) -> Resource<RemoteTarget> {
+        self.client
+            .remote_targets()
+            .set_raw_param("collection_id", self.collection_id)
+    }
+
+    pub fn events(&self) -> EventListRequest {
+        self.client.collection_events(self.collection_id)
+    }
+
+    pub fn history(&self) -> HistoryRequest<CollectionHistory> {
+        self.client.collection_history(self.collection_id)
+    }
+
+    pub fn event_subscriptions(&self) -> EventSubscriptions {
+        self.client.event_subscriptions(self.collection_id)
+    }
+
+    #[cfg(feature = "typed-schemas")]
+    pub async fn create_typed_class<T>(
+        &self,
+        name: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Result<TypedClass<T>, ApiError>
+    where
+        T: schemars::JsonSchema,
+    {
+        let class = self
+            .client
+            .classes()
+            .create_checked()
+            .name(name)
+            .description(description)
+            .collection_id(self.collection_id)
+            .json_schema(crate::types::schema_for::<T>()?)
+            .validate_schema(true)
+            .send()
+            .await?;
+        Ok(self.client.typed_class(class.id))
+    }
+}
+
+pub struct TypedClass<T> {
+    client: Client<Authenticated>,
+    class_id: ClassId,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> Clone for TypedClass<T> {
+    fn clone(&self) -> Self {
+        Self {
+            client: self.client.clone(),
+            class_id: self.class_id,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<T> TypedClass<T> {
+    pub fn id(&self) -> ClassId {
+        self.class_id
+    }
+}
+
+impl<T> TypedClass<T>
+where
+    T: DeserializeOwned,
+{
+    pub async fn get(&self, object_id: impl Into<ObjectId>) -> Result<TypedObject<T>, ApiError> {
+        self.client
+            .objects(self.class_id)
+            .get(object_id)
+            .await?
+            .into_inner()
+            .try_into()
+    }
+
+    pub async fn all(&self) -> Result<Vec<TypedObject<T>>, ApiError> {
+        self.client
+            .objects(self.class_id)
+            .all()
+            .await?
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect()
+    }
+}
+
+impl<T> TypedClass<T>
+where
+    T: DeserializeOwned + Send + 'static,
+{
+    pub fn items(&self) -> ItemStream<TypedObject<T>> {
+        use futures_util::StreamExt;
+
+        let stream = self.client.objects(self.class_id).items();
+        Box::pin(stream.map(|object| object.and_then(TryInto::try_into)))
+    }
+}
+
+impl<T> TypedClass<T>
+where
+    T: Serialize + DeserializeOwned,
+{
+    pub async fn create(
+        &self,
+        collection_id: impl Into<CollectionId>,
+        name: impl Into<String>,
+        description: impl Into<String>,
+        data: T,
+    ) -> Result<TypedObject<T>, ApiError> {
+        let data = serde_json::to_value(data)?;
+        self.client
+            .objects(self.class_id)
+            .create_checked()
+            .name(name)
+            .collection_id(collection_id)
+            .hubuum_class_id(self.class_id)
+            .description(description)
+            .data(data)
+            .send()
+            .await?
+            .try_into()
+    }
+}
+
 pub struct EventListRequest {
     inner: CursorRequest<EventResponse>,
 }
@@ -1046,8 +1656,10 @@ impl EventListRequest {
         self
     }
 
-    pub fn actor_user_id(mut self, actor_user_id: i32) -> Self {
-        self.inner = self.inner.set_query_param("actor_user_id", actor_user_id);
+    pub fn actor_user_id(mut self, actor_user_id: impl Into<UserId>) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("actor_user_id", actor_user_id.into());
         self
     }
 
@@ -1063,8 +1675,10 @@ impl EventListRequest {
         self
     }
 
-    pub fn collection_id(mut self, collection_id: i32) -> Self {
-        self.inner = self.inner.set_query_param("collection_id", collection_id);
+    pub fn collection_id(mut self, collection_id: impl Into<CollectionId>) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("collection_id", collection_id.into());
         self
     }
 
@@ -1107,6 +1721,14 @@ impl EventListRequest {
 
     pub async fn all(self) -> Result<Vec<EventResponse>, ApiError> {
         self.inner.all().await
+    }
+
+    pub fn pages(self) -> PageStream<EventResponse> {
+        self.inner.pages()
+    }
+
+    pub fn items(self) -> ItemStream<EventResponse> {
+        self.inner.items()
     }
 }
 
@@ -1152,13 +1774,26 @@ where
     }
 }
 
+impl<T> HistoryRequest<T>
+where
+    T: DeserializeOwned + Send + 'static,
+{
+    pub fn pages(self) -> PageStream<T> {
+        self.inner.pages()
+    }
+
+    pub fn items(self) -> ItemStream<T> {
+        self.inner.items()
+    }
+}
+
 pub struct EventSubscriptions {
     client: Client<Authenticated>,
-    collection_id: i32,
+    collection_id: CollectionId,
 }
 
 impl EventSubscriptions {
-    fn new(client: Client<Authenticated>, collection_id: i32) -> Self {
+    fn new(client: Client<Authenticated>, collection_id: CollectionId) -> Self {
         Self {
             client,
             collection_id,
@@ -1172,7 +1807,7 @@ impl EventSubscriptions {
         )]
     }
 
-    fn url_params_with_subscription(&self, subscription_id: i32) -> UrlParams {
+    fn url_params_with_subscription(&self, subscription_id: EventSubscriptionId) -> UrlParams {
         vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -1193,7 +1828,11 @@ impl EventSubscriptions {
         )
     }
 
-    pub async fn get(&self, subscription_id: i32) -> Result<EventSubscription, ApiError> {
+    pub async fn get(
+        &self,
+        subscription_id: impl Into<EventSubscriptionId>,
+    ) -> Result<EventSubscription, ApiError> {
+        let subscription_id = subscription_id.into();
         self.client
             .request_with_endpoint::<EmptyPostParams, EventSubscription>(
                 reqwest::Method::GET,
@@ -1228,9 +1867,10 @@ impl EventSubscriptions {
 
     pub async fn update(
         &self,
-        subscription_id: i32,
+        subscription_id: impl Into<EventSubscriptionId>,
         request: UpdateEventSubscription,
     ) -> Result<EventSubscription, ApiError> {
+        let subscription_id = subscription_id.into();
         let mut url_params = self.url_params();
         url_params.push(("patch_id".into(), subscription_id.to_string().into()));
         self.client
@@ -1247,7 +1887,11 @@ impl EventSubscriptions {
             ))
     }
 
-    pub async fn delete(&self, subscription_id: i32) -> Result<(), ApiError> {
+    pub async fn delete(
+        &self,
+        subscription_id: impl Into<EventSubscriptionId>,
+    ) -> Result<(), ApiError> {
+        let subscription_id = subscription_id.into();
         let mut url_params = self.url_params();
         url_params.push(("delete_id".into(), subscription_id.to_string().into()));
         self.client
@@ -1280,7 +1924,11 @@ impl EventDeliveries {
         )
     }
 
-    pub async fn get(&self, delivery_id: i64) -> Result<EventDelivery, ApiError> {
+    pub async fn get(
+        &self,
+        delivery_id: impl Into<EventDeliveryId>,
+    ) -> Result<EventDelivery, ApiError> {
+        let delivery_id = delivery_id.into();
         self.client
             .request_with_endpoint::<EmptyPostParams, EventDelivery>(
                 reqwest::Method::GET,
@@ -1310,12 +1958,18 @@ impl EventDeliveries {
             ))
     }
 
-    pub async fn retry(&self, delivery_id: i64) -> Result<EventDelivery, ApiError> {
+    pub async fn retry(
+        &self,
+        delivery_id: impl Into<EventDeliveryId>,
+    ) -> Result<EventDelivery, ApiError> {
         self.update_delivery(Endpoint::EventDeliveryRetry, delivery_id, "retry")
             .await
     }
 
-    pub async fn mark_dead(&self, delivery_id: i64) -> Result<EventDelivery, ApiError> {
+    pub async fn mark_dead(
+        &self,
+        delivery_id: impl Into<EventDeliveryId>,
+    ) -> Result<EventDelivery, ApiError> {
         self.update_delivery(Endpoint::EventDeliveryDead, delivery_id, "mark dead")
             .await
     }
@@ -1323,9 +1977,10 @@ impl EventDeliveries {
     async fn update_delivery(
         &self,
         endpoint: Endpoint,
-        delivery_id: i64,
+        delivery_id: impl Into<EventDeliveryId>,
         operation: &str,
     ) -> Result<EventDelivery, ApiError> {
+        let delivery_id = delivery_id.into();
         self.client
             .request_with_endpoint::<EmptyPostParams, EventDeliveryUpdateResponse>(
                 reqwest::Method::POST,
@@ -1355,7 +2010,8 @@ impl Exports {
         ExportSubmitOp::new(self.client.clone(), request)
     }
 
-    pub async fn get(&self, task_id: i32) -> Result<TaskResponse, ApiError> {
+    pub async fn get(&self, task_id: impl Into<TaskId>) -> Result<TaskResponse, ApiError> {
+        let task_id = task_id.into();
         self.client
             .request_with_endpoint::<EmptyPostParams, TaskResponse>(
                 reqwest::Method::GET,
@@ -1368,7 +2024,8 @@ impl Exports {
             .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Export returned empty result".into())))
     }
 
-    pub async fn output(&self, task_id: i32) -> Result<ExportResult, ApiError> {
+    pub async fn output(&self, task_id: impl Into<TaskId>) -> Result<ExportResult, ApiError> {
+        let task_id = task_id.into();
         let raw = self
             .client
             .request_with_endpoint_raw(
@@ -1401,6 +2058,49 @@ impl Exports {
                 body: raw.body,
             }),
         }
+    }
+
+    pub async fn output_stream(
+        &self,
+        task_id: impl Into<TaskId>,
+    ) -> Result<ExportOutputStream, ApiError> {
+        use futures_util::StreamExt;
+
+        let task_id = task_id.into();
+        let response = self
+            .client
+            .request_stream_with_endpoint(
+                &Endpoint::ExportOutput,
+                vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
+                vec![],
+            )
+            .await?;
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .and_then(ExportContentType::from_header)
+            .unwrap_or_default();
+        let content_length = response.content_length();
+        let body = response
+            .bytes_stream()
+            .map(|chunk| chunk.map_err(ApiError::from));
+        Ok(ExportOutputStream {
+            content_type,
+            content_length,
+            body: Box::pin(body),
+        })
+    }
+
+    pub async fn download_output(
+        &self,
+        task_id: impl Into<TaskId>,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<u64, ApiError> {
+        self.output_stream(task_id)
+            .await?
+            .download_to_path(path)
+            .await
     }
 
     pub fn run(&self, request: ExportRequest) -> ExportRunOp {
@@ -1650,7 +2350,8 @@ impl Imports {
         ImportSubmitOp::new(self.client.clone(), request)
     }
 
-    pub async fn get(&self, task_id: i32) -> Result<TaskResponse, ApiError> {
+    pub async fn get(&self, task_id: impl Into<TaskId>) -> Result<TaskResponse, ApiError> {
+        let task_id = task_id.into();
         self.client
             .request_with_endpoint::<EmptyPostParams, TaskResponse>(
                 reqwest::Method::GET,
@@ -1663,7 +2364,8 @@ impl Imports {
             .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Import returned empty result".into())))
     }
 
-    pub fn results(&self, task_id: i32) -> CursorRequest<ImportTaskResultResponse> {
+    pub fn results(&self, task_id: impl Into<TaskId>) -> CursorRequest<ImportTaskResultResponse> {
+        let task_id = task_id.into();
         CursorRequest::new(
             self.client.clone(),
             Endpoint::ImportResults,
@@ -1772,7 +2474,8 @@ impl Tasks {
         Self { client }
     }
 
-    pub async fn get(&self, task_id: i32) -> Result<TaskResponse, ApiError> {
+    pub async fn get(&self, task_id: impl Into<TaskId>) -> Result<TaskResponse, ApiError> {
+        let task_id = task_id.into();
         self.client
             .request_with_endpoint::<EmptyPostParams, TaskResponse>(
                 reqwest::Method::GET,
@@ -1785,7 +2488,8 @@ impl Tasks {
             .and_then(|opt| opt.ok_or(ApiError::EmptyResult("Task returned empty result".into())))
     }
 
-    pub fn events(&self, task_id: i32) -> CursorRequest<TaskEventResponse> {
+    pub fn events(&self, task_id: impl Into<TaskId>) -> CursorRequest<TaskEventResponse> {
+        let task_id = task_id.into();
         CursorRequest::new(
             self.client.clone(),
             Endpoint::TaskEvents,
@@ -1793,8 +2497,8 @@ impl Tasks {
         )
     }
 
-    pub fn wait(&self, task_id: i32) -> TaskWaitOp {
-        TaskWaitOp::new(self.client.clone(), task_id)
+    pub fn wait(&self, task_id: impl Into<TaskId>) -> TaskWaitOp {
+        TaskWaitOp::new(self.client.clone(), task_id.into())
     }
 
     pub fn query(&self) -> TaskListRequest {
@@ -1819,8 +2523,10 @@ impl TaskListRequest {
         self
     }
 
-    pub fn submitted_by(mut self, user_id: i32) -> Self {
-        self.inner = self.inner.set_query_param("submitted_by", user_id);
+    pub fn submitted_by(mut self, principal_id: impl Into<PrincipalId>) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("submitted_by", principal_id.into());
         self
     }
 
@@ -1850,17 +2556,25 @@ impl TaskListRequest {
     pub async fn all(self) -> Result<Vec<TaskResponse>, ApiError> {
         self.inner.all().await
     }
+
+    pub fn pages(self) -> PageStream<TaskResponse> {
+        self.inner.pages()
+    }
+
+    pub fn items(self) -> ItemStream<TaskResponse> {
+        self.inner.items()
+    }
 }
 
 pub struct TaskWaitOp {
     client: Client<Authenticated>,
-    task_id: i32,
+    task_id: TaskId,
     poll_interval: std::time::Duration,
     timeout: Option<std::time::Duration>,
 }
 
 impl TaskWaitOp {
-    fn new(client: Client<Authenticated>, task_id: i32) -> Self {
+    fn new(client: Client<Authenticated>, task_id: TaskId) -> Self {
         Self {
             client,
             task_id,
@@ -1892,10 +2606,10 @@ impl TaskWaitOp {
                 Some(timeout) => {
                     let elapsed = start.elapsed();
                     if elapsed >= timeout {
-                        return Err(ApiError::Api(format!(
-                            "Timed out waiting for task {} after {:?}",
-                            self.task_id, timeout
-                        )));
+                        return Err(ApiError::TaskTimeout {
+                            task_id: self.task_id,
+                            timeout,
+                        });
                     }
                     self.poll_interval.min(timeout - elapsed)
                 }
@@ -1911,6 +2625,10 @@ pub struct UnifiedSearchRequest {
     query: String,
     query_params: Vec<QueryFilter>,
 }
+
+pub type UnifiedSearchEventStream = std::pin::Pin<
+    Box<dyn futures_core::Stream<Item = Result<UnifiedSearchEvent, ApiError>> + Send + 'static>,
+>;
 
 impl UnifiedSearchRequest {
     fn new(client: Client<Authenticated>, query: String) -> Self {
@@ -1995,26 +2713,40 @@ impl UnifiedSearchRequest {
             ))
     }
 
+    #[deprecated(since = "0.3.0", note = "use send()")]
     pub async fn execute(self) -> Result<UnifiedSearchResponse, ApiError> {
         self.send().await
     }
 
-    pub async fn stream(self) -> Result<Vec<UnifiedSearchEvent>, ApiError> {
+    pub async fn stream(self) -> Result<UnifiedSearchEventStream, ApiError> {
+        use eventsource_stream::Eventsource;
+        use futures_util::StreamExt;
+
         let mut query_params = self.query_params;
         query_params.push(QueryFilter::raw("q", self.query));
 
-        let raw = self
+        let response = self
             .client
-            .request_with_endpoint_raw(
-                reqwest::Method::GET,
+            .request_stream_with_endpoint(
                 &Endpoint::SearchStream,
                 UrlParams::default(),
                 query_params,
-                EmptyPostParams,
             )
             .await?;
 
-        UnifiedSearchEvent::parse_sse_stream(&raw.body)
+        let events = response.bytes_stream().eventsource().map(|event| {
+            let event = event.map_err(|error| {
+                ApiError::DeserializationError(format!("invalid SSE frame: {error}"))
+            })?;
+            UnifiedSearchEvent::from_sse_parts(event.event, event.data)
+        });
+        Ok(Box::pin(events))
+    }
+
+    pub async fn collect_stream(self) -> Result<Vec<UnifiedSearchEvent>, ApiError> {
+        use futures_util::TryStreamExt;
+
+        self.stream().await?.try_collect().await
     }
 }
 
@@ -2194,9 +2926,18 @@ impl<T: ApiResource> QueryOp<T> {
     pub async fn all(self) -> Result<Vec<T::GetOutput>, ApiError> {
         let mut query = self;
         let mut items = Vec::new();
+        let mut pages = 0;
         let mut seen_cursors = shared::pagination_cursors(&query.query_params);
 
         loop {
+            if pages >= query.client.options.max_auto_pages
+                || items.len() >= query.client.options.max_auto_items
+            {
+                return Err(ApiError::PaginationLimit {
+                    pages,
+                    items: items.len(),
+                });
+            }
             let page = QueryOp::<T>::with_query_params(
                 query.client.clone(),
                 query.url_params.clone(),
@@ -2204,7 +2945,14 @@ impl<T: ApiResource> QueryOp<T> {
             )
             .page()
             .await?;
+            pages += 1;
             items.extend(page.items);
+            if items.len() > query.client.options.max_auto_items {
+                return Err(ApiError::PaginationLimit {
+                    pages,
+                    items: items.len(),
+                });
+            }
 
             match page.next_cursor {
                 Some(cursor) => {
@@ -2239,6 +2987,50 @@ impl<T: ApiResource> QueryOp<T> {
                 n
             ))),
         }
+    }
+}
+
+impl<T> QueryOp<T>
+where
+    T: ApiResource + Send + 'static,
+    T::GetOutput: Send + 'static,
+{
+    pub fn pages(mut self) -> PageStream<T::GetOutput> {
+        Box::pin(async_stream::try_stream! {
+            let mut seen_cursors = shared::pagination_cursors(&self.query_params);
+            loop {
+                let page = QueryOp::<T>::with_query_params(
+                    self.client.clone(),
+                    self.url_params.clone(),
+                    self.query_params.clone(),
+                )
+                .page()
+                .await?;
+                let next_cursor = page.next_cursor.clone();
+                yield page;
+                let Some(cursor) = next_cursor else {
+                    break;
+                };
+                shared::advance_cursor(
+                    &mut self.query_params,
+                    &mut seen_cursors,
+                    cursor,
+                )?;
+            }
+        })
+    }
+
+    pub fn items(self) -> ItemStream<T::GetOutput> {
+        use futures_util::StreamExt;
+
+        Box::pin(async_stream::try_stream! {
+            let mut pages = self.pages();
+            while let Some(page) = pages.next().await {
+                for item in page?.items {
+                    yield item;
+                }
+            }
+        })
     }
 }
 
@@ -2370,9 +3162,18 @@ where
     pub async fn all(self) -> Result<Vec<T>, ApiError> {
         let mut request = self;
         let mut items = Vec::new();
+        let mut pages = 0;
         let mut seen_cursors = shared::pagination_cursors(&request.query_params);
 
         loop {
+            if pages >= request.client.options.max_auto_pages
+                || items.len() >= request.client.options.max_auto_items
+            {
+                return Err(ApiError::PaginationLimit {
+                    pages,
+                    items: items.len(),
+                });
+            }
             let page = CursorRequest::<T> {
                 client: request.client.clone(),
                 endpoint: request.endpoint,
@@ -2382,7 +3183,14 @@ where
             }
             .page()
             .await?;
+            pages += 1;
             items.extend(page.items);
+            if items.len() > request.client.options.max_auto_items {
+                return Err(ApiError::PaginationLimit {
+                    pages,
+                    items: items.len(),
+                });
+            }
 
             match page.next_cursor {
                 Some(cursor) => {
@@ -2391,6 +3199,51 @@ where
                 None => return Ok(items),
             }
         }
+    }
+}
+
+impl<T> CursorRequest<T>
+where
+    T: DeserializeOwned + Send + 'static,
+{
+    pub fn pages(mut self) -> PageStream<T> {
+        Box::pin(async_stream::try_stream! {
+            let mut seen_cursors = shared::pagination_cursors(&self.query_params);
+            loop {
+                let page = (CursorRequest::<T> {
+                    client: self.client.clone(),
+                    endpoint: self.endpoint,
+                    query_params: self.query_params.clone(),
+                    url_params: self.url_params.clone(),
+                    _phantom: PhantomData,
+                })
+                .page()
+                .await?;
+                let next_cursor = page.next_cursor.clone();
+                yield page;
+                let Some(cursor) = next_cursor else {
+                    break;
+                };
+                shared::advance_cursor(
+                    &mut self.query_params,
+                    &mut seen_cursors,
+                    cursor,
+                )?;
+            }
+        })
+    }
+
+    pub fn items(self) -> ItemStream<T> {
+        use futures_util::StreamExt;
+
+        Box::pin(async_stream::try_stream! {
+            let mut pages = self.pages();
+            while let Some(page) = pages.next().await {
+                for item in page?.items {
+                    yield item;
+                }
+            }
+        })
     }
 }
 
@@ -2464,6 +3317,7 @@ where
             ))
     }
 
+    #[deprecated(since = "0.3.0", note = "use send()")]
     pub async fn fetch(self) -> Result<T, ApiError> {
         self.send().await
     }
@@ -2584,6 +3438,22 @@ impl<T: ApiResource> Resource<T> {
         self.query().all().await
     }
 
+    pub fn pages(self) -> PageStream<T::GetOutput>
+    where
+        T: Send + 'static,
+        T::GetOutput: Send + 'static,
+    {
+        self.query().pages()
+    }
+
+    pub fn items(self) -> ItemStream<T::GetOutput>
+    where
+        T: Send + 'static,
+        T::GetOutput: Send + 'static,
+    {
+        self.query().items()
+    }
+
     pub async fn one(self) -> Result<T::GetOutput, ApiError> {
         self.query().one().await
     }
@@ -2592,12 +3462,16 @@ impl<T: ApiResource> Resource<T> {
         self.query().optional().await
     }
 
+    #[deprecated(since = "0.3.0", note = "use create_checked() or create_raw()")]
     pub fn create(&self) -> CreateOp<T> {
-        CreateOp::new(self.client.clone(), self.url_params.clone())
+        CreateOp::<T>::new(self.client.clone(), self.url_params.clone())
     }
 
     pub async fn create_raw(&self, params: T::PostParams) -> Result<T::PostOutput, ApiError> {
-        self.create().params(params).send().await
+        CreateOp::<T>::new(self.client.clone(), self.url_params.clone())
+            .params(params)
+            .send()
+            .await
     }
 
     pub fn update<I: Into<T::Id>>(&self, id: I) -> UpdateOp<T> {

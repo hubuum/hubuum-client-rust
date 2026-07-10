@@ -2,20 +2,30 @@ use std::borrow::Cow;
 
 use crate::QueryFilter;
 use crate::endpoints::Endpoint;
+use secrecy::{ExposeSecret, SecretString};
 
 #[cfg(feature = "async")]
 pub mod r#async;
 mod shared;
 #[cfg(feature = "blocking")]
 pub mod sync;
-#[cfg(test)]
+#[cfg(all(test, feature = "async", feature = "blocking"))]
 mod tests;
+pub mod transport;
 
 #[cfg(feature = "async")]
-pub use self::r#async::Client;
+pub use self::r#async::{
+    Client, CollectionScope, ExportOutputStream, ItemStream, PageStream, TypedClass,
+};
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryNumericField, QueryTextField, QueryValueField,
+    RetryPolicy,
 };
+#[cfg(feature = "async")]
+pub use self::transport::AsyncTransport;
+#[cfg(feature = "blocking")]
+pub use self::transport::BlockingTransport;
+pub use self::transport::{MockTransport, RequestPlan, TransportResponse};
 
 use crate::resources::ApiResource;
 
@@ -56,7 +66,7 @@ pub struct Unauthenticated;
 
 #[derive(Clone)]
 pub struct Authenticated {
-    token: String,
+    token: SecretString,
 }
 
 impl std::fmt::Debug for Authenticated {
@@ -64,6 +74,18 @@ impl std::fmt::Debug for Authenticated {
         f.debug_struct("Authenticated")
             .field("token", &"[REDACTED]")
             .finish()
+    }
+}
+
+impl Authenticated {
+    fn new(token: crate::types::Token) -> Self {
+        Self {
+            token: token.into_secret(),
+        }
+    }
+
+    fn token(&self) -> &str {
+        self.token.expose_secret()
     }
 }
 
@@ -78,8 +100,8 @@ mod parity_contract {
 
     macro_rules! assert_constructor_capabilities {
         ($module:ident) => {
-            let _: fn(BaseUrl, bool) -> $module::Client<Unauthenticated> =
-                $module::Client::<Unauthenticated>::new_with_certificate_validation;
+            let _: fn(BaseUrl) -> $module::ClientBuilder =
+                $module::Client::<Unauthenticated>::builder;
             let _ = $module::Client::<Unauthenticated>::try_new;
             let _ = || $module::Client::<Unauthenticated>::from_url("https://example.invalid");
             let _ =
@@ -123,7 +145,6 @@ mod parity_contract {
 
     macro_rules! assert_authenticated_client_auth_surface {
         ($module:ident) => {
-            let _ = $module::Client::<Authenticated>::get_token;
             let _ = $module::Client::<Authenticated>::token;
             let _ = $module::Client::<Authenticated>::logout;
             let _ = $module::Client::<Authenticated>::logout_token;
@@ -168,7 +189,8 @@ mod parity_contract {
         ($module:ident) => {
             let _ = $module::Resource::<Class>::query;
             let _ = $module::Resource::<Class>::all;
-            let _ = $module::Resource::<Class>::create;
+            let _ = $module::Resource::<Class>::create_checked;
+            let _ = $module::Resource::<Class>::create_raw;
             let _ = $module::Resource::<Class>::update::<ClassId>;
             let _ = $module::Resource::<Class>::delete::<ClassId>;
             let _ = $module::Resource::<Class>::set_raw_param::<&str, &str>;
@@ -227,31 +249,18 @@ mod parity_contract {
             let _ = $module::Handle::<User>::tokens;
             let _ = $module::Handle::<User>::tokens_request;
             let _ = $module::Handle::<User>::tokens_create;
-            let _ = $module::Handle::<User>::token_revoke;
 
             let _ = $module::Handle::<ServiceAccount>::disable;
             let _ = $module::Handle::<ServiceAccount>::tokens;
             let _ = $module::Handle::<ServiceAccount>::tokens_create;
-            let _ = $module::Handle::<ServiceAccount>::token_revoke;
 
             let _ = $module::Handle::<RemoteTarget>::invoke;
 
-            let _ = $module::Handle::<Group>::add_member;
-            let _ = $module::Handle::<Group>::remove_member;
             let _ = $module::Handle::<Group>::members;
             let _ = $module::Handle::<Group>::members_request;
 
             let _ = $module::Handle::<Collection>::permissions;
             let _ = $module::Handle::<Collection>::permissions_request;
-            let _ = $module::Handle::<Collection>::group_permissions;
-            let _ = $module::Handle::<Collection>::replace_permissions;
-            let _ = $module::Handle::<Collection>::grant_permissions;
-            let _ = $module::Handle::<Collection>::revoke_permissions;
-            let _ = $module::Handle::<Collection>::has_group_permission;
-            let _ = $module::Handle::<Collection>::grant_permission;
-            let _ = $module::Handle::<Collection>::revoke_permission;
-            let _ = $module::Handle::<Collection>::principal_permissions;
-            let _ = $module::Handle::<Collection>::principal_permissions_request;
             let _ = $module::Handle::<Collection>::groups_with_permission;
         };
     }

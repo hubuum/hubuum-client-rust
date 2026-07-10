@@ -9,7 +9,7 @@ Export templates are exposed as a regular resource. Executable templates need a 
 ```rust
 let template = client
     .export_templates()
-    .create()
+    .create_checked()
     .collection_id(7)
     .name("owner-export")
     .description("Owner listing")
@@ -31,7 +31,7 @@ let request = hubuum_client::ExportRequest {
     missing_data_policy: None,
     query: Some("name__icontains=server".to_string()),
     scope: hubuum_client::ExportScope {
-        class_id: Some(42),
+        class_id: Some(42.into()),
         kind: hubuum_client::ExportScopeKind::ObjectsInClass,
         object_id: None,
     },
@@ -124,3 +124,7 @@ let tasks = client
 ```
 
 Cursor-paged endpoints return `hubuum_client::Page<T>` with `items` and `next_cursor`.
+
+Large rendered outputs can bypass in-memory buffering. Blocking clients expose a
+`Read` implementation through `output_stream(task_id)`, while async clients
+return a byte stream and support `download_output(task_id, path)`.

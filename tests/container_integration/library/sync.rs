@@ -116,7 +116,11 @@ fn sync_user_tokens_endpoint_returns_admin_token_or_legacy_404() {
         .expect("sync users().get_by_name(admin) failed");
 
     match admin.tokens() {
-        Ok(tokens) => assert!(tokens.iter().any(|token| token.principal_id == admin.id())),
+        Ok(tokens) => assert!(
+            tokens
+                .iter()
+                .any(|token| token.principal_id == i32::from(admin.id()))
+        ),
         Err(ApiError::HttpWithBody { status, .. }) if status == reqwest::StatusCode::NOT_FOUND => {
             // Legacy servers may not expose /users/{id}/tokens.
         }
@@ -280,13 +284,14 @@ fn sync_auth_login_with_token_accepts_valid_token() {
 
     let logged_in =
         login_sync(base_url.clone(), &stack.admin_password).expect("failed to login for token");
-    let token = logged_in.get_token().to_string();
+    let token = logged_in.token().to_string();
 
-    let validated = blocking::Client::new(base_url)
+    let validated = blocking::Client::try_new(base_url)
+        .expect("client should build")
         .login_with_token(Token::new(token.clone()))
         .expect("sync login_with_token(valid) failed");
 
-    assert_eq!(validated.get_token(), token);
+    assert_eq!(validated.token(), token);
 }
 
 #[test]
@@ -298,18 +303,19 @@ fn sync_auth_login_with_token_rejects_invalid_token() {
         .parse::<BaseUrl>()
         .expect("stack base URL should parse as BaseUrl");
 
-    let err = blocking::Client::new(base_url)
+    let err = blocking::Client::try_new(base_url)
+        .expect("client should build")
         .login_with_token(Token::new("invalid-token".to_string()))
         .expect_err("login_with_token should fail for invalid token");
 
-    assert!(matches!(err, ApiError::InvalidToken));
+    assert_auth_token_revoked(err);
 }
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
 fn sync_auth_logout_revokes_current_token() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
-    harness.client.logout().expect("sync logout failed");
+    harness.client.clone().logout().expect("sync logout failed");
 
     let err = harness
         .client
@@ -336,7 +342,7 @@ fn sync_auth_logout_token_revokes_target_token() {
         .expect("failed to login revocation target");
 
     controller
-        .logout_token(revoked.get_token())
+        .logout_token(revoked.token())
         .expect("sync logout_token failed");
 
     let err = revoked
@@ -709,8 +715,8 @@ fn sync_object_update_changes_fields() {
             object_id,
             ObjectPatch {
                 name: Some(updated_name.clone()),
-                collection_id: Some(collection_id),
-                hubuum_class_id: Some(class_id),
+                collection_id: Some(collection_id.into()),
+                hubuum_class_id: Some(class_id.into()),
                 description: Some(updated_description.clone()),
                 data: Some(updated_data.clone()),
             },
@@ -768,7 +774,7 @@ fn sync_class_relation_create_delete_roundtrip() {
         .create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("sync-class-relation")),
             description: "integration class relation target".to_string(),
-            collection_id,
+            collection_id: collection_id.into(),
             json_schema: None,
             validate_schema: None,
         })
@@ -778,8 +784,8 @@ fn sync_class_relation_create_delete_roundtrip() {
         .client
         .class_relation()
         .create_raw(ClassRelationPost {
-            from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id.into(),
+            from_hubuum_class_id: class_a_id.into(),
+            to_hubuum_class_id: class_b.id,
             forward_template_alias: None,
             reverse_template_alias: None,
         })
@@ -822,7 +828,7 @@ fn sync_object_relation_create_delete_roundtrip() {
         .create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("sync-object-relation")),
             description: "integration object relation class target".to_string(),
-            collection_id,
+            collection_id: collection_id.into(),
             json_schema: None,
             validate_schema: None,
         })
@@ -845,8 +851,8 @@ fn sync_object_relation_create_delete_roundtrip() {
         .client
         .class_relation()
         .create_raw(ClassRelationPost {
-            from_hubuum_class_id: class_a_id,
-            to_hubuum_class_id: class_b.id.into(),
+            from_hubuum_class_id: class_a_id.into(),
+            to_hubuum_class_id: class_b.id,
             forward_template_alias: None,
             reverse_template_alias: None,
         })
@@ -856,9 +862,9 @@ fn sync_object_relation_create_delete_roundtrip() {
         .client
         .object_relation()
         .create_raw(ObjectRelationPost {
-            from_hubuum_object_id: object_a_id,
-            to_hubuum_object_id: object_b_id,
-            class_relation_id: class_relation.id.into(),
+            from_hubuum_object_id: object_a_id.into(),
+            to_hubuum_object_id: object_b_id.into(),
+            class_relation_id: class_relation.id,
         })
         .expect("sync object_relation().create_raw() failed");
 
@@ -965,7 +971,7 @@ fn sync_query_sort_and_limit_returns_expected_class() {
         .create_raw(CollectionPost {
             name: format!("{prefix}-collection"),
             description: "query sort collection".to_string(),
-            group_id: admin_group_id,
+            group_id: admin_group_id.into(),
             parent_collection_id: None,
         })
         .expect("failed to create collection for sort/limit test");
@@ -975,7 +981,7 @@ fn sync_query_sort_and_limit_returns_expected_class() {
         .create_raw(ClassPost {
             name: format!("{prefix}-sort-a"),
             description: "query sort class a".to_string(),
-            collection_id: collection.id.into(),
+            collection_id: collection.id,
             json_schema: None,
             validate_schema: None,
         })
@@ -986,7 +992,7 @@ fn sync_query_sort_and_limit_returns_expected_class() {
         .create_raw(ClassPost {
             name: format!("{prefix}-sort-b"),
             description: "query sort class b".to_string(),
-            collection_id: collection.id.into(),
+            collection_id: collection.id,
             json_schema: None,
             validate_schema: None,
         })
@@ -1019,7 +1025,7 @@ fn sync_query_json_path_lt_filters_json_schema() {
         .create_raw(CollectionPost {
             name: format!("{prefix}-collection"),
             description: "query json collection".to_string(),
-            group_id: admin_group_id,
+            group_id: admin_group_id.into(),
             parent_collection_id: None,
         })
         .expect("failed to create collection for json query test");
@@ -1029,7 +1035,7 @@ fn sync_query_json_path_lt_filters_json_schema() {
         .create_raw(ClassPost {
             name: format!("{prefix}-geo-south"),
             description: "geo south".to_string(),
-            collection_id: collection.id.into(),
+            collection_id: collection.id,
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": -90 }
@@ -1044,7 +1050,7 @@ fn sync_query_json_path_lt_filters_json_schema() {
         .create_raw(ClassPost {
             name: format!("{prefix}-geo-north"),
             description: "geo north".to_string(),
-            collection_id: collection.id.into(),
+            collection_id: collection.id,
             json_schema: Some(json!({
                 "properties": {
                     "latitude": { "minimum": 10 }

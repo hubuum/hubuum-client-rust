@@ -50,7 +50,10 @@ This is what the wrapper script exports internally before running tests.
 - `HUBUUM_INTEGRATION_KEEP_CONTAINERS=1` keeps containers running for debugging.
 - `HUBUUM_INTEGRATION_SEED_SQL` overrides the default seed SQL file.
 
-CI runs integration tests against `ghcr.io/hubuum/hubuum-server:main` with `--with-e2e-client`, so the consumer e2e suite is validated with the library integration tests.
+Required CI runs integration tests against an immutable server image digest.
+A scheduled compatibility workflow separately runs against
+`ghcr.io/hubuum/hubuum-server:main`, so upstream movement is visible without
+making otherwise unrelated pull requests nondeterministic.
 
 If the server image is private in your environment, authenticate first:
 

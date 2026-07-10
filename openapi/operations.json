@@ -1,0 +1,4361 @@
+{
+  "api_version": "0.0.1",
+  "openapi": "3.1.0",
+  "operation_count": 149,
+  "operations": [
+    {
+      "method": "POST",
+      "operation_id": "postApiV0AuthLogin",
+      "parameters": [],
+      "path": "/api/v0/auth/login",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV0AuthLogout",
+      "parameters": [],
+      "path": "/api/v0/auth/logout",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV0AuthLogoutToken",
+      "parameters": [],
+      "path": "/api/v0/auth/logout/token",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV0AuthLogoutUidByUserId",
+      "parameters": [
+        "path:user_id"
+      ],
+      "path": "/api/v0/auth/logout/uid/{user_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV0AuthLogoutAll",
+      "parameters": [],
+      "path": "/api/v0/auth/logout_all",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV0AuthValidate",
+      "parameters": [],
+      "path": "/api/v0/auth/validate",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV0MetaCounts",
+      "parameters": [],
+      "path": "/api/v0/meta/counts",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV0MetaDb",
+      "parameters": [],
+      "path": "/api/v0/meta/db",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV0MetaLoginRateLimit",
+      "parameters": [],
+      "path": "/api/v0/meta/login-rate-limit",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV0MetaLoginRateLimit",
+      "parameters": [
+        "query:include",
+        "query:q",
+        "query:scope"
+      ],
+      "path": "/api/v0/meta/login-rate-limit",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV0MetaLoginRateLimitById",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v0/meta/login-rate-limit/{id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV0MetaTasks",
+      "parameters": [],
+      "path": "/api/v0/meta/tasks",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1Classes",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1Classes",
+      "parameters": [],
+      "path": "/api/v1/classes",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByClassId",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassId",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1ClassesByClassId",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdTrailing",
+      "parameters": [
+        "path:class_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdTrailing",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdEvents",
+      "parameters": [
+        "path:class_id",
+        "query:action",
+        "query:actor_kind",
+        "query:actor_user_id",
+        "query:collection_id",
+        "query:cursor",
+        "query:limit",
+        "query:occurred_after",
+        "query:occurred_before",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/events",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdHistory",
+      "parameters": [
+        "path:class_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/history",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdHistoryAsOf",
+      "parameters": [
+        "path:class_id",
+        "query:at"
+      ],
+      "path": "/api/v1/classes/{class_id}/history/as-of",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdObjectsByObjectIdRelatedGraph",
+      "parameters": [
+        "path:class_id",
+        "path:object_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/objects/{object_id}/related/graph",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdObjectsByObjectIdRelatedObjects",
+      "parameters": [
+        "path:class_id",
+        "path:object_id",
+        "query:cursor",
+        "query:ignore_classes",
+        "query:ignore_self_class",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/objects/{object_id}/related/objects",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdObjectsByObjectIdRelatedRelations",
+      "parameters": [
+        "path:class_id",
+        "path:object_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/objects/{object_id}/related/relations",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdPermissions",
+      "parameters": [
+        "path:class_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/permissions",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdRelatedClasses",
+      "parameters": [
+        "path:class_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/related/classes",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdRelatedGraph",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/related/graph",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdRelatedRelations",
+      "parameters": [
+        "path:class_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/related/relations",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdRelations",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/relations",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByClassIdRelationsByRelationId",
+      "parameters": [
+        "path:class_id",
+        "path:relation_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/relations/{relation_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByClassIdByFromObjectIdRelationsByToClassIdByToObjectId",
+      "parameters": [
+        "path:class_id",
+        "path:from_object_id",
+        "path:to_class_id",
+        "path:to_object_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/{from_object_id}/relations/{to_class_id}/{to_object_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByFromObjectIdRelationsByToClassIdByToObjectId",
+      "parameters": [
+        "path:class_id",
+        "path:from_object_id",
+        "path:to_class_id",
+        "path:to_object_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/{from_object_id}/relations/{to_class_id}/{to_object_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdByFromObjectIdRelationsByToClassIdByToObjectId",
+      "parameters": [
+        "path:class_id",
+        "path:from_object_id",
+        "path:to_class_id",
+        "path:to_object_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/{from_object_id}/relations/{to_class_id}/{to_object_id}",
+      "request_content": [],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByClassIdByObjectId",
+      "parameters": [
+        "path:class_id",
+        "path:object_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByObjectId",
+      "parameters": [
+        "path:class_id",
+        "path:object_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1ClassesByClassIdByObjectId",
+      "parameters": [
+        "path:class_id",
+        "path:object_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByObjectIdEvents",
+      "parameters": [
+        "path:class_id",
+        "path:object_id",
+        "query:action",
+        "query:actor_kind",
+        "query:actor_user_id",
+        "query:collection_id",
+        "query:cursor",
+        "query:limit",
+        "query:occurred_after",
+        "query:occurred_before",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}/events",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByObjectIdHistory",
+      "parameters": [
+        "path:class_id",
+        "path:object_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}/history",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByObjectIdHistoryAsOf",
+      "parameters": [
+        "path:class_id",
+        "path:object_id",
+        "query:at"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}/history/as-of",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1Collections",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/collections",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1Collections",
+      "parameters": [],
+      "path": "/api/v1/collections",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1CollectionsByCollectionId",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionId",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1CollectionsByCollectionId",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdAncestors",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/ancestors",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdChildren",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/children",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdEventSubscriptions",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-subscriptions",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1CollectionsByCollectionIdEventSubscriptions",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-subscriptions",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1CollectionsByCollectionIdEventSubscriptionsBySubscriptionId",
+      "parameters": [
+        "path:collection_id",
+        "path:subscription_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-subscriptions/{subscription_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdEventSubscriptionsBySubscriptionId",
+      "parameters": [
+        "path:collection_id",
+        "path:subscription_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-subscriptions/{subscription_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1CollectionsByCollectionIdEventSubscriptionsBySubscriptionId",
+      "parameters": [
+        "path:collection_id",
+        "path:subscription_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-subscriptions/{subscription_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdEvents",
+      "parameters": [
+        "path:collection_id",
+        "query:action",
+        "query:actor_kind",
+        "query:actor_user_id",
+        "query:cursor",
+        "query:limit",
+        "query:occurred_after",
+        "query:occurred_before",
+        "query:sort"
+      ],
+      "path": "/api/v1/collections/{collection_id}/events",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdHasPermissionsByPermission",
+      "parameters": [
+        "path:collection_id",
+        "path:permission",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/collections/{collection_id}/has_permissions/{permission}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdHistory",
+      "parameters": [
+        "path:collection_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/collections/{collection_id}/history",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdHistoryAsOf",
+      "parameters": [
+        "path:collection_id",
+        "query:at"
+      ],
+      "path": "/api/v1/collections/{collection_id}/history/as-of",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1CollectionsByCollectionIdParent",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/parent",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdPermissions",
+      "parameters": [
+        "path:collection_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdPermissionsEffectiveGroupByGroupId",
+      "parameters": [
+        "path:collection_id",
+        "path:group_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/effective/group/{group_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdPermissionsEffectivePrincipalByPrincipalId",
+      "parameters": [
+        "path:collection_id",
+        "path:principal_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/effective/principal/{principal_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1CollectionsByCollectionIdPermissionsGroupByGroupId",
+      "parameters": [
+        "path:collection_id",
+        "path:group_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdPermissionsGroupByGroupId",
+      "parameters": [
+        "path:collection_id",
+        "path:group_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1CollectionsByCollectionIdPermissionsGroupByGroupId",
+      "parameters": [
+        "path:collection_id",
+        "path:group_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1CollectionsByCollectionIdPermissionsGroupByGroupId",
+      "parameters": [
+        "path:collection_id",
+        "path:group_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1CollectionsByCollectionIdPermissionsGroupByGroupIdByPermission",
+      "parameters": [
+        "path:collection_id",
+        "path:group_id",
+        "path:permission"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdPermissionsGroupByGroupIdByPermission",
+      "parameters": [
+        "path:collection_id",
+        "path:group_id",
+        "path:permission"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1CollectionsByCollectionIdPermissionsGroupByGroupIdByPermission",
+      "parameters": [
+        "path:collection_id",
+        "path:group_id",
+        "path:permission"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}",
+      "request_content": [],
+      "responses": {
+        "201": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdPermissionsPrincipalByPrincipalId",
+      "parameters": [
+        "path:collection_id",
+        "path:principal_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/collections/{collection_id}/permissions/principal/{principal_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1EventDeliveries",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/event-deliveries",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1EventDeliveriesHealth",
+      "parameters": [],
+      "path": "/api/v1/event-deliveries/health",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1EventDeliveriesByDeliveryId",
+      "parameters": [
+        "path:delivery_id"
+      ],
+      "path": "/api/v1/event-deliveries/{delivery_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1EventDeliveriesByDeliveryIdDead",
+      "parameters": [
+        "path:delivery_id"
+      ],
+      "path": "/api/v1/event-deliveries/{delivery_id}/dead",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1EventDeliveriesByDeliveryIdRetry",
+      "parameters": [
+        "path:delivery_id"
+      ],
+      "path": "/api/v1/event-deliveries/{delivery_id}/retry",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1EventSinks",
+      "parameters": [],
+      "path": "/api/v1/event-sinks",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1EventSinks",
+      "parameters": [],
+      "path": "/api/v1/event-sinks",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1EventSinksBySinkId",
+      "parameters": [
+        "path:sink_id"
+      ],
+      "path": "/api/v1/event-sinks/{sink_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1EventSinksBySinkId",
+      "parameters": [
+        "path:sink_id"
+      ],
+      "path": "/api/v1/event-sinks/{sink_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1EventSinksBySinkId",
+      "parameters": [
+        "path:sink_id"
+      ],
+      "path": "/api/v1/event-sinks/{sink_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1Events",
+      "parameters": [
+        "query:action",
+        "query:actor_kind",
+        "query:actor_user_id",
+        "query:collection_id",
+        "query:cursor",
+        "query:entity_id",
+        "query:entity_type",
+        "query:limit",
+        "query:occurred_after",
+        "query:occurred_before",
+        "query:sort"
+      ],
+      "path": "/api/v1/events",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ExportTemplates",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/export-templates",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ExportTemplates",
+      "parameters": [],
+      "path": "/api/v1/export-templates",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ExportTemplatesByTemplateId",
+      "parameters": [
+        "path:template_id"
+      ],
+      "path": "/api/v1/export-templates/{template_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ExportTemplatesByTemplateId",
+      "parameters": [
+        "path:template_id"
+      ],
+      "path": "/api/v1/export-templates/{template_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1ExportTemplatesByTemplateId",
+      "parameters": [
+        "path:template_id"
+      ],
+      "path": "/api/v1/export-templates/{template_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ExportTemplatesByTemplateIdEvents",
+      "parameters": [
+        "path:template_id",
+        "query:action",
+        "query:actor_kind",
+        "query:actor_user_id",
+        "query:collection_id",
+        "query:cursor",
+        "query:limit",
+        "query:occurred_after",
+        "query:occurred_before",
+        "query:sort"
+      ],
+      "path": "/api/v1/export-templates/{template_id}/events",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ExportTemplatesByTemplateIdExports",
+      "parameters": [
+        "path:template_id"
+      ],
+      "path": "/api/v1/export-templates/{template_id}/exports",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ExportTemplatesByTemplateIdHistory",
+      "parameters": [
+        "path:template_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/export-templates/{template_id}/history",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ExportTemplatesByTemplateIdHistoryAsOf",
+      "parameters": [
+        "path:template_id",
+        "query:at"
+      ],
+      "path": "/api/v1/export-templates/{template_id}/history/as-of",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1Exports",
+      "parameters": [],
+      "path": "/api/v1/exports",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ExportsByTaskId",
+      "parameters": [
+        "path:task_id"
+      ],
+      "path": "/api/v1/exports/{task_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ExportsByTaskIdOutput",
+      "parameters": [
+        "path:task_id"
+      ],
+      "path": "/api/v1/exports/{task_id}/output",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json",
+          "text/csv",
+          "text/html",
+          "text/plain"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "410": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamGroups",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/groups",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamGroups",
+      "parameters": [],
+      "path": "/api/v1/iam/groups",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1IamGroupsByGroupId",
+      "parameters": [
+        "path:group_id"
+      ],
+      "path": "/api/v1/iam/groups/{group_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamGroupsByGroupId",
+      "parameters": [
+        "path:group_id"
+      ],
+      "path": "/api/v1/iam/groups/{group_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1IamGroupsByGroupId",
+      "parameters": [
+        "path:group_id"
+      ],
+      "path": "/api/v1/iam/groups/{group_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamGroupsByGroupIdEvents",
+      "parameters": [
+        "path:group_id",
+        "query:action",
+        "query:actor_kind",
+        "query:actor_user_id",
+        "query:collection_id",
+        "query:cursor",
+        "query:limit",
+        "query:occurred_after",
+        "query:occurred_before",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/groups/{group_id}/events",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamGroupsByGroupIdMembers",
+      "parameters": [
+        "path:group_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/groups/{group_id}/members",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1IamGroupsByGroupIdMembersByPrincipalId",
+      "parameters": [
+        "path:group_id",
+        "path:principal_id"
+      ],
+      "path": "/api/v1/iam/groups/{group_id}/members/{principal_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamGroupsByGroupIdMembersByPrincipalId",
+      "parameters": [
+        "path:group_id",
+        "path:principal_id"
+      ],
+      "path": "/api/v1/iam/groups/{group_id}/members/{principal_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamMe",
+      "parameters": [],
+      "path": "/api/v1/iam/me",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamMeGroups",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/me/groups",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamMePermissions",
+      "parameters": [],
+      "path": "/api/v1/iam/me/permissions",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamMeTokens",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/me/tokens",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamPrincipalsByPrincipalIdGroups",
+      "parameters": [
+        "path:principal_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/groups",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamPrincipalsByPrincipalIdPermissions",
+      "parameters": [
+        "path:principal_id"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/permissions",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamPrincipalsByPrincipalIdTokens",
+      "parameters": [
+        "path:principal_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/tokens",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamPrincipalsByPrincipalIdTokens",
+      "parameters": [
+        "path:principal_id"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/tokens",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamPrincipalsByPrincipalIdTokensByTokenIdRevoke",
+      "parameters": [
+        "path:principal_id",
+        "path:token_id"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamServiceAccounts",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/service-accounts",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamServiceAccounts",
+      "parameters": [],
+      "path": "/api/v1/iam/service-accounts",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1IamServiceAccountsByServiceAccountId",
+      "parameters": [
+        "path:service_account_id"
+      ],
+      "path": "/api/v1/iam/service-accounts/{service_account_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamServiceAccountsByServiceAccountId",
+      "parameters": [
+        "path:service_account_id"
+      ],
+      "path": "/api/v1/iam/service-accounts/{service_account_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1IamServiceAccountsByServiceAccountId",
+      "parameters": [
+        "path:service_account_id"
+      ],
+      "path": "/api/v1/iam/service-accounts/{service_account_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamServiceAccountsByServiceAccountIdDisable",
+      "parameters": [
+        "path:service_account_id"
+      ],
+      "path": "/api/v1/iam/service-accounts/{service_account_id}/disable",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamUsers",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/users",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamUsers",
+      "parameters": [],
+      "path": "/api/v1/iam/users",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1IamUsersByUserId",
+      "parameters": [
+        "path:user_id"
+      ],
+      "path": "/api/v1/iam/users/{user_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamUsersByUserId",
+      "parameters": [
+        "path:user_id"
+      ],
+      "path": "/api/v1/iam/users/{user_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1IamUsersByUserId",
+      "parameters": [
+        "path:user_id"
+      ],
+      "path": "/api/v1/iam/users/{user_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamUsersByUserIdAnonymize",
+      "parameters": [
+        "path:user_id"
+      ],
+      "path": "/api/v1/iam/users/{user_id}/anonymize",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamUsersByUserIdEvents",
+      "parameters": [
+        "path:user_id",
+        "query:action",
+        "query:actor_kind",
+        "query:actor_user_id",
+        "query:collection_id",
+        "query:cursor",
+        "query:limit",
+        "query:occurred_after",
+        "query:occurred_before",
+        "query:sort"
+      ],
+      "path": "/api/v1/iam/users/{user_id}/events",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1Imports",
+      "parameters": [],
+      "path": "/api/v1/imports",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ImportsByTaskId",
+      "parameters": [
+        "path:task_id"
+      ],
+      "path": "/api/v1/imports/{task_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ImportsByTaskIdResults",
+      "parameters": [
+        "path:task_id"
+      ],
+      "path": "/api/v1/imports/{task_id}/results",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RelationsClasses",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/relations/classes",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1RelationsClasses",
+      "parameters": [],
+      "path": "/api/v1/relations/classes",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1RelationsClassesByRelationId",
+      "parameters": [
+        "path:relation_id"
+      ],
+      "path": "/api/v1/relations/classes/{relation_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RelationsClassesByRelationId",
+      "parameters": [
+        "path:relation_id"
+      ],
+      "path": "/api/v1/relations/classes/{relation_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RelationsObjects",
+      "parameters": [
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/relations/objects",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1RelationsObjects",
+      "parameters": [],
+      "path": "/api/v1/relations/objects",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1RelationsObjectsByRelationId",
+      "parameters": [
+        "path:relation_id"
+      ],
+      "path": "/api/v1/relations/objects/{relation_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RelationsObjectsByRelationId",
+      "parameters": [
+        "path:relation_id"
+      ],
+      "path": "/api/v1/relations/objects/{relation_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RemoteTargets",
+      "parameters": [],
+      "path": "/api/v1/remote-targets",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1RemoteTargets",
+      "parameters": [],
+      "path": "/api/v1/remote-targets",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RemoteTargetsByRemoteTargetIdHistory",
+      "parameters": [
+        "path:remote_target_id",
+        "query:cursor",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/remote-targets/{remote_target_id}/history",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RemoteTargetsByRemoteTargetIdHistoryAsOf",
+      "parameters": [
+        "path:remote_target_id",
+        "query:at"
+      ],
+      "path": "/api/v1/remote-targets/{remote_target_id}/history/as-of",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1RemoteTargetsByTargetId",
+      "parameters": [
+        "path:target_id"
+      ],
+      "path": "/api/v1/remote-targets/{target_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RemoteTargetsByTargetId",
+      "parameters": [
+        "path:target_id"
+      ],
+      "path": "/api/v1/remote-targets/{target_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1RemoteTargetsByTargetId",
+      "parameters": [
+        "path:target_id"
+      ],
+      "path": "/api/v1/remote-targets/{target_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RemoteTargetsByTargetIdEvents",
+      "parameters": [
+        "path:target_id",
+        "query:action",
+        "query:actor_kind",
+        "query:actor_user_id",
+        "query:collection_id",
+        "query:cursor",
+        "query:limit",
+        "query:occurred_after",
+        "query:occurred_before",
+        "query:sort"
+      ],
+      "path": "/api/v1/remote-targets/{target_id}/events",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1RemoteTargetsByTargetIdInvoke",
+      "parameters": [
+        "path:target_id"
+      ],
+      "path": "/api/v1/remote-targets/{target_id}/invoke",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1Search",
+      "parameters": [
+        "query:cursor_classes",
+        "query:cursor_collections",
+        "query:cursor_objects",
+        "query:kinds",
+        "query:limit_per_kind",
+        "query:q",
+        "query:search_class_schema",
+        "query:search_object_data"
+      ],
+      "path": "/api/v1/search",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1SearchStream",
+      "parameters": [
+        "query:cursor_classes",
+        "query:cursor_collections",
+        "query:cursor_objects",
+        "query:kinds",
+        "query:limit_per_kind",
+        "query:q",
+        "query:search_class_schema",
+        "query:search_object_data"
+      ],
+      "path": "/api/v1/search/stream",
+      "request_content": [],
+      "responses": {
+        "200": [],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1Tasks",
+      "parameters": [
+        "query:cursor",
+        "query:kind",
+        "query:limit",
+        "query:sort",
+        "query:status",
+        "query:submitted_by"
+      ],
+      "path": "/api/v1/tasks",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1TasksByTaskId",
+      "parameters": [
+        "path:task_id"
+      ],
+      "path": "/api/v1/tasks/{task_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1TasksByTaskIdEvents",
+      "parameters": [
+        "path:task_id"
+      ],
+      "path": "/api/v1/tasks/{task_id}/events",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getHealthz",
+      "parameters": [],
+      "path": "/healthz",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "GET",
+      "operation_id": "getReadyz",
+      "parameters": [],
+      "path": "/readyz",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": []
+    }
+  ],
+  "path_count": 105,
+  "schema_count": 158,
+  "schema_names": [
+    "ApiErrorResponse",
+    "ClassKey",
+    "ClearRateLimitResponse",
+    "Collection",
+    "CollectionHistory",
+    "CollectionID",
+    "CollectionKey",
+    "CountsResponse",
+    "CurrentTokenMetadata",
+    "DbStateResponse",
+    "EffectiveGroupPermission",
+    "EventDelivery",
+    "EventDeliveryHealthResponse",
+    "EventDeliveryQueueHealth",
+    "EventDeliveryStatus",
+    "EventDeliveryStatusCounts",
+    "EventDeliveryUpdateResponse",
+    "EventFanoutHealth",
+    "EventResponse",
+    "EventSink",
+    "EventSinkDeliveryHealth",
+    "EventSinkID",
+    "EventSinkKind",
+    "EventSubscription",
+    "EventSubscriptionDeliveryHealth",
+    "EventSubscriptionFilter",
+    "EventWorkerHealth",
+    "EventWorkerWakeupStats",
+    "ExportContentType",
+    "ExportInclude",
+    "ExportIncludeRelatedDirection",
+    "ExportIncludeRelatedObject",
+    "ExportIncludeRelatedSort",
+    "ExportJsonResponse",
+    "ExportLimits",
+    "ExportMeta",
+    "ExportMissingDataPolicy",
+    "ExportRelationContext",
+    "ExportRequest",
+    "ExportScope",
+    "ExportScopeKind",
+    "ExportTaskDetails",
+    "ExportTemplate",
+    "ExportTemplateHistory",
+    "ExportTemplateID",
+    "ExportTemplateKind",
+    "ExportTemplateRunRequest",
+    "ExportWarning",
+    "Group",
+    "GroupGrant",
+    "GroupKey",
+    "GroupPermission",
+    "HistoryResponse_CollectionHistory",
+    "HistoryResponse_ExportTemplateHistory",
+    "HistoryResponse_HubuumClassHistory",
+    "HistoryResponse_HubuumObjectHistory",
+    "HistoryResponse_RemoteTargetHistory",
+    "HubuumClass",
+    "HubuumClassExpanded",
+    "HubuumClassHistory",
+    "HubuumClassID",
+    "HubuumClassRelation",
+    "HubuumClassRelationID",
+    "HubuumClassWithPath",
+    "HubuumObject",
+    "HubuumObjectHistory",
+    "HubuumObjectID",
+    "HubuumObjectRelation",
+    "HubuumObjectRelationID",
+    "HubuumObjectWithPath",
+    "ImportAtomicity",
+    "ImportClassInput",
+    "ImportClassRelationInput",
+    "ImportCollectionInput",
+    "ImportCollectionPermissionInput",
+    "ImportCollisionPolicy",
+    "ImportGraph",
+    "ImportMode",
+    "ImportObjectInput",
+    "ImportObjectRelationInput",
+    "ImportPermissionPolicy",
+    "ImportRequest",
+    "ImportTaskDetails",
+    "ImportTaskResultResponse",
+    "LoginRateLimitConfigResponse",
+    "LoginRateLimitEntryResponse",
+    "LoginRateLimitStateResponse",
+    "LoginResponse",
+    "LoginUser",
+    "LogoutTokenRequest",
+    "MeResponse",
+    "MessageResponse",
+    "NewCollectionWithAssignee",
+    "NewEventSink",
+    "NewEventSubscription",
+    "NewExportTemplate",
+    "NewGroup",
+    "NewHubuumClass",
+    "NewHubuumClassRelation",
+    "NewHubuumClassRelationFromClass",
+    "NewHubuumObject",
+    "NewHubuumObjectRelation",
+    "NewRemoteTarget",
+    "NewServiceAccount",
+    "NewTokenRequest",
+    "NewUser",
+    "ObjectKey",
+    "ObjectsByClass",
+    "Permission",
+    "Permissions",
+    "PrincipalCollectionPermissions",
+    "PrincipalMemberResponse",
+    "PrincipalToken",
+    "PrincipalTokenMetadata",
+    "ProbeResponse",
+    "RelatedClassGraph",
+    "RelatedObjectGraph",
+    "ReleaseRateLimitResponse",
+    "RemoteAuthConfig",
+    "RemoteCallResult",
+    "RemoteHttpMethod",
+    "RemoteInvocationBodyOverride",
+    "RemoteInvocationParameters",
+    "RemoteInvocationSubject",
+    "RemoteTarget",
+    "RemoteTargetHistory",
+    "RemoteTargetID",
+    "RemoteTargetInvokeRequest",
+    "RemoteTargetSubjectType",
+    "ServiceAccountResponse",
+    "TaskDetails",
+    "TaskEventResponse",
+    "TaskKind",
+    "TaskLinks",
+    "TaskProgress",
+    "TaskQueueStateResponse",
+    "TaskResponse",
+    "TaskStatus",
+    "UnifiedSearchBatchResponse",
+    "UnifiedSearchDoneEvent",
+    "UnifiedSearchErrorEvent",
+    "UnifiedSearchKind",
+    "UnifiedSearchNext",
+    "UnifiedSearchResponse",
+    "UnifiedSearchResults",
+    "UnifiedSearchStartedEvent",
+    "UpdateCollection",
+    "UpdateCollectionParent",
+    "UpdateEventSink",
+    "UpdateEventSubscription",
+    "UpdateExportTemplate",
+    "UpdateGroup",
+    "UpdateHubuumClass",
+    "UpdateHubuumObject",
+    "UpdateRemoteTarget",
+    "UpdateServiceAccount",
+    "UpdateUser",
+    "UserResponse"
+  ],
+  "spec_sha256": "6a12d8c35134fcffa23a8e4a57cb063fd28329d3af1c4f79707560f6990aefb1"
+}

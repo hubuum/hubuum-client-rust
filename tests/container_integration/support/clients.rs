@@ -21,7 +21,7 @@ impl TestUserCredentials {
         &self,
         base_url: BaseUrl,
     ) -> Result<blocking::Client<Authenticated>, ApiError> {
-        blocking::Client::new(base_url).login(Credentials::new(
+        blocking::Client::try_new(base_url)?.login(Credentials::new(
             self.username.clone(),
             self.password.clone(),
         ))
@@ -31,7 +31,7 @@ impl TestUserCredentials {
         &self,
         base_url: BaseUrl,
     ) -> Result<Client<Authenticated>, ApiError> {
-        Client::new(base_url)
+        Client::try_new(base_url)?
             .login(Credentials::new(
                 self.username.clone(),
                 self.password.clone(),
@@ -44,7 +44,7 @@ pub(crate) fn login_sync(
     base_url: BaseUrl,
     admin_password: &str,
 ) -> Result<blocking::Client<Authenticated>, ApiError> {
-    blocking::Client::new(base_url).login(Credentials::new(
+    blocking::Client::try_new(base_url)?.login(Credentials::new(
         ADMIN_USERNAME.to_string(),
         admin_password.to_string(),
     ))
@@ -64,7 +64,7 @@ pub(crate) async fn login_async(
     base_url: BaseUrl,
     admin_password: &str,
 ) -> Result<Client<Authenticated>, ApiError> {
-    Client::new(base_url)
+    Client::try_new(base_url)?
         .login(Credentials::new(
             ADMIN_USERNAME.to_string(),
             admin_password.to_string(),
@@ -295,13 +295,13 @@ pub(crate) fn create_sync_permission_sandbox(
     let collection = client.collections().create_raw(CollectionPost {
         name: format!("{prefix}-collection"),
         description: "integration collection".to_string(),
-        group_id: admin_group_id,
+        group_id: admin_group_id.into(),
         parent_collection_id: None,
     })?;
 
     let class = client.classes().create_raw(ClassPost {
         name: format!("{prefix}-class"),
-        collection_id: collection.id.into(),
+        collection_id: collection.id,
         description: "integration class".to_string(),
         json_schema: None,
         validate_schema: None,
@@ -320,8 +320,8 @@ pub(crate) fn create_sync_object(
     let name = format!("{prefix}-object");
     let object = client.objects(class_id).create_raw(ObjectPost {
         name: name.clone(),
-        collection_id,
-        hubuum_class_id: class_id,
+        collection_id: collection_id.into(),
+        hubuum_class_id: class_id.into(),
         description: "integration object".to_string(),
         data: None,
     })?;
@@ -341,7 +341,7 @@ pub(crate) async fn create_async_permission_sandbox(
         .create_raw(CollectionPost {
             name: format!("{prefix}-collection"),
             description: "integration collection".to_string(),
-            group_id: admin_group_id,
+            group_id: admin_group_id.into(),
             parent_collection_id: None,
         })
         .await?;
@@ -350,7 +350,7 @@ pub(crate) async fn create_async_permission_sandbox(
         .classes()
         .create_raw(ClassPost {
             name: format!("{prefix}-class"),
-            collection_id: collection.id.into(),
+            collection_id: collection.id,
             description: "integration class".to_string(),
             json_schema: None,
             validate_schema: None,
@@ -372,8 +372,8 @@ pub(crate) async fn create_async_object(
         .objects(class_id)
         .create_raw(ObjectPost {
             name: name.clone(),
-            collection_id,
-            hubuum_class_id: class_id,
+            collection_id: collection_id.into(),
+            hubuum_class_id: class_id.into(),
             description: "integration object".to_string(),
             data: None,
         })

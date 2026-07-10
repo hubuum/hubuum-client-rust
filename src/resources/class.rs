@@ -12,7 +12,10 @@ use crate::client::sync::{
     CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
     GraphRequest as SyncGraphRequest, Handle as SyncHandle, QueryOp as SyncQueryOp, one_or_err,
 };
-use crate::{ApiError, GroupPermissionsResult, Object, endpoints::Endpoint, types::HubuumDateTime};
+use crate::{
+    ApiError, CollectionId, GroupPermissionsResult, Object, endpoints::Endpoint,
+    types::HubuumDateTime,
+};
 #[cfg(feature = "blocking")]
 use crate::{FilterOperator, QueryFilter};
 
@@ -20,7 +23,7 @@ use super::Collection;
 
 #[derive(Debug, Clone, serde::Serialize)]
 struct NewClassRelationFromClassParams {
-    to_hubuum_class_id: i32,
+    to_hubuum_class_id: ClassId,
     #[serde(skip_serializing_if = "Option::is_none")]
     forward_template_alias: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -51,8 +54,8 @@ pub struct ClassResource {
 pub struct ClassRelationResource {
     #[api(read_only)]
     pub id: i32,
-    pub from_hubuum_class_id: i32,
-    pub to_hubuum_class_id: i32,
+    pub from_hubuum_class_id: ClassId,
+    pub to_hubuum_class_id: ClassId,
     #[api(optional)]
     pub forward_template_alias: String,
     #[api(optional)]
@@ -65,15 +68,15 @@ pub struct ClassRelationResource {
 
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
 pub struct ClassWithPath {
-    pub id: i32,
+    pub id: ClassId,
     pub name: String,
-    pub collection_id: i32,
+    pub collection_id: CollectionId,
     pub description: String,
     pub json_schema: serde_json::Value,
     pub validate_schema: bool,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
-    pub path: Vec<i32>,
+    pub path: Vec<ClassId>,
 }
 
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
@@ -177,10 +180,11 @@ impl SyncHandle<Class> {
         )
     }
 
-    pub fn relation<I: ToString>(
+    pub fn relation<I: Into<ClassRelationId>>(
         &self,
         relation_id: I,
     ) -> Result<SyncHandle<ClassRelation>, ApiError> {
+        let relation_id = relation_id.into();
         let relation = self
             .client()
             .request_with_endpoint::<SyncEmptyPostParams, ClassRelation>(
@@ -220,7 +224,7 @@ impl SyncHandle<Class> {
                 vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
                 vec![],
                 NewClassRelationFromClassParams {
-                    to_hubuum_class_id: to_class_id.into().into(),
+                    to_hubuum_class_id: to_class_id.into(),
                     forward_template_alias,
                     reverse_template_alias,
                 },
@@ -230,7 +234,11 @@ impl SyncHandle<Class> {
             ))
     }
 
-    pub fn delete_relation<I: ToString>(&self, relation_id: I) -> Result<(), ApiError> {
+    pub fn delete_relation<I: Into<ClassRelationId>>(
+        &self,
+        relation_id: I,
+    ) -> Result<(), ApiError> {
+        let relation_id = relation_id.into();
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,
@@ -324,10 +332,11 @@ impl AsyncHandle<Class> {
         )
     }
 
-    pub async fn relation<I: ToString>(
+    pub async fn relation<I: Into<ClassRelationId>>(
         &self,
         relation_id: I,
     ) -> Result<AsyncHandle<ClassRelation>, ApiError> {
+        let relation_id = relation_id.into();
         let relation = self
             .client()
             .request_with_endpoint::<AsyncEmptyPostParams, ClassRelation>(
@@ -369,7 +378,7 @@ impl AsyncHandle<Class> {
                 vec![(Cow::Borrowed("class_id"), self.id().to_string().into())],
                 vec![],
                 NewClassRelationFromClassParams {
-                    to_hubuum_class_id: to_class_id.into().into(),
+                    to_hubuum_class_id: to_class_id.into(),
                     forward_template_alias,
                     reverse_template_alias,
                 },
@@ -380,7 +389,11 @@ impl AsyncHandle<Class> {
             ))
     }
 
-    pub async fn delete_relation<I: ToString>(&self, relation_id: I) -> Result<(), ApiError> {
+    pub async fn delete_relation<I: Into<ClassRelationId>>(
+        &self,
+        relation_id: I,
+    ) -> Result<(), ApiError> {
+        let relation_id = relation_id.into();
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, ()>(
                 reqwest::Method::DELETE,
@@ -404,7 +417,7 @@ mod alias_tests {
     #[test]
     fn new_relation_params_without_aliases_serialize_one_key() {
         let params = NewClassRelationFromClassParams {
-            to_hubuum_class_id: 2,
+            to_hubuum_class_id: 2.into(),
             forward_template_alias: None,
             reverse_template_alias: None,
         };
@@ -417,7 +430,7 @@ mod alias_tests {
     #[test]
     fn new_relation_params_with_aliases_serialize_three_keys() {
         let params = NewClassRelationFromClassParams {
-            to_hubuum_class_id: 2,
+            to_hubuum_class_id: 2.into(),
             forward_template_alias: Some("rooms".into()),
             reverse_template_alias: Some("hosts".into()),
         };

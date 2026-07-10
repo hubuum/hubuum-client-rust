@@ -1,8 +1,7 @@
-use log::error;
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use reqwest::{
-    StatusCode,
-    header::{CONTENT_TYPE, HeaderMap},
+    Method, StatusCode,
+    header::{CONTENT_TYPE, HeaderMap, RETRY_AFTER},
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -23,6 +22,285 @@ use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";
+
+pub const DEFAULT_MAX_RESPONSE_BODY_BYTES: usize = 16 * 1024 * 1024;
+pub const DEFAULT_MAX_ERROR_BODY_BYTES: usize = 64 * 1024;
+
+/// Retry configuration applied to requests that are safe to replay.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RetryPolicy {
+    pub max_attempts: usize,
+    pub initial_delay: std::time::Duration,
+    pub max_delay: std::time::Duration,
+}
+
+impl RetryPolicy {
+    pub fn disabled() -> Self {
+        Self {
+            max_attempts: 1,
+            ..Self::default()
+        }
+    }
+
+    pub(crate) fn should_retry_status(&self, status: StatusCode) -> bool {
+        matches!(status.as_u16(), 408 | 429 | 502 | 503 | 504)
+    }
+
+    pub(crate) fn delay(&self, attempt: usize, headers: Option<&HeaderMap>) -> std::time::Duration {
+        if let Some(delay) = headers.and_then(retry_after) {
+            return delay.min(self.max_delay);
+        }
+
+        let exponent = attempt.saturating_sub(1).min(31) as u32;
+        let ceiling = self
+            .initial_delay
+            .saturating_mul(2_u32.saturating_pow(exponent))
+            .min(self.max_delay);
+        if ceiling.is_zero() {
+            return ceiling;
+        }
+
+        let max_millis = ceiling.as_millis().min(u64::MAX as u128) as u64;
+        std::time::Duration::from_millis(fastrand::u64(0..=max_millis))
+    }
+}
+
+impl Default for RetryPolicy {
+    fn default() -> Self {
+        Self {
+            max_attempts: 3,
+            initial_delay: std::time::Duration::from_millis(100),
+            max_delay: std::time::Duration::from_secs(2),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ClientOptions {
+    pub max_response_body_bytes: usize,
+    pub max_error_body_bytes: usize,
+    pub retry_policy: RetryPolicy,
+    pub max_auto_pages: usize,
+    pub max_auto_items: usize,
+}
+
+impl Default for ClientOptions {
+    fn default() -> Self {
+        Self {
+            max_response_body_bytes: DEFAULT_MAX_RESPONSE_BODY_BYTES,
+            max_error_body_bytes: DEFAULT_MAX_ERROR_BODY_BYTES,
+            retry_policy: RetryPolicy::default(),
+            max_auto_pages: 10_000,
+            max_auto_items: 1_000_000,
+        }
+    }
+}
+
+pub(crate) fn is_replay_safe(method: &Method, has_idempotency_key: bool) -> bool {
+    matches!(*method, Method::GET | Method::HEAD | Method::OPTIONS) || has_idempotency_key
+}
+
+pub(crate) fn redacted_url_for_log(value: &str) -> String {
+    let Ok(mut url) = url::Url::parse(value) else {
+        return "[INVALID URL]".to_string();
+    };
+    let keys = url
+        .query_pairs()
+        .map(|(key, _)| key.into_owned())
+        .collect::<Vec<_>>();
+    if !keys.is_empty() {
+        url.set_query(None);
+        let mut pairs = url.query_pairs_mut();
+        for key in keys {
+            pairs.append_pair(&key, "[REDACTED]");
+        }
+    }
+    url.to_string()
+}
+
+pub(crate) fn build_relative_url(
+    base_url: &BaseUrl,
+    path: &str,
+    query: &[(String, String)],
+) -> Result<url::Url, ApiError> {
+    if path.split('/').any(|segment| segment == "..") || url::Url::parse(path).is_ok() {
+        return Err(ApiError::InvalidBaseUrl(
+            "raw request paths must be relative and cannot contain `..`".into(),
+        ));
+    }
+    let mut url = base_url.as_url().join(path.trim_start_matches('/'))?;
+    if !query.is_empty() {
+        let mut pairs = url.query_pairs_mut();
+        for (key, value) in query {
+            pairs.append_pair(key, value);
+        }
+    }
+    Ok(url)
+}
+
+pub(crate) fn build_request_plan<T: Serialize>(
+    method: &Method,
+    request_url: &str,
+    body: &T,
+    bearer_token: &str,
+    headers: &[(&str, String)],
+) -> Result<super::transport::RequestPlan, ApiError> {
+    let url = url::Url::parse(request_url)?;
+    let mut plan = super::transport::RequestPlan::new(method.clone(), url);
+    let authorization = reqwest::header::HeaderValue::from_str(&format!("Bearer {bearer_token}"))
+        .map_err(|error| {
+        ApiError::Transport(format!("invalid authorization header: {error}"))
+    })?;
+    plan.headers
+        .insert(reqwest::header::AUTHORIZATION, authorization);
+    for (name, value) in headers {
+        let name = reqwest::header::HeaderName::from_bytes(name.as_bytes())
+            .map_err(|error| ApiError::Transport(format!("invalid header name: {error}")))?;
+        let value = reqwest::header::HeaderValue::from_str(value)
+            .map_err(|error| ApiError::Transport(format!("invalid header value: {error}")))?;
+        plan.headers.insert(name, value);
+    }
+    if matches!(*method, Method::POST | Method::PUT | Method::PATCH) {
+        plan.headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            reqwest::header::HeaderValue::from_static("application/json"),
+        );
+        plan = plan.with_body(serde_json::to_vec(body)?);
+    }
+    Ok(plan)
+}
+
+pub(crate) fn process_transport_response(
+    method: &Method,
+    request_url: &str,
+    mut response: super::transport::TransportResponse,
+    options: &ClientOptions,
+) -> Result<RawResponse, ApiError> {
+    if !response.status.is_success() {
+        response.body.truncate(options.max_error_body_bytes);
+        let body = String::from_utf8_lossy(&response.body).into_owned();
+        return Err(ApiError::HttpWithBody {
+            method: method.clone(),
+            url: request_url.to_string(),
+            status: response.status,
+            message: parse_http_error_message(&body),
+            body,
+        });
+    }
+    if response.body.len() > options.max_response_body_bytes {
+        return Err(ApiError::ResponseTooLarge {
+            limit: options.max_response_body_bytes,
+            content_length: Some(response.body.len() as u64),
+        });
+    }
+    let (next_cursor, total_count, content_type) = response_metadata(&response.headers);
+    Ok(RawResponse {
+        status: response.status,
+        body: String::from_utf8_lossy(&response.body).into_owned(),
+        next_cursor,
+        total_count,
+        content_type,
+    })
+}
+
+fn retry_after(headers: &HeaderMap) -> Option<std::time::Duration> {
+    let value = headers.get(RETRY_AFTER)?.to_str().ok()?;
+    if let Ok(seconds) = value.parse::<u64>() {
+        return Some(std::time::Duration::from_secs(seconds));
+    }
+
+    let retry_at = httpdate::parse_http_date(value).ok()?;
+    retry_at.duration_since(std::time::SystemTime::now()).ok()
+}
+
+#[cfg(feature = "async")]
+pub(crate) async fn read_async_body(
+    response: reqwest::Response,
+    limit: usize,
+) -> Result<String, ApiError> {
+    use futures_util::StreamExt;
+
+    let content_length = response.content_length();
+    if content_length.is_some_and(|length| length > limit as u64) {
+        return Err(ApiError::ResponseTooLarge {
+            limit,
+            content_length,
+        });
+    }
+
+    let mut body = Vec::with_capacity(content_length.unwrap_or(0).min(limit as u64) as usize);
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        if body.len().saturating_add(chunk.len()) > limit {
+            return Err(ApiError::ResponseTooLarge {
+                limit,
+                content_length,
+            });
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(String::from_utf8_lossy(&body).into_owned())
+}
+
+#[cfg(feature = "async")]
+pub(crate) async fn read_async_body_preview(response: reqwest::Response, limit: usize) -> String {
+    use futures_util::StreamExt;
+
+    let mut body = Vec::with_capacity(limit.min(4096));
+    let mut stream = response.bytes_stream();
+    while body.len() < limit {
+        let Some(chunk) = stream.next().await else {
+            break;
+        };
+        let Ok(chunk) = chunk else {
+            break;
+        };
+        let remaining = limit - body.len();
+        body.extend_from_slice(&chunk[..chunk.len().min(remaining)]);
+    }
+    String::from_utf8_lossy(&body).into_owned()
+}
+
+#[cfg(feature = "blocking")]
+pub(crate) fn read_blocking_body(
+    response: reqwest::blocking::Response,
+    limit: usize,
+) -> Result<String, ApiError> {
+    use std::io::Read;
+
+    let content_length = response.content_length();
+    if content_length.is_some_and(|length| length > limit as u64) {
+        return Err(ApiError::ResponseTooLarge {
+            limit,
+            content_length,
+        });
+    }
+
+    let mut body = Vec::with_capacity(content_length.unwrap_or(0).min(limit as u64) as usize);
+    response
+        .take(limit.saturating_add(1) as u64)
+        .read_to_end(&mut body)?;
+    if body.len() > limit {
+        return Err(ApiError::ResponseTooLarge {
+            limit,
+            content_length,
+        });
+    }
+    Ok(String::from_utf8_lossy(&body).into_owned())
+}
+
+#[cfg(feature = "blocking")]
+pub(crate) fn read_blocking_body_preview(
+    response: reqwest::blocking::Response,
+    limit: usize,
+) -> String {
+    use std::io::Read;
+
+    let mut body = Vec::with_capacity(limit.min(4096));
+    let _ = response.take(limit as u64).read_to_end(&mut body);
+    String::from_utf8_lossy(&body).into_owned()
+}
 
 /// Characters that must be escaped when interpolating an opaque value into a
 /// single URL path segment. Unreserved characters (including base64url's `-`
@@ -46,6 +324,7 @@ pub(crate) fn encode_path_segment(segment: &str) -> String {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Page<T> {
     pub items: Vec<T>,
     pub next_cursor: Option<String>,
@@ -165,13 +444,13 @@ pub(crate) fn build_request_url(
 }
 
 fn ensure_no_unresolved_url_params(url: &str) -> Result<(), ApiError> {
-    if let Some(start) = url.find('{')
-        && let Some(end_offset) = url[start + 1..].find('}')
-    {
-        let end = start + 1 + end_offset;
-        return Err(ApiError::MissingUrlParameter(
-            url[start + 1..end].to_string(),
-        ));
+    if let Some(start) = url.find('{') {
+        if let Some(end_offset) = url[start + 1..].find('}') {
+            let end = start + 1 + end_offset;
+            return Err(ApiError::MissingUrlParameter(
+                url[start + 1..end].to_string(),
+            ));
+        }
     }
 
     Ok(())
@@ -229,20 +508,25 @@ pub(crate) fn parse_response<U: DeserializeOwned>(
         if response_text.trim().is_empty() {
             return Ok(None);
         }
-        error!("Expected empty response, got: {response_text}");
-        return Err(ApiError::DeserializationError(response_text));
+        return Err(ApiError::DeserializationError(format!(
+            "DELETE response contained {} unexpected bytes",
+            response_text.len()
+        )));
     }
 
     if response_code == StatusCode::NO_CONTENT || response_text.trim().is_empty() {
         return Ok(None);
     }
 
-    match serde_json::from_str(&response_text) {
+    let mut deserializer = serde_json::Deserializer::from_str(&response_text);
+    match serde_path_to_error::deserialize(&mut deserializer) {
         Ok(obj) => Ok(Some(obj)),
-        Err(err) => {
-            error!("Failed to deserialize response: {err} Response text: {response_text}");
-            Err(ApiError::DeserializationError(response_text))
-        }
+        Err(error) => Err(ApiError::DeserializationError(format!(
+            "failed to decode {} at {}: {}",
+            type_name::<U>(),
+            error.path(),
+            error.inner()
+        ))),
     }
 }
 

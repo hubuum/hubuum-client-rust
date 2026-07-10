@@ -1,15 +1,15 @@
 # Querying Resources
 
-This page assumes you already have an authenticated client. Async and blocking clients use the same builders; async callers only await the terminal operation.
+This page assumes you already have an authenticated client. Examples use the blocking client; async callers use the same builders and await terminal operations.
 
 ## Creating and Fetching Resources
 
-The fluent API works across create, update, and query flows. If needed, you can still pass raw structs through `create_raw`, `update_raw`, and `params(...)`.
+The fluent API works across create, update, and query flows. `create_checked()` tracks required fields in the builder type, so `.send()` is unavailable until all of them are supplied. Use `create_raw` and `update_raw` when values already exist as request structs.
 
 ```rust
 let class = client
     .classes()
-    .create()
+    .create_checked()
     .name("example-class")
     .collection_id(1)
     .description("Example class")
@@ -33,7 +33,7 @@ Collections are the top-level organizational resource for classes, objects, expo
 ```rust
 let collection = client
     .collections()
-    .create()
+    .create_checked()
     .name("platform")
     .description("Platform inventory")
     .group_id(admin_group_id)
@@ -90,7 +90,7 @@ Use `list()` for an unfiltered collection request:
 let classes = client.classes().list()?;
 ```
 
-Use `all()` when you want the client to follow cursor pagination and collect all items:
+Use `all()` when you want the client to follow cursor pagination and collect all items. It stops at the configured page or item safety limit:
 
 ```rust
 let classes = client.classes().limit(100).all()?;
@@ -111,7 +111,8 @@ for class in page {
 
 Event, history, task, import-result, and related-resource request builders also
 support `all()`. Automatic pagination returns `ApiError::PaginationCycle` if a
-server repeats a cursor instead of looping forever.
+server repeats a cursor instead of looping forever. Use `pages()` or `items()`
+for lazy consumption without collecting the full result set.
 
 Existing `QueryFilter` values can be passed as a batch:
 
@@ -214,6 +215,10 @@ let events = client
     .search("server")
     .kinds([hubuum_client::UnifiedSearchKind::Object])
     .stream()?;
+
+for event in events {
+    println!("{:?}", event?);
+}
 ```
 
 ## Error Details

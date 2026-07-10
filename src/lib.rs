@@ -7,6 +7,8 @@
 //!
 //! async:
 //! ```no_run
+//! # #[cfg(feature = "async")]
+//! # {
 //! use hubuum_client::Client;
 //!
 //! #[tokio::main]
@@ -15,10 +17,13 @@
 //!     // ... rest of the code
 //!     Ok(())
 //! }
+//! # }
 //! ```
 //!
 //! sync:
 //! ```no_run
+//! # #[cfg(feature = "blocking")]
+//! # {
 //! use hubuum_client::blocking;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,6 +31,7 @@
 //!    // ... rest of the code
 //!    Ok(())
 //! }
+//! # }
 //! ```
 pub mod client;
 pub mod errors;
@@ -36,39 +42,62 @@ mod endpoints;
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
-pub use client::Client;
+pub use client::AsyncTransport;
+#[cfg(feature = "blocking")]
+pub use client::BlockingTransport;
 pub use client::{
-    Authenticated, IntoQueryFilters, Page, QueryBoolField, QueryJsonField, QueryNumericField,
-    QueryTextField, QueryValueField, Unauthenticated,
+    Authenticated, IntoQueryFilters, MockTransport, Page, QueryBoolField, QueryJsonField,
+    QueryNumericField, QueryTextField, QueryValueField, RequestPlan, RetryPolicy,
+    TransportResponse, Unauthenticated,
 };
+#[cfg(feature = "async")]
+pub use client::{Client, CollectionScope, ExportOutputStream, ItemStream, PageStream, TypedClass};
 pub use errors::{ApiError, ApiErrorResponse};
 pub use resources::*;
 pub use types::{
     BaseUrl, CURRENT_IMPORT_VERSION, ClassHistory, ClassKey, ClassParams, ClearRateLimitResponse,
     CollectionHistory, CollectionKey, CountsResponse, Credentials, DbStateResponse, EventDelivery,
-    EventDeliveryHealthResponse, EventDeliveryQueueHealth, EventDeliveryStatus,
+    EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryQueueHealth, EventDeliveryStatus,
     EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
     EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSubscription,
-    EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventWorkerHealth,
-    EventWorkerWakeupStats, ExportContentType, ExportInclude, ExportIncludeRelatedDirection,
-    ExportIncludeRelatedObject, ExportIncludeRelatedSort, ExportJsonResponse, ExportLimits,
-    ExportMeta, ExportMissingDataPolicy, ExportRelationContext, ExportRequest, ExportResult,
-    ExportScope, ExportScopeKind, ExportTaskDetails, ExportTemplateHistory, ExportTemplateKind,
-    ExportTemplateRunRequest, ExportWarning, GroupKey, HistoryMetadata, ImportAtomicity,
-    ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
-    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportGraph, ImportMode,
-    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportRequest,
-    ImportTaskDetails, ImportTaskResultResponse, LoginRateLimitConfig, LoginRateLimitEntry,
-    LoginRateLimitState, LogoutTokenRequest, NewEventSink, NewEventSubscription, ObjectHistory,
-    ObjectKey, Permissions, ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory,
-    TaskDetails, TaskEventResponse, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse,
-    TaskResponse, TaskStatus, Token, UnifiedSearchBatchResponse, UnifiedSearchDoneEvent,
-    UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext,
-    UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink,
-    UpdateEventSubscription, UserParams,
+    EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventSubscriptionId,
+    EventWorkerHealth, EventWorkerWakeupStats, ExportContentType, ExportInclude,
+    ExportIncludeRelatedDirection, ExportIncludeRelatedObject, ExportIncludeRelatedSort,
+    ExportJsonResponse, ExportLimits, ExportMeta, ExportMissingDataPolicy, ExportRelationContext,
+    ExportRequest, ExportResult, ExportScope, ExportScopeKind, ExportTaskDetails,
+    ExportTemplateHistory, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning, GroupKey,
+    HistoryId, HistoryMetadata, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
+    ImportCollectionInput, ImportCollectionPermissionInput, ImportCollisionPolicy, ImportGraph,
+    ImportMode, ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy,
+    ImportRequest, ImportResultId, ImportTaskDetails, ImportTaskResultResponse,
+    LoginRateLimitConfig, LoginRateLimitEntry, LoginRateLimitState, LogoutTokenRequest,
+    NewEventSink, NewEventSubscription, ObjectHistory, ObjectKey, PermissionId, Permissions,
+    PrincipalId, ProbeResponse, ReleaseRateLimitResponse, RemoteCallResultId, RemoteTargetHistory,
+    TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks, TaskProgress,
+    TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TokenId, TypedObject,
+    UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
+    UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
+    UserParams,
 };
 
 #[cfg(feature = "blocking")]
 pub mod blocking {
     pub use crate::client::sync::*;
+}
+
+/// Common imports for application code.
+pub mod prelude {
+    #[cfg(feature = "async")]
+    pub use crate::Client;
+    pub use crate::{
+        ApiError, BaseUrl, ClassId, CollectionId, Credentials, GroupId, MockTransport, ObjectId,
+        RetryPolicy, TaskId, Token, TypedObject,
+    };
+}
+
+/// Wire and domain models, grouped separately from request builders.
+pub mod model {
+    pub use crate::resources::*;
+    pub use crate::types::*;
 }

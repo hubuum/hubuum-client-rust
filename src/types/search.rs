@@ -6,6 +6,7 @@ use crate::{
     resources::{Class, Collection, Object},
 };
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, EnumString, Display, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -13,6 +14,8 @@ pub enum UnifiedSearchKind {
     Collection,
     Class,
     Object,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -30,6 +33,7 @@ pub struct UnifiedSearchNext {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[non_exhaustive]
 pub struct UnifiedSearchResponse {
     pub query: String,
     pub results: UnifiedSearchResults,
@@ -60,15 +64,32 @@ pub struct UnifiedSearchErrorEvent {
     pub message: String,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnifiedSearchEvent {
     Started(UnifiedSearchStartedEvent),
     Batch(UnifiedSearchBatchResponse),
     Done(UnifiedSearchDoneEvent),
     Error(UnifiedSearchErrorEvent),
+    Unknown { event: String, data: String },
 }
 
 impl UnifiedSearchEvent {
+    pub fn from_sse_parts(
+        event: impl Into<String>,
+        data: impl Into<String>,
+    ) -> Result<Self, ApiError> {
+        let event = event.into();
+        let data = data.into();
+        match event.as_str() {
+            "started" => Ok(Self::Started(serde_json::from_str(&data)?)),
+            "batch" => Ok(Self::Batch(serde_json::from_str(&data)?)),
+            "done" => Ok(Self::Done(serde_json::from_str(&data)?)),
+            "error" => Ok(Self::Error(serde_json::from_str(&data)?)),
+            _ => Ok(Self::Unknown { event, data }),
+        }
+    }
+
     pub fn parse_sse_stream(body: &str) -> Result<Vec<Self>, ApiError> {
         let mut events = Vec::new();
         let mut event_name: Option<String> = None;
@@ -88,19 +109,7 @@ impl UnifiedSearchEvent {
             let data = data_lines.join("\n");
             data_lines.clear();
 
-            let event = match name.as_str() {
-                "started" => Self::Started(serde_json::from_str(&data)?),
-                "batch" => Self::Batch(serde_json::from_str(&data)?),
-                "done" => Self::Done(serde_json::from_str(&data)?),
-                "error" => Self::Error(serde_json::from_str(&data)?),
-                other => {
-                    return Err(ApiError::DeserializationError(format!(
-                        "Unknown unified search SSE event `{other}`"
-                    )));
-                }
-            };
-
-            events.push(event);
+            events.push(Self::from_sse_parts(name, data)?);
             Ok(())
         };
 

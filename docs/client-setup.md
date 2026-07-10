@@ -52,6 +52,9 @@ let client = Client::builder_from_url("https://server.example.com:443")?
     .validate_certs(true)
     .timeout(Duration::from_secs(30))
     .user_agent("inventory-sync/1.0")
+    .max_response_body_bytes(8 * 1024 * 1024)
+    .max_error_body_bytes(32 * 1024)
+    .auto_pagination_limits(1_000, 100_000)
     .build()?;
 ```
 
@@ -69,9 +72,17 @@ let client = Client::builder_from_url("https://localhost:8443")?
 Use `BaseUrl::new(...)` when a parsed URL is shared between clients. Base URLs
 must use HTTP(S), may include a path prefix, and reject embedded credentials,
 query parameters, and fragments. `Client::try_new(base_url)` is the fallible
-equivalent of `Client::new(base_url)` when avoiding constructor panics matters.
+constructor for an already parsed URL. The older panicking constructors are
+deprecated.
 
 Authenticated clients expose `token()`, `base_url()`, and `http_client()`
 accessors. Secret-bearing authentication and remote-target values redact their
 `Debug` output. Transport debug logs report request URLs, response status, and
 body size without logging request or response bodies.
+
+`login()` borrows the unauthenticated client, so it can be reused for credential
+rotation. `logout()` consumes an authenticated client and returns an
+unauthenticated client, preventing accidental reuse of a revoked session at
+compile time. `authenticate(token)` attaches a token without a validation call;
+it is intended for custom transports and environments where the first API call
+is the validation boundary.

@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
-use super::HubuumDateTime;
+use super::{HubuumDateTime, ImportResultId, PrincipalId, TaskEventId, TaskId};
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -11,8 +12,11 @@ pub enum TaskKind {
     Export,
     Reindex,
     RemoteCall,
+    #[serde(other)]
+    Unknown,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -24,6 +28,8 @@ pub enum TaskStatus {
     Failed,
     PartiallySucceeded,
     Cancelled,
+    #[serde(other)]
+    Unknown,
 }
 
 impl TaskStatus {
@@ -88,11 +94,12 @@ pub struct TaskDetails {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct TaskResponse {
-    pub id: i32,
+    pub id: TaskId,
     pub kind: TaskKind,
     pub status: TaskStatus,
-    pub submitted_by: Option<i32>,
+    pub submitted_by: Option<PrincipalId>,
     pub created_at: HubuumDateTime,
     pub started_at: Option<HubuumDateTime>,
     pub finished_at: Option<HubuumDateTime>,
@@ -104,9 +111,10 @@ pub struct TaskResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
 pub struct TaskEventResponse {
-    pub id: i32,
-    pub task_id: i32,
+    pub id: TaskEventId,
+    pub task_id: TaskId,
     pub event_type: String,
     pub message: String,
     pub data: Option<serde_json::Value>,
@@ -114,9 +122,10 @@ pub struct TaskEventResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
 pub struct ImportTaskResultResponse {
-    pub id: i32,
-    pub task_id: i32,
+    pub id: ImportResultId,
+    pub task_id: TaskId,
     pub item_ref: Option<String>,
     pub entity_kind: String,
     pub action: String,

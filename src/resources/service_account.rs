@@ -15,7 +15,9 @@ use crate::resources::user::{
     principal_token_create_sync, principal_token_revoke_sync, principal_tokens_sync,
 };
 use crate::{
-    ApiError, NewTokenRequest, PrincipalTokenMetadata, endpoints::Endpoint, types::HubuumDateTime,
+    ApiError, GroupId, NewTokenRequest, PrincipalTokenMetadata,
+    endpoints::Endpoint,
+    types::{HubuumDateTime, PrincipalId, TokenId},
 };
 
 #[allow(dead_code)]
@@ -30,9 +32,9 @@ pub struct ServiceAccountResource {
     // Optional on create, mutable on update; always present in responses.
     #[api(optional)]
     pub description: String,
-    pub owner_group_id: i32,
+    pub owner_group_id: GroupId,
     #[api(read_only, optional)]
-    pub created_by: i32,
+    pub created_by: PrincipalId,
     #[api(read_only, optional)]
     pub disabled_at: HubuumDateTime,
     #[api(read_only)]
@@ -71,8 +73,8 @@ impl SyncHandle<ServiceAccount> {
         principal_token_create_sync(self.client(), self.id().into(), request)
     }
 
-    pub fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_sync(self.client(), self.id().into(), token_id)
+    pub fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
+        principal_token_revoke_sync(self.client(), self.id().into(), token_id.into())
     }
 }
 
@@ -107,7 +109,7 @@ impl AsyncHandle<ServiceAccount> {
         principal_token_create_async(self.client(), self.id().into(), request).await
     }
 
-    pub async fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_async(self.client(), self.id().into(), token_id).await
+    pub async fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
+        principal_token_revoke_async(self.client(), self.id().into(), token_id.into()).await
     }
 }

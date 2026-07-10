@@ -12,7 +12,11 @@ use crate::client::sync::{
     CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
     Handle as SyncHandle,
 };
-use crate::{ApiError, PrincipalMember, endpoints::Endpoint, types::HubuumDateTime};
+use crate::{
+    ApiError, PrincipalMember,
+    endpoints::Endpoint,
+    types::{HubuumDateTime, PrincipalId},
+};
 
 #[allow(dead_code)]
 #[derive(ApiResource)]
@@ -29,7 +33,10 @@ pub struct GroupResource {
 
 #[cfg(feature = "blocking")]
 impl SyncHandle<Group> {
-    pub fn add_member(&self, principal_id: i32) -> Result<(), ApiError> {
+    pub fn add_member(
+        &self,
+        principal_id: impl Into<PrincipalId> + ToString,
+    ) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("group_id"),
@@ -52,7 +59,10 @@ impl SyncHandle<Group> {
         Ok(())
     }
 
-    pub fn remove_member(&self, principal_id: i32) -> Result<(), ApiError> {
+    pub fn remove_member(
+        &self,
+        principal_id: impl Into<PrincipalId> + ToString,
+    ) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("group_id"),
@@ -107,7 +117,10 @@ impl SyncHandle<Group> {
 
 #[cfg(feature = "async")]
 impl AsyncHandle<Group> {
-    pub async fn add_member(&self, principal_id: i32) -> Result<(), ApiError> {
+    pub async fn add_member(
+        &self,
+        principal_id: impl Into<PrincipalId> + ToString,
+    ) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("group_id"),
@@ -131,7 +144,10 @@ impl AsyncHandle<Group> {
         Ok(())
     }
 
-    pub async fn remove_member(&self, principal_id: i32) -> Result<(), ApiError> {
+    pub async fn remove_member(
+        &self,
+        principal_id: impl Into<PrincipalId> + ToString,
+    ) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("group_id"),

@@ -1,9 +1,18 @@
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) fn serialize_secret<S>(value: &SecretString, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(value.expose_secret())
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Credentials {
     name: String,
-    password: String,
+    #[serde(serialize_with = "serialize_secret")]
+    password: SecretString,
 }
 
 impl Credentials {
@@ -11,7 +20,7 @@ impl Credentials {
     pub fn new(name: impl Into<String>, password: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            password: password.into(),
+            password: SecretString::from(password.into()),
         }
     }
 
@@ -20,6 +29,14 @@ impl Credentials {
         &self.name
     }
 }
+
+impl PartialEq for Credentials {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.password.expose_secret() == other.password.expose_secret()
+    }
+}
+
+impl Eq for Credentials {}
 
 impl std::fmt::Debug for Credentials {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -30,28 +47,41 @@ impl std::fmt::Debug for Credentials {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Token {
-    pub token: String,
+    #[serde(serialize_with = "serialize_secret")]
+    token: SecretString,
 }
 
 impl Token {
     pub fn new(token: impl Into<String>) -> Self {
         Self {
-            token: token.into(),
+            token: SecretString::from(token.into()),
         }
     }
 
     /// Borrow the raw bearer token.
     pub fn as_str(&self) -> &str {
-        &self.token
+        self.token.expose_secret()
     }
 
     /// Consume the wrapper and return the raw bearer token.
     pub fn into_inner(self) -> String {
+        self.token.expose_secret().to_owned()
+    }
+
+    pub(crate) fn into_secret(self) -> SecretString {
         self.token
     }
 }
+
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+
+impl Eq for Token {}
 
 impl AsRef<str> for Token {
     fn as_ref(&self) -> &str {
@@ -68,19 +98,28 @@ impl std::fmt::Debug for Token {
 }
 
 /// Body for revoking a specific token via `POST /api/v0/auth/logout/token`.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct LogoutTokenRequest {
-    pub token: String,
+    #[serde(serialize_with = "serialize_secret")]
+    token: SecretString,
 }
 
 impl LogoutTokenRequest {
     /// Construct a token-revocation request without requiring an owned string.
     pub fn new(token: impl Into<String>) -> Self {
         Self {
-            token: token.into(),
+            token: SecretString::from(token.into()),
         }
     }
 }
+
+impl PartialEq for LogoutTokenRequest {
+    fn eq(&self, other: &Self) -> bool {
+        self.token.expose_secret() == other.token.expose_secret()
+    }
+}
+
+impl Eq for LogoutTokenRequest {}
 
 impl std::fmt::Debug for LogoutTokenRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

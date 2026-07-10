@@ -5,22 +5,23 @@ use hubuum_client_derive::ApiResource;
 #[cfg(feature = "async")]
 use crate::client::r#async::{
     CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
-    Handle as AsyncHandle,
+    Handle as AsyncHandle, Resource as AsyncResource,
 };
 #[cfg(feature = "blocking")]
 use crate::client::sync::{
     CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
-    Handle as SyncHandle,
+    Handle as SyncHandle, Resource as SyncResource,
 };
 use crate::{
-    ApiError, EffectiveGroupPermission, Group, GroupPermissionsResult, PermissionResult,
+    ApiError, Class, EffectiveGroupPermission, ExportTemplate, Group, GroupId,
+    GroupPermissionsResult, PermissionResult, RemoteTarget,
     endpoints::Endpoint,
-    types::{CollectionPermissionsGrantParams, HubuumDateTime, Permissions},
+    types::{CollectionPermissionsGrantParams, HubuumDateTime, Permissions, PrincipalId},
 };
 
 #[derive(Debug, Clone, serde::Serialize)]
 struct UpdateCollectionParent {
-    parent_collection_id: i32,
+    parent_collection_id: CollectionId,
 }
 
 #[allow(dead_code)]
@@ -31,9 +32,9 @@ pub struct CollectionResource {
     pub name: String,
     pub description: String,
     #[api(post_only)]
-    pub group_id: i32, // This is the group that the collection belongs to and is set on creation.
+    pub group_id: GroupId, // This is the group that the collection belongs to and is set on creation.
     #[api(optional, skip_patch)]
-    pub parent_collection_id: i32,
+    pub parent_collection_id: CollectionId,
     #[api(read_only)]
     pub created_at: HubuumDateTime,
     #[api(read_only)]
@@ -42,6 +43,18 @@ pub struct CollectionResource {
 
 #[cfg(feature = "blocking")]
 impl SyncHandle<Collection> {
+    pub fn classes(&self) -> SyncResource<Class> {
+        self.client().collection(self.id()).classes()
+    }
+
+    pub fn export_templates(&self) -> SyncResource<ExportTemplate> {
+        self.client().collection(self.id()).export_templates()
+    }
+
+    pub fn remote_targets(&self) -> SyncResource<RemoteTarget> {
+        self.client().collection(self.id()).remote_targets()
+    }
+
     pub fn children(&self) -> Result<Vec<Collection>, ApiError> {
         let url_params = vec![(
             Cow::Borrowed("collection_id"),
@@ -78,7 +91,11 @@ impl SyncHandle<Collection> {
         Ok(res.unwrap_or_default())
     }
 
-    pub fn move_parent(&self, parent_collection_id: i32) -> Result<Collection, ApiError> {
+    pub fn move_parent(
+        &self,
+        parent_collection_id: impl Into<CollectionId>,
+    ) -> Result<Collection, ApiError> {
+        let parent_collection_id = parent_collection_id.into();
         let url_params = vec![(
             Cow::Borrowed("collection_id"),
             self.resource().id.to_string().into(),
@@ -132,7 +149,7 @@ impl SyncHandle<Collection> {
 
     pub fn replace_permissions(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
         permissions: Vec<String>,
     ) -> Result<(), ApiError> {
         let url_params = vec![
@@ -156,7 +173,7 @@ impl SyncHandle<Collection> {
 
     pub fn grant_permissions(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
         permissions: Vec<String>,
     ) -> Result<(), ApiError> {
         let url_params = vec![
@@ -178,7 +195,10 @@ impl SyncHandle<Collection> {
         Ok(())
     }
 
-    pub fn group_permissions(&self, group_id: i32) -> Result<PermissionResult, ApiError> {
+    pub fn group_permissions(
+        &self,
+        group_id: impl Into<GroupId> + ToString,
+    ) -> Result<PermissionResult, ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -202,7 +222,10 @@ impl SyncHandle<Collection> {
             })
     }
 
-    pub fn revoke_permissions(&self, group_id: i32) -> Result<(), ApiError> {
+    pub fn revoke_permissions(
+        &self,
+        group_id: impl Into<GroupId> + ToString,
+    ) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -224,7 +247,7 @@ impl SyncHandle<Collection> {
 
     pub fn has_group_permission(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
         permission: Permissions,
     ) -> Result<bool, ApiError> {
         let url_params = vec![
@@ -255,7 +278,11 @@ impl SyncHandle<Collection> {
         }
     }
 
-    pub fn grant_permission(&self, group_id: i32, permission: Permissions) -> Result<(), ApiError> {
+    pub fn grant_permission(
+        &self,
+        group_id: impl Into<GroupId> + ToString,
+        permission: Permissions,
+    ) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -278,7 +305,7 @@ impl SyncHandle<Collection> {
 
     pub fn revoke_permission(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
         permission: Permissions,
     ) -> Result<(), ApiError> {
         let url_params = vec![
@@ -303,7 +330,7 @@ impl SyncHandle<Collection> {
 
     pub fn principal_permissions(
         &self,
-        principal_id: i32,
+        principal_id: impl Into<PrincipalId> + ToString,
     ) -> Result<Vec<GroupPermissionsResult>, ApiError> {
         let url_params = vec![
             (
@@ -331,7 +358,7 @@ impl SyncHandle<Collection> {
 
     pub fn effective_group_permissions(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
         let url_params = vec![
             (
@@ -356,7 +383,7 @@ impl SyncHandle<Collection> {
 
     pub fn effective_principal_permissions(
         &self,
-        principal_id: i32,
+        principal_id: impl Into<PrincipalId> + ToString,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
         let url_params = vec![
             (
@@ -384,7 +411,7 @@ impl SyncHandle<Collection> {
 
     pub fn principal_permissions_request(
         &self,
-        principal_id: i32,
+        principal_id: impl Into<PrincipalId> + ToString,
     ) -> SyncCursorRequest<GroupPermissionsResult> {
         SyncCursorRequest::new(
             self.client().clone(),
@@ -419,6 +446,18 @@ impl SyncHandle<Collection> {
 
 #[cfg(feature = "async")]
 impl AsyncHandle<Collection> {
+    pub fn classes(&self) -> AsyncResource<Class> {
+        self.client().collection(self.id()).classes()
+    }
+
+    pub fn export_templates(&self) -> AsyncResource<ExportTemplate> {
+        self.client().collection(self.id()).export_templates()
+    }
+
+    pub fn remote_targets(&self) -> AsyncResource<RemoteTarget> {
+        self.client().collection(self.id()).remote_targets()
+    }
+
     pub async fn children(&self) -> Result<Vec<Collection>, ApiError> {
         let url_params = vec![(
             Cow::Borrowed("collection_id"),
@@ -457,7 +496,11 @@ impl AsyncHandle<Collection> {
         Ok(res.unwrap_or_default())
     }
 
-    pub async fn move_parent(&self, parent_collection_id: i32) -> Result<Collection, ApiError> {
+    pub async fn move_parent(
+        &self,
+        parent_collection_id: impl Into<CollectionId>,
+    ) -> Result<Collection, ApiError> {
+        let parent_collection_id = parent_collection_id.into();
         let url_params = vec![(
             Cow::Borrowed("collection_id"),
             self.resource().id.to_string().into(),
@@ -513,7 +556,7 @@ impl AsyncHandle<Collection> {
 
     pub async fn replace_permissions(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
         permissions: Vec<String>,
     ) -> Result<(), ApiError> {
         let url_params = vec![
@@ -538,7 +581,7 @@ impl AsyncHandle<Collection> {
 
     pub async fn grant_permissions(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
         permissions: Vec<String>,
     ) -> Result<(), ApiError> {
         let url_params = vec![
@@ -561,7 +604,10 @@ impl AsyncHandle<Collection> {
         Ok(())
     }
 
-    pub async fn group_permissions(&self, group_id: i32) -> Result<PermissionResult, ApiError> {
+    pub async fn group_permissions(
+        &self,
+        group_id: impl Into<GroupId> + ToString,
+    ) -> Result<PermissionResult, ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -586,7 +632,10 @@ impl AsyncHandle<Collection> {
             })
     }
 
-    pub async fn revoke_permissions(&self, group_id: i32) -> Result<(), ApiError> {
+    pub async fn revoke_permissions(
+        &self,
+        group_id: impl Into<GroupId> + ToString,
+    ) -> Result<(), ApiError> {
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -609,7 +658,7 @@ impl AsyncHandle<Collection> {
 
     pub async fn has_group_permission(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
         permission: Permissions,
     ) -> Result<bool, ApiError> {
         let url_params = vec![
@@ -644,7 +693,7 @@ impl AsyncHandle<Collection> {
 
     pub async fn grant_permission(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
         permission: Permissions,
     ) -> Result<(), ApiError> {
         let url_params = vec![
@@ -670,7 +719,7 @@ impl AsyncHandle<Collection> {
 
     pub async fn revoke_permission(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
         permission: Permissions,
     ) -> Result<(), ApiError> {
         let url_params = vec![
@@ -696,7 +745,7 @@ impl AsyncHandle<Collection> {
 
     pub async fn principal_permissions(
         &self,
-        principal_id: i32,
+        principal_id: impl Into<PrincipalId> + ToString,
     ) -> Result<Vec<GroupPermissionsResult>, ApiError> {
         let url_params = vec![
             (
@@ -725,7 +774,7 @@ impl AsyncHandle<Collection> {
 
     pub async fn effective_group_permissions(
         &self,
-        group_id: i32,
+        group_id: impl Into<GroupId> + ToString,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
         let url_params = vec![
             (
@@ -751,7 +800,7 @@ impl AsyncHandle<Collection> {
 
     pub async fn effective_principal_permissions(
         &self,
-        principal_id: i32,
+        principal_id: impl Into<PrincipalId> + ToString,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
         let url_params = vec![
             (
@@ -780,7 +829,7 @@ impl AsyncHandle<Collection> {
 
     pub fn principal_permissions_request(
         &self,
-        principal_id: i32,
+        principal_id: impl Into<PrincipalId> + ToString,
     ) -> AsyncCursorRequest<GroupPermissionsResult> {
         AsyncCursorRequest::new(
             self.client().clone(),

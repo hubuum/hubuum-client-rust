@@ -3,13 +3,14 @@ use hubuum_client_derive::ApiResource;
 use crate::types::{
     ExportContentType, ExportMissingDataPolicy, ExportScopeKind, ExportTemplateKind, HubuumDateTime,
 };
+use crate::{ClassId, CollectionId};
 
 #[allow(dead_code)]
 #[derive(ApiResource)]
 pub struct ExportTemplateResource {
     #[api(read_only)]
     pub id: i32,
-    pub collection_id: i32,
+    pub collection_id: CollectionId,
     pub name: String,
     pub description: String,
     #[api(skip_patch)]
@@ -19,7 +20,7 @@ pub struct ExportTemplateResource {
     #[api(optional)]
     pub scope_kind: ExportScopeKind,
     #[api(optional)]
-    pub class_id: i32,
+    pub class_id: ClassId,
     #[api(optional)]
     pub default_query: String,
     #[api(optional)]

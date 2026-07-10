@@ -78,7 +78,7 @@ impl ResourceId for RemoteTargetId {
 
 impl crate::client::GetID for RemoteTarget {
     fn id(&self) -> Self::Id {
-        RemoteTargetId::new(self.id)
+        self.id
     }
 }
 
@@ -87,6 +87,8 @@ impl std::fmt::Display for RemoteTarget {
         write!(f, "{}", self.name)
     }
 }
+
+impl crate::resources::sealed::Sealed for RemoteTarget {}
 
 impl crate::resources::ApiResource for RemoteTarget {
     type Id = RemoteTargetId;

@@ -20,7 +20,7 @@ fn query_contract(client: &blocking::Client<Authenticated>, since: HubuumDateTim
     let _ = client
         .objects(42)
         .hubuum_class_id()
-        .eq(42)
+        .eq(42.into())
         .data()
         .path(["owner"])
         .ne("legacy");
@@ -48,7 +48,8 @@ fn typed_nested_id_contract(
 
 fn main() {
     let base_url = BaseUrl::from_str("https://example.invalid").unwrap();
-    let client = blocking::Client::new(base_url)
+    let client = blocking::Client::try_new(base_url)
+        .unwrap()
         .login(Credentials::new("user".to_string(), "pass".to_string()));
 
     if let Ok(client) = client {

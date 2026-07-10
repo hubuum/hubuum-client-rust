@@ -45,7 +45,8 @@ fn e2e_sync_meta_and_crud_lifecycle() {
 fn e2e_probe_meta_and_auth_admin_endpoints() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
 
-    let probe_client = hubuum_client::blocking::Client::new(harness.base_url.clone());
+    let probe_client = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
+        .expect("probe client should build");
     let health = probe_client.healthz().expect("healthz endpoint failed");
     assert!(!health.status.is_empty());
     let ready = probe_client.readyz().expect("readyz endpoint failed");
@@ -78,13 +79,14 @@ fn e2e_probe_meta_and_auth_admin_endpoints() {
     let managed_session = managed_user
         .login(harness.base_url.clone())
         .expect("managed user should log in");
-    let second_session = hubuum_client::blocking::Client::new(harness.base_url.clone())
+    let second_session = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
+        .expect("second client should build")
         .login(hubuum_client::Credentials::new(
             "admin".to_string(),
             harness.admin_password.clone(),
         ))
         .expect("second admin login should succeed");
-    let second_token = second_session.get_token().to_string();
+    let second_token = second_session.token().to_string();
 
     harness
         .client
@@ -102,7 +104,8 @@ fn e2e_probe_meta_and_auth_admin_endpoints() {
         .meta_counts()
         .expect_err("logout_user should revoke the target user's session");
 
-    let fourth_session = hubuum_client::blocking::Client::new(harness.base_url.clone())
+    let fourth_session = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
+        .expect("fourth client should build")
         .login(hubuum_client::Credentials::new(
             "admin".to_string(),
             harness.admin_password.clone(),

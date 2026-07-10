@@ -9,6 +9,9 @@ A Rust client library for the Hubuum API. It provides synchronous and asynchrono
 - **Configurable setup**: use `Client::from_url("https://...")` for secure defaults or a client builder for certificate validation, timeout, and user-agent controls.
 - **Typed resource access**: collections, classes, objects, relations, users, groups, permissions, remote targets, event sinks, export templates, imports, and tasks use typed request and response models.
 - **Fluent queries and pagination**: chain typed filters directly from resource helpers and choose `list()`, `page()`, `all()`, or `one()` depending on the result shape you need.
+- **Lazy and bounded I/O**: stream cursor pages, individual items, search events, and export bytes without buffering entire result sets.
+- **Safe extension points**: inject a custom or mock transport, issue authenticated requests to newly added relative routes, and configure retries and response-size limits.
+- **Typed object payloads**: decode object `data` into application structs and optionally derive JSON Schema with the `typed-schemas` feature.
 - **Exports, export templates, and imports**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
 - **Principal-centric identity**: users and service accounts are principals, with group membership, scoped tokens, and effective permission helpers.
 - **Health and readiness probes**: unauthenticated `healthz()` and `readyz()` calls are available for operational checks.
@@ -19,7 +22,14 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.2.0"
+hubuum_client = "0.3.0"
+```
+
+Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
+
+```toml
+[dependencies]
+hubuum_client = { version = "0.3.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
@@ -44,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let class = client
         .classes()
-        .create()
+        .create_checked()
         .name("example-class")
         .collection_id(1)
         .description("Example class")
@@ -73,17 +83,18 @@ Collections are the top-level organizational resource for classes, objects, expo
 ```rust
 let collection = client
     .collections()
-    .create()
+    .create_checked()
     .name("platform")
     .description("Platform inventory")
     .group_id(admin_group_id)
     .parent_collection_id(parent_collection_id)
-    .send()?;
+    .send()
+    .await?;
 
-let children = collection.children()?;
-let ancestors = collection.ancestors()?;
-let moved = collection.move_parent(new_parent_collection_id)?;
-let effective = collection.effective_group_permissions(admin_group_id)?;
+let children = collection.children().await?;
+let ancestors = collection.ancestors().await?;
+let moved = collection.move_parent(new_parent_collection_id).await?;
+let effective = collection.effective_group_permissions(admin_group_id).await?;
 ```
 
 Queries compose by chaining field operators. Use `list()` for one page, `page()` when you need cursor metadata, `all()` to follow pagination, and `one()` when exactly one result is expected:
@@ -98,13 +109,14 @@ let classes = client
     .validate_schema()
     .eq(true)
     .limit(25)
-    .list()?;
+    .list()
+    .await?;
 ```
 
 Exports and imports are task-backed. High-level helpers submit work, poll the task to completion, and return the final output:
 
 ```rust
-let export = client.exports().run(request).send()?;
+let export = client.exports().run(request).send().await?;
 
 match export {
     hubuum_client::ExportResult::Json(body) => println!("{} rows", body.items.len()),
@@ -123,7 +135,8 @@ let search = client
     ])
     .limit_per_kind(5)
     .search_object_data(true)
-    .send()?;
+    .send()
+    .await?;
 ```
 
 ## More Documentation
@@ -131,6 +144,8 @@ let search = client
 - [Client setup](docs/client-setup.md): async and blocking initialization, token login, and builder options.
 - [Querying resources](docs/querying.md): resource CRUD, typed filters, pagination, related-object traversal, and error details.
 - [Exports, imports, and tasks](docs/exports-and-tasks.md): export templates, rendered output, task polling, and import results.
+- [Advanced usage](docs/advanced.md): lazy streams, retries, body limits, typed payloads, scoped navigation, mock transports, and raw requests.
+- [Declarative reconciliation](docs/reconciliation.md): previewing and applying desired Hubuum graphs with `hubuum_reconcile`.
 - [Integration tests](docs/integration-tests.md): Docker-backed real-server tests, e2e client tests, seed data, and environment variables.
 - [Release procedure](RELEASING.md): crates.io release checklist and trusted publishing notes.
 

@@ -6,8 +6,43 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-10
+
+### Breaking
+
+- Default features now enable only the async client. Blocking consumers must
+  enable the `blocking` feature explicitly.
+- `logout()` consumes the authenticated client and returns an unauthenticated
+  client, preventing reuse of a session after its token is revoked.
+- Task, principal, token, history, permission, event-delivery, import-result,
+  remote-call, and subscription identifiers now use dedicated ID newtypes.
+- `UnifiedSearchRequest::stream()` now returns a lazy SSE stream or blocking
+  iterator. Use `collect_stream()` when a collected `Vec` is required.
+- Task wait timeouts now return structured `ApiError::TaskTimeout` values.
+- Core response models and extensible enums are non-exhaustive. Unknown server
+  enum and SSE event values are preserved instead of failing deserialization.
+
 ### Added
 
+- True streaming for unified search, cursor pages/items, and export downloads.
+- Compile-time required-field builders through `create_checked()`; `create_raw()`
+  remains the explicit request-struct escape hatch.
+- Typed object payloads through `TypedObject<T>` and `typed_class::<T>()`, plus
+  optional JSON Schema generation with the `typed-schemas` feature.
+- Collection-scoped navigation for classes, export templates, remote targets,
+  events, history, and subscriptions.
+- Configurable replay-safe retries with jitter, `Retry-After` support, and
+  idempotency-key protection for mutating requests.
+- Independent normal and error response-size limits, bounded body readers, and
+  streaming download-to-writer/path helpers.
+- Transport-neutral `RequestPlan`, custom async/blocking transport traits,
+  `MockTransport`, and authenticated relative `raw()` requests for new routes.
+- The `hubuum_reconcile` workspace crate for dry-run previews and task-backed,
+  idempotent desired-state application.
+- A normalized OpenAPI operation snapshot covering 149 operations, executable
+  endpoint coverage checks, documented upstream gaps, and scheduled drift CI.
+- Strict formatting, clippy, docs, feature-matrix, MSRV, supply-chain, SemVer,
+  pinned-server, and latest-server compatibility checks.
 - `Page<T>` now preserves the OpenAPI-documented `X-Total-Count` response header
   and provides slice access plus `len()`, `is_empty()`, `has_next()`, `iter()`,
   and `into_items()` helpers.
@@ -24,6 +59,14 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Secret-bearing authentication and remote-target values use zeroizing secret
+  storage and redact diagnostics. Request/response bodies and query values are
+  no longer emitted through debug formatting or logs.
+- Login-with-token preserves structured server failures instead of collapsing
+  them into an invalid-token marker, and login borrows the unauthenticated client.
+- Deserialization failures include the precise JSON field path.
+- Custom transports now honor retry and response-size policies, matching the
+  reqwest-backed transport behavior.
 - Automatic pagination now returns `ApiError::PaginationCycle` when a server
   repeats a cursor instead of requesting the same page forever.
 - Blocking login and sync/async health probes now preserve API error status,
@@ -35,6 +78,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Changed
 
+- Panicking client constructors, unchecked fluent `create()`, `get_token()`,
+  graph `fetch()`, and search `execute()` are deprecated in favor of fallible,
+  explicit alternatives.
+- `ApiResource` is sealed and public imports are organized through `prelude` and
+  `model` modules.
+- Workspace packages declare Rust 1.86 as their minimum supported version.
 - Nested resource, event, history, template, and remote-target helpers now use
   the corresponding typed resource IDs while continuing to accept `i32` values.
 - Simplified the derive macro by sharing identical generated fluent methods

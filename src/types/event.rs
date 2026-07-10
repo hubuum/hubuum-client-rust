@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use super::HubuumDateTime;
+use crate::resources::{CollectionId, EventSinkId, UserId};
+
+use super::{EventDeliveryId, EventSubscriptionId, HubuumDateTime};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
 pub struct EventResponse {
     pub id: i64,
     pub event_id: String,
@@ -13,11 +16,11 @@ pub struct EventResponse {
     #[serde(default)]
     pub entity_name: Option<String>,
     #[serde(default)]
-    pub collection_id: Option<i32>,
+    pub collection_id: Option<CollectionId>,
     pub action: String,
     pub actor_kind: String,
     #[serde(default)]
-    pub actor_user_id: Option<i32>,
+    pub actor_user_id: Option<UserId>,
     #[serde(default)]
     pub correlation_id: Option<String>,
     #[serde(default)]
@@ -31,6 +34,7 @@ pub struct EventResponse {
     pub schema_version: i32,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum EventSinkKind {
@@ -39,11 +43,14 @@ pub enum EventSinkKind {
     Amqp,
     ValkeyStream,
     Email,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[non_exhaustive]
 pub struct EventSink {
-    pub id: i32,
+    pub id: EventSinkId,
     pub name: String,
     pub kind: EventSinkKind,
     pub config: serde_json::Value,
@@ -82,7 +89,7 @@ pub struct UpdateEventSink {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct EventSinkGet {
-    pub id: Option<i32>,
+    pub id: Option<EventSinkId>,
     pub name: Option<String>,
     pub kind: Option<EventSinkKind>,
     pub enabled: Option<bool>,
@@ -93,7 +100,7 @@ pub struct EventSubscriptionFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actor_kinds: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub actor_user_ids: Option<Vec<i32>>,
+    pub actor_user_ids: Option<Vec<UserId>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub correlation_ids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -101,18 +108,19 @@ pub struct EventSubscriptionFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entity_names: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub collection_ids: Option<Vec<i32>>,
+    pub collection_ids: Option<Vec<CollectionId>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub related_collection_ids: Option<Vec<i32>>,
+    pub related_collection_ids: Option<Vec<CollectionId>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_ids: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
 pub struct EventSubscription {
-    pub id: i32,
-    pub collection_id: i32,
-    pub sink_id: i32,
+    pub id: EventSubscriptionId,
+    pub collection_id: CollectionId,
+    pub sink_id: EventSinkId,
     pub name: String,
     pub description: String,
     pub entity_types: Vec<String>,
@@ -127,7 +135,7 @@ pub struct EventSubscription {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct NewEventSubscription {
-    pub sink_id: i32,
+    pub sink_id: EventSinkId,
     pub name: String,
     pub entity_types: Vec<String>,
     pub actions: Vec<String>,
@@ -144,7 +152,7 @@ pub struct NewEventSubscription {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UpdateEventSubscription {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sink_id: Option<i32>,
+    pub sink_id: Option<EventSinkId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -161,6 +169,7 @@ pub struct UpdateEventSubscription {
     pub filter: Option<EventSubscriptionFilter>,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EventDeliveryStatus {
@@ -169,13 +178,16 @@ pub enum EventDeliveryStatus {
     Succeeded,
     Failed,
     Dead,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
 pub struct EventDelivery {
-    pub id: i64,
+    pub id: EventDeliveryId,
     pub event_id: i64,
-    pub subscription_id: i32,
+    pub subscription_id: EventSubscriptionId,
     pub status: EventDeliveryStatus,
     pub attempts: i32,
     pub next_attempt_at: HubuumDateTime,
@@ -242,7 +254,7 @@ pub struct EventDeliveryQueueHealth {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EventSinkDeliveryHealth {
-    pub sink_id: i32,
+    pub sink_id: EventSinkId,
     pub sink_name: String,
     pub sink_kind: String,
     pub sink_enabled: bool,
@@ -255,10 +267,10 @@ pub struct EventSinkDeliveryHealth {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EventSubscriptionDeliveryHealth {
-    pub subscription_id: i32,
+    pub subscription_id: EventSubscriptionId,
     pub subscription_name: String,
-    pub collection_id: i32,
-    pub sink_id: i32,
+    pub collection_id: CollectionId,
+    pub sink_id: EventSinkId,
     pub sink_name: String,
     pub sink_kind: String,
     pub subscription_enabled: bool,

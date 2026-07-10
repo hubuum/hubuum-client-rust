@@ -5,12 +5,14 @@ mod event;
 mod export;
 mod filter;
 mod history;
+mod id;
 mod import;
 mod meta;
 mod params;
 mod remote;
 mod search;
 mod task;
+mod typed_object;
 
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
@@ -36,6 +38,10 @@ pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
 pub use history::{
     ClassHistory, CollectionHistory, ExportTemplateHistory, HistoryMetadata, ObjectHistory,
     RemoteTargetHistory,
+};
+pub use id::{
+    EventDeliveryId, EventSubscriptionId, HistoryId, ImportResultId, PermissionId, PrincipalId,
+    RemoteCallResultId, TaskEventId, TaskId, TokenId,
 };
 pub use import::{
     CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, GroupKey, ImportAtomicity, ImportClassInput,
@@ -63,7 +69,11 @@ pub use task::{
     ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse, TaskDetails, TaskEventResponse,
     TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
 };
+pub use typed_object::TypedObject;
+#[cfg(feature = "typed-schemas")]
+pub use typed_object::schema_for;
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, EnumIter, EnumString, Display, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub enum Permissions {
@@ -98,4 +108,6 @@ pub enum Permissions {
     ExecuteRemoteTarget,
     ReadAudit,
     ManageEventSubscription,
+    #[serde(other)]
+    Unknown,
 }

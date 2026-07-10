@@ -4,12 +4,14 @@ use thiserror::Error;
 
 /// Error payload returned by Hubuum API endpoints.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ApiErrorResponse {
     pub error: String,
     pub message: String,
 }
 
-#[derive(Debug, Error)]
+#[non_exhaustive]
+#[derive(Error)]
 pub enum ApiError {
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
@@ -17,8 +19,14 @@ pub enum ApiError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+
     #[error("API error: {0}")]
     Api(String),
+
+    #[error("Transport error: {0}")]
+    Transport(String),
 
     #[error("Invalid URL scheme: {0}")]
     InvalidScheme(String),
@@ -31,9 +39,6 @@ pub enum ApiError {
 
     #[error("Invalid URL: {0}")]
     UrlParse(#[from] url::ParseError),
-
-    #[error("Invalid token.")]
-    InvalidToken,
 
     #[error("URL serialization error: {0}")]
     UrlSerialize(#[from] serde_urlencoded::ser::Error),
@@ -56,6 +61,21 @@ pub enum ApiError {
     #[error("Deserialization error: {0}")]
     DeserializationError(String),
 
+    #[error("Response body exceeded the configured {limit} byte limit")]
+    ResponseTooLarge {
+        limit: usize,
+        content_length: Option<u64>,
+    },
+
+    #[error("Timed out waiting for task {task_id} after {timeout:?}")]
+    TaskTimeout {
+        task_id: crate::types::TaskId,
+        timeout: std::time::Duration,
+    },
+
+    #[error("Request retries exhausted after {attempts} attempts: {last_error}")]
+    RetryExhausted { attempts: usize, last_error: String },
+
     #[error("Unsupported HTTP operation: {0}")]
     UnsupportedHttpOperation(String),
 
@@ -74,8 +94,101 @@ pub enum ApiError {
     #[error("Pagination cursor repeated: {0}")]
     PaginationCycle(String),
 
+    #[error("Automatic pagination exceeded its safety limit ({pages} pages, {items} items)")]
+    PaginationLimit { pages: usize, items: usize },
+
     #[error("Unknown permission `{0}`")]
     UnknownPermission(#[from] strum::ParseError),
+}
+
+impl std::fmt::Debug for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Http(error) => f.debug_tuple("Http").field(error).finish(),
+            Self::Json(error) => f.debug_tuple("Json").field(error).finish(),
+            Self::Io(error) => f.debug_tuple("Io").field(error).finish(),
+            Self::Api(message) => f.debug_tuple("Api").field(message).finish(),
+            Self::Transport(message) => f.debug_tuple("Transport").field(message).finish(),
+            Self::InvalidScheme(scheme) => f.debug_tuple("InvalidScheme").field(scheme).finish(),
+            Self::UrlNotBase(url) => f.debug_tuple("UrlNotBase").field(url).finish(),
+            Self::InvalidBaseUrl(message) => {
+                f.debug_tuple("InvalidBaseUrl").field(message).finish()
+            }
+            Self::UrlParse(error) => f.debug_tuple("UrlParse").field(error).finish(),
+            Self::UrlSerialize(error) => f.debug_tuple("UrlSerialize").field(error).finish(),
+            Self::QueryEncoding(message) => f.debug_tuple("QueryEncoding").field(message).finish(),
+            Self::MissingLocationHeader(message) => f
+                .debug_tuple("MissingLocationHeader")
+                .field(message)
+                .finish(),
+            Self::HttpWithBody {
+                method,
+                url,
+                status,
+                message,
+                body,
+            } => f
+                .debug_struct("HttpWithBody")
+                .field("method", method)
+                .field("url", url)
+                .field("status", status)
+                .field("message", message)
+                .field("body", &"[REDACTED]")
+                .field("body_len", &body.len())
+                .finish(),
+            Self::DeserializationError(message) => f
+                .debug_tuple("DeserializationError")
+                .field(message)
+                .finish(),
+            Self::ResponseTooLarge {
+                limit,
+                content_length,
+            } => f
+                .debug_struct("ResponseTooLarge")
+                .field("limit", limit)
+                .field("content_length", content_length)
+                .finish(),
+            Self::TaskTimeout { task_id, timeout } => f
+                .debug_struct("TaskTimeout")
+                .field("task_id", task_id)
+                .field("timeout", timeout)
+                .finish(),
+            Self::RetryExhausted {
+                attempts,
+                last_error,
+            } => f
+                .debug_struct("RetryExhausted")
+                .field("attempts", attempts)
+                .field("last_error", last_error)
+                .finish(),
+            Self::UnsupportedHttpOperation(method) => f
+                .debug_tuple("UnsupportedHttpOperation")
+                .field(method)
+                .finish(),
+            Self::EmptyResult(message) => f.debug_tuple("EmptyResult").field(message).finish(),
+            Self::TooManyResults(message) => {
+                f.debug_tuple("TooManyResults").field(message).finish()
+            }
+            Self::MissingUrlIdentifier => f.write_str("MissingUrlIdentifier"),
+            Self::MissingUrlParameter(parameter) => f
+                .debug_tuple("MissingUrlParameter")
+                .field(parameter)
+                .finish(),
+            Self::PaginationCycle(cursor) => f
+                .debug_struct("PaginationCycle")
+                .field("cursor", &"[REDACTED]")
+                .field("cursor_len", &cursor.len())
+                .finish(),
+            Self::PaginationLimit { pages, items } => f
+                .debug_struct("PaginationLimit")
+                .field("pages", pages)
+                .field("items", items)
+                .finish(),
+            Self::UnknownPermission(error) => {
+                f.debug_tuple("UnknownPermission").field(error).finish()
+            }
+        }
+    }
 }
 
 impl ApiError {

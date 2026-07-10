@@ -25,7 +25,7 @@ pub struct E2EUser {
 
 impl E2EUser {
     pub fn login(&self, base_url: BaseUrl) -> Result<blocking::Client<Authenticated>, ApiError> {
-        blocking::Client::new(base_url).login(Credentials::new(
+        blocking::Client::try_new(base_url)?.login(Credentials::new(
             self.username.clone(),
             self.password.clone(),
         ))
@@ -42,7 +42,8 @@ impl E2EHarness {
         let parsed_base_url =
             BaseUrl::from_str(&base_url).map_err(|err| format!("invalid base url: {err}"))?;
 
-        let client = blocking::Client::new(parsed_base_url.clone())
+        let client = blocking::Client::try_new(parsed_base_url.clone())
+            .map_err(|err| format!("client initialization failed: {err}"))?
             .login(Credentials::new(
                 ADMIN_USERNAME.to_string(),
                 admin_password.to_string(),
@@ -66,13 +67,13 @@ impl E2EHarness {
         let collection = self.client.collections().create_raw(CollectionPost {
             name: format!("{prefix}-collection"),
             description: "e2e collection".to_string(),
-            group_id: admin_group_id,
+            group_id: admin_group_id.into(),
             parent_collection_id: None,
         })?;
 
         let class = self.client.classes().create_raw(ClassPost {
             name: format!("{prefix}-class"),
-            collection_id: collection.id.into(),
+            collection_id: collection.id,
             description: "e2e class".to_string(),
             json_schema: None,
             validate_schema: None,
@@ -80,8 +81,8 @@ impl E2EHarness {
 
         let object = self.client.objects(class.id).create_raw(ObjectPost {
             name: format!("{prefix}-object"),
-            collection_id: collection.id.into(),
-            hubuum_class_id: class.id.into(),
+            collection_id: collection.id,
+            hubuum_class_id: class.id,
             description: "e2e object".to_string(),
             data: Some(serde_json::json!({ "source": "e2e-client" })),
         })?;

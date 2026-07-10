@@ -1,0 +1,15 @@
+error[E0599]: no method named `send` found for struct `resources::class::SyncClassCreate<true, true, false>` in the current scope
+ --> tests/trybuild/checked_create_fail_missing_required.rs:9:10
+  |
+4 |       let _ = client
+  |  _____________-
+5 | |         .classes()
+6 | |         .create_checked()
+7 | |         .name("servers")
+8 | |         .description("Managed servers")
+9 | |         .send();
+  | |         -^^^^ method not found in `resources::class::SyncClassCreate<true, true, false>`
+  | |_________|
+  |
+  |
+  = note: the method was found for `resources::class::SyncClassCreate<true, true, true>`

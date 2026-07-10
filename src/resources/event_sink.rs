@@ -67,7 +67,7 @@ impl ResourceId for EventSinkId {
 
 impl crate::client::GetID for EventSink {
     fn id(&self) -> Self::Id {
-        EventSinkId::new(self.id)
+        self.id
     }
 }
 
@@ -76,6 +76,8 @@ impl std::fmt::Display for EventSink {
         write!(f, "{}", self.name)
     }
 }
+
+impl crate::resources::sealed::Sealed for EventSink {}
 
 impl crate::resources::ApiResource for EventSink {
     type Id = EventSinkId;
@@ -138,5 +140,6 @@ fn event_sink_kind_value(kind: EventSinkKind) -> &'static str {
         EventSinkKind::Amqp => "amqp",
         EventSinkKind::ValkeyStream => "valkey_stream",
         EventSinkKind::Email => "email",
+        EventSinkKind::Unknown => "unknown",
     }
 }

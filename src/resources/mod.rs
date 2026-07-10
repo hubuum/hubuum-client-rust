@@ -42,7 +42,23 @@ pub use crate::types::{
 
 use crate::endpoints::Endpoint;
 
+impl From<UserId> for crate::types::PrincipalId {
+    fn from(value: UserId) -> Self {
+        Self::new(value.get())
+    }
+}
+
+impl From<ServiceAccountId> for crate::types::PrincipalId {
+    fn from(value: ServiceAccountId) -> Self {
+        Self::new(value.get())
+    }
+}
+
 // ApiResource trait
+pub(crate) mod sealed {
+    pub trait Sealed {}
+}
+
 pub trait ResourceId:
     Copy + Clone + Debug + Default + PartialEq + Eq + std::fmt::Display + std::str::FromStr
 {
@@ -50,7 +66,7 @@ pub trait ResourceId:
     fn get(self) -> i32;
 }
 
-pub trait ApiResource: Default {
+pub trait ApiResource: sealed::Sealed + Default {
     type Id: ResourceId;
     type GetParams: Serialize + Default;
     type GetOutput: DeserializeOwned;
@@ -79,7 +95,7 @@ pub struct GroupPermissionsResult {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GroupResult {
-    pub id: i32,
+    pub id: GroupId,
     pub groupname: String,
     pub description: String,
     pub created_at: HubuumDateTime,
@@ -88,9 +104,9 @@ pub struct GroupResult {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PermissionResult {
-    pub id: i32,
-    pub collection_id: i32,
-    pub group_id: i32,
+    pub id: crate::types::PermissionId,
+    pub collection_id: CollectionId,
+    pub group_id: GroupId,
     pub has_read_collection: bool,
     pub has_update_collection: bool,
     pub has_delete_collection: bool,
@@ -140,8 +156,8 @@ pub struct PermissionResult {
 /// Public, hash-free projection of a principal token (used for listing).
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrincipalTokenMetadata {
-    pub id: i32,
-    pub principal_id: i32,
+    pub id: crate::types::TokenId,
+    pub principal_id: crate::types::PrincipalId,
     #[serde(default)]
     pub name: Option<String>,
     #[serde(default)]
@@ -160,7 +176,7 @@ pub struct PrincipalTokenMetadata {
 /// `service_account`).
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrincipalMember {
-    pub principal_id: i32,
+    pub principal_id: crate::types::PrincipalId,
     pub kind: String,
     pub name: String,
 }
@@ -168,7 +184,7 @@ pub struct PrincipalMember {
 /// One group's contribution to a principal's effective permissions on a collection.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GroupGrant {
-    pub group_id: i32,
+    pub group_id: GroupId,
     pub groupname: String,
     pub permissions: Vec<crate::types::Permissions>,
 }
@@ -177,7 +193,7 @@ pub struct GroupGrant {
 /// group that grants them.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrincipalCollectionPermissions {
-    pub collection_id: i32,
+    pub collection_id: CollectionId,
     pub collection_name: String,
     pub grants: Vec<GroupGrant>,
 }
@@ -196,7 +212,7 @@ pub struct EffectiveGroupPermission {
 /// token), including its scopes when scoped.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct CurrentTokenMetadata {
-    pub id: i32,
+    pub id: crate::types::TokenId,
     #[serde(default)]
     pub name: Option<String>,
     #[serde(default)]

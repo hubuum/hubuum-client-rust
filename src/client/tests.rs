@@ -27,7 +27,9 @@ fn mock_login(server: &MockServer) {
 
 fn build_sync_client(server: &MockServer) -> Result<sync_client::Client<Authenticated>, ApiError> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("base URL should be valid");
-    sync_client::Client::new_with_certificate_validation(base_url, true)
+    sync_client::Client::builder(base_url)
+        .validate_certs(true)
+        .build()?
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
 }
 
@@ -35,7 +37,9 @@ async fn build_async_client(
     server: &MockServer,
 ) -> Result<async_client::Client<Authenticated>, ApiError> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("base URL should be valid");
-    async_client::Client::new_with_certificate_validation(base_url, true)
+    async_client::Client::builder(base_url)
+        .validate_certs(true)
+        .build()?
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .await
 }
@@ -50,9 +54,10 @@ async fn build_async_client(
 )]
 fn sync_build_url_matches_endpoint(server: &str, endpoint: Endpoint) {
     let base_url = BaseUrl::from_str(server).unwrap();
-    let client = sync_client::Client::<Unauthenticated>::new_without_certificate_validation(
-        base_url.clone(),
-    );
+    let client = sync_client::Client::<Unauthenticated>::builder(base_url.clone())
+        .validate_certs(false)
+        .build()
+        .unwrap();
 
     assert_eq!(
         client.build_url(&endpoint, UrlParams::default()),
@@ -74,9 +79,10 @@ fn sync_build_url_matches_endpoint(server: &str, endpoint: Endpoint) {
 )]
 fn async_build_url_matches_endpoint(server: &str, endpoint: Endpoint) {
     let base_url = BaseUrl::from_str(server).unwrap();
-    let client = async_client::Client::<Unauthenticated>::new_without_certificate_validation(
-        base_url.clone(),
-    );
+    let client = async_client::Client::<Unauthenticated>::builder(base_url.clone())
+        .validate_certs(false)
+        .build()
+        .unwrap();
 
     assert_eq!(
         client.build_url(&endpoint, UrlParams::default()),
@@ -182,7 +188,11 @@ fn sync_task_wait_times_out() {
         .send()
         .unwrap_err();
     assert!(started.elapsed() < std::time::Duration::from_secs(2));
-    assert!(matches!(err, ApiError::Api(m) if m.contains("Timed out")));
+    assert!(matches!(
+        err,
+        ApiError::TaskTimeout { task_id, timeout }
+            if task_id == 9 && timeout == std::time::Duration::from_millis(20)
+    ));
 }
 
 #[tokio::test]
@@ -238,7 +248,11 @@ async fn async_task_wait_times_out() {
         .await
         .unwrap_err();
     assert!(started.elapsed() < std::time::Duration::from_secs(2));
-    assert!(matches!(err, ApiError::Api(m) if m.contains("Timed out")));
+    assert!(matches!(
+        err,
+        ApiError::TaskTimeout { task_id, timeout }
+            if task_id == 9 && timeout == std::time::Duration::from_millis(20)
+    ));
 }
 
 #[test]
@@ -310,7 +324,7 @@ fn export_request_value() -> crate::types::ExportRequest {
         missing_data_policy: None,
         query: None,
         scope: crate::types::ExportScope {
-            class_id: Some(42),
+            class_id: Some(42.into()),
             kind: crate::types::ExportScopeKind::ObjectsInClass,
             object_id: None,
         },

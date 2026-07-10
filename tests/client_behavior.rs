@@ -1,5 +1,8 @@
+#![cfg(all(feature = "async", feature = "blocking"))]
+
 use std::str::FromStr;
 
+use futures_util::TryStreamExt;
 use httpmock::prelude::*;
 use hubuum_client::types::{
     EventSinkKind, ExportContentType, ExportRequest, ExportScope, ExportScopeKind,
@@ -153,7 +156,7 @@ fn export_request() -> ExportRequest {
         missing_data_policy: None,
         query: Some("name__icontains=server".to_string()),
         scope: ExportScope {
-            class_id: Some(42),
+            class_id: Some(42.into()),
             kind: ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
@@ -466,14 +469,20 @@ fn mock_login(server: &MockServer) {
 
 fn sync_client(server: &MockServer) -> blocking::Client<hubuum_client::Authenticated> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    blocking::Client::new_with_certificate_validation(base_url, true)
+    blocking::Client::builder(base_url)
+        .validate_certs(true)
+        .build()
+        .expect("sync client should build")
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .expect("sync login should succeed")
 }
 
 async fn async_client(server: &MockServer) -> Client<hubuum_client::Authenticated> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    Client::new_with_certificate_validation(base_url, true)
+    Client::builder(base_url)
+        .validate_certs(true)
+        .build()
+        .expect("async client should build")
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .await
         .expect("async login should succeed")
@@ -496,7 +505,6 @@ fn sync_client_can_be_built_from_a_url_string_and_inspected() {
         .login(Credentials::new(USERNAME, PASSWORD))
         .expect("login should succeed");
     assert_eq!(client.token(), TOKEN);
-    assert_eq!(client.get_token(), client.token());
     assert!(!format!("{client:?}").contains(TOKEN));
 }
 
@@ -514,7 +522,8 @@ fn sync_login_preserves_structured_api_error() {
     });
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
 
-    let error = blocking::Client::new(base_url)
+    let error = blocking::Client::try_new(base_url)
+        .expect("client should build")
         .login(Credentials::new(USERNAME.to_string(), "wrong".to_string()))
         .expect_err("invalid credentials should fail");
 
@@ -540,7 +549,8 @@ async fn async_readyz_preserves_structured_api_error() {
     });
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
 
-    let error = Client::new(base_url)
+    let error = Client::try_new(base_url)
+        .expect("client should build")
         .readyz()
         .await
         .expect_err("not-ready response should fail");
@@ -634,7 +644,9 @@ fn sync_delete_rejects_non_empty_response_body() {
         .delete(1)
         .expect_err("delete should reject non-empty response");
     match err {
-        ApiError::DeserializationError(body) => assert_eq!(body, "{\"ok\":true}"),
+        ApiError::DeserializationError(message) => {
+            assert_eq!(message, "DELETE response contained 11 unexpected bytes")
+        }
         other => panic!("unexpected error variant: {other:?}"),
     }
 }
@@ -659,7 +671,9 @@ async fn async_delete_rejects_non_empty_response_body() {
         .await
         .expect_err("delete should reject non-empty response");
     match err {
-        ApiError::DeserializationError(body) => assert_eq!(body, "{\"ok\":true}"),
+        ApiError::DeserializationError(message) => {
+            assert_eq!(message, "DELETE response contained 11 unexpected bytes")
+        }
         other => panic!("unexpected error variant: {other:?}"),
     }
 }
@@ -819,7 +833,7 @@ fn sync_class_create_fluent_builder_posts_resource() {
 
     let class = client
         .classes()
-        .create()
+        .create_checked()
         .name("fluent-class")
         .description("Fluent class")
         .collection_id(7)
@@ -1253,7 +1267,7 @@ fn sync_supports_all_auth_logout_endpoints() {
     });
 
     let client = sync_client(&server);
-    client.logout().expect("logout should succeed");
+    client.clone().logout().expect("logout should succeed");
     client
         .logout_token("revoked-token")
         .expect("logout_token should succeed");
@@ -1309,7 +1323,11 @@ async fn async_supports_all_auth_logout_endpoints() {
     });
 
     let client = async_client(&server).await;
-    client.logout().await.expect("logout should succeed");
+    client
+        .clone()
+        .logout()
+        .await
+        .expect("logout should succeed");
     client
         .logout_token("revoked-token")
         .await
@@ -2509,7 +2527,7 @@ fn sync_exports_and_templates_cover_new_server_surface() {
 
     let created = client
         .export_templates()
-        .create()
+        .create_checked()
         .collection_id(7)
         .name("created-template")
         .description("Template")
@@ -3073,7 +3091,9 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
         .search("server")
         .kinds([UnifiedSearchKind::Collection, UnifiedSearchKind::Object])
         .stream()
-        .expect("unified search stream should succeed");
+        .expect("unified search stream should succeed")
+        .collect::<Result<Vec<_>, _>>()
+        .expect("stream events should decode");
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
     assert!(matches!(events[1], UnifiedSearchEvent::Batch(_)));
     assert!(matches!(events[2], UnifiedSearchEvent::Done(_)));
@@ -3129,7 +3149,10 @@ async fn async_unified_search_supports_grouped_results_and_stream_events() {
         .kinds([UnifiedSearchKind::Class])
         .stream()
         .await
-        .expect("async unified search stream should succeed");
+        .expect("async unified search stream should succeed")
+        .try_collect::<Vec<_>>()
+        .await
+        .expect("stream events should decode");
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
     assert!(matches!(events[1], UnifiedSearchEvent::Done(_)));
 
@@ -3429,21 +3452,19 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
 
     let sink = client
         .event_sinks()
-        .create()
-        .params(NewEventSink {
+        .create_raw(NewEventSink {
             name: "audit-webhook".to_string(),
             kind: EventSinkKind::Webhook,
             enabled: Some(true),
             ..Default::default()
         })
-        .send()
         .expect("event sink create should succeed");
     assert_eq!(sink.id, 5);
 
     let subscription = client
         .event_subscriptions(7)
         .create(NewEventSubscription {
-            sink_id: 5,
+            sink_id: 5.into(),
             name: "class-updates".to_string(),
             entity_types: vec!["class".to_string()],
             actions: vec!["updated".to_string()],
@@ -3691,13 +3712,11 @@ fn sync_service_account_create_and_disable() {
     let client = sync_client(&server);
     let created = client
         .service_accounts()
-        .create()
-        .params(ServiceAccountPost {
+        .create_raw(ServiceAccountPost {
             name: "dns-sync".to_string(),
             description: Some("integration service account".to_string()),
-            owner_group_id: 10,
+            owner_group_id: 10.into(),
         })
-        .send()
         .expect("service account create should succeed");
     assert_eq!(created.id, 5);
     assert_eq!(created.name, "dns-sync");
@@ -3810,8 +3829,8 @@ fn sync_remote_target_invoke_returns_task() {
     let task = target
         .invoke(RemoteTargetInvokeRequest::new(
             RemoteInvocationSubject::Object {
-                class_id: 1,
-                object_id: 2,
+                class_id: 1.into(),
+                object_id: 2.into(),
             },
         ))
         .expect("invoke should succeed");
@@ -3868,7 +3887,10 @@ fn sync_healthz_probe_succeeds_without_auth() {
     });
 
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    let client = blocking::Client::new_with_certificate_validation(base_url, true);
+    let client = blocking::Client::builder(base_url)
+        .validate_certs(true)
+        .build()
+        .expect("client should build");
     let probe = client.healthz().expect("healthz should succeed");
     assert_eq!(probe.status, "ok");
 

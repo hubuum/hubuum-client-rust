@@ -5,28 +5,37 @@ use super::Permissions;
 
 pub const CURRENT_IMPORT_VERSION: i32 = 1;
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum ImportAtomicity {
     Strict,
     BestEffort,
+    #[serde(other)]
+    Unknown,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum ImportCollisionPolicy {
     Abort,
     Overwrite,
+    #[serde(other)]
+    Unknown,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum ImportPermissionPolicy {
     Abort,
     Continue,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

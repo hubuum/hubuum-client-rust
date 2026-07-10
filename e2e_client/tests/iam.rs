@@ -125,7 +125,7 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
         .create_raw(ServiceAccountPost {
             name: format!("{}-service-account", user.username),
             description: Some("e2e service account".to_string()),
-            owner_group_id: admin_group_id,
+            owner_group_id: admin_group_id.into(),
         })
         .expect("service account should create");
     let service_account_handle = harness

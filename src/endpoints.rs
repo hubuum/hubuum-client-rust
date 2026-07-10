@@ -1,6 +1,7 @@
 use crate::types::BaseUrl;
+use strum::EnumIter;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum Endpoint {
     Login,
     LoginWithToken,
@@ -276,6 +277,30 @@ impl Endpoint {
 #[cfg(test)]
 mod test {
     use super::*;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn endpoint_paths_match_the_pinned_openapi_contract() {
+        let contract: serde_json::Value =
+            serde_json::from_str(include_str!("../openapi/operations.json"))
+                .expect("OpenAPI operation snapshot should be valid JSON");
+        let spec_paths = contract["operations"]
+            .as_array()
+            .expect("snapshot operations should be an array")
+            .iter()
+            .map(|operation| {
+                operation["path"]
+                    .as_str()
+                    .expect("operation path should be a string")
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        let client_paths = Endpoint::iter()
+            .map(|endpoint| endpoint.path())
+            .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(client_paths, spec_paths);
+        assert_eq!(contract["operation_count"], 149);
+    }
     use std::str::FromStr;
     use yare::parameterized;
 
