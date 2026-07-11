@@ -105,17 +105,17 @@ impl SyncHandle<User> {
     }
 
     pub fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_sync(self.client(), self.id().into())
+        principal_tokens_sync(self.client(), self.id())
     }
 
     /// Mint a new token for this user. Returns the raw token, shown only once.
     pub fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_sync(self.client(), self.id().into(), request)
+        principal_token_create_sync(self.client(), self.id(), request)
     }
 
     /// Revoke (soft-delete) one of this user's tokens.
     pub fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
-        principal_token_revoke_sync(self.client(), self.id().into(), token_id.into())
+        principal_token_revoke_sync(self.client(), self.id(), token_id)
     }
 
     /// Set a new plaintext password for this user.
@@ -193,17 +193,17 @@ impl AsyncHandle<User> {
     }
 
     pub async fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_async(self.client(), self.id().into()).await
+        principal_tokens_async(self.client(), self.id()).await
     }
 
     /// Mint a new token for this user. Returns the raw token, shown only once.
     pub async fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_async(self.client(), self.id().into(), request).await
+        principal_token_create_async(self.client(), self.id(), request).await
     }
 
     /// Revoke (soft-delete) one of this user's tokens.
     pub async fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
-        principal_token_revoke_async(self.client(), self.id().into(), token_id.into()).await
+        principal_token_revoke_async(self.client(), self.id(), token_id).await
     }
 
     /// Set a new plaintext password for this user.
@@ -249,8 +249,9 @@ struct SetPasswordBody {
 #[cfg(feature = "blocking")]
 pub(crate) fn principal_tokens_sync(
     client: &crate::client::sync::Client<crate::Authenticated>,
-    principal_id: PrincipalId,
+    principal_id: impl Into<PrincipalId>,
 ) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
+    let principal_id = principal_id.into();
     let url_params = vec![(
         Cow::Borrowed("principal_id"),
         principal_id.to_string().into(),
@@ -268,9 +269,10 @@ pub(crate) fn principal_tokens_sync(
 #[cfg(feature = "blocking")]
 pub(crate) fn principal_token_create_sync(
     client: &crate::client::sync::Client<crate::Authenticated>,
-    principal_id: PrincipalId,
+    principal_id: impl Into<PrincipalId>,
     request: NewTokenRequest,
 ) -> Result<String, ApiError> {
+    let principal_id = principal_id.into();
     let url_params = vec![(
         Cow::Borrowed("principal_id"),
         principal_id.to_string().into(),
@@ -286,9 +288,11 @@ pub(crate) fn principal_token_create_sync(
 #[cfg(feature = "blocking")]
 pub(crate) fn principal_token_revoke_sync(
     client: &crate::client::sync::Client<crate::Authenticated>,
-    principal_id: PrincipalId,
-    token_id: TokenId,
+    principal_id: impl Into<PrincipalId>,
+    token_id: impl Into<TokenId>,
 ) -> Result<(), ApiError> {
+    let principal_id = principal_id.into();
+    let token_id = token_id.into();
     let url_params = vec![
         (
             Cow::Borrowed("principal_id"),
@@ -309,8 +313,9 @@ pub(crate) fn principal_token_revoke_sync(
 #[cfg(feature = "async")]
 pub(crate) async fn principal_tokens_async(
     client: &crate::client::r#async::Client<crate::Authenticated>,
-    principal_id: PrincipalId,
+    principal_id: impl Into<PrincipalId>,
 ) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
+    let principal_id = principal_id.into();
     let url_params = vec![(
         Cow::Borrowed("principal_id"),
         principal_id.to_string().into(),
@@ -330,9 +335,10 @@ pub(crate) async fn principal_tokens_async(
 #[cfg(feature = "async")]
 pub(crate) async fn principal_token_create_async(
     client: &crate::client::r#async::Client<crate::Authenticated>,
-    principal_id: PrincipalId,
+    principal_id: impl Into<PrincipalId>,
     request: NewTokenRequest,
 ) -> Result<String, ApiError> {
+    let principal_id = principal_id.into();
     let url_params = vec![(
         Cow::Borrowed("principal_id"),
         principal_id.to_string().into(),
@@ -350,9 +356,11 @@ pub(crate) async fn principal_token_create_async(
 #[cfg(feature = "async")]
 pub(crate) async fn principal_token_revoke_async(
     client: &crate::client::r#async::Client<crate::Authenticated>,
-    principal_id: PrincipalId,
-    token_id: TokenId,
+    principal_id: impl Into<PrincipalId>,
+    token_id: impl Into<TokenId>,
 ) -> Result<(), ApiError> {
+    let principal_id = principal_id.into();
+    let token_id = token_id.into();
     let url_params = vec![
         (
             Cow::Borrowed("principal_id"),

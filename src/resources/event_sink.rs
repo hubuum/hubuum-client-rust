@@ -43,6 +43,18 @@ impl From<i32> for EventSinkId {
     }
 }
 
+impl From<&EventSinkId> for EventSinkId {
+    fn from(value: &EventSinkId) -> Self {
+        *value
+    }
+}
+
+impl From<EventSinkId> for i32 {
+    fn from(value: EventSinkId) -> Self {
+        value.0
+    }
+}
+
 impl PartialEq<i32> for EventSinkId {
     fn eq(&self, other: &i32) -> bool {
         self.0 == *other

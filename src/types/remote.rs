@@ -294,7 +294,7 @@ pub struct RemoteCallResult {
     pub id: RemoteCallResultId,
     pub task_id: TaskId,
     #[serde(default)]
-    pub target_id: Option<i32>,
+    pub target_id: Option<RemoteTargetId>,
     pub subject_type: String,
     pub subject_id: i32,
     pub method: RemoteHttpMethod,
@@ -425,6 +425,31 @@ impl std::fmt::Debug for RemoteCallResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn remote_call_result_preserves_the_target_id_type() {
+        let result: RemoteCallResult = serde_json::from_value(json!({
+            "id": 11,
+            "task_id": 12,
+            "target_id": 13,
+            "subject_type": "object",
+            "subject_id": 14,
+            "method": "GET",
+            "rendered_url": "https://example.invalid/resource/14",
+            "response_status": 200,
+            "response_headers": null,
+            "response_body_preview": null,
+            "duration_ms": 5,
+            "success": true,
+            "error": null,
+            "created_at": "2026-07-11T10:00:00Z"
+        }))
+        .unwrap();
+
+        assert_eq!(result.target_id, Some(RemoteTargetId::new(13)));
+        assert_eq!(result.subject_id, 14);
+    }
 
     #[test]
     fn remote_auth_debug_redacts_secrets() {

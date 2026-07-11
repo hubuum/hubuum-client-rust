@@ -24,7 +24,9 @@ Resource identity is typed. Handles and resources expose IDs such as `ClassId`,
 `classes().get(...)` or `objects(...)` is rejected at compile time. Nested event,
 history, template, and remote-target helpers use the same typed IDs. Integer
 literals and raw `i32` values still work through conversion into the expected ID
-type.
+type, and an existing ID can be passed by value or by reference. Keep IDs typed
+through application code and use `.get()` only at intentionally untyped or
+polymorphic boundaries, such as a generic event entity ID.
 
 ## Collections
 

@@ -30,7 +30,7 @@ fn e2e_core_collection_class_object_crud_and_query() {
             ClassPatch {
                 name: Some(updated_class_name.clone()),
                 description: Some("updated e2e class".to_string()),
-                collection_id: collection_id.into(),
+                collection_id,
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -47,8 +47,8 @@ fn e2e_core_collection_class_object_crud_and_query() {
             object_id,
             ObjectPatch {
                 name: Some(updated_object_name.clone()),
-                collection_id: Some(collection_id.into()),
-                hubuum_class_id: Some(class_id.into()),
+                collection_id: Some(collection_id),
+                hubuum_class_id: Some(class_id),
                 description: Some("updated e2e object".to_string()),
                 data: Some(updated_data.clone()),
             },

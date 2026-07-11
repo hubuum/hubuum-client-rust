@@ -1,5 +1,7 @@
 use serde_json::{Value, json};
 
+use hubuum_client::{GroupId, UserId};
+
 pub(crate) const ADMIN_USERNAME: &str = "admin";
 
 pub(crate) fn login_token(base_url: &str, admin_password: &str) -> Result<String, String> {
@@ -26,7 +28,7 @@ pub(crate) fn login_token(base_url: &str, admin_password: &str) -> Result<String
         .ok_or_else(|| "login response missing token field".to_string())
 }
 
-pub(crate) fn fetch_admin_ids(base_url: &str, token: &str) -> Result<(i32, i32), String> {
+pub(crate) fn fetch_admin_ids(base_url: &str, token: &str) -> Result<(UserId, GroupId), String> {
     let http = reqwest::blocking::Client::new();
 
     let users_response = http
@@ -50,7 +52,10 @@ pub(crate) fn fetch_admin_ids(base_url: &str, token: &str) -> Result<(i32, i32),
         .and_then(|values| values.first())
         .and_then(|entry| entry.get("id"))
         .and_then(Value::as_i64)
-        .ok_or_else(|| "failed to extract admin user id".to_string())? as i32;
+        .ok_or_else(|| "failed to extract admin user id".to_string())?;
+    let user_id = i32::try_from(user_id)
+        .map(UserId::new)
+        .map_err(|_| "admin user id is outside the i32 range".to_string())?;
 
     let groups_response = http
         .get(format!(
@@ -73,7 +78,10 @@ pub(crate) fn fetch_admin_ids(base_url: &str, token: &str) -> Result<(i32, i32),
         .and_then(|values| values.first())
         .and_then(|entry| entry.get("id"))
         .and_then(Value::as_i64)
-        .ok_or_else(|| "failed to extract admin group id".to_string())? as i32;
+        .ok_or_else(|| "failed to extract admin group id".to_string())?;
+    let group_id = i32::try_from(group_id)
+        .map(GroupId::new)
+        .map_err(|_| "admin group id is outside the i32 range".to_string())?;
 
     Ok((user_id, group_id))
 }
