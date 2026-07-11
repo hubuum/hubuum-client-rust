@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
-use super::Permissions;
+use super::{ImportTaskResultResponse, Permissions, TaskResponse};
 
 pub const CURRENT_IMPORT_VERSION: i32 = 1;
 
@@ -193,6 +193,25 @@ pub struct ImportRequest {
 }
 
 impl ImportRequest {
+    pub fn new(graph: ImportGraph) -> Self {
+        Self {
+            version: CURRENT_IMPORT_VERSION,
+            dry_run: None,
+            mode: None,
+            graph,
+        }
+    }
+
+    pub fn dry_run(mut self, dry_run: bool) -> Self {
+        self.dry_run = Some(dry_run);
+        self
+    }
+
+    pub fn mode(mut self, mode: ImportMode) -> Self {
+        self.mode = Some(mode);
+        self
+    }
+
     pub fn total_items(&self) -> i32 {
         (self.graph.collections.len()
             + self.graph.classes.len()
@@ -203,9 +222,42 @@ impl ImportRequest {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct ImportRunResult {
+    pub task: TaskResponse,
+    pub changes: Vec<ImportTaskResultResponse>,
+}
+
+impl ImportRunResult {
+    pub fn succeeded(&self) -> usize {
+        self.changes
+            .iter()
+            .filter(|change| change.error.is_none())
+            .count()
+    }
+
+    pub fn failed(&self) -> usize {
+        self.changes.len().saturating_sub(self.succeeded())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn request_builder_uses_current_version_and_sets_options() {
+        let mode = ImportMode::default();
+        let request = ImportRequest::new(ImportGraph::default())
+            .dry_run(true)
+            .mode(mode.clone());
+
+        assert_eq!(request.version, CURRENT_IMPORT_VERSION);
+        assert_eq!(request.dry_run, Some(true));
+        assert_eq!(request.mode, Some(mode));
+        assert_eq!(request.total_items(), 0);
+    }
 
     #[test]
     fn group_keys_default_to_local_and_can_disambiguate_scopes() {

@@ -51,7 +51,7 @@ pub use import::{
     CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, GroupKey, ImportAtomicity, ImportClassInput,
     ImportClassRelationInput, ImportCollectionInput, ImportCollectionPermissionInput,
     ImportCollisionPolicy, ImportGraph, ImportMode, ImportObjectInput, ImportObjectRelationInput,
-    ImportPermissionPolicy, ImportRequest, ObjectKey,
+    ImportPermissionPolicy, ImportRequest, ImportRunResult, ObjectKey,
 };
 pub use meta::{
     ClearRateLimitResponse, CountsResponse, DbStateResponse, LoginRateLimitConfig,

@@ -126,6 +126,14 @@ match export {
     hubuum_client::ExportResult::Json(body) => println!("{} rows", body.items.len()),
     hubuum_client::ExportResult::Rendered { body, .. } => println!("{body}"),
 }
+
+let imported = client
+    .imports()
+    .run(hubuum_client::ImportRequest::new(graph))
+    .idempotency_key("inventory-import-2026-07-11")
+    .send()
+    .await?;
+println!("{} changes applied", imported.succeeded());
 ```
 
 Unified search is exposed through `client.search(...)`:
@@ -162,7 +170,6 @@ let settings = client
 - [Principal settings](docs/principal-settings.md): current-principal and administrative preference management with JSON Merge Patch.
 - [Scoped authentication](docs/scoped-auth.md): provider-scoped login, identity
   metadata, queries, and import references.
-- [Declarative reconciliation](docs/reconciliation.md): previewing and applying desired Hubuum graphs with `hubuum_reconcile`.
 - [Integration tests](docs/integration-tests.md): Docker-backed real-server tests, e2e client tests, seed data, and environment variables.
 - [Release procedure](RELEASING.md): crates.io release checklist and trusted publishing notes.
 

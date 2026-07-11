@@ -1,5 +1,5 @@
 [workspace]
-members = ["hubuum_client_derive", "e2e_client", "hubuum_reconcile"]
+members = ["hubuum_client_derive", "e2e_client"]
 resolver = "3"
 
 [package]

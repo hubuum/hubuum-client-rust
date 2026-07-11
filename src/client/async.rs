@@ -23,11 +23,11 @@ use crate::types::{
     EventDeliveryId, EventDeliveryUpdateResponse, EventResponse, EventSubscription,
     EventSubscriptionId, ExportContentType, ExportJsonResponse, ExportRequest, ExportResult,
     ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportRequest,
-    ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
-    ObjectHistory, PrincipalId, PrincipalSettings, ProbeResponse, ReleaseRateLimitResponse,
-    RemoteTargetHistory, SortDirection, TaskEventResponse, TaskId, TaskKind,
-    TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject, UnifiedSearchEvent,
-    UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
+    ImportRunResult, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
+    NewEventSubscription, ObjectHistory, PrincipalId, PrincipalSettings, ProbeResponse,
+    ReleaseRateLimitResponse, RemoteTargetHistory, SortDirection, TaskEventResponse, TaskId,
+    TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -2443,6 +2443,10 @@ impl Imports {
         ImportSubmitOp::new(self.client.clone(), request)
     }
 
+    pub fn run(&self, request: ImportRequest) -> ImportRunOp {
+        ImportRunOp::new(self.client.clone(), request)
+    }
+
     pub async fn get(&self, task_id: impl Into<TaskId>) -> Result<TaskResponse, ApiError> {
         let task_id = task_id.into();
         self.client
@@ -2508,6 +2512,64 @@ impl ImportSubmitOp {
         shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?.ok_or(
             ApiError::EmptyResult("Import submit returned empty result".into()),
         )
+    }
+}
+
+pub struct ImportRunOp {
+    client: Client<Authenticated>,
+    request: ImportRequest,
+    idempotency_key: Option<String>,
+    poll_interval: std::time::Duration,
+    timeout: Option<std::time::Duration>,
+}
+
+impl ImportRunOp {
+    fn new(client: Client<Authenticated>, request: ImportRequest) -> Self {
+        Self {
+            client,
+            request,
+            idempotency_key: None,
+            poll_interval: std::time::Duration::from_secs(1),
+            timeout: Some(std::time::Duration::from_secs(300)),
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(idempotency_key.into());
+        self
+    }
+
+    pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
+        self.poll_interval = interval;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub async fn send(self) -> Result<ImportRunResult, ApiError> {
+        let imports = Imports::new(self.client.clone());
+        let mut submit = imports.submit(self.request);
+        if let Some(key) = self.idempotency_key {
+            submit = submit.idempotency_key(key);
+        }
+        let submitted = submit.send().await?;
+        let task = Tasks::new(self.client)
+            .wait(submitted.id)
+            .poll_interval(self.poll_interval)
+            .timeout(self.timeout)
+            .send()
+            .await?;
+        if !task.status.is_success() {
+            return Err(ApiError::TaskUnsuccessful {
+                task_id: task.id,
+                status: task.status,
+            });
+        }
+        let changes = imports.results(task.id).all().await?;
+        Ok(ImportRunResult { task, changes })
     }
 }
 

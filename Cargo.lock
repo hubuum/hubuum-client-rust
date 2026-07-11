@@ -690,17 +690,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hubuum_reconcile"
-version = "0.1.0"
-dependencies = [
- "hubuum_client",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "hyper"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

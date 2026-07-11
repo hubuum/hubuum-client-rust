@@ -46,8 +46,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   streaming download-to-writer/path helpers.
 - Transport-neutral `RequestPlan`, custom async/blocking transport traits,
   `MockTransport`, and authenticated relative `raw()` requests for new routes.
-- The `hubuum_reconcile` workspace crate for dry-run previews and task-backed,
-  idempotent desired-state application.
+- High-level import runners that submit work, wait for terminal task state,
+  reject unsuccessful tasks, and collect all result rows.
 - A normalized OpenAPI operation snapshot covering 158 operations, executable
   endpoint coverage checks, documented upstream gaps, and scheduled drift CI.
 - Strict formatting, clippy, docs, feature-matrix, MSRV, supply-chain, SemVer,
@@ -71,8 +71,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Raw requests cannot escape the configured origin or path prefix through
   network-path references, backslashes, or encoded dot segments before bearer
   authentication is attached.
-- Reconciliation derives distinct preview/apply idempotency keys and returns a
-  structured error for failed or cancelled terminal tasks.
+- High-level import runners return a structured error for failed or cancelled
+  terminal tasks instead of fetching result rows from unsuccessful work.
 - Transport response diagnostics redact header values and bodies, and HTTP error
   diagnostics redact query values.
 - Secret-bearing authentication and remote-target values use zeroizing secret
