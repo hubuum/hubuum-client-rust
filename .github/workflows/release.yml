@@ -241,7 +241,30 @@ jobs:
           echo "Timed out waiting for hubuum_client ${version} to reach crates.io" >&2
           exit 1
 
+      - name: Check whether hubuum_reconcile is already published
+        id: published
+        run: |
+          version="$(sed -nE 's/^version = "([^"]+)"/\1/p' hubuum_reconcile/Cargo.toml | head -n1)"
+          tmpdir="$(mktemp -d)"
+          mkdir -p "${tmpdir}/src"
+          printf "" > "${tmpdir}/src/lib.rs"
+          printf '%s\n' \
+            '[package]' \
+            'name = "hubuum-client-release-probe"' \
+            'version = "0.0.0"' \
+            'edition = "2024"' \
+            '' \
+            '[dependencies]' \
+            "hubuum_reconcile = \"=${version}\"" \
+            > "${tmpdir}/Cargo.toml"
+          if cargo metadata --manifest-path "${tmpdir}/Cargo.toml" --format-version 1 >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish hubuum_reconcile
+        if: steps.published.outputs.published != 'true'
         run: cargo publish -p hubuum_reconcile --locked
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

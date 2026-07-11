@@ -9,25 +9,25 @@ This repository publishes three crates:
 `hubuum_client` depends on `hubuum_client_derive`, and `hubuum_reconcile`
 depends on `hubuum_client`, so releases publish them in that order.
 
-## First release bootstrap (`v0.0.1`)
+## First release bootstrap
 
-Trusted publishing on crates.io only works after each crate has been published once manually.
+Trusted publishing on crates.io only works after each crate has been published
+once manually. Run this bootstrap whenever a new workspace crate is introduced,
+before creating the release tag that should publish it.
 
 1. Run the local release checks:
 
    ```bash
-   ./scripts/check-release.sh v0.0.1
+   ./scripts/check-release.sh vX.Y.Z
    ```
 
 2. Publish the crates manually from a clean checkout:
 
    ```bash
-   cargo publish -p hubuum_client_derive --locked
-   cargo publish -p hubuum_client --locked
-   cargo publish -p hubuum_reconcile --locked
+   cargo publish -p <new-crate> --locked
    ```
 
-3. In crates.io, configure a trusted publisher for all three crates with:
+3. In crates.io, configure a trusted publisher for the new crate with:
 
    - owner: `terjekv`
    - repo: `hubuum-client-rust`
@@ -54,4 +54,5 @@ Trusted publishing on crates.io only works after each crate has been published o
 
 The `Release` GitHub Actions workflow validates the release metadata, checks the
 workspace, lists all packaged files, and publishes the three crates to crates.io
-through trusted publishing.
+through trusted publishing. Each publish job first checks the registry, so the
+workflow can be rerun safely after a partial release or manual bootstrap.

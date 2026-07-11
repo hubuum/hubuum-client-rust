@@ -6,7 +6,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
-## [0.3.0] - 2026-07-10
+## [0.3.0] - 2026-07-11
 
 ### Breaking
 
