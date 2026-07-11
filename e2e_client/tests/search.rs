@@ -27,7 +27,7 @@ fn e2e_unified_search_finds_created_object() {
             .client
             .search(&object_name)
             .kinds([UnifiedSearchKind::Object])
-            .execute()
+            .send()
             .expect("unified search should execute");
         last_count = response.results.objects.len();
         if response

@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use crate::types::HubuumDateTime;
+use crate::{ClassId, types::HubuumDateTime};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ObjectsByClass {
-    pub hubuum_class_id: i32,
+    pub hubuum_class_id: ClassId,
     pub count: i64,
 }
 

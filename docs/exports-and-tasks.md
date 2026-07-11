@@ -9,7 +9,7 @@ Export templates are exposed as a regular resource. Executable templates need a 
 ```rust
 let template = client
     .export_templates()
-    .create()
+    .create_checked()
     .collection_id(7)
     .name("owner-export")
     .description("Owner listing")
@@ -31,7 +31,7 @@ let request = hubuum_client::ExportRequest {
     missing_data_policy: None,
     query: Some("name__icontains=server".to_string()),
     scope: hubuum_client::ExportScope {
-        class_id: Some(42),
+        class_id: Some(42.into()),
         kind: hubuum_client::ExportScopeKind::ObjectsInClass,
         object_id: None,
     },
@@ -90,17 +90,31 @@ Migration from the old report API is a rename plus one route split: use `Export*
 
 ## Imports
 
-Imports return task-shaped responses and can be polled through `client.imports()` and `client.tasks()`:
+Use `run()` to submit an import, wait for its terminal task state, and collect all result rows:
+
+```rust
+let imported = client
+    .imports()
+    .run(
+        hubuum_client::ImportRequest::new(hubuum_client::ImportGraph::default())
+            .dry_run(true),
+    )
+    .idempotency_key("inventory-preview-2026-07-11")
+    .send()?;
+
+println!("{} succeeded, {} failed", imported.succeeded(), imported.failed());
+```
+
+Failed and cancelled tasks return `ApiError::TaskUnsuccessful` without fetching result rows. Use distinct idempotency keys for dry-run and mutating imports.
+
+The lower-level helpers remain available when polling must be controlled directly:
 
 ```rust
 let task = client
     .imports()
-    .submit(hubuum_client::ImportRequest {
-        version: hubuum_client::CURRENT_IMPORT_VERSION,
-        dry_run: Some(true),
-        mode: None,
-        graph: hubuum_client::ImportGraph::default(),
-    })
+    .submit(hubuum_client::ImportRequest::new(
+        hubuum_client::ImportGraph::default(),
+    ).dry_run(true))
     .idempotency_key("inventory-import-2026-03-07")
     .send()?;
 
@@ -124,3 +138,7 @@ let tasks = client
 ```
 
 Cursor-paged endpoints return `hubuum_client::Page<T>` with `items` and `next_cursor`.
+
+Large rendered outputs can bypass in-memory buffering. Blocking clients expose a
+`Read` implementation through `output_stream(task_id)`, while async clients
+return a byte stream and support `download_output(task_id, path)`.

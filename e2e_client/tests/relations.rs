@@ -20,7 +20,7 @@ fn e2e_class_and_object_relations_roundtrip() {
         .classes()
         .create_raw(ClassPost {
             name: format!("{prefix}-class-b"),
-            collection_id,
+            collection_id: collection_id.into(),
             description: "relation target class".to_string(),
             json_schema: None,
             validate_schema: None,
@@ -31,8 +31,8 @@ fn e2e_class_and_object_relations_roundtrip() {
         .objects(class_b.id)
         .create_raw(ObjectPost {
             name: format!("{prefix}-object-b"),
-            collection_id,
-            hubuum_class_id: class_b.id.into(),
+            collection_id: collection_id.into(),
+            hubuum_class_id: class_b.id,
             description: "relation target object".to_string(),
             data: Some(json!({ "role": "target" })),
         })
@@ -83,7 +83,7 @@ fn e2e_class_and_object_relations_roundtrip() {
     );
     let class_graph = class_a
         .related_graph()
-        .fetch()
+        .send()
         .expect("related class graph should fetch");
     assert!(
         class_graph
@@ -121,7 +121,7 @@ fn e2e_class_and_object_relations_roundtrip() {
 
     let graph = object_a
         .related_graph()
-        .fetch()
+        .send()
         .expect("related graph should fetch");
     assert!(graph.objects.iter().any(|object| object.id == object_b.id));
     assert!(

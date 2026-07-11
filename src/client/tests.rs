@@ -27,7 +27,9 @@ fn mock_login(server: &MockServer) {
 
 fn build_sync_client(server: &MockServer) -> Result<sync_client::Client<Authenticated>, ApiError> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("base URL should be valid");
-    sync_client::Client::new_with_certificate_validation(base_url, true)
+    sync_client::Client::builder(base_url)
+        .validate_certs(true)
+        .build()?
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
 }
 
@@ -35,7 +37,9 @@ async fn build_async_client(
     server: &MockServer,
 ) -> Result<async_client::Client<Authenticated>, ApiError> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("base URL should be valid");
-    async_client::Client::new_with_certificate_validation(base_url, true)
+    async_client::Client::builder(base_url)
+        .validate_certs(true)
+        .build()?
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .await
 }
@@ -50,9 +54,10 @@ async fn build_async_client(
 )]
 fn sync_build_url_matches_endpoint(server: &str, endpoint: Endpoint) {
     let base_url = BaseUrl::from_str(server).unwrap();
-    let client = sync_client::Client::<Unauthenticated>::new_without_certificate_validation(
-        base_url.clone(),
-    );
+    let client = sync_client::Client::<Unauthenticated>::builder(base_url.clone())
+        .validate_certs(false)
+        .build()
+        .unwrap();
 
     assert_eq!(
         client.build_url(&endpoint, UrlParams::default()),
@@ -74,9 +79,10 @@ fn sync_build_url_matches_endpoint(server: &str, endpoint: Endpoint) {
 )]
 fn async_build_url_matches_endpoint(server: &str, endpoint: Endpoint) {
     let base_url = BaseUrl::from_str(server).unwrap();
-    let client = async_client::Client::<Unauthenticated>::new_without_certificate_validation(
-        base_url.clone(),
-    );
+    let client = async_client::Client::<Unauthenticated>::builder(base_url.clone())
+        .validate_certs(false)
+        .build()
+        .unwrap();
 
     assert_eq!(
         client.build_url(&endpoint, UrlParams::default()),
@@ -182,7 +188,11 @@ fn sync_task_wait_times_out() {
         .send()
         .unwrap_err();
     assert!(started.elapsed() < std::time::Duration::from_secs(2));
-    assert!(matches!(err, ApiError::Api(m) if m.contains("Timed out")));
+    assert!(matches!(
+        err,
+        ApiError::TaskTimeout { task_id, timeout }
+            if task_id == 9 && timeout == std::time::Duration::from_millis(20)
+    ));
 }
 
 #[tokio::test]
@@ -238,7 +248,11 @@ async fn async_task_wait_times_out() {
         .await
         .unwrap_err();
     assert!(started.elapsed() < std::time::Duration::from_secs(2));
-    assert!(matches!(err, ApiError::Api(m) if m.contains("Timed out")));
+    assert!(matches!(
+        err,
+        ApiError::TaskTimeout { task_id, timeout }
+            if task_id == 9 && timeout == std::time::Duration::from_millis(20)
+    ));
 }
 
 #[test]
@@ -310,13 +324,47 @@ fn export_request_value() -> crate::types::ExportRequest {
         missing_data_policy: None,
         query: None,
         scope: crate::types::ExportScope {
-            class_id: Some(42),
+            class_id: Some(42.into()),
             kind: crate::types::ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
         include: None,
         relation_context: None,
     }
+}
+
+fn import_task_json(status: &str) -> serde_json::Value {
+    json!({
+        "id": 12, "kind": "import", "status": status,
+        "created_at": "2026-07-11T12:00:00Z",
+        "progress": {
+            "total_items": 1,
+            "processed_items": 1,
+            "success_items": if status == "succeeded" { 1 } else { 0 },
+            "failed_items": if status == "failed" { 1 } else { 0 }
+        },
+        "links": {
+            "task": "/api/v1/tasks/12",
+            "events": "/api/v1/tasks/12/events",
+            "import": "/api/v1/imports/12",
+            "import_results": "/api/v1/imports/12/results"
+        }
+    })
+}
+
+fn import_result_value() -> serde_json::Value {
+    json!({
+        "id": 101,
+        "task_id": 12,
+        "item_ref": "collection:infra",
+        "entity_kind": "collection",
+        "action": "create",
+        "identifier": "infra",
+        "outcome": "succeeded",
+        "error": null,
+        "details": null,
+        "created_at": "2026-07-11T12:00:01Z"
+    })
 }
 
 #[test]
@@ -497,6 +545,94 @@ async fn async_export_run_failed_errors() {
         .await
         .unwrap_err();
     assert!(matches!(err, ApiError::Api(m) if m.contains("stopped")));
+}
+
+#[test]
+fn sync_import_run_waits_and_collects_results() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let submit = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/imports")
+            .header("idempotency-key", "inventory-apply");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(import_task_json("queued"));
+    });
+    let task = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/12");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(import_task_json("succeeded"));
+    });
+    let results = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/imports/12/results");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([import_result_value()]));
+    });
+
+    let client = build_sync_client(&server).unwrap();
+    let imported = client
+        .imports()
+        .run(crate::types::ImportRequest::new(
+            crate::types::ImportGraph::default(),
+        ))
+        .idempotency_key("inventory-apply")
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
+        .unwrap();
+
+    assert_eq!(imported.task.id, 12);
+    assert_eq!(imported.succeeded(), 1);
+    assert_eq!(imported.failed(), 0);
+    submit.assert_calls(1);
+    task.assert_calls(1);
+    results.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_import_run_rejects_failed_tasks_without_fetching_results() {
+    let server = MockServer::start();
+    mock_login(&server);
+    server.mock(|when, then| {
+        when.method(POST).path("/api/v1/imports");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(import_task_json("queued"));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/tasks/12");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(import_task_json("failed"));
+    });
+    let results = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/imports/12/results");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([import_result_value()]));
+    });
+
+    let client = build_async_client(&server).await.unwrap();
+    let error = client
+        .imports()
+        .run(crate::types::ImportRequest::new(
+            crate::types::ImportGraph::default(),
+        ))
+        .poll_interval(std::time::Duration::from_millis(1))
+        .send()
+        .await
+        .unwrap_err();
+
+    assert!(matches!(
+        error,
+        ApiError::TaskUnsuccessful {
+            task_id,
+            status: crate::types::TaskStatus::Failed
+        } if task_id == 12
+    ));
+    results.assert_calls(0);
 }
 
 #[test]

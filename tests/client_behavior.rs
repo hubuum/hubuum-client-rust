@@ -1,5 +1,8 @@
+#![cfg(all(feature = "async", feature = "blocking"))]
+
 use std::str::FromStr;
 
+use futures_util::TryStreamExt;
 use httpmock::prelude::*;
 use hubuum_client::types::{
     EventSinkKind, ExportContentType, ExportRequest, ExportScope, ExportScopeKind,
@@ -153,7 +156,7 @@ fn export_request() -> ExportRequest {
         missing_data_policy: None,
         query: Some("name__icontains=server".to_string()),
         scope: ExportScope {
-            class_id: Some(42),
+            class_id: Some(42.into()),
             kind: ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
@@ -466,17 +469,205 @@ fn mock_login(server: &MockServer) {
 
 fn sync_client(server: &MockServer) -> blocking::Client<hubuum_client::Authenticated> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    blocking::Client::new_with_certificate_validation(base_url, true)
+    blocking::Client::builder(base_url)
+        .validate_certs(true)
+        .build()
+        .expect("sync client should build")
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .expect("sync login should succeed")
 }
 
 async fn async_client(server: &MockServer) -> Client<hubuum_client::Authenticated> {
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    Client::new_with_certificate_validation(base_url, true)
+    Client::builder(base_url)
+        .validate_certs(true)
+        .build()
+        .expect("async client should build")
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .await
         .expect("async login should succeed")
+}
+
+#[test]
+fn sync_client_can_be_built_from_a_url_string_and_inspected() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let client = blocking::Client::from_url(server.base_url())
+        .expect("client should accept a valid URL string");
+    assert_eq!(
+        client.base_url().as_str(),
+        format!("{}/", server.base_url())
+    );
+    let _http_client = client.http_client();
+
+    let client = client
+        .login(Credentials::new(USERNAME, PASSWORD))
+        .expect("login should succeed");
+    assert_eq!(client.token(), TOKEN);
+    assert!(!format!("{client:?}").contains(TOKEN));
+}
+
+#[test]
+fn sync_login_preserves_structured_api_error() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(POST).path("/api/v0/auth/login");
+        then.status(401)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "error": "Unauthorized",
+                "message": "Authentication failure"
+            }));
+    });
+    let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
+
+    let error = blocking::Client::try_new(base_url)
+        .expect("client should build")
+        .login(Credentials::new(USERNAME.to_string(), "wrong".to_string()))
+        .expect_err("invalid credentials should fail");
+
+    assert_eq!(error.status(), Some(reqwest::StatusCode::UNAUTHORIZED));
+    let response = error
+        .api_response()
+        .expect("standard API error should be available");
+    assert_eq!(response.error, "Unauthorized");
+    assert_eq!(response.message, "Authentication failure");
+}
+
+#[test]
+fn sync_scoped_login_and_identity_filter_use_provider_scope() {
+    let server = MockServer::start();
+    let login = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v0/auth/login")
+            .json_body(json!({
+                "identity_scope": "corp-directory",
+                "name": USERNAME,
+                "password": PASSWORD
+            }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "token": TOKEN }));
+    });
+    let users = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users")
+            .query_param("identity_scope__equals", "corp-directory")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([{
+                "id": 17,
+                "identity_scope": "corp-directory",
+                "provider_kind": "ldap",
+                "provider_managed": true,
+                "name": USERNAME,
+                "email": "tester@example.com",
+                "proper_name": "Directory Tester",
+                "last_sync_attempted_at": ts(),
+                "last_sync_success_at": ts(),
+                "created_at": ts(),
+                "updated_at": ts()
+            }]));
+    });
+
+    let client = blocking::Client::from_url(server.base_url())
+        .unwrap()
+        .login(Credentials::scoped("corp-directory", USERNAME, PASSWORD))
+        .unwrap();
+    let matches = client
+        .users()
+        .identity_scope()
+        .eq("corp-directory")
+        .list()
+        .unwrap();
+
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].identity_scope, "corp-directory");
+    assert_eq!(matches[0].provider_kind, "ldap");
+    assert!(matches[0].is_provider_managed());
+    assert!(!matches[0].is_local());
+    login.assert_calls(1);
+    users.assert_calls(1);
+}
+
+#[test]
+fn sync_auth_provider_discovery_is_public_and_preserves_server_order() {
+    let server = MockServer::start();
+    let providers = server.mock(|when, then| {
+        when.method(GET).path("/api/v0/auth/providers");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "providers": ["local", "corp-directory"]
+            }));
+    });
+
+    let client = blocking::Client::from_url(server.base_url()).unwrap();
+    let response = client
+        .auth_providers()
+        .expect("provider discovery should succeed without authentication");
+
+    assert_eq!(
+        response.iter().collect::<Vec<_>>(),
+        ["local", "corp-directory"]
+    );
+    assert!(response.contains("corp-directory"));
+    providers.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_auth_provider_discovery_is_public() {
+    let server = MockServer::start();
+    let providers = server.mock(|when, then| {
+        when.method(GET).path("/api/v0/auth/providers");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "providers": ["local"] }));
+    });
+
+    let client = Client::from_url(server.base_url()).unwrap();
+    let response = client
+        .auth_providers()
+        .await
+        .expect("async provider discovery should succeed without authentication");
+
+    assert_eq!(response.into_providers(), ["local"]);
+    providers.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_readyz_preserves_structured_api_error() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/readyz");
+        then.status(503)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "error": "ServiceUnavailable",
+                "message": "Database is unavailable"
+            }));
+    });
+    let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
+
+    let error = Client::try_new(base_url)
+        .expect("client should build")
+        .readyz()
+        .await
+        .expect_err("not-ready response should fail");
+
+    assert_eq!(
+        error.status(),
+        Some(reqwest::StatusCode::SERVICE_UNAVAILABLE)
+    );
+    assert_eq!(
+        error
+            .api_response()
+            .expect("standard API error should be available")
+            .message,
+        "Database is unavailable"
+    );
 }
 
 #[test]
@@ -555,7 +746,9 @@ fn sync_delete_rejects_non_empty_response_body() {
         .delete(1)
         .expect_err("delete should reject non-empty response");
     match err {
-        ApiError::DeserializationError(body) => assert_eq!(body, "{\"ok\":true}"),
+        ApiError::DeserializationError(message) => {
+            assert_eq!(message, "DELETE response contained 11 unexpected bytes")
+        }
         other => panic!("unexpected error variant: {other:?}"),
     }
 }
@@ -580,7 +773,9 @@ async fn async_delete_rejects_non_empty_response_body() {
         .await
         .expect_err("delete should reject non-empty response");
     match err {
-        ApiError::DeserializationError(body) => assert_eq!(body, "{\"ok\":true}"),
+        ApiError::DeserializationError(message) => {
+            assert_eq!(message, "DELETE response contained 11 unexpected bytes")
+        }
         other => panic!("unexpected error variant: {other:?}"),
     }
 }
@@ -740,7 +935,7 @@ fn sync_class_create_fluent_builder_posts_resource() {
 
     let class = client
         .classes()
-        .create()
+        .create_checked()
         .name("fluent-class")
         .description("Fluent class")
         .collection_id(7)
@@ -877,6 +1072,7 @@ fn sync_resource_all_auto_paginates_and_page_iterates() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
+            .header("x-total-count", "37")
             .json_body(json!([class_json("iterated")]));
     });
 
@@ -901,8 +1097,43 @@ fn sync_resource_all_auto_paginates_and_page_iterates() {
         .eq("iterated")
         .page()
         .expect("classes().page() should succeed");
-    let iterated = page.into_iter().map(|class| class.name).collect::<Vec<_>>();
+    assert_eq!(page.len(), 1);
+    assert!(!page.is_empty());
+    assert!(!page.has_next());
+    assert_eq!(page.total_count, Some(37));
+    let iterated = page
+        .into_items()
+        .into_iter()
+        .map(|class| class.name)
+        .collect::<Vec<_>>();
     assert_eq!(iterated, vec!["iterated"]);
+}
+
+#[test]
+fn sync_resource_all_stops_when_the_server_repeats_a_cursor() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes")
+            .query_param("cursor", "stuck")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "stuck")
+            .json_body(json!([class_json("first")]));
+    });
+
+    let client = sync_client(&server);
+    let error = client
+        .classes()
+        .cursor("stuck")
+        .all()
+        .expect_err("a repeated cursor should stop pagination");
+
+    assert!(matches!(error, ApiError::PaginationCycle(cursor) if cursor == "stuck"));
+    page.assert_calls(1);
 }
 
 #[test]
@@ -1138,7 +1369,7 @@ fn sync_supports_all_auth_logout_endpoints() {
     });
 
     let client = sync_client(&server);
-    client.logout().expect("logout should succeed");
+    client.clone().logout().expect("logout should succeed");
     client
         .logout_token("revoked-token")
         .expect("logout_token should succeed");
@@ -1194,7 +1425,11 @@ async fn async_supports_all_auth_logout_endpoints() {
     });
 
     let client = async_client(&server).await;
-    client.logout().await.expect("logout should succeed");
+    client
+        .clone()
+        .logout()
+        .await
+        .expect("logout should succeed");
     client
         .logout_token("revoked-token")
         .await
@@ -2394,7 +2629,7 @@ fn sync_exports_and_templates_cover_new_server_surface() {
 
     let created = client
         .export_templates()
-        .create()
+        .create_checked()
         .collection_id(7)
         .name("created-template")
         .description("Template")
@@ -2958,7 +3193,9 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
         .search("server")
         .kinds([UnifiedSearchKind::Collection, UnifiedSearchKind::Object])
         .stream()
-        .expect("unified search stream should succeed");
+        .expect("unified search stream should succeed")
+        .collect::<Result<Vec<_>, _>>()
+        .expect("stream events should decode");
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
     assert!(matches!(events[1], UnifiedSearchEvent::Batch(_)));
     assert!(matches!(events[2], UnifiedSearchEvent::Done(_)));
@@ -3014,7 +3251,10 @@ async fn async_unified_search_supports_grouped_results_and_stream_events() {
         .kinds([UnifiedSearchKind::Class])
         .stream()
         .await
-        .expect("async unified search stream should succeed");
+        .expect("async unified search stream should succeed")
+        .try_collect::<Vec<_>>()
+        .await
+        .expect("stream events should decode");
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
     assert!(matches!(events[1], UnifiedSearchEvent::Done(_)));
 
@@ -3314,21 +3554,19 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
 
     let sink = client
         .event_sinks()
-        .create()
-        .params(NewEventSink {
+        .create_raw(NewEventSink {
             name: "audit-webhook".to_string(),
             kind: EventSinkKind::Webhook,
             enabled: Some(true),
             ..Default::default()
         })
-        .send()
         .expect("event sink create should succeed");
     assert_eq!(sink.id, 5);
 
     let subscription = client
         .event_subscriptions(7)
         .create(NewEventSubscription {
-            sink_id: 5,
+            sink_id: 5.into(),
             name: "class-updates".to_string(),
             entity_types: vec!["class".to_string()],
             actions: vec!["updated".to_string()],
@@ -3576,13 +3814,12 @@ fn sync_service_account_create_and_disable() {
     let client = sync_client(&server);
     let created = client
         .service_accounts()
-        .create()
-        .params(ServiceAccountPost {
+        .create_raw(ServiceAccountPost {
+            identity_scope: None,
             name: "dns-sync".to_string(),
             description: Some("integration service account".to_string()),
-            owner_group_id: 10,
+            owner_group_id: 10.into(),
         })
-        .send()
         .expect("service account create should succeed");
     assert_eq!(created.id, 5);
     assert_eq!(created.name, "dns-sync");
@@ -3695,8 +3932,8 @@ fn sync_remote_target_invoke_returns_task() {
     let task = target
         .invoke(RemoteTargetInvokeRequest::new(
             RemoteInvocationSubject::Object {
-                class_id: 1,
-                object_id: 2,
+                class_id: 1.into(),
+                object_id: 2.into(),
             },
         ))
         .expect("invoke should succeed");
@@ -3753,7 +3990,10 @@ fn sync_healthz_probe_succeeds_without_auth() {
     });
 
     let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
-    let client = blocking::Client::new_with_certificate_validation(base_url, true);
+    let client = blocking::Client::builder(base_url)
+        .validate_certs(true)
+        .build()
+        .expect("client should build");
     let probe = client.healthz().expect("healthz should succeed");
     assert_eq!(probe.status, "ok");
 

@@ -10,6 +10,9 @@ DB_PASSWORD="${HUBUUM_INTEGRATION_DB_PASSWORD:-hubuum_password}"
 DB_NAME="${HUBUUM_INTEGRATION_DB_NAME:-hubuum}"
 DB_IMAGE="${HUBUUM_INTEGRATION_DB_IMAGE:-postgres:18}"
 SERVER_IMAGE="${HUBUUM_INTEGRATION_SERVER_IMAGE:-ghcr.io/hubuum/hubuum-server:main}"
+LDAP_IMAGE="${HUBUUM_INTEGRATION_LDAP_IMAGE:-ghcr.io/rroemhild/docker-test-openldap@sha256:08a769cd1a8c8a17cba7fba28bc3443722203dd101b4f3628929a4ee30b50ec4}"
+AUTH_CONFIG="${HUBUUM_INTEGRATION_AUTH_CONFIG:-tests/container_integration/fixtures/auth-providers.toml}"
+LDAP_CERTIFICATE_SCRIPT="tests/container_integration/fixtures/generate-ldap-certificates.sh"
 CLIENT_ALLOWLIST="${HUBUUM_CLIENT_ALLOWLIST:-*}"
 STACK_TIMEOUT_SECS="${HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS:-300}"
 KEEP_CONTAINERS="${HUBUUM_INTEGRATION_KEEP_CONTAINERS:-0}"
@@ -115,6 +118,8 @@ suffix="$(date +%s)-$$-${RANDOM}"
 NETWORK_NAME="hubuum-it-net-${suffix}"
 DB_CONTAINER="hubuum-it-db-${suffix}"
 SERVER_CONTAINER="hubuum-it-server-${suffix}"
+LDAP_CONTAINER="hubuum-it-ldap-${suffix}"
+LDAP_CERT_VOLUME="hubuum-it-ldap-certs-${suffix}"
 
 is_true() {
     case "$1" in
@@ -140,11 +145,14 @@ cleanup() {
         echo "Keeping integration containers/network:"
         echo "  server=${SERVER_CONTAINER}"
         echo "  db=${DB_CONTAINER}"
+        echo "  ldap=${LDAP_CONTAINER}"
+        echo "  ldap_certs=${LDAP_CERT_VOLUME}"
         echo "  network=${NETWORK_NAME}"
         return
     fi
 
-    container rm -f "${SERVER_CONTAINER}" "${DB_CONTAINER}" >/dev/null 2>&1 || true
+    container rm -f "${SERVER_CONTAINER}" "${DB_CONTAINER}" "${LDAP_CONTAINER}" >/dev/null 2>&1 || true
+    container volume rm "${LDAP_CERT_VOLUME}" >/dev/null 2>&1 || true
     container network rm "${NETWORK_NAME}" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT INT TERM
@@ -171,6 +179,41 @@ wait_for_db() {
     echo "Timed out waiting for DB container health after ${STACK_TIMEOUT_SECS}s."
     print_db_diagnostics
     return 1
+}
+
+wait_for_ldap() {
+    local deadline=$((SECONDS + STACK_TIMEOUT_SECS))
+    while ((SECONDS < deadline)); do
+        local status
+        status="$(container inspect -f '{{.State.Status}}' "${LDAP_CONTAINER}" 2>/dev/null || true)"
+
+        if container exec "${LDAP_CONTAINER}" \
+            ldapsearch -x -H ldap://127.0.0.1:10389 \
+            -D 'cn=admin,dc=planetexpress,dc=com' \
+            -w GoodNewsEveryone \
+            -b 'ou=people,dc=planetexpress,dc=com' \
+            -s base '(objectClass=organizationalUnit)' dn >/dev/null 2>&1; then
+            return 0
+        fi
+
+        if [[ "${status}" == "exited" ]]; then
+            container logs --tail 120 "${LDAP_CONTAINER}" || true
+            return 1
+        fi
+        sleep 1
+    done
+
+    echo "Timed out waiting for LDAP container health after ${STACK_TIMEOUT_SECS}s." >&2
+    container logs --tail 120 "${LDAP_CONTAINER}" || true
+    return 1
+}
+
+initialize_ldap_certificates() {
+    container run --rm \
+        --entrypoint sh \
+        --mount "type=volume,source=${LDAP_CERT_VOLUME},target=/certs" \
+        --mount "type=bind,source=${LDAP_CERTIFICATE_SCRIPT},target=/generate-ldap-certificates.sh,readonly" \
+        "${LDAP_IMAGE}" /generate-ldap-certificates.sh
 }
 
 extract_admin_password() {
@@ -277,6 +320,27 @@ container pull "${SERVER_IMAGE}"
 echo "Creating integration container network: ${NETWORK_NAME}"
 container network create "${NETWORK_NAME}" >/dev/null
 
+if [[ ! -f "${AUTH_CONFIG}" ]]; then
+    echo "Auth provider config not found: ${AUTH_CONFIG}" >&2
+    exit 1
+fi
+AUTH_CONFIG="$(cd -- "$(dirname -- "${AUTH_CONFIG}")" && pwd)/$(basename -- "${AUTH_CONFIG}")"
+LDAP_CERTIFICATE_SCRIPT="$(cd -- "$(dirname -- "${LDAP_CERTIFICATE_SCRIPT}")" && pwd)/$(basename -- "${LDAP_CERTIFICATE_SCRIPT}")"
+
+echo "Creating LDAP certificate volume: ${LDAP_CERT_VOLUME}"
+container volume create "${LDAP_CERT_VOLUME}" >/dev/null
+initialize_ldap_certificates
+
+echo "Starting LDAP provider: ${LDAP_CONTAINER} (${LDAP_IMAGE})"
+container run -d \
+    --name "${LDAP_CONTAINER}" \
+    --network "${NETWORK_NAME}" \
+    --network-alias planetexpress.com \
+    --mount "type=volume,source=${LDAP_CERT_VOLUME},target=/etc/ldap/ssl" \
+    "${LDAP_IMAGE}" >/dev/null
+
+wait_for_ldap
+
 echo "Starting DB container: ${DB_CONTAINER} (${DB_IMAGE})"
 container run -d \
     --name "${DB_CONTAINER}" \
@@ -303,8 +367,12 @@ container run -d \
     -e "HUBUUM_BIND_PORT=8080" \
     -e "HUBUUM_CLIENT_ALLOWLIST=${CLIENT_ALLOWLIST}" \
     -e "HUBUUM_LOG_LEVEL=debug" \
+    -e "HUBUUM_AUTH_CONFIG_PATH=/etc/hubuum/auth-providers.toml" \
     -e "HUBUUM_DATABASE_URL=${DATABASE_URL}" \
     -e "DATABASE_URL=${DATABASE_URL}" \
+    -e "SSL_CERT_FILE=/etc/hubuum/ldap-certs/ca.crt" \
+    --mount "type=bind,source=${AUTH_CONFIG},target=/etc/hubuum/auth-providers.toml,readonly" \
+    --mount "type=volume,source=${LDAP_CERT_VOLUME},target=/etc/hubuum/ldap-certs,readonly" \
     "${SERVER_IMAGE}" >/dev/null
 
 MAPPED_PORT="$(container port "${SERVER_CONTAINER}" 8080/tcp | awk -F: 'END {print $NF}')"
@@ -325,7 +393,16 @@ export HUBUUM_INTEGRATION_ADMIN_PASSWORD="${ADMIN_PASSWORD}"
 echo "Running integration tests against external stack: ${BASE_URL}"
 
 if [[ "${E2E_ONLY}" != "1" ]]; then
-    CMD=(cargo test --features integration-tests --test container_integration -- --ignored --nocapture)
+    CMD=(
+        cargo test
+        --locked
+        --no-default-features
+        --features async,blocking,integration-tests
+        --test container_integration
+        --
+        --ignored
+        --nocapture
+    )
     if ((${#TEST_ARGS[@]} > 0)); then
         CMD+=("${TEST_ARGS[@]}")
     fi
@@ -334,7 +411,15 @@ if [[ "${E2E_ONLY}" != "1" ]]; then
 fi
 
 if [[ "${RUN_E2E_CLIENT}" == "1" ]]; then
-    E2E_CMD=(cargo test -p e2e_client --features integration-tests -- --ignored --nocapture)
+    E2E_CMD=(
+        cargo test
+        --locked
+        -p e2e_client
+        --features integration-tests
+        --
+        --ignored
+        --nocapture
+    )
     if ((${#TEST_ARGS[@]} > 0)); then
         E2E_CMD+=("${TEST_ARGS[@]}")
     fi

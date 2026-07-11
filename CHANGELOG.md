@@ -6,6 +6,108 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-11
+
+### Breaking
+
+- Default features now enable only the async client. Blocking consumers must
+  enable the `blocking` feature explicitly.
+- `logout()` consumes the authenticated client and returns an unauthenticated
+  client, preventing reuse of a session after its token is revoked.
+- Task, principal, token, history, permission, event-delivery, import-result,
+  remote-call, and subscription identifiers now use dedicated ID newtypes.
+- `UnifiedSearchRequest::stream()` now returns a lazy SSE stream or blocking
+  iterator. Use `collect_stream()` when a collected `Vec` is required.
+- Task wait timeouts now return structured `ApiError::TaskTimeout` values.
+- Core response models and extensible enums are non-exhaustive. Unknown server
+  enum and SSE event values are preserved instead of failing deserialization.
+
+### Added
+
+- Unauthenticated provider discovery through `auth_providers()` for building
+  login selectors and CLI prompts before credentials are collected.
+- Provider-scoped credentials through `Credentials::scoped()` and `in_scope()`,
+  plus scope-aware identity queries and import group keys.
+- Identity-provider metadata on users, groups, service accounts, and group
+  members, including helpers for detecting local and provider-managed records.
+- Object-only principal settings with fluent current-principal and
+  cross-principal get, replace, merge-patch, and reset operations for both async
+  and blocking clients.
+- True streaming for unified search, cursor pages/items, and export downloads.
+- Compile-time required-field builders through `create_checked()`; `create_raw()`
+  remains the explicit request-struct escape hatch.
+- Typed object payloads through `TypedObject<T>` and `typed_class::<T>()`, plus
+  optional JSON Schema generation with the `typed-schemas` feature.
+- Collection-scoped navigation for classes, export templates, remote targets,
+  events, history, and subscriptions.
+- Configurable replay-safe retries with jitter, `Retry-After` support, and
+  idempotency-key protection for mutating requests.
+- Independent normal and error response-size limits, bounded body readers, and
+  streaming download-to-writer/path helpers.
+- Transport-neutral `RequestPlan`, custom async/blocking transport traits,
+  `MockTransport`, and authenticated relative `raw()` requests for new routes.
+- High-level import runners that submit work, wait for terminal task state,
+  reject unsuccessful tasks, and collect all result rows.
+- A normalized OpenAPI operation snapshot covering 158 operations, executable
+  endpoint coverage checks, documented upstream gaps, and scheduled drift CI.
+- Strict formatting, clippy, docs, feature-matrix, MSRV, supply-chain, SemVer,
+  pinned-server, and latest-server compatibility checks.
+- `Page<T>` now preserves the OpenAPI-documented `X-Total-Count` response header
+  and provides slice access plus `len()`, `is_empty()`, `has_next()`, `iter()`,
+  and `into_items()` helpers.
+- Event, history, and task list builders now support automatic cursor pagination
+  through `all()`.
+- `ApiError` accessors expose HTTP status, request context, raw response bodies,
+  API messages, and the standard structured Hubuum error payload.
+- Clients can be constructed directly from URL strings with `from_url()` and
+  `builder_from_url()`, and expose `base_url()`, `http_client()`, and `token()`
+  accessors. `BaseUrl::new()` provides direct validated parsing.
+- Resource queries expose `set_raw_param()`, while cursor and graph requests expose
+  `set_query_param()`, for replacing scalar raw options. The corresponding
+  `raw_param()` and `query_param()` methods remain append-oriented for repeated keys.
+
+### Fixed
+
+- Raw requests cannot escape the configured origin or path prefix through
+  network-path references, backslashes, or encoded dot segments before bearer
+  authentication is attached.
+- High-level import runners return a structured error for failed or cancelled
+  terminal tasks instead of fetching result rows from unsuccessful work.
+- Transport response diagnostics redact header values and bodies, and HTTP error
+  diagnostics redact query values.
+- Secret-bearing authentication and remote-target values use zeroizing secret
+  storage and redact diagnostics. Request/response bodies and query values are
+  no longer emitted through debug formatting or logs.
+- Login-with-token preserves structured server failures instead of collapsing
+  them into an invalid-token marker, and login borrows the unauthenticated client.
+- Deserialization failures include the precise JSON field path.
+- Custom transports now honor retry and response-size policies, matching the
+  reqwest-backed transport behavior.
+- Automatic pagination now returns `ApiError::PaginationCycle` when a server
+  repeats a cursor instead of requesting the same page forever.
+- Blocking login and sync/async health probes now preserve API error status,
+  message, URL, and response body consistently with authenticated requests.
+- Client debug logging no longer emits serialized request or response bodies,
+  and authentication and remote-target secrets are redacted from `Debug` output.
+- Fluent scalar options now replace earlier values instead of generating
+  duplicate limit, cursor, sort, event, task, search, or rate-limit query keys.
+
+### Changed
+
+- Panicking client constructors, unchecked fluent `create()`, `get_token()`,
+  graph `fetch()`, and search `execute()` are deprecated in favor of fallible,
+  explicit alternatives.
+- `ApiResource` is sealed and public imports are organized through `prelude` and
+  `model` modules.
+- Workspace packages declare Rust 1.86 as their minimum supported version.
+- Nested resource, event, history, template, and remote-target helpers now use
+  the corresponding typed resource IDs while continuing to accept `i32` values.
+- Simplified the derive macro by sharing identical generated fluent methods
+  across blocking and async implementations.
+- Docker-backed integration coverage now uses verified LDAPS to exercise scoped
+  provider discovery and login, synchronized identities and groups, and external
+  user settings through both async and blocking clients.
+
 ## [0.2.0] - 2026-07-08
 
 ### Breaking

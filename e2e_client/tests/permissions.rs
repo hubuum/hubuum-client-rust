@@ -30,7 +30,7 @@ fn e2e_collection_permissions_grant_and_revoke() {
         .create_raw(CollectionPost {
             name: format!("{prefix}-collection"),
             description: "permission e2e collection".to_string(),
-            group_id: admin_group_id,
+            group_id: admin_group_id.into(),
             parent_collection_id: None,
         })
         .expect("collection create should succeed");

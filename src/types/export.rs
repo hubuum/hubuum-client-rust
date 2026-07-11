@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
+use crate::{ClassId, ClassRelationId, ObjectId};
+
+#[non_exhaustive]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 pub enum ExportContentType {
     #[default]
@@ -16,14 +19,24 @@ pub enum ExportContentType {
     #[serde(rename = "text/csv")]
     #[strum(serialize = "text/csv")]
     TextCsv,
+    #[serde(other)]
+    Unknown,
 }
 
 impl ExportContentType {
     pub fn from_header(value: &str) -> Option<Self> {
-        value.split(';').next()?.trim().parse().ok()
+        Some(
+            value
+                .split(';')
+                .next()?
+                .trim()
+                .parse()
+                .unwrap_or(Self::Unknown),
+        )
     }
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -34,8 +47,11 @@ pub enum ExportScopeKind {
     ClassRelations,
     ObjectRelations,
     RelatedObjects,
+    #[serde(other)]
+    Unknown,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display, Default)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -43,8 +59,11 @@ pub enum ExportTemplateKind {
     #[default]
     Export,
     Fragment,
+    #[serde(other)]
+    Unknown,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -52,8 +71,11 @@ pub enum ExportMissingDataPolicy {
     Strict,
     Null,
     Omit,
+    #[serde(other)]
+    Unknown,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -61,8 +83,11 @@ pub enum ExportIncludeRelatedDirection {
     Any,
     Outgoing,
     Incoming,
+    #[serde(other)]
+    Unknown,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -70,12 +95,14 @@ pub enum ExportIncludeRelatedSort {
     Path,
     Name,
     CreatedAt,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExportIncludeRelatedObject {
-    pub class_id: i32,
-    pub class_relation_id: Option<i32>,
+    pub class_id: ClassId,
+    pub class_relation_id: Option<ClassRelationId>,
     pub direction: Option<ExportIncludeRelatedDirection>,
     pub limit: Option<i32>,
     pub max_depth: Option<i32>,
@@ -94,9 +121,9 @@ pub struct ExportRelationContext {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExportScope {
-    pub class_id: Option<i32>,
+    pub class_id: Option<ClassId>,
     pub kind: ExportScopeKind,
-    pub object_id: Option<i32>,
+    pub object_id: Option<ObjectId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -140,7 +167,7 @@ pub struct ExportRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct ExportTemplateRunRequest {
     pub query: Option<String>,
-    pub object_id: Option<i32>,
+    pub object_id: Option<ObjectId>,
     pub missing_data_policy: Option<ExportMissingDataPolicy>,
     pub limits: Option<ExportLimits>,
 }
@@ -164,7 +191,7 @@ mod tests {
         related.insert(
             "owners".to_string(),
             ExportIncludeRelatedObject {
-                class_id: 7,
+                class_id: 7.into(),
                 class_relation_id: None,
                 direction: Some(ExportIncludeRelatedDirection::Outgoing),
                 limit: Some(10),
@@ -177,7 +204,7 @@ mod tests {
             missing_data_policy: None,
             query: None,
             scope: ExportScope {
-                class_id: Some(42),
+                class_id: Some(42.into()),
                 kind: ExportScopeKind::ObjectsInClass,
                 object_id: None,
             },

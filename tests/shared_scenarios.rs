@@ -1,3 +1,5 @@
+#![cfg(all(feature = "async", feature = "blocking"))]
+
 use std::str::FromStr;
 
 use httpmock::prelude::*;
@@ -325,7 +327,10 @@ fn shared_scenario_runs_with_sync_client() {
     setup_scenario_mocks(&server);
 
     let base_url = BaseUrl::from_str(&server.base_url()).expect("valid mock base URL");
-    let client = blocking::Client::new_with_certificate_validation(base_url, true)
+    let client = blocking::Client::builder(base_url)
+        .validate_certs(true)
+        .build()
+        .expect("sync client should build")
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .expect("sync login should succeed");
     run_shared_scenario_sync(&client).expect("sync scenario should succeed");
@@ -337,7 +342,10 @@ async fn shared_scenario_runs_with_async_client() {
     setup_scenario_mocks(&server);
 
     let base_url = BaseUrl::from_str(&server.base_url()).expect("valid mock base URL");
-    let client = Client::new_with_certificate_validation(base_url, true)
+    let client = Client::builder(base_url)
+        .validate_certs(true)
+        .build()
+        .expect("async client should build")
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .await
         .expect("async login should succeed");

@@ -23,9 +23,8 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
     let target = harness
         .client
         .remote_targets()
-        .create()
-        .params(NewRemoteTarget {
-            collection_id,
+        .create_raw(NewRemoteTarget {
+            collection_id: collection_id.into(),
             name: format!("{prefix}-target"),
             description: "e2e remote target".to_string(),
             method: RemoteHttpMethod::Post,
@@ -38,7 +37,6 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
             headers_template: Some(json!({"x-e2e": "hubuum-client"})),
             timeout_ms: Some(500),
         })
-        .send()
         .expect("remote target should create");
     assert_eq!(target.collection_id, collection_id);
 
@@ -88,8 +86,10 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
 
     let invoked = selected
         .invoke(
-            RemoteTargetInvokeRequest::new(RemoteInvocationSubject::Collection { collection_id })
-                .parameters(json!({"case": prefix})),
+            RemoteTargetInvokeRequest::new(RemoteInvocationSubject::Collection {
+                collection_id: collection_id.into(),
+            })
+            .parameters(json!({"case": prefix})),
         )
         .expect("remote target invocation should enqueue task");
     assert_eq!(invoked.kind, TaskKind::RemoteCall);
@@ -143,7 +143,7 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
     assert!(
         events
             .iter()
-            .any(|event| event.entity_id == Some(target.id))
+            .any(|event| event.entity_id == Some(target.id.get()))
     );
 
     harness

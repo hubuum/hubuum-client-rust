@@ -1,8 +1,10 @@
 use crate::types::BaseUrl;
+use strum::EnumIter;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum Endpoint {
     Login,
+    AuthProviders,
     LoginWithToken,
     Logout,
     LogoutToken,
@@ -22,9 +24,11 @@ pub enum Endpoint {
     PrincipalPermissions,
     PrincipalTokens,
     PrincipalTokenRevoke,
+    PrincipalSettings,
     Me,
     MeGroups,
     MePermissions,
+    MeSettings,
     MeTokens,
     Groups,
     GroupsById,
@@ -114,6 +118,7 @@ impl Endpoint {
     pub fn path(&self) -> &'static str {
         match self {
             Endpoint::Login => "/api/v0/auth/login",
+            Endpoint::AuthProviders => "/api/v0/auth/providers",
             Endpoint::LoginWithToken => "/api/v0/auth/validate",
             Endpoint::Logout => "/api/v0/auth/logout",
             Endpoint::LogoutToken => "/api/v0/auth/logout/token",
@@ -137,9 +142,11 @@ impl Endpoint {
             Endpoint::PrincipalTokenRevoke => {
                 "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke"
             }
+            Endpoint::PrincipalSettings => "/api/v1/iam/principals/{principal_id}/settings",
             Endpoint::Me => "/api/v1/iam/me",
             Endpoint::MeGroups => "/api/v1/iam/me/groups",
             Endpoint::MePermissions => "/api/v1/iam/me/permissions",
+            Endpoint::MeSettings => "/api/v1/iam/me/settings",
             Endpoint::MeTokens => "/api/v1/iam/me/tokens",
             Endpoint::Groups => "/api/v1/iam/groups",
             Endpoint::GroupsById => "/api/v1/iam/groups/{group_id}",
@@ -276,11 +283,36 @@ impl Endpoint {
 #[cfg(test)]
 mod test {
     use super::*;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn endpoint_paths_match_the_pinned_openapi_contract() {
+        let contract: serde_json::Value =
+            serde_json::from_str(include_str!("../openapi/operations.json"))
+                .expect("OpenAPI operation snapshot should be valid JSON");
+        let spec_paths = contract["operations"]
+            .as_array()
+            .expect("snapshot operations should be an array")
+            .iter()
+            .map(|operation| {
+                operation["path"]
+                    .as_str()
+                    .expect("operation path should be a string")
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        let client_paths = Endpoint::iter()
+            .map(|endpoint| endpoint.path())
+            .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(client_paths, spec_paths);
+        assert_eq!(contract["operation_count"], 158);
+    }
     use std::str::FromStr;
     use yare::parameterized;
 
     #[parameterized(
         login = { Endpoint::Login, "/api/v0/auth/login" },
+        auth_providers = { Endpoint::AuthProviders, "/api/v0/auth/providers" },
         logout = { Endpoint::Logout, "/api/v0/auth/logout" },
         logout_token = { Endpoint::LogoutToken, "/api/v0/auth/logout/token" },
         logout_user = { Endpoint::LogoutUser, "/api/v0/auth/logout/uid/{user_id}" },
@@ -298,9 +330,11 @@ mod test {
         principal_permissions = { Endpoint::PrincipalPermissions, "/api/v1/iam/principals/{principal_id}/permissions" },
         principal_tokens = { Endpoint::PrincipalTokens, "/api/v1/iam/principals/{principal_id}/tokens" },
         principal_token_revoke = { Endpoint::PrincipalTokenRevoke, "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke" },
+        principal_settings = { Endpoint::PrincipalSettings, "/api/v1/iam/principals/{principal_id}/settings" },
         me = { Endpoint::Me, "/api/v1/iam/me" },
         me_groups = { Endpoint::MeGroups, "/api/v1/iam/me/groups" },
         me_permissions = { Endpoint::MePermissions, "/api/v1/iam/me/permissions" },
+        me_settings = { Endpoint::MeSettings, "/api/v1/iam/me/settings" },
         me_tokens = { Endpoint::MeTokens, "/api/v1/iam/me/tokens" },
         get_group_by_id = { Endpoint::GroupsById, "/api/v1/iam/groups/{group_id}" },
         group_events = { Endpoint::GroupEvents, "/api/v1/iam/groups/{group_id}/events" },
@@ -358,6 +392,7 @@ mod test {
 
     #[parameterized(
         login = { Endpoint::Login, '/', "api/v0/auth/login" },
+        auth_providers = { Endpoint::AuthProviders, '/', "api/v0/auth/providers" },
         logout = { Endpoint::Logout, '/', "api/v0/auth/logout" },
         logout_token = { Endpoint::LogoutToken, '/', "api/v0/auth/logout/token" },
         logout_user = { Endpoint::LogoutUser, '/', "api/v0/auth/logout/uid/{user_id}" },
@@ -372,7 +407,9 @@ mod test {
         service_account_by_id = { Endpoint::ServiceAccountsById, '/', "api/v1/iam/service-accounts/{service_account_id}" },
         principal_tokens = { Endpoint::PrincipalTokens, '/', "api/v1/iam/principals/{principal_id}/tokens" },
         principal_token_revoke = { Endpoint::PrincipalTokenRevoke, '/', "api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke" },
+        principal_settings = { Endpoint::PrincipalSettings, '/', "api/v1/iam/principals/{principal_id}/settings" },
         me = { Endpoint::Me, '/', "api/v1/iam/me" },
+        me_settings = { Endpoint::MeSettings, '/', "api/v1/iam/me/settings" },
         me_tokens = { Endpoint::MeTokens, '/', "api/v1/iam/me/tokens" },
         get_group_by_id = { Endpoint::GroupsById, '/', "api/v1/iam/groups/{group_id}" },
         group_events = { Endpoint::GroupEvents, '/', "api/v1/iam/groups/{group_id}/events" },
@@ -428,6 +465,7 @@ mod test {
 
     #[parameterized(
         api_login = { Endpoint::Login, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/login" },
+        api_auth_providers = { Endpoint::AuthProviders, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/providers" },
         api_logout = { Endpoint::Logout, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/logout" },
         api_logout_all = { Endpoint::LogoutAll, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/auth/logout_all" },
         api_meta_counts = { Endpoint::MetaCounts, BaseUrl::from_str("https://api.example.com").unwrap(), "https://api.example.com/api/v0/meta/counts" },

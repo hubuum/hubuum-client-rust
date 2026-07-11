@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use hubuum_client::{
-    CURRENT_IMPORT_VERSION, ImportClassInput, ImportCollectionInput, ImportGraph, ImportMode,
-    ImportObjectInput, ImportRequest, TaskKind,
+    ImportClassInput, ImportCollectionInput, ImportGraph, ImportMode, ImportObjectInput,
+    ImportRequest, TaskKind,
 };
 use serde_json::json;
 
@@ -18,14 +18,11 @@ fn e2e_import_creates_graph_and_exposes_results() {
     let class_name = format!("{prefix}-class");
     let object_name = format!("{prefix}-object");
 
-    let submitted = harness
+    let imported = harness
         .client
         .imports()
-        .submit(ImportRequest {
-            version: CURRENT_IMPORT_VERSION,
-            dry_run: Some(false),
-            mode: Some(ImportMode::default()),
-            graph: ImportGraph {
+        .run(
+            ImportRequest::new(ImportGraph {
                 collections: vec![ImportCollectionInput {
                     ref_: Some("ns".to_string()),
                     name: collection_name.clone(),
@@ -51,46 +48,36 @@ fn e2e_import_creates_graph_and_exposes_results() {
                     class_key: None,
                 }],
                 ..Default::default()
-            },
-        })
+            })
+            .dry_run(false)
+            .mode(ImportMode::default()),
+        )
         .idempotency_key(format!("e2e-import-{prefix}"))
-        .send()
-        .expect("import submit should return task");
-    assert_eq!(submitted.kind, TaskKind::Import);
-
-    let completed = harness
-        .client
-        .tasks()
-        .wait(submitted.id)
         .poll_interval(Duration::from_millis(100))
         .timeout(Some(Duration::from_secs(30)))
         .send()
-        .expect("import task should complete");
-    assert!(completed.status.is_success(), "{completed:?}");
+        .expect("import should complete and return result rows");
+    assert_eq!(imported.task.kind, TaskKind::Import);
+    assert!(imported.task.status.is_success(), "{:?}", imported.task);
 
     let fetched_import = harness
         .client
         .imports()
-        .get(submitted.id)
+        .get(imported.task.id)
         .expect("import task should be fetchable through import endpoint");
-    assert_eq!(fetched_import.id, submitted.id);
+    assert_eq!(fetched_import.id, imported.task.id);
 
-    let results = harness
-        .client
-        .imports()
-        .results(submitted.id)
-        .limit(20)
-        .list()
-        .expect("import results should list");
     assert!(
-        results
+        imported
+            .changes
             .iter()
-            .any(|result| result.task_id == submitted.id && result.entity_kind == "collection")
+            .any(|result| result.task_id == imported.task.id && result.entity_kind == "collection")
     );
     assert!(
-        results
+        imported
+            .changes
             .iter()
-            .any(|result| result.task_id == submitted.id && result.entity_kind == "object")
+            .any(|result| result.task_id == imported.task.id && result.entity_kind == "object")
     );
 
     let imported_class = harness

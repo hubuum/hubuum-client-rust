@@ -2,20 +2,32 @@ use std::borrow::Cow;
 
 use crate::QueryFilter;
 use crate::endpoints::Endpoint;
+use secrecy::{ExposeSecret, SecretString};
 
 #[cfg(feature = "async")]
 pub mod r#async;
 mod shared;
 #[cfg(feature = "blocking")]
 pub mod sync;
-#[cfg(test)]
+#[cfg(all(test, feature = "async", feature = "blocking"))]
 mod tests;
+pub mod transport;
 
 #[cfg(feature = "async")]
-pub use self::r#async::Client;
+pub use self::r#async::{
+    Client, CollectionScope, ExportOutputStream, ItemStream, PageStream, PrincipalSettingsScope,
+    TypedClass,
+};
+pub(crate) use self::shared::redacted_url_for_log;
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryNumericField, QueryTextField, QueryValueField,
+    RetryPolicy,
 };
+#[cfg(feature = "async")]
+pub use self::transport::AsyncTransport;
+#[cfg(feature = "blocking")]
+pub use self::transport::BlockingTransport;
+pub use self::transport::{MockTransport, RequestPlan, TransportResponse};
 
 use crate::resources::ApiResource;
 
@@ -54,9 +66,29 @@ impl<T: ApiResource> IntoQueryFilters<T> for () {
 #[derive(Debug, Clone)]
 pub struct Unauthenticated;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Authenticated {
-    token: String,
+    token: SecretString,
+}
+
+impl std::fmt::Debug for Authenticated {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Authenticated")
+            .field("token", &"[REDACTED]")
+            .finish()
+    }
+}
+
+impl Authenticated {
+    fn new(token: crate::types::Token) -> Self {
+        Self {
+            token: token.into_secret(),
+        }
+    }
+
+    fn token(&self) -> &str {
+        self.token.expose_secret()
+    }
 }
 
 #[cfg(all(test, feature = "async", feature = "blocking"))]
@@ -64,14 +96,21 @@ mod parity_contract {
     use super::{Authenticated, Unauthenticated, r#async as async_client, sync as sync_client};
     use crate::resources::{
         Class, ClassId, ClassRelation, ClassRelationId, Collection, ExportTemplate, Group, Object,
-        ObjectId, ObjectRelation, RemoteTarget, ServiceAccount, User,
+        ObjectId, ObjectRelation, RelatedClassGraph, RemoteTarget, ServiceAccount, User,
     };
     use crate::types::BaseUrl;
 
     macro_rules! assert_constructor_capabilities {
         ($module:ident) => {
-            let _: fn(BaseUrl, bool) -> $module::Client<Unauthenticated> =
-                $module::Client::<Unauthenticated>::new_with_certificate_validation;
+            let _: fn(BaseUrl) -> $module::ClientBuilder =
+                $module::Client::<Unauthenticated>::builder;
+            let _ = $module::Client::<Unauthenticated>::try_new;
+            let _ = || $module::Client::<Unauthenticated>::from_url("https://example.invalid");
+            let _ =
+                || $module::Client::<Unauthenticated>::builder_from_url("https://example.invalid");
+            let _ = $module::Client::<Unauthenticated>::base_url;
+            let _ = $module::Client::<Unauthenticated>::http_client;
+            let _ = $module::Client::<Unauthenticated>::auth_providers;
             let _ = $module::Client::<Unauthenticated>::healthz;
             let _ = $module::Client::<Unauthenticated>::readyz;
         };
@@ -109,10 +148,10 @@ mod parity_contract {
 
     macro_rules! assert_authenticated_client_auth_surface {
         ($module:ident) => {
-            let _ = $module::Client::<Authenticated>::get_token;
+            let _ = $module::Client::<Authenticated>::token;
             let _ = $module::Client::<Authenticated>::logout;
             let _ = $module::Client::<Authenticated>::logout_token;
-            let _ = $module::Client::<Authenticated>::logout_user;
+            let _ = $module::Client::<Authenticated>::logout_user::<i32>;
             let _ = $module::Client::<Authenticated>::logout_all;
             let _ = $module::Client::<Authenticated>::meta_counts;
             let _ = $module::Client::<Authenticated>::meta_db;
@@ -124,6 +163,12 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::me_tokens_request;
             let _ = $module::Client::<Authenticated>::me_permissions;
             let _ = $module::Client::<Authenticated>::me_permissions_request;
+            let _ = $module::Client::<Authenticated>::settings;
+            let _ = $module::Client::<Authenticated>::principal_settings::<i32>;
+            let _ = $module::PrincipalSettingsScope::get;
+            let _ = $module::PrincipalSettingsScope::replace::<serde_json::Value>;
+            let _ = $module::PrincipalSettingsScope::patch::<serde_json::Value>;
+            let _ = $module::PrincipalSettingsScope::reset;
         };
     }
 
@@ -131,6 +176,7 @@ mod parity_contract {
         ($module:ident) => {
             let _ = $module::QueryOp::<Class>::filter::<&str, i32>;
             let _ = $module::QueryOp::<Class>::raw_param::<&str, &str>;
+            let _ = $module::QueryOp::<Class>::set_raw_param::<&str, &str>;
             let _ = $module::QueryOp::<Class>::sort_by::<&str>;
             let _ = $module::QueryOp::<Class>::order_by::<&str>;
             let _ = $module::QueryOp::<Class>::sort::<&str>;
@@ -141,18 +187,32 @@ mod parity_contract {
             let _ = $module::QueryOp::<Class>::limit;
             let _ = $module::QueryOp::<Class>::cursor::<&str>;
             let _ = $module::QueryOp::<Class>::list;
+            let _ = $module::QueryOp::<Class>::all;
             let _ = $module::QueryOp::<Class>::page;
             let _ = $module::QueryOp::<Class>::one;
             let _ = $module::QueryOp::<Class>::optional;
         };
     }
 
+    #[allow(dead_code)]
+    fn scoped_identity_query_surface_compiles() {
+        let _ = async_client::Resource::<User>::identity_scope;
+        let _ = async_client::Resource::<Group>::identity_scope;
+        let _ = async_client::Resource::<ServiceAccount>::identity_scope;
+        let _ = sync_client::Resource::<User>::identity_scope;
+        let _ = sync_client::Resource::<Group>::identity_scope;
+        let _ = sync_client::Resource::<ServiceAccount>::identity_scope;
+    }
+
     macro_rules! assert_resource_surface {
         ($module:ident) => {
             let _ = $module::Resource::<Class>::query;
-            let _ = $module::Resource::<Class>::create;
+            let _ = $module::Resource::<Class>::all;
+            let _ = $module::Resource::<Class>::create_checked;
+            let _ = $module::Resource::<Class>::create_raw;
             let _ = $module::Resource::<Class>::update::<ClassId>;
             let _ = $module::Resource::<Class>::delete::<ClassId>;
+            let _ = $module::Resource::<Class>::set_raw_param::<&str, &str>;
             let _ = $module::Resource::<Class>::get::<ClassId>;
             let _ = $module::Resource::<Class>::get_by_name;
         };
@@ -164,6 +224,20 @@ mod parity_contract {
             let _ = $module::Handle::<Class>::resource;
             let _ = $module::Handle::<Class>::id;
             let _ = $module::Handle::<Class>::client;
+        };
+    }
+
+    macro_rules! assert_cursor_request_surface {
+        ($module:ident) => {
+            let _ = $module::EventListRequest::all;
+            let _ = $module::HistoryRequest::<crate::types::ClassHistory>::all;
+            let _ = $module::TaskListRequest::all;
+            let _ = $module::CursorRequest::<crate::types::TaskEventResponse>::all;
+            let _ = $module::CursorRequest::<crate::types::TaskEventResponse>::set_query_param::<
+                &str,
+                &str,
+            >;
+            let _ = $module::GraphRequest::<RelatedClassGraph>::set_query_param::<&str, &str>;
         };
     }
 
@@ -194,31 +268,20 @@ mod parity_contract {
             let _ = $module::Handle::<User>::tokens;
             let _ = $module::Handle::<User>::tokens_request;
             let _ = $module::Handle::<User>::tokens_create;
-            let _ = $module::Handle::<User>::token_revoke;
+            let _ = $module::Handle::<User>::settings;
 
             let _ = $module::Handle::<ServiceAccount>::disable;
             let _ = $module::Handle::<ServiceAccount>::tokens;
             let _ = $module::Handle::<ServiceAccount>::tokens_create;
-            let _ = $module::Handle::<ServiceAccount>::token_revoke;
+            let _ = $module::Handle::<ServiceAccount>::settings;
 
             let _ = $module::Handle::<RemoteTarget>::invoke;
 
-            let _ = $module::Handle::<Group>::add_member;
-            let _ = $module::Handle::<Group>::remove_member;
             let _ = $module::Handle::<Group>::members;
             let _ = $module::Handle::<Group>::members_request;
 
             let _ = $module::Handle::<Collection>::permissions;
             let _ = $module::Handle::<Collection>::permissions_request;
-            let _ = $module::Handle::<Collection>::group_permissions;
-            let _ = $module::Handle::<Collection>::replace_permissions;
-            let _ = $module::Handle::<Collection>::grant_permissions;
-            let _ = $module::Handle::<Collection>::revoke_permissions;
-            let _ = $module::Handle::<Collection>::has_group_permission;
-            let _ = $module::Handle::<Collection>::grant_permission;
-            let _ = $module::Handle::<Collection>::revoke_permission;
-            let _ = $module::Handle::<Collection>::principal_permissions;
-            let _ = $module::Handle::<Collection>::principal_permissions_request;
             let _ = $module::Handle::<Collection>::groups_with_permission;
         };
     }
@@ -235,6 +298,8 @@ mod parity_contract {
 
         assert_filter_builder_surface!(sync_client);
         assert_filter_builder_surface!(async_client);
+        assert_cursor_request_surface!(sync_client);
+        assert_cursor_request_surface!(async_client);
 
         assert_resource_surface!(sync_client);
         assert_resource_surface!(async_client);

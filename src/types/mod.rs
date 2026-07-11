@@ -5,17 +5,21 @@ mod event;
 mod export;
 mod filter;
 mod history;
+mod id;
+mod identity;
 mod import;
 mod meta;
 mod params;
 mod remote;
 mod search;
+mod settings;
 mod task;
+mod typed_object;
 
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
 
-pub use auth::{Credentials, LogoutTokenRequest, Token};
+pub use auth::{AuthProvidersResponse, Credentials, LogoutTokenRequest, Token};
 pub use baseurl::BaseUrl;
 pub use datetime::HubuumDateTime;
 pub use event::{
@@ -37,11 +41,17 @@ pub use history::{
     ClassHistory, CollectionHistory, ExportTemplateHistory, HistoryMetadata, ObjectHistory,
     RemoteTargetHistory,
 };
+pub use id::{
+    EventDeliveryId, EventSubscriptionId, HistoryId, ImportResultId, PermissionId, PrincipalId,
+    RemoteCallResultId, TaskEventId, TaskId, TokenId,
+};
+pub(crate) use identity::default_local_identity_value;
+pub use identity::{LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND};
 pub use import::{
     CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, GroupKey, ImportAtomicity, ImportClassInput,
     ImportClassRelationInput, ImportCollectionInput, ImportCollectionPermissionInput,
     ImportCollisionPolicy, ImportGraph, ImportMode, ImportObjectInput, ImportObjectRelationInput,
-    ImportPermissionPolicy, ImportRequest, ObjectKey,
+    ImportPermissionPolicy, ImportRequest, ImportRunResult, ObjectKey,
 };
 pub use meta::{
     ClearRateLimitResponse, CountsResponse, DbStateResponse, LoginRateLimitConfig,
@@ -59,11 +69,16 @@ pub use search::{
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
     UnifiedSearchResults, UnifiedSearchStartedEvent,
 };
+pub use settings::PrincipalSettings;
 pub use task::{
     ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse, TaskDetails, TaskEventResponse,
     TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
 };
+pub use typed_object::TypedObject;
+#[cfg(feature = "typed-schemas")]
+pub use typed_object::schema_for;
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, EnumIter, EnumString, Display, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub enum Permissions {
@@ -98,4 +113,6 @@ pub enum Permissions {
     ExecuteRemoteTarget,
     ReadAudit,
     ManageEventSubscription,
+    #[serde(other)]
+    Unknown,
 }

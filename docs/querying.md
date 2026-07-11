@@ -1,15 +1,15 @@
 # Querying Resources
 
-This page assumes you already have an authenticated client. Async and blocking clients use the same builders; async callers only await the terminal operation.
+This page assumes you already have an authenticated client. Examples use the blocking client; async callers use the same builders and await terminal operations.
 
 ## Creating and Fetching Resources
 
-The fluent API works across create, update, and query flows. If needed, you can still pass raw structs through `create_raw`, `update_raw`, and `params(...)`.
+The fluent API works across create, update, and query flows. `create_checked()` tracks required fields in the builder type, so `.send()` is unavailable until all of them are supplied. Use `create_raw` and `update_raw` when values already exist as request structs.
 
 ```rust
 let class = client
     .classes()
-    .create()
+    .create_checked()
     .name("example-class")
     .collection_id(1)
     .description("Example class")
@@ -19,7 +19,12 @@ let class = client.classes().get(42)?;
 let class = client.classes().get_by_name("example-class")?;
 ```
 
-Resource identity is typed. Handles and resources expose IDs such as `ClassId`, `CollectionId`, `ObjectId`, and `GroupId`, so accidentally passing a group ID to `classes().get(...)` is rejected at compile time. Integer literals and raw `i32` values still work at API boundaries through explicit conversion into the expected ID type.
+Resource identity is typed. Handles and resources expose IDs such as `ClassId`,
+`CollectionId`, `ObjectId`, and `GroupId`, so accidentally passing a group ID to
+`classes().get(...)` or `objects(...)` is rejected at compile time. Nested event,
+history, template, and remote-target helpers use the same typed IDs. Integer
+literals and raw `i32` values still work through conversion into the expected ID
+type.
 
 ## Collections
 
@@ -28,7 +33,7 @@ Collections are the top-level organizational resource for classes, objects, expo
 ```rust
 let collection = client
     .collections()
-    .create()
+    .create_checked()
     .name("platform")
     .description("Platform inventory")
     .group_id(admin_group_id)
@@ -72,26 +77,42 @@ let classes = client
     .list()?;
 ```
 
+Scalar controls replace their previous value, so `.limit(10).limit(25)` sends
+only `limit=25`. This applies to limits, cursors, sorting, and the typed event,
+task, search, and rate-limit selectors; `sort` and `order_by` also replace each
+other because they are aliases. Resource queries use `raw_param()` to append
+repeated raw keys and `set_raw_param()` to replace a scalar key. Cursor and graph
+requests provide the equivalent `query_param()` and `set_query_param()` methods.
+
 Use `list()` for an unfiltered collection request:
 
 ```rust
 let classes = client.classes().list()?;
 ```
 
-Use `all()` when you want the client to follow cursor pagination and collect all items:
+Use `all()` when you want the client to follow cursor pagination and collect all items. It stops at the configured page or item safety limit:
 
 ```rust
 let classes = client.classes().limit(100).all()?;
 ```
 
-Use `page()` when you need cursor metadata. A page can be iterated directly:
+Use `page()` when you need cursor metadata. `Page<T>` exposes `next_cursor`, the
+server's exact `total_count` when available, and convenience methods such as
+`len()`, `is_empty()`, `has_next()`, `iter()`, and `into_items()`. It dereferences
+to a slice for methods such as `first()` and can also be iterated directly:
 
 ```rust
 let page = client.classes().limit(25).page()?;
+println!("{} total matches", page.total_count.unwrap_or(page.len() as u64));
 for class in page {
     println!("{}", class.name);
 }
 ```
+
+Event, history, task, import-result, and related-resource request builders also
+support `all()`. Automatic pagination returns `ApiError::PaginationCycle` if a
+server repeats a cursor instead of looping forever. Use `pages()` or `items()`
+for lazy consumption without collecting the full result set.
 
 Existing `QueryFilter` values can be passed as a batch:
 
@@ -194,8 +215,16 @@ let events = client
     .search("server")
     .kinds([hubuum_client::UnifiedSearchKind::Object])
     .stream()?;
+
+for event in events {
+    println!("{:?}", event?);
+}
 ```
 
 ## Error Details
 
-HTTP errors include the request method, URL, status, parsed API message, and raw body to make failed requests easier to diagnose.
+HTTP errors include the request method, URL, status, parsed API message, and raw
+body to make failed requests easier to diagnose. `ApiError::status()` returns the
+HTTP status, and `ApiError::api_response()` parses the standard server
+`ApiErrorResponse` payload when present. Login and health/readiness probe errors
+use the same detailed representation as authenticated API calls.

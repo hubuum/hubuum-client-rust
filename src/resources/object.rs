@@ -12,7 +12,9 @@ use crate::client::sync::{
     CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
     GraphRequest as SyncGraphRequest, Handle as SyncHandle,
 };
-use crate::{ApiError, endpoints::Endpoint, types::HubuumDateTime};
+use crate::{
+    ApiError, ClassId, ClassRelationId, CollectionId, endpoints::Endpoint, types::HubuumDateTime,
+};
 
 #[allow(dead_code)]
 #[derive(ApiResource)]
@@ -20,8 +22,8 @@ pub struct ObjectResource {
     #[api(read_only)]
     pub id: i32,
     pub name: String,
-    pub collection_id: i32,
-    pub hubuum_class_id: i32,
+    pub collection_id: CollectionId,
+    pub hubuum_class_id: ClassId,
     pub description: String,
     #[api(optional)]
     pub data: serde_json::Value,
@@ -36,9 +38,9 @@ pub struct ObjectResource {
 pub struct ObjectRelationResource {
     #[api(read_only)]
     pub id: i32,
-    pub from_hubuum_object_id: i32,
-    pub to_hubuum_object_id: i32,
-    pub class_relation_id: i32,
+    pub from_hubuum_object_id: ObjectId,
+    pub to_hubuum_object_id: ObjectId,
+    pub class_relation_id: ClassRelationId,
     #[api(read_only)]
     pub created_at: HubuumDateTime,
     #[api(read_only)]
@@ -47,15 +49,15 @@ pub struct ObjectRelationResource {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Default)]
 pub struct ObjectWithPath {
-    pub id: i32,
+    pub id: ObjectId,
     pub name: String,
-    pub collection_id: i32,
-    pub hubuum_class_id: i32,
+    pub collection_id: CollectionId,
+    pub hubuum_class_id: ClassId,
     pub description: String,
     pub data: serde_json::Value,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
-    pub path: Vec<i32>,
+    pub path: Vec<ObjectId>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Default)]

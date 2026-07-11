@@ -3,9 +3,15 @@ use std::borrow::Cow;
 use hubuum_client_derive::ApiResource;
 
 #[cfg(feature = "async")]
-use crate::client::r#async::{EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle};
+use crate::client::r#async::{
+    EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle,
+    PrincipalSettingsScope as AsyncPrincipalSettingsScope,
+};
 #[cfg(feature = "blocking")]
-use crate::client::sync::{EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle};
+use crate::client::sync::{
+    EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle,
+    PrincipalSettingsScope as SyncPrincipalSettingsScope,
+};
 #[cfg(feature = "async")]
 use crate::resources::user::{
     principal_token_create_async, principal_token_revoke_async, principal_tokens_async,
@@ -15,7 +21,9 @@ use crate::resources::user::{
     principal_token_create_sync, principal_token_revoke_sync, principal_tokens_sync,
 };
 use crate::{
-    ApiError, NewTokenRequest, PrincipalTokenMetadata, endpoints::Endpoint, types::HubuumDateTime,
+    ApiError, GroupId, NewTokenRequest, PrincipalTokenMetadata,
+    endpoints::Endpoint,
+    types::{HubuumDateTime, PrincipalId, TokenId},
 };
 
 #[allow(dead_code)]
@@ -23,16 +31,18 @@ use crate::{
 pub struct ServiceAccountResource {
     #[api(read_only)]
     pub id: i32,
+    #[api(post_optional, skip_patch, default_local)]
+    pub identity_scope: String,
     // The principal name. Required on create; renaming lives on the principal, so it
     // is excluded from PATCH.
     #[api(skip_patch)]
     pub name: String,
     // Optional on create, mutable on update; always present in responses.
-    #[api(optional)]
+    #[api(post_optional)]
     pub description: String,
-    pub owner_group_id: i32,
+    pub owner_group_id: GroupId,
     #[api(read_only, optional)]
-    pub created_by: i32,
+    pub created_by: PrincipalId,
     #[api(read_only, optional)]
     pub disabled_at: HubuumDateTime,
     #[api(read_only)]
@@ -41,8 +51,18 @@ pub struct ServiceAccountResource {
     pub updated_at: HubuumDateTime,
 }
 
+impl ServiceAccount {
+    pub fn is_local(&self) -> bool {
+        self.identity_scope == crate::types::LOCAL_IDENTITY_SCOPE
+    }
+}
+
 #[cfg(feature = "blocking")]
 impl SyncHandle<ServiceAccount> {
+    pub fn settings(&self) -> SyncPrincipalSettingsScope {
+        self.client().principal_settings(self.id())
+    }
+
     /// Disable this service account. Returns the updated service account.
     pub fn disable(&self) -> Result<ServiceAccount, ApiError> {
         let url_params = vec![(
@@ -71,13 +91,17 @@ impl SyncHandle<ServiceAccount> {
         principal_token_create_sync(self.client(), self.id().into(), request)
     }
 
-    pub fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_sync(self.client(), self.id().into(), token_id)
+    pub fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
+        principal_token_revoke_sync(self.client(), self.id().into(), token_id.into())
     }
 }
 
 #[cfg(feature = "async")]
 impl AsyncHandle<ServiceAccount> {
+    pub fn settings(&self) -> AsyncPrincipalSettingsScope {
+        self.client().principal_settings(self.id())
+    }
+
     /// Disable this service account. Returns the updated service account.
     pub async fn disable(&self) -> Result<ServiceAccount, ApiError> {
         let url_params = vec![(
@@ -107,7 +131,7 @@ impl AsyncHandle<ServiceAccount> {
         principal_token_create_async(self.client(), self.id().into(), request).await
     }
 
-    pub async fn token_revoke(&self, token_id: i32) -> Result<(), ApiError> {
-        principal_token_revoke_async(self.client(), self.id().into(), token_id).await
+    pub async fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
+        principal_token_revoke_async(self.client(), self.id().into(), token_id.into()).await
     }
 }
