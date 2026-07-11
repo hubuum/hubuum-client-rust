@@ -1,0 +1,23 @@
+[[ldap]]
+scope = "planet-express"
+url = "ldaps://planetexpress.com:10636"
+bind_dn = "cn=admin,dc=planetexpress,dc=com"
+bind_password = "GoodNewsEveryone"
+connect_timeout_seconds = 5
+operation_timeout_seconds = 10
+user_base_dn = "ou=people,dc=planetexpress,dc=com"
+user_filter = "(uid={username})"
+user_scope = "subtree"
+username_attribute = "uid"
+subject_attribute = "entryUUID"
+display_name_attribute = "displayName"
+email_attribute = "mail"
+group_attributes = ["memberOf"]
+refresh_ttl_seconds = 1
+max_stale_seconds = 60
+
+[[ldap.group_rules]]
+pattern = "^cn=([^,]+),ou=people,dc=planetexpress,dc=com$"
+name = "$1"
+key = "$0"
+description = "Planet Express directory group $1"

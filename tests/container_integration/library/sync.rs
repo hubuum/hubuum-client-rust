@@ -1,7 +1,7 @@
 use hubuum_client::{
     ApiError, BaseUrl, ClassPost, ClassRelationPost, CollectionPatch, CollectionPost, Credentials,
-    GroupPatch, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, ObjectPatch, ObjectRelationPost,
-    QueryFilter, Token, UserPatch, blocking,
+    GroupPatch, LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, ObjectPatch,
+    ObjectRelationPost, QueryFilter, Token, UserPatch, blocking,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -63,21 +63,93 @@ fn sync_meta_db_available_connections_non_negative() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
-fn sync_auth_provider_discovery_returns_local_or_legacy_404() {
+fn sync_external_provider_login_materializes_groups_and_supports_settings() {
     let stack = IntegrationStack::start().expect("failed to start integration stack");
-    let client = blocking::Client::from_url(&stack.base_url)
+    let base_url = stack
+        .base_url
+        .parse::<BaseUrl>()
+        .expect("stack base URL should parse as BaseUrl");
+    let client = blocking::Client::try_new(base_url.clone())
         .expect("failed to construct unauthenticated sync client");
 
-    match client.auth_providers() {
-        Ok(providers) => assert!(
-            providers.contains(LOCAL_IDENTITY_SCOPE),
-            "every Hubuum server should advertise the local provider"
-        ),
-        Err(ApiError::HttpWithBody { status, .. }) if status == reqwest::StatusCode::NOT_FOUND => {
-            // Rolling compatibility for the pinned image preceding this endpoint.
-        }
-        Err(err) => panic!("sync auth provider discovery failed: {err}"),
-    }
+    let providers = client
+        .auth_providers()
+        .expect("sync auth provider discovery failed");
+    assert_eq!(
+        providers.iter().collect::<Vec<_>>(),
+        [LOCAL_IDENTITY_SCOPE, "planet-express"]
+    );
+
+    let err = client
+        .login(Credentials::scoped("planet-express", "fry", "wrong"))
+        .expect_err("LDAP login should reject an invalid password");
+    assert_auth_token_revoked(err);
+
+    let external = client
+        .login(Credentials::scoped("planet-express", "fry", "fry"))
+        .expect("LDAP login for fry failed");
+    let me = external.me().expect("external user me lookup failed");
+    assert_eq!(me.principal.identity_scope, "planet-express");
+    assert_eq!(me.principal.name, "fry");
+
+    let groups = external
+        .me_groups()
+        .expect("external user group lookup failed");
+    let crew = groups
+        .iter()
+        .find(|group| group.groupname == "ship_crew")
+        .expect("LDAP ship_crew membership should be synchronized");
+    assert_eq!(crew.identity_scope, "planet-express");
+    assert!(crew.is_provider_managed());
+
+    external
+        .settings()
+        .reset()
+        .expect("external user settings reset failed");
+    let replaced = external
+        .settings()
+        .replace(&json!({
+            "dashboard": { "columns": 2, "density": "compact" },
+            "theme": "nebula"
+        }))
+        .expect("external user settings replace failed");
+    assert_eq!(replaced.get("theme"), Some(&json!("nebula")));
+
+    let patched = external
+        .settings()
+        .patch(&json!({
+            "dashboard": { "columns": 3 },
+            "theme": null
+        }))
+        .expect("external user settings patch failed");
+    assert!(patched.get("theme").is_none());
+    assert_eq!(patched.get("dashboard").unwrap()["columns"], 3);
+    assert_eq!(patched.get("dashboard").unwrap()["density"], "compact");
+    assert_eq!(
+        external
+            .settings()
+            .get()
+            .expect("external user settings get failed"),
+        patched
+    );
+    external
+        .settings()
+        .reset()
+        .expect("external user final settings reset failed");
+
+    let admin = login_sync(base_url, &stack.admin_password).expect("local admin login failed");
+    let materialized = admin
+        .users()
+        .identity_scope()
+        .eq("planet-express")
+        .name()
+        .eq("fry")
+        .one()
+        .expect("materialized LDAP user query failed");
+    assert_eq!(materialized.provider_kind, LDAP_PROVIDER_KIND);
+    assert!(materialized.is_provider_managed());
+    assert_eq!(materialized.proper_name.as_deref(), Some("Fry"));
+    assert_eq!(materialized.email.as_deref(), Some("fry@planetexpress.com"));
 }
 
 #[test]

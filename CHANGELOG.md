@@ -48,7 +48,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   `MockTransport`, and authenticated relative `raw()` requests for new routes.
 - The `hubuum_reconcile` workspace crate for dry-run previews and task-backed,
   idempotent desired-state application.
-- A normalized OpenAPI operation snapshot covering 157 operations, executable
+- A normalized OpenAPI operation snapshot covering 158 operations, executable
   endpoint coverage checks, documented upstream gaps, and scheduled drift CI.
 - Strict formatting, clippy, docs, feature-matrix, MSRV, supply-chain, SemVer,
   pinned-server, and latest-server compatibility checks.
@@ -104,6 +104,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   the corresponding typed resource IDs while continuing to accept `i32` values.
 - Simplified the derive macro by sharing identical generated fluent methods
   across blocking and async implementations.
+- Docker-backed integration coverage now uses verified LDAPS to exercise scoped
+  provider discovery and login, synchronized identities and groups, and external
+  user settings through both async and blocking clients.
 
 ## [0.2.0] - 2026-07-08
 

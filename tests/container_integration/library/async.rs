@@ -1,6 +1,7 @@
 use hubuum_client::{
     ApiError, BaseUrl, ClassPost, ClassRelationPost, Client, CollectionPatch, CollectionPost,
-    GroupPatch, ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch,
+    Credentials, GroupPatch, LOCAL_IDENTITY_SCOPE, ObjectPatch, ObjectRelationPost, QueryFilter,
+    Token, UserPatch,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -98,6 +99,56 @@ fn async_principal_settings_roundtrip() {
             .expect("async settings get after reset failed")
             .is_empty()
     );
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn async_external_provider_login_and_user_settings_roundtrip() {
+    let stack = IntegrationStack::start().expect("failed to start integration stack");
+    let base_url = stack
+        .base_url
+        .parse::<BaseUrl>()
+        .expect("stack base URL should parse as BaseUrl");
+    let runtime = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
+    let client = Client::try_new(base_url).expect("failed to construct async client");
+
+    let providers = runtime
+        .block_on(client.auth_providers())
+        .expect("async auth provider discovery failed");
+    assert!(providers.contains(LOCAL_IDENTITY_SCOPE));
+    assert!(providers.contains("planet-express"));
+
+    let external = runtime
+        .block_on(client.login(Credentials::scoped("planet-express", "amy", "amy")))
+        .expect("async LDAP login for amy failed");
+    let me = runtime
+        .block_on(external.me())
+        .expect("async external user me lookup failed");
+    assert_eq!(me.principal.identity_scope, "planet-express");
+    assert_eq!(me.principal.name, "amy");
+
+    runtime
+        .block_on(external.settings().reset())
+        .expect("async external settings reset failed");
+    let replaced = runtime
+        .block_on(external.settings().replace(&json!({
+            "notifications": { "email": true },
+            "theme": "solarized"
+        })))
+        .expect("async external settings replace failed");
+    assert_eq!(replaced.get("theme"), Some(&json!("solarized")));
+
+    let patched = runtime
+        .block_on(external.settings().patch(&json!({
+            "notifications": { "email": false },
+            "theme": null
+        })))
+        .expect("async external settings patch failed");
+    assert!(patched.get("theme").is_none());
+    assert_eq!(patched.get("notifications").unwrap()["email"], false);
+    runtime
+        .block_on(external.settings().reset())
+        .expect("async external final settings reset failed");
 }
 
 #[test]
