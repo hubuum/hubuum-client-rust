@@ -127,12 +127,12 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Audit Published Advisories
-        uses: rustsec/audit-check@v2.0.0
+        uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check Licenses, Bans, and Sources
-        uses: EmbarkStudios/cargo-deny-action@v2.0.20
+        uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check bans licenses sources
           rust-version: 1.86
@@ -148,7 +148,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check SemVer
-        uses: obi1kenobi/cargo-semver-checks-action@v2.9
+        uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           feature-group: all-features
 
