@@ -13,6 +13,7 @@ pub enum Endpoint {
     MetaCounts,
     MetaDb,
     MetaTasks,
+    AdminConfig,
     Users,
     UsersById,
     UserEvents,
@@ -127,6 +128,7 @@ impl Endpoint {
             Endpoint::MetaCounts => "/api/v0/meta/counts",
             Endpoint::MetaDb => "/api/v0/meta/db",
             Endpoint::MetaTasks => "/api/v0/meta/tasks",
+            Endpoint::AdminConfig => "/api/v1/admin/config",
             Endpoint::Users => "/api/v1/iam/users",
             Endpoint::UsersById => "/api/v1/iam/users/{user_id}",
             Endpoint::UserEvents => "/api/v1/iam/users/{user_id}/events",
@@ -305,7 +307,7 @@ mod test {
             .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(client_paths, spec_paths);
-        assert_eq!(contract["operation_count"], 158);
+        assert_eq!(contract["operation_count"], 159);
     }
     use std::str::FromStr;
     use yare::parameterized;
@@ -320,6 +322,7 @@ mod test {
         meta_counts = { Endpoint::MetaCounts, "/api/v0/meta/counts" },
         meta_db = { Endpoint::MetaDb, "/api/v0/meta/db" },
         meta_tasks = { Endpoint::MetaTasks, "/api/v0/meta/tasks" },
+        admin_config = { Endpoint::AdminConfig, "/api/v1/admin/config" },
         get_user = { Endpoint::Users, "/api/v1/iam/users" },
         get_user_by_id = { Endpoint::UsersById, "/api/v1/iam/users/{user_id}" },
         user_events = { Endpoint::UserEvents, "/api/v1/iam/users/{user_id}/events" },
@@ -400,6 +403,7 @@ mod test {
         meta_counts = { Endpoint::MetaCounts, '/', "api/v0/meta/counts" },
         meta_db = { Endpoint::MetaDb, '/', "api/v0/meta/db" },
         meta_tasks = { Endpoint::MetaTasks, '/', "api/v0/meta/tasks" },
+        admin_config = { Endpoint::AdminConfig, '/', "api/v1/admin/config" },
         get_user = { Endpoint::Users, '/', "api/v1/iam/users" },
         get_user_by_id = { Endpoint::UsersById, '/', "api/v1/iam/users/{user_id}" },
         user_events = { Endpoint::UserEvents, '/', "api/v1/iam/users/{user_id}/events" },

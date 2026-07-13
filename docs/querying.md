@@ -97,17 +97,21 @@ let classes = client.classes().limit(100).all()?;
 ```
 
 Use `page()` when you need cursor metadata. `Page<T>` exposes `next_cursor`, the
-server's exact `total_count` when available, and convenience methods such as
+server's exact `total_count` when requested and returned, and convenience methods such as
 `len()`, `is_empty()`, `has_next()`, `iter()`, and `into_items()`. It dereferences
 to a slice for methods such as `first()` and can also be iterated directly:
 
 ```rust
-let page = client.classes().limit(25).page()?;
+let page = client.classes().limit(25).include_total(true).page()?;
 println!("{} total matches", page.total_count.unwrap_or(page.len() as u64));
 for class in page {
     println!("{}", class.name);
 }
 ```
+
+Paginated server endpoints compute an exact total by default. On latency-sensitive
+requests that do not use the count, call `include_total(false)`; the resulting
+`Page<T>::total_count` will normally be `None`.
 
 Event, history, task, import-result, and related-resource request builders also
 support `all()`. Automatic pagination returns `ApiError::PaginationCycle` if a

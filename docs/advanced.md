@@ -26,6 +26,18 @@ Normal responses and error previews have independent limits. Exceeding the
 normal limit returns `ApiError::ResponseTooLarge`; streaming export methods are
 the intended path for larger payloads.
 
+## Administrative Configuration
+
+Authenticated administrators can inspect the server's effective, redacted
+process configuration. Secret-bearing values are represented by `SecretStatus`,
+which reports only whether each value is configured.
+
+```rust
+let config = client.admin_config().await?;
+println!("page limit: {}", config.pagination.max_page_limit);
+println!("TLS enabled: {}", config.server.tls.enabled);
+```
+
 ## Lazy Pagination and Search
 
 Async resource and cursor builders provide `pages()` and `items()` streams.

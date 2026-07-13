@@ -1,5 +1,6 @@
 mod auth;
 mod baseurl;
+mod config;
 mod datetime;
 mod event;
 mod export;
@@ -21,6 +22,11 @@ use strum::{Display, EnumIter, EnumString};
 
 pub use auth::{AuthProvidersResponse, Credentials, LogoutTokenRequest, Token};
 pub use baseurl::BaseUrl;
+pub use config::{
+    AuthenticationConfig, ClientAllowlistStatus, DatabaseConfig, EventConfig, ExportConfig,
+    NetworkConfig, PaginationConfig, RemoteCallConfig, RunningConfig, SecretStatus, ServerConfig,
+    TaskConfig, TlsConfig,
+};
 pub use datetime::HubuumDateTime;
 pub use event::{
     EventDelivery, EventDeliveryHealthResponse, EventDeliveryQueueHealth, EventDeliveryStatus,

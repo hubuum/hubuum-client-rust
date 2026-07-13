@@ -25,8 +25,8 @@ use crate::types::{
     ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportRequest,
     ImportRunResult, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
     NewEventSubscription, ObjectHistory, PrincipalId, PrincipalSettings, ProbeResponse,
-    ReleaseRateLimitResponse, RemoteTargetHistory, SortDirection, TaskEventResponse, TaskId,
-    TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
+    ReleaseRateLimitResponse, RemoteTargetHistory, RunningConfig, SortDirection, TaskEventResponse,
+    TaskId, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
 };
 use crate::{ObjectRelation, QueryFilter};
@@ -618,6 +618,23 @@ impl Client<Authenticated> {
         .and_then(|opt| {
             opt.ok_or(ApiError::EmptyResult(
                 "META task state returned empty result".into(),
+            ))
+        })
+    }
+
+    /// Return the server's effective process configuration with secrets redacted.
+    pub async fn admin_config(&self) -> Result<RunningConfig, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, RunningConfig>(
+            reqwest::Method::GET,
+            &Endpoint::AdminConfig,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .await
+        .and_then(|opt| {
+            opt.ok_or(ApiError::EmptyResult(
+                "Admin config returned empty result".into(),
             ))
         })
     }
@@ -1844,6 +1861,11 @@ where
         self
     }
 
+    pub fn include_total(mut self, include_total: bool) -> Self {
+        self.inner = self.inner.include_total(include_total);
+        self
+    }
+
     pub fn sort<S: AsRef<str>>(mut self, field: S, direction: SortDirection) -> Self {
         self.inner = self.inner.sort(field, direction);
         self
@@ -2690,6 +2712,11 @@ impl TaskListRequest {
         self
     }
 
+    pub fn include_total(mut self, include_total: bool) -> Self {
+        self.inner = self.inner.include_total(include_total);
+        self
+    }
+
     pub fn sort<S: AsRef<str>>(mut self, field: S, direction: SortDirection) -> Self {
         self.inner = self.inner.sort(field, direction);
         self
@@ -3067,6 +3094,16 @@ impl<T: ApiResource> QueryOp<T> {
         self
     }
 
+    /// Control whether the server computes and returns an exact total count.
+    pub fn include_total(mut self, include_total: bool) -> Self {
+        shared::set_raw_query_param(
+            &mut self.query_params,
+            "include_total",
+            include_total.to_string(),
+        );
+        self
+    }
+
     pub fn cursor<V: ToString>(mut self, cursor: V) -> Self {
         shared::set_raw_query_param(&mut self.query_params, "cursor", cursor.to_string());
         self
@@ -3252,6 +3289,16 @@ impl<T> CursorRequest<T> {
 
     pub fn limit(mut self, limit: usize) -> Self {
         shared::set_raw_query_param(&mut self.query_params, "limit", limit.to_string());
+        self
+    }
+
+    /// Control whether the server computes and returns an exact total count.
+    pub fn include_total(mut self, include_total: bool) -> Self {
+        shared::set_raw_query_param(
+            &mut self.query_params,
+            "include_total",
+            include_total.to_string(),
+        );
         self
     }
 
@@ -3573,6 +3620,16 @@ impl<T: ApiResource> Resource<T> {
 
     pub fn limit(mut self, limit: usize) -> Self {
         shared::set_raw_query_param(&mut self.query_params, "limit", limit.to_string());
+        self
+    }
+
+    /// Control whether the server computes and returns an exact total count.
+    pub fn include_total(mut self, include_total: bool) -> Self {
+        shared::set_raw_query_param(
+            &mut self.query_params,
+            "include_total",
+            include_total.to_string(),
+        );
         self
     }
 

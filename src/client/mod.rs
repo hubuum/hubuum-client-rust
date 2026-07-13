@@ -156,6 +156,7 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::meta_counts;
             let _ = $module::Client::<Authenticated>::meta_db;
             let _ = $module::Client::<Authenticated>::meta_tasks;
+            let _ = $module::Client::<Authenticated>::admin_config;
             let _ = $module::Client::<Authenticated>::me;
             let _ = $module::Client::<Authenticated>::me_groups;
             let _ = $module::Client::<Authenticated>::me_groups_request;
@@ -185,6 +186,7 @@ mod parity_contract {
                 &str,
             >;
             let _ = $module::QueryOp::<Class>::limit;
+            let _ = $module::QueryOp::<Class>::include_total;
             let _ = $module::QueryOp::<Class>::cursor::<&str>;
             let _ = $module::QueryOp::<Class>::list;
             let _ = $module::QueryOp::<Class>::all;
@@ -213,6 +215,7 @@ mod parity_contract {
             let _ = $module::Resource::<Class>::update::<ClassId>;
             let _ = $module::Resource::<Class>::delete::<ClassId>;
             let _ = $module::Resource::<Class>::set_raw_param::<&str, &str>;
+            let _ = $module::Resource::<Class>::include_total;
             let _ = $module::Resource::<Class>::get::<ClassId>;
             let _ = $module::Resource::<Class>::get_by_name;
         };
@@ -231,8 +234,11 @@ mod parity_contract {
         ($module:ident) => {
             let _ = $module::EventListRequest::all;
             let _ = $module::HistoryRequest::<crate::types::ClassHistory>::all;
+            let _ = $module::HistoryRequest::<crate::types::ClassHistory>::include_total;
             let _ = $module::TaskListRequest::all;
+            let _ = $module::TaskListRequest::include_total;
             let _ = $module::CursorRequest::<crate::types::TaskEventResponse>::all;
+            let _ = $module::CursorRequest::<crate::types::TaskEventResponse>::include_total;
             let _ = $module::CursorRequest::<crate::types::TaskEventResponse>::set_query_param::<
                 &str,
                 &str,
