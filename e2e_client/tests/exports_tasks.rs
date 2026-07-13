@@ -24,7 +24,7 @@ fn e2e_export_submission_task_wait_output_and_task_listing() {
         missing_data_policy: None,
         query: None,
         scope: ExportScope {
-            class_id: Some(class_id.into()),
+            class_id: Some(class_id),
             kind: ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
@@ -71,7 +71,7 @@ fn e2e_export_submission_task_wait_output_and_task_listing() {
         .expect("export output should fetch");
     match output {
         ExportResult::Json(export) => {
-            assert_eq!(export.meta.scope.class_id, Some(class_id.into()));
+            assert_eq!(export.meta.scope.class_id, Some(class_id));
             assert!(export.meta.count >= 1);
         }
         other => panic!("expected JSON export output, got {other:?}"),
@@ -104,14 +104,14 @@ fn e2e_export_template_update_export_get_and_delete() {
         .client
         .export_templates()
         .create_raw(ExportTemplatePost {
-            collection_id: collection_id.into(),
+            collection_id,
             name: format!("{prefix}-template"),
             description: "e2e executable export template".to_string(),
             content_type: ExportContentType::TextPlain,
             template: "count={{ meta.count }}".to_string(),
             kind: ExportTemplateKind::Export,
             scope_kind: Some(ExportScopeKind::ObjectsInClass),
-            class_id: Some(class_id.into()),
+            class_id: Some(class_id),
             default_query: None,
             include: None,
             relation_context: None,

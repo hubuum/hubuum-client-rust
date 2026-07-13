@@ -8,12 +8,27 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [0.4.0] - 2026-07-13
 
+### Breaking
+
+- `RemoteCallResult::target_id` now uses `Option<RemoteTargetId>` instead of
+  `Option<i32>`. Intentionally polymorphic identifiers such as event entities
+  and invocation subjects remain raw integers.
+
 ### Added
 
 - Administrative effective-configuration retrieval through `admin_config()`,
   with typed redacted configuration models for async and blocking clients.
 - `include_total(bool)` controls on resource, cursor, history, and task list
   builders for opting into or out of exact pagination counts.
+- Fluent ID arguments accept borrowed typed IDs in addition to owned IDs and
+  raw integers, avoiding unnecessary copies or explicit conversions in generic
+  consumer code.
+
+### Changed
+
+- Internal and end-to-end test helpers carry resource-specific ID types through
+  workflows and unwrap them only at genuinely untyped wire boundaries.
+- CI uses the Node 24-compatible RustSec audit action.
 
 ## [0.3.0] - 2026-07-11
 

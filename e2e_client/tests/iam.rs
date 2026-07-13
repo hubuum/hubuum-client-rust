@@ -1,4 +1,4 @@
-use hubuum_client::{NewTokenRequest, ServiceAccountPost};
+use hubuum_client::{NewTokenRequest, PrincipalId, ServiceAccountPost};
 
 use e2e_client::harness::{E2EHarness, admin_context};
 
@@ -19,11 +19,9 @@ fn e2e_iam_user_group_membership_lifecycle() {
         .expect("adding user to group failed");
 
     let members = group.members().expect("group members should list");
-    assert!(
-        members
-            .iter()
-            .any(|member| member.principal_id == user.id && member.name == user.username)
-    );
+    assert!(members.iter().any(|member| {
+        member.principal_id == PrincipalId::from(user.id) && member.name == user.username
+    }));
 
     let selected_user = harness
         .client
@@ -45,7 +43,11 @@ fn e2e_iam_user_group_membership_lifecycle() {
     let members = group
         .members()
         .expect("group members should list after remove");
-    assert!(!members.iter().any(|member| member.principal_id == user.id));
+    assert!(
+        !members
+            .iter()
+            .any(|member| member.principal_id == PrincipalId::from(user.id))
+    );
 
     let selected_group = harness
         .client
@@ -126,7 +128,7 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
             identity_scope: None,
             name: format!("{}-service-account", user.username),
             description: Some("e2e service account".to_string()),
-            owner_group_id: admin_group_id.into(),
+            owner_group_id: admin_group_id,
         })
         .expect("service account should create");
     let service_account_handle = harness

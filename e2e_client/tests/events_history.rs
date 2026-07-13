@@ -30,7 +30,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
             ClassPatch {
                 name: Some(first_class_name.clone()),
                 description: Some("e2e class update for audit event".to_string()),
-                collection_id: collection_id.into(),
+                collection_id,
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -87,7 +87,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
             ClassPatch {
                 name: Some(second_class_name),
                 description: Some("e2e class update for delivery fanout".to_string()),
-                collection_id: collection_id.into(),
+                collection_id,
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -193,7 +193,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
             ClassPatch {
                 name: Some(updated_class_name.clone()),
                 description: Some("e2e class history update".to_string()),
-                collection_id: collection_id.into(),
+                collection_id,
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -208,8 +208,8 @@ fn e2e_events_and_history_cover_core_and_templates() {
             object_id,
             ObjectPatch {
                 name: Some(updated_object_name.clone()),
-                collection_id: Some(collection_id.into()),
-                hubuum_class_id: Some(class_id.into()),
+                collection_id: Some(collection_id),
+                hubuum_class_id: Some(class_id),
                 description: Some("e2e object history update".to_string()),
                 data: Some(json!({"source": "e2e-client", "history": true})),
             },
@@ -220,7 +220,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
         .client
         .export_templates()
         .create_raw(ExportTemplatePost {
-            collection_id: collection_id.into(),
+            collection_id,
             name: format!("{prefix}-template"),
             description: "e2e export template".to_string(),
             content_type: ExportContentType::TextPlain,
@@ -350,38 +350,38 @@ fn e2e_events_and_history_cover_core_and_templates() {
         .list()
         .expect("global event listing should support filters");
     assert!(events.iter().any(|event| event.entity_type == "class"
-        && event.entity_id == Some(class_id)
+        && event.entity_id == Some(class_id.get())
         && event.action == "updated"));
     assert!(events.iter().any(|event| event.entity_type == "object"
-        && event.entity_id == Some(object_id)
+        && event.entity_id == Some(object_id.get())
         && event.action == "updated"));
 
     let user_global_events = harness
         .client
         .events()
         .entity_type("user")
-        .entity_id(user.id)
+        .entity_id(user.id.get())
         .limit(20)
         .list()
         .expect("global event listing should filter by user entity");
     assert!(
         user_global_events
             .iter()
-            .any(|event| event.entity_type == "user" && event.entity_id == Some(user.id))
+            .any(|event| event.entity_type == "user" && event.entity_id == Some(user.id.get()))
     );
 
     let group_global_events = harness
         .client
         .events()
         .entity_type("group")
-        .entity_id(group_id)
+        .entity_id(group_id.get())
         .limit(20)
         .list()
         .expect("global event listing should filter by group entity");
     assert!(
         group_global_events
             .iter()
-            .any(|event| event.entity_type == "group" && event.entity_id == Some(group_id))
+            .any(|event| event.entity_type == "group" && event.entity_id == Some(group_id.get()))
     );
 
     let collection_events = harness
@@ -393,7 +393,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         collection_events
             .iter()
-            .any(|event| event.collection_id == Some(collection_id.into()))
+            .any(|event| event.collection_id == Some(collection_id))
     );
 
     let class_events = harness
@@ -406,7 +406,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         class_events
             .iter()
-            .any(|event| event.entity_id == Some(class_id) && event.action == "updated")
+            .any(|event| event.entity_id == Some(class_id.get()) && event.action == "updated")
     );
 
     let object_events = harness
@@ -419,7 +419,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         object_events
             .iter()
-            .any(|event| event.entity_id == Some(object_id) && event.action == "updated")
+            .any(|event| event.entity_id == Some(object_id.get()) && event.action == "updated")
     );
 
     let template_events = harness
@@ -431,7 +431,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         template_events
             .iter()
-            .any(|event| event.entity_id == Some(template.id.into()))
+            .any(|event| event.entity_id == Some(template.id.get()))
     );
 
     let user_events = harness
@@ -443,7 +443,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         user_events
             .iter()
-            .any(|event| event.entity_type == "user" && event.entity_id == Some(user.id))
+            .any(|event| event.entity_type == "user" && event.entity_id == Some(user.id.get()))
     );
 
     let group_events = harness
@@ -455,6 +455,6 @@ fn e2e_events_and_history_cover_core_and_templates() {
     assert!(
         group_events
             .iter()
-            .any(|event| event.entity_type == "group" && event.entity_id == Some(group_id))
+            .any(|event| event.entity_type == "group" && event.entity_id == Some(group_id.get()))
     );
 }

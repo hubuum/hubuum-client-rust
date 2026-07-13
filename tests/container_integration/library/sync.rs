@@ -377,7 +377,7 @@ fn sync_collection_has_group_permission_returns_expected(
     let target_group_id = if existing_group {
         admin_group_id
     } else {
-        i32::MAX
+        hubuum_client::GroupId::new(i32::MAX)
     };
     let has_permission = collection
         .has_group_permission(target_group_id, Permissions::ReadCollection)
@@ -733,7 +733,11 @@ fn sync_group_membership_add_remove_roundtrip() {
         .expect("sync group.add_member(user_id) failed");
 
     let members = group.members().expect("sync group.members() failed");
-    assert!(members.iter().any(|member| member.principal_id == user_id));
+    assert!(
+        members
+            .iter()
+            .any(|member| member.principal_id == hubuum_client::PrincipalId::from(user_id))
+    );
 
     group
         .remove_member(user_id)
@@ -744,7 +748,7 @@ fn sync_group_membership_add_remove_roundtrip() {
     assert!(
         !members_after
             .iter()
-            .any(|member| member.principal_id == user_id)
+            .any(|member| member.principal_id == hubuum_client::PrincipalId::from(user_id))
     );
 }
 
@@ -896,8 +900,8 @@ fn sync_object_update_changes_fields() {
             object_id,
             ObjectPatch {
                 name: Some(updated_name.clone()),
-                collection_id: Some(collection_id.into()),
-                hubuum_class_id: Some(class_id.into()),
+                collection_id: Some(collection_id),
+                hubuum_class_id: Some(class_id),
                 description: Some(updated_description.clone()),
                 data: Some(updated_data.clone()),
             },
@@ -955,7 +959,7 @@ fn sync_class_relation_create_delete_roundtrip() {
         .create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("sync-class-relation")),
             description: "integration class relation target".to_string(),
-            collection_id: collection_id.into(),
+            collection_id,
             json_schema: None,
             validate_schema: None,
         })
@@ -965,7 +969,7 @@ fn sync_class_relation_create_delete_roundtrip() {
         .client
         .class_relation()
         .create_raw(ClassRelationPost {
-            from_hubuum_class_id: class_a_id.into(),
+            from_hubuum_class_id: class_a_id,
             to_hubuum_class_id: class_b.id,
             forward_template_alias: None,
             reverse_template_alias: None,
@@ -1009,7 +1013,7 @@ fn sync_object_relation_create_delete_roundtrip() {
         .create_raw(ClassPost {
             name: format!("{}-class-b", unique_case_prefix("sync-object-relation")),
             description: "integration object relation class target".to_string(),
-            collection_id: collection_id.into(),
+            collection_id,
             json_schema: None,
             validate_schema: None,
         })
@@ -1024,7 +1028,7 @@ fn sync_object_relation_create_delete_roundtrip() {
     let (_, object_b_id) = create_sync_object(
         &harness.client,
         collection_id,
-        class_b.id.into(),
+        class_b.id,
         "sync-object-relation-b",
     )
     .expect("failed to create relation object B");
@@ -1032,7 +1036,7 @@ fn sync_object_relation_create_delete_roundtrip() {
         .client
         .class_relation()
         .create_raw(ClassRelationPost {
-            from_hubuum_class_id: class_a_id.into(),
+            from_hubuum_class_id: class_a_id,
             to_hubuum_class_id: class_b.id,
             forward_template_alias: None,
             reverse_template_alias: None,
@@ -1043,8 +1047,8 @@ fn sync_object_relation_create_delete_roundtrip() {
         .client
         .object_relation()
         .create_raw(ObjectRelationPost {
-            from_hubuum_object_id: object_a_id.into(),
-            to_hubuum_object_id: object_b_id.into(),
+            from_hubuum_object_id: object_a_id,
+            to_hubuum_object_id: object_b_id,
             class_relation_id: class_relation.id,
         })
         .expect("sync object_relation().create_raw() failed");
@@ -1152,7 +1156,7 @@ fn sync_query_sort_and_limit_returns_expected_class() {
         .create_raw(CollectionPost {
             name: format!("{prefix}-collection"),
             description: "query sort collection".to_string(),
-            group_id: admin_group_id.into(),
+            group_id: admin_group_id,
             parent_collection_id: None,
         })
         .expect("failed to create collection for sort/limit test");
@@ -1206,7 +1210,7 @@ fn sync_query_json_path_lt_filters_json_schema() {
         .create_raw(CollectionPost {
             name: format!("{prefix}-collection"),
             description: "query json collection".to_string(),
-            group_id: admin_group_id.into(),
+            group_id: admin_group_id,
             parent_collection_id: None,
         })
         .expect("failed to create collection for json query test");

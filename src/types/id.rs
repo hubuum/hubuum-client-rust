@@ -46,6 +46,12 @@ macro_rules! define_id {
             }
         }
 
+        impl From<&$name> for $name {
+            fn from(value: &$name) -> Self {
+                *value
+            }
+        }
+
         impl From<$name> for $inner {
             fn from(value: $name) -> Self {
                 value.0

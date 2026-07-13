@@ -287,6 +287,12 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             }
         }
 
+        impl From<&#id_name> for #id_name {
+            fn from(value: &#id_name) -> Self {
+                *value
+            }
+        }
+
         impl From<#id_name> for i32 {
             fn from(value: #id_name) -> Self {
                 value.0

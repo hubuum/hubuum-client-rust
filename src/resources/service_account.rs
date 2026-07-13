@@ -83,16 +83,16 @@ impl SyncHandle<ServiceAccount> {
     }
 
     pub fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_sync(self.client(), self.id().into())
+        principal_tokens_sync(self.client(), self.id())
     }
 
     /// Mint a new token for this service account. Returns the raw token, shown once.
     pub fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_sync(self.client(), self.id().into(), request)
+        principal_token_create_sync(self.client(), self.id(), request)
     }
 
     pub fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
-        principal_token_revoke_sync(self.client(), self.id().into(), token_id.into())
+        principal_token_revoke_sync(self.client(), self.id(), token_id)
     }
 }
 
@@ -123,15 +123,15 @@ impl AsyncHandle<ServiceAccount> {
     }
 
     pub async fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        principal_tokens_async(self.client(), self.id().into()).await
+        principal_tokens_async(self.client(), self.id()).await
     }
 
     /// Mint a new token for this service account. Returns the raw token, shown once.
     pub async fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
-        principal_token_create_async(self.client(), self.id().into(), request).await
+        principal_token_create_async(self.client(), self.id(), request).await
     }
 
     pub async fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
-        principal_token_revoke_async(self.client(), self.id().into(), token_id.into()).await
+        principal_token_revoke_async(self.client(), self.id(), token_id).await
     }
 }

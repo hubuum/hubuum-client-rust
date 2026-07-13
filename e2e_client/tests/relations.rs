@@ -20,7 +20,7 @@ fn e2e_class_and_object_relations_roundtrip() {
         .classes()
         .create_raw(ClassPost {
             name: format!("{prefix}-class-b"),
-            collection_id: collection_id.into(),
+            collection_id,
             description: "relation target class".to_string(),
             json_schema: None,
             validate_schema: None,
@@ -31,7 +31,7 @@ fn e2e_class_and_object_relations_roundtrip() {
         .objects(class_b.id)
         .create_raw(ObjectPost {
             name: format!("{prefix}-object-b"),
-            collection_id: collection_id.into(),
+            collection_id,
             hubuum_class_id: class_b.id,
             description: "relation target object".to_string(),
             data: Some(json!({ "role": "target" })),

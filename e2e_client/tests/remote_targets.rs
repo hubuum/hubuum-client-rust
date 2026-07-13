@@ -24,7 +24,7 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
         .client
         .remote_targets()
         .create_raw(NewRemoteTarget {
-            collection_id: collection_id.into(),
+            collection_id,
             name: format!("{prefix}-target"),
             description: "e2e remote target".to_string(),
             method: RemoteHttpMethod::Post,
@@ -86,10 +86,8 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
 
     let invoked = selected
         .invoke(
-            RemoteTargetInvokeRequest::new(RemoteInvocationSubject::Collection {
-                collection_id: collection_id.into(),
-            })
-            .parameters(json!({"case": prefix})),
+            RemoteTargetInvokeRequest::new(RemoteInvocationSubject::Collection { collection_id })
+                .parameters(json!({"case": prefix})),
         )
         .expect("remote target invocation should enqueue task");
     assert_eq!(invoked.kind, TaskKind::RemoteCall);

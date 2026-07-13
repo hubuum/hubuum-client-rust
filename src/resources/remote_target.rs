@@ -54,6 +54,18 @@ impl From<i32> for RemoteTargetId {
     }
 }
 
+impl From<&RemoteTargetId> for RemoteTargetId {
+    fn from(value: &RemoteTargetId) -> Self {
+        *value
+    }
+}
+
+impl From<RemoteTargetId> for i32 {
+    fn from(value: RemoteTargetId) -> Self {
+        value.0
+    }
+}
+
 impl PartialEq<i32> for RemoteTargetId {
     fn eq(&self, other: &i32) -> bool {
         self.0 == *other

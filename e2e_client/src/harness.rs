@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use hubuum_client::{
-    ApiError, Authenticated, BaseUrl, ClassPost, CollectionPost, Credentials, GroupPost,
-    ObjectPost, UserPost, blocking,
+    ApiError, Authenticated, BaseUrl, ClassId, ClassPost, CollectionId, CollectionPost,
+    Credentials, GroupId, GroupPost, ObjectId, ObjectPost, UserId, UserPost, blocking,
 };
 
 use crate::naming::unique_case_prefix;
@@ -18,7 +18,7 @@ pub struct E2EHarness {
 }
 
 pub struct E2EUser {
-    pub id: i32,
+    pub id: UserId,
     pub username: String,
     pub password: String,
 }
@@ -60,14 +60,14 @@ impl E2EHarness {
     pub fn create_collection_class_object(
         &self,
         case: &str,
-        admin_group_id: i32,
-    ) -> Result<(i32, i32, i32), ApiError> {
+        admin_group_id: GroupId,
+    ) -> Result<(CollectionId, ClassId, ObjectId), ApiError> {
         let prefix = unique_case_prefix(case);
 
         let collection = self.client.collections().create_raw(CollectionPost {
             name: format!("{prefix}-collection"),
             description: "e2e collection".to_string(),
-            group_id: admin_group_id.into(),
+            group_id: admin_group_id,
             parent_collection_id: None,
         })?;
 
@@ -87,7 +87,7 @@ impl E2EHarness {
             data: Some(serde_json::json!({ "source": "e2e-client" })),
         })?;
 
-        Ok((collection.id.into(), class.id.into(), object.id.into()))
+        Ok((collection.id, class.id, object.id))
     }
 
     pub fn create_user(&self, case: &str) -> Result<E2EUser, ApiError> {
@@ -103,13 +103,13 @@ impl E2EHarness {
         })?;
 
         Ok(E2EUser {
-            id: user.id.into(),
+            id: user.id,
             username,
             password,
         })
     }
 
-    pub fn create_group(&self, case: &str) -> Result<(String, i32), ApiError> {
+    pub fn create_group(&self, case: &str) -> Result<(String, GroupId), ApiError> {
         let prefix = unique_case_prefix(case);
         let groupname = format!("{prefix}-group");
         let group = self.client.groups().create_raw(GroupPost {
@@ -118,11 +118,13 @@ impl E2EHarness {
             description: Some("e2e group".to_string()),
         })?;
 
-        Ok((groupname, group.id.into()))
+        Ok((groupname, group.id))
     }
 }
 
-pub fn admin_context(client: &blocking::Client<Authenticated>) -> Result<(i32, i32), ApiError> {
+pub fn admin_context(
+    client: &blocking::Client<Authenticated>,
+) -> Result<(UserId, GroupId), ApiError> {
     let admin = client.users().get_by_name(ADMIN_USERNAME)?;
     let admin_id = admin.id();
 
@@ -140,5 +142,5 @@ pub fn admin_context(client: &blocking::Client<Authenticated>) -> Result<(i32, i
         Err(err) => return Err(err),
     };
 
-    Ok((admin_id.into(), admin_group_id.into()))
+    Ok((admin_id, admin_group_id))
 }
