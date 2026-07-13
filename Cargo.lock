@@ -650,7 +650,7 @@ dependencies = [
 
 [[package]]
 name = "hubuum_client"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "async-stream",
  "bytes",
@@ -682,7 +682,7 @@ dependencies = [
 
 [[package]]
 name = "hubuum_client_derive"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "proc-macro2",
  "quote",
