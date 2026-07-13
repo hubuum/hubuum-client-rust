@@ -6,6 +6,13 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Administrative effective-configuration retrieval through `admin_config()`,
+  with typed redacted configuration models for async and blocking clients.
+- `include_total(bool)` controls on resource, cursor, history, and task list
+  builders for opting into or out of exact pagination counts.
+
 ## [0.3.0] - 2026-07-11
 
 ### Breaking

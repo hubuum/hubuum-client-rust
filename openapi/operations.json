@@ -1,7 +1,7 @@
 {
   "api_version": "0.0.1",
   "openapi": "3.1.0",
-  "operation_count": 158,
+  "operation_count": 159,
   "operations": [
     {
       "method": "POST",
@@ -311,9 +311,33 @@
     },
     {
       "method": "GET",
+      "operation_id": "getApiV1AdminConfig",
+      "parameters": [],
+      "path": "/api/v1/admin/config",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
       "operation_id": "getApiV1Classes",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -448,6 +472,7 @@
       "parameters": [
         "path:class_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -543,6 +568,7 @@
       "parameters": [
         "path:class_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -638,6 +664,7 @@
         "query:cursor",
         "query:ignore_classes",
         "query:ignore_self_class",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -670,6 +697,7 @@
         "path:class_id",
         "path:object_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -701,6 +729,7 @@
       "parameters": [
         "path:class_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -729,6 +758,7 @@
       "parameters": [
         "path:class_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -788,6 +818,7 @@
       "parameters": [
         "path:class_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -1081,6 +1112,7 @@
         "path:class_id",
         "path:object_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -1144,6 +1176,7 @@
       "operation_id": "getApiV1Collections",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -1519,6 +1552,7 @@
         "path:collection_id",
         "path:permission",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -1547,6 +1581,7 @@
       "parameters": [
         "path:collection_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -1646,6 +1681,7 @@
       "parameters": [
         "path:collection_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -1907,6 +1943,7 @@
         "path:collection_id",
         "path:principal_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -2256,6 +2293,7 @@
       "operation_id": "getApiV1ExportTemplates",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -2478,6 +2516,7 @@
       "parameters": [
         "path:template_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -2627,6 +2666,7 @@
       "operation_id": "getApiV1IamGroups",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -2804,6 +2844,7 @@
       "parameters": [
         "path:group_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -2899,6 +2940,7 @@
       "operation_id": "getApiV1IamMeGroups",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -3031,6 +3073,7 @@
       "operation_id": "getApiV1IamMeTokens",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -3059,6 +3102,7 @@
       "parameters": [
         "path:principal_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -3220,6 +3264,7 @@
       "parameters": [
         "path:principal_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -3307,6 +3352,7 @@
       "operation_id": "getApiV1IamServiceAccounts",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -3474,6 +3520,7 @@
       "operation_id": "getApiV1IamUsers",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -3694,6 +3741,9 @@
         ],
         "409": [
           "application/json"
+        ],
+        "429": [
+          "application/json"
         ]
       },
       "security": [
@@ -3763,6 +3813,7 @@
       "operation_id": "getApiV1RelationsClasses",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -3866,6 +3917,7 @@
       "operation_id": "getApiV1RelationsObjects",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -4024,6 +4076,7 @@
       "parameters": [
         "path:remote_target_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -4308,6 +4361,7 @@
       "operation_id": "getApiV1Tasks",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:kind",
         "query:limit",
         "query:sort",
@@ -4419,21 +4473,25 @@
       "security": []
     }
   ],
-  "path_count": 108,
-  "schema_count": 161,
+  "path_count": 109,
+  "schema_count": 175,
   "schema_names": [
     "ApiErrorResponse",
     "AuthProvidersResponse",
+    "AuthenticationConfig",
     "ClassKey",
     "ClearRateLimitResponse",
+    "ClientAllowlistStatus",
     "Collection",
     "CollectionHistory",
     "CollectionID",
     "CollectionKey",
     "CountsResponse",
     "CurrentTokenMetadata",
+    "DatabaseConfig",
     "DbStateResponse",
     "EffectiveGroupPermission",
+    "EventConfig",
     "EventDelivery",
     "EventDeliveryHealthResponse",
     "EventDeliveryQueueHealth",
@@ -4451,6 +4509,7 @@
     "EventSubscriptionFilter",
     "EventWorkerHealth",
     "EventWorkerWakeupStats",
+    "ExportConfig",
     "ExportContentType",
     "ExportInclude",
     "ExportIncludeRelatedDirection",
@@ -4508,6 +4567,7 @@
     "ImportRequest",
     "ImportTaskDetails",
     "ImportTaskResultResponse",
+    "LoginRateLimitConfig",
     "LoginRateLimitConfigResponse",
     "LoginRateLimitEntryResponse",
     "LoginRateLimitStateResponse",
@@ -4516,6 +4576,7 @@
     "LogoutTokenRequest",
     "MeResponse",
     "MessageResponse",
+    "NetworkConfig",
     "NewCollectionWithAssignee",
     "NewEventSink",
     "NewEventSubscription",
@@ -4532,6 +4593,7 @@
     "NewUser",
     "ObjectKey",
     "ObjectsByClass",
+    "PaginationConfig",
     "Permission",
     "Permissions",
     "PrincipalCollectionPermissions",
@@ -4544,6 +4606,7 @@
     "RelatedObjectGraph",
     "ReleaseRateLimitResponse",
     "RemoteAuthConfig",
+    "RemoteCallConfig",
     "RemoteCallResult",
     "RemoteHttpMethod",
     "RemoteInvocationBodyOverride",
@@ -4554,7 +4617,11 @@
     "RemoteTargetID",
     "RemoteTargetInvokeRequest",
     "RemoteTargetSubjectType",
+    "RunningConfig",
+    "SecretStatus",
+    "ServerConfig",
     "ServiceAccountResponse",
+    "TaskConfig",
     "TaskDetails",
     "TaskEventResponse",
     "TaskKind",
@@ -4563,6 +4630,7 @@
     "TaskQueueStateResponse",
     "TaskResponse",
     "TaskStatus",
+    "TlsConfig",
     "UnifiedSearchBatchResponse",
     "UnifiedSearchDoneEvent",
     "UnifiedSearchErrorEvent",
@@ -4584,5 +4652,5 @@
     "UpdateUser",
     "UserResponse"
   ],
-  "spec_sha256": "40f9f9260ebea7a34dce281efeb1076ba1d3424185392c7e2dbcdc7e4573ca2b"
+  "spec_sha256": "ba6b289cf2f1d92cd8230e62c447291514e8e66835b7d245bd320d74884aeca7"
 }

@@ -129,6 +129,107 @@ fn group_permission_json(collection_id: i32, group_id: i32, groupname: &str) -> 
     })
 }
 
+fn running_config_json() -> serde_json::Value {
+    json!({
+        "server": {
+            "bind_ip": "127.0.0.1",
+            "bind_port": 8080,
+            "log_level": "info",
+            "actix_workers": 4,
+            "metrics_enabled": true,
+            "metrics_path": "/metrics",
+            "tls": {
+                "enabled": false,
+                "certificate_path_configured": false,
+                "private_key_path": { "configured": false },
+                "private_key_passphrase": { "configured": false },
+                "backend": null
+            }
+        },
+        "database": {
+            "url": { "configured": true },
+            "pool_size": 20,
+            "pool_acquire_timeout_ms": 5000,
+            "statement_timeout_ms": 30000
+        },
+        "tasks": {
+            "workers": 4,
+            "poll_interval_ms": 250,
+            "import_max_active_per_user": 2,
+            "export_max_active_per_user": 3,
+            "remote_call_max_active_per_user": 4
+        },
+        "events": {
+            "fanout_workers": 2,
+            "fanout_batch_size": 100,
+            "fanout_poll_interval_ms": 250,
+            "fanout_lock_timeout_ms": 30000,
+            "delivery_workers": 2,
+            "delivery_batch_size": 100,
+            "delivery_poll_interval_ms": 250,
+            "delivery_lock_timeout_ms": 30000,
+            "delivery_transport_timeout_ms": 10000,
+            "delivery_retry_backoff_base_ms": 1000,
+            "delivery_retry_backoff_max_ms": 60000,
+            "delivery_max_attempts": 5,
+            "retention_purge_enabled": true,
+            "retention_days": 30,
+            "delivery_retention_days": 7,
+            "retention_purge_interval_seconds": 3600,
+            "retention_purge_batch_size": 1000,
+            "retention_file_archive_enabled": false,
+            "retention_archive_path_configured": false
+        },
+        "exports": {
+            "output_retention_hours": 24,
+            "output_cleanup_interval_seconds": 3600,
+            "template_recursion_limit": 10,
+            "template_fuel": 100000,
+            "template_max_objects": 10000,
+            "max_output_bytes": 16777216,
+            "stage_timeout_ms": 30000,
+            "database_statement_timeout_ms": 30000
+        },
+        "remote_calls": {
+            "timeout_ms": 10000,
+            "max_response_bytes": 1048576,
+            "allow_private_targets": false
+        },
+        "authentication": {
+            "token_lifetime_hours": 24,
+            "stable_token_hash_key_configured": true,
+            "admin_groupname": "admin",
+            "admin_identity_scope": "local",
+            "provider_config_path": { "configured": true },
+            "login_rate_limit": {
+                "enabled": true,
+                "max_attempts": 5,
+                "max_attempts_per_ip": 20,
+                "max_attempts_per_subnet": 100,
+                "window_seconds": 300,
+                "backoff_base_seconds": 300,
+                "backoff_max_seconds": 86400,
+                "subnet_prefix_v4": 24,
+                "subnet_prefix_v6": 64
+            }
+        },
+        "pagination": {
+            "default_page_limit": 100,
+            "max_page_limit": 1000,
+            "max_transitive_depth": 10
+        },
+        "network": {
+            "trust_ip_headers": false,
+            "trusted_proxy_hops": 0,
+            "trusted_proxy_networks": 0,
+            "client_allowlist": {
+                "allows_any": true,
+                "network_count": 0
+            }
+        }
+    })
+}
+
 fn export_template_json(template_id: i32, name: &str) -> serde_json::Value {
     json!({
         "id": template_id,
@@ -1069,6 +1170,7 @@ fn sync_resource_all_auto_paginates_and_page_iterates() {
         when.method(GET)
             .path("/api/v1/classes")
             .query_param("name__equals", "iterated")
+            .query_param("include_total", "true")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
@@ -1095,6 +1197,7 @@ fn sync_resource_all_auto_paginates_and_page_iterates() {
         .classes()
         .name()
         .eq("iterated")
+        .include_total(true)
         .page()
         .expect("classes().page() should succeed");
     assert_eq!(page.len(), 1);
@@ -1486,6 +1589,15 @@ fn sync_supports_meta_endpoints() {
             }));
     });
 
+    let admin_config = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/admin/config")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(running_config_json());
+    });
+
     let client = sync_client(&server);
     let counts_response = client
         .meta_counts()
@@ -1506,8 +1618,16 @@ fn sync_supports_meta_endpoints() {
     assert_eq!(db_response.db_size, 1024);
     assert!(db_response.last_vacuum_time.is_some());
 
+    let config = client
+        .admin_config()
+        .expect("admin_config request should succeed");
+    assert_eq!(config.server.bind_port, 8080);
+    assert!(config.database.url.configured);
+    assert_eq!(config.pagination.max_page_limit, 1000);
+
     counts.assert_calls(1);
     db.assert_calls(1);
+    admin_config.assert_calls(1);
 }
 
 #[tokio::test]
@@ -1547,6 +1667,15 @@ async fn async_supports_meta_endpoints() {
             }));
     });
 
+    let admin_config = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/admin/config")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(running_config_json());
+    });
+
     let client = async_client(&server).await;
     let counts_response = client
         .meta_counts()
@@ -1571,8 +1700,17 @@ async fn async_supports_meta_endpoints() {
     assert_eq!(db_response.db_size, 1024);
     assert!(db_response.last_vacuum_time.is_some());
 
+    let config = client
+        .admin_config()
+        .await
+        .expect("admin_config request should succeed");
+    assert_eq!(config.server.bind_port, 8080);
+    assert!(config.authentication.stable_token_hash_key_configured);
+    assert_eq!(config.network.client_allowlist.network_count, 0);
+
     counts.assert_calls(1);
     db.assert_calls(1);
+    admin_config.assert_calls(1);
 }
 
 #[test]
