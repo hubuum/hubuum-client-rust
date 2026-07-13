@@ -28,6 +28,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 - Internal and end-to-end test helpers carry resource-specific ID types through
   workflows and unwrap them only at genuinely untyped wire boundaries.
+- CI uses the Node 24-compatible RustSec audit action.
 
 ## [0.3.0] - 2026-07-11
 
