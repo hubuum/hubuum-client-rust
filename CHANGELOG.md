@@ -6,6 +6,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-13
+
 ### Added
 
 - Administrative effective-configuration retrieval through `admin_config()`,
