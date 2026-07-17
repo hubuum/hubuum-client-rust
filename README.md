@@ -2,7 +2,7 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.5.0 targets Hubuum server v0.0.2. The exact tested image and
+`hubuum_client` 0.5.1 targets Hubuum server v0.0.2. The exact tested image and
 the history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
@@ -25,6 +25,7 @@ the history for earlier client releases are recorded in
   ownership, and disambiguate scoped group references in imports.
 - **Principal settings**: get, replace, merge-patch, or reset object-only preferences for the current or an explicitly selected principal.
 - **Health and readiness probes**: unauthenticated `healthz()` and `readyz()` calls are available for operational checks.
+- **Prometheus metrics**: fetch exposition text without bearer authentication from the default or administratively configured metrics path.
 
 ## Installation
 
@@ -32,14 +33,14 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.5.0"
+hubuum_client = "0.5.1"
 ```
 
 Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.5.0", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.5.1", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
@@ -199,6 +200,15 @@ let settings = client
     .settings()
     .patch(&serde_json::json!({ "theme": "dark" }))
     .await?;
+```
+
+Operational clients can scrape Prometheus text before authentication. For a
+non-default path, use the value exposed by the read-only administrative config:
+
+```rust
+let metrics = client.metrics().await?;
+let config = admin_client.admin_config().await?;
+let configured_metrics = client.metrics_at(&config.server.metrics_path).await?;
 ```
 
 ## More Documentation

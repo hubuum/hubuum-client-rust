@@ -113,6 +113,7 @@ mod parity_contract {
             let _ = $module::Client::<Unauthenticated>::auth_providers;
             let _ = $module::Client::<Unauthenticated>::healthz;
             let _ = $module::Client::<Unauthenticated>::readyz;
+            let _ = $module::Client::<Unauthenticated>::metrics;
         };
     }
 
@@ -167,6 +168,7 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::meta_db;
             let _ = $module::Client::<Authenticated>::meta_tasks;
             let _ = $module::Client::<Authenticated>::admin_config;
+            let _ = $module::Client::<Authenticated>::metrics;
             let _ = $module::Client::<Authenticated>::me;
             let _ = $module::Client::<Authenticated>::me_groups;
             let _ = $module::Client::<Authenticated>::me_groups_request;

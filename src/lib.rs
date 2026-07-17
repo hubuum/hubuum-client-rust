@@ -5,7 +5,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.5.0 targets Hubuum server v0.0.2. See the repository's
+//! Version 0.5.1 targets Hubuum server v0.0.2. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -70,7 +70,7 @@ pub use types::{
     ComputedFieldListResponse, ComputedFieldMutationResponse, ComputedFieldOperation,
     ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedFieldVisibility,
     ComputedObject, ComputedObjectScopes, ComputedResultType, ComputedScope, CountsResponse,
-    Credentials, DatabaseConfig, DbStateResponse, EventConfig, EventDelivery,
+    Credentials, DEFAULT_METRICS_PATH, DatabaseConfig, DbStateResponse, EventConfig, EventDelivery,
     EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryQueueHealth, EventDeliveryStatus,
     EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
     EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSubscription,

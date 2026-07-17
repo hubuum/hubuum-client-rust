@@ -38,10 +38,10 @@ pub use computed::{
     PersonalComputedFieldDefinitionRequest, SharedComputedScope,
 };
 pub use config::{
-    AuthenticationConfig, BackupConfig, ClientAllowlistStatus, DatabaseConfig, EventConfig,
-    ExportConfig, NetworkConfig, PaginationConfig, PermissionConfig, RemoteCallConfig,
-    RestoreConfig, RunningConfig, RunningLoginRateLimitConfig, SecretStatus, ServerConfig,
-    TaskConfig, TlsConfig,
+    AuthenticationConfig, BackupConfig, ClientAllowlistStatus, DEFAULT_METRICS_PATH,
+    DatabaseConfig, EventConfig, ExportConfig, NetworkConfig, PaginationConfig, PermissionConfig,
+    RemoteCallConfig, RestoreConfig, RunningConfig, RunningLoginRateLimitConfig, SecretStatus,
+    ServerConfig, TaskConfig, TlsConfig,
 };
 pub use datetime::HubuumDateTime;
 pub use event::{

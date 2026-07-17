@@ -63,6 +63,21 @@ fn sync_meta_db_available_connections_non_negative() {
 
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
+fn sync_v002_metrics_returns_prometheus_text_without_authentication() {
+    let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
+    let client = blocking::Client::try_new(harness.client.base_url().clone())
+        .expect("unauthenticated metrics client should build");
+
+    let metrics = client
+        .metrics()
+        .expect("v0.0.2 metrics endpoint should return Prometheus text");
+
+    assert!(metrics.contains("# TYPE hubuum_http_requests_total counter"));
+    assert!(metrics.contains("hubuum_inventory_entities"));
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
 fn sync_v002_admin_config_backup_and_restore_staging_roundtrip() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
 

@@ -6,6 +6,20 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-17
+
+### Added
+
+- Unauthenticated async and blocking Prometheus metrics retrieval through
+  `metrics()` for the server default and `metrics_at(path)` for the path exposed
+  by the read-only administrative configuration.
+
+### Changed
+
+- This release explicitly targets Hubuum server v0.0.2 and adds live
+  coverage for its runtime-configurable metrics route, which is intentionally
+  outside the server's OpenAPI document.
+
 ## [0.5.0] - 2026-07-17
 
 ### Added

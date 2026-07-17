@@ -227,6 +227,56 @@ impl<S> Client<S> {
         &self.options.retry_policy
     }
 
+    /// Fetch Prometheus exposition text from the server's default `/metrics`
+    /// path without bearer authentication.
+    pub async fn metrics(&self) -> Result<String, ApiError> {
+        self.metrics_at(crate::types::DEFAULT_METRICS_PATH).await
+    }
+
+    /// Fetch Prometheus exposition text from a configured metrics path without
+    /// bearer authentication.
+    ///
+    /// Use `RunningConfig::server.metrics_path` when the server does not use
+    /// its default `/metrics` path. The path remains constrained to the
+    /// configured base URL.
+    pub async fn metrics_at(&self, path: impl AsRef<str>) -> Result<String, ApiError> {
+        let url = shared::build_relative_url(&self.base_url, path.as_ref(), &[])?;
+        let request_url = url.to_string();
+
+        if let Some(transport) = &self.transport {
+            let plan = shared::build_unauthenticated_request_plan(
+                &reqwest::Method::GET,
+                &request_url,
+                &[],
+            )?;
+            let response = self
+                .execute_transport_with_retry(
+                    &reqwest::Method::GET,
+                    false,
+                    transport.as_ref(),
+                    plan,
+                )
+                .await?;
+            return Ok(shared::process_transport_response(
+                &reqwest::Method::GET,
+                &request_url,
+                response,
+                &self.options,
+            )?
+            .body);
+        }
+
+        debug!("GET {}", shared::redacted_url_for_log(&request_url));
+        let request = self.http_client.get(&request_url);
+        let response = self
+            .send_with_retry(&reqwest::Method::GET, false, request)
+            .await?;
+        let response = self
+            .check_success(&reqwest::Method::GET, &request_url, response)
+            .await?;
+        shared::read_async_body(response, self.options.max_response_body_bytes).await
+    }
+
     /// Inspect a staged restore using only its one-time capability.
     ///
     /// This is available in both authentication states because a successful

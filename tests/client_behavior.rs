@@ -18,6 +18,10 @@ use serde_json::json;
 const USERNAME: &str = "tester";
 const PASSWORD: &str = "secret";
 const TOKEN: &str = "integration-token";
+const PROMETHEUS_METRICS: &str = concat!(
+    "# TYPE hubuum_http_requests_total counter\n",
+    "hubuum_http_requests_total{method=\"GET\",route=\"/metrics\",status_code=\"200\",status_family=\"2xx\"} 1\n",
+);
 
 fn ts() -> &'static str {
     "2024-01-01T00:00:00"
@@ -4306,6 +4310,91 @@ fn sync_healthz_probe_succeeds_without_auth() {
     assert_eq!(probe.status, "ok");
 
     healthz.assert_calls(1);
+}
+
+#[rstest::rstest]
+#[case::default_unauthenticated(false, true, "/metrics")]
+#[case::default_authenticated(true, true, "/metrics")]
+#[case::custom_unauthenticated(false, false, "/internal/metrics")]
+#[case::custom_authenticated(true, false, "/internal/metrics")]
+fn sync_metrics_supports_auth_states_and_configured_paths(
+    #[case] authenticated: bool,
+    #[case] use_default_path: bool,
+    #[case] expected_path: &str,
+) {
+    let server = MockServer::start();
+    let metrics = server.mock(|when, then| {
+        when.method(GET)
+            .path(expected_path)
+            .header_missing("authorization");
+        then.status(200)
+            .header("content-type", "text/plain; version=0.0.4; charset=utf-8")
+            .body(PROMETHEUS_METRICS);
+    });
+
+    let body = if authenticated {
+        mock_login(&server);
+        let client = sync_client(&server);
+        if use_default_path {
+            client.metrics()
+        } else {
+            client.metrics_at(expected_path)
+        }
+    } else {
+        let client = blocking::Client::from_url(server.base_url()).expect("client should build");
+        if use_default_path {
+            client.metrics()
+        } else {
+            client.metrics_at(expected_path)
+        }
+    }
+    .expect("metrics scrape should succeed");
+
+    assert_eq!(body, PROMETHEUS_METRICS);
+    metrics.assert_calls(1);
+}
+
+#[rstest::rstest]
+#[case::default_unauthenticated(false, true, "/metrics")]
+#[case::default_authenticated(true, true, "/metrics")]
+#[case::custom_unauthenticated(false, false, "/internal/metrics")]
+#[case::custom_authenticated(true, false, "/internal/metrics")]
+#[tokio::test]
+async fn async_metrics_supports_auth_states_and_configured_paths(
+    #[case] authenticated: bool,
+    #[case] use_default_path: bool,
+    #[case] expected_path: &str,
+) {
+    let server = MockServer::start();
+    let metrics = server.mock(|when, then| {
+        when.method(GET)
+            .path(expected_path)
+            .header_missing("authorization");
+        then.status(200)
+            .header("content-type", "text/plain; version=0.0.4; charset=utf-8")
+            .body(PROMETHEUS_METRICS);
+    });
+
+    let body = if authenticated {
+        mock_login(&server);
+        let client = async_client(&server).await;
+        if use_default_path {
+            client.metrics().await
+        } else {
+            client.metrics_at(expected_path).await
+        }
+    } else {
+        let client = Client::from_url(server.base_url()).expect("client should build");
+        if use_default_path {
+            client.metrics().await
+        } else {
+            client.metrics_at(expected_path).await
+        }
+    }
+    .expect("metrics scrape should succeed");
+
+    assert_eq!(body, PROMETHEUS_METRICS);
+    metrics.assert_calls(1);
 }
 
 #[test]

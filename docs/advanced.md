@@ -44,6 +44,29 @@ The endpoint is read-only. Secret values are never returned; fields such as
 `treetop_url`, `database.url`, and `provider_config_path` expose configuration
 status only.
 
+## Runtime Metrics
+
+Prometheus exposition text is available without bearer authentication. The
+default server path is `/metrics`:
+
+```rust
+let metrics = client.metrics().await?;
+println!("{metrics}");
+```
+
+The server may configure a different literal path. Administrators can discover
+it through the read-only effective configuration endpoint and pass it directly
+to `metrics_at`:
+
+```rust
+let config = client.admin_config().await?;
+let metrics = client.metrics_at(&config.server.metrics_path).await?;
+```
+
+Both methods are available before and after login and deliberately omit the
+`Authorization` header. The server still applies its client allowlist. Scrapes
+use the client's normal retry and response-body limit policies.
+
 ## Lazy Pagination and Search
 
 Async resource and cursor builders provide `pages()` and `items()` streams.

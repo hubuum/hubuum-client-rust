@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+/// Default path of the Hubuum Prometheus scrape endpoint.
+pub const DEFAULT_METRICS_PATH: &str = "/metrics";
+
 /// Redacted effective process configuration returned by the administrative
 /// configuration endpoint.
 #[non_exhaustive]
