@@ -649,7 +649,7 @@ fn sync_meta_login_rate_limit_state() {
             .json_body(json!({
                 "config": {"enabled":true,"max_attempts":5,"max_attempts_per_ip":20,
                     "max_attempts_per_subnet":100,"window_seconds":300,"backoff_base_seconds":300,
-                    "backoff_max_seconds":86400,"subnet_prefix_v4":24,"subnet_prefix_v6":64},
+                    "backoff_max_seconds":86400,"subnet_prefix_v4":24,"subnet_prefix_v6":64,"backend":"memory"},
                 "tracked_entries":0,"locked_entries":0,"returned_entries":0,"entries":[]
             }));
     });
@@ -707,7 +707,7 @@ async fn async_meta_login_rate_limit_state() {
             .json_body(json!({
                 "config": {"enabled":true,"max_attempts":5,"max_attempts_per_ip":20,
                     "max_attempts_per_subnet":100,"window_seconds":300,"backoff_base_seconds":300,
-                    "backoff_max_seconds":86400,"subnet_prefix_v4":24,"subnet_prefix_v6":64},
+                    "backoff_max_seconds":86400,"subnet_prefix_v4":24,"subnet_prefix_v6":64,"backend":"memory"},
                 "tracked_entries":1,"locked_entries":1,"returned_entries":1,
                 "entries":[{"id":"x","scope":"user_ip","identifier":"alice@1.2.3.4",
                     "attempts":6,"locked":true,"locked_for_seconds":120,"lockout_level":1}]

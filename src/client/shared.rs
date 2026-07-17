@@ -201,6 +201,23 @@ pub(crate) fn build_request_plan<T: Serialize>(
     Ok(plan)
 }
 
+pub(crate) fn build_unauthenticated_request_plan(
+    method: &Method,
+    request_url: &str,
+    headers: &[(&str, String)],
+) -> Result<super::transport::RequestPlan, ApiError> {
+    let url = url::Url::parse(request_url)?;
+    let mut plan = super::transport::RequestPlan::new(method.clone(), url);
+    for (name, value) in headers {
+        let name = reqwest::header::HeaderName::from_bytes(name.as_bytes())
+            .map_err(|error| ApiError::Transport(format!("invalid header name: {error}")))?;
+        let value = reqwest::header::HeaderValue::from_str(value)
+            .map_err(|error| ApiError::Transport(format!("invalid header value: {error}")))?;
+        plan.headers.insert(name, value);
+    }
+    Ok(plan)
+}
+
 pub(crate) fn process_transport_response(
     method: &Method,
     request_url: &str,

@@ -5,7 +5,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.4.1 targets Hubuum server v0.0.2. See the repository's
+//! Version 0.5.0 targets Hubuum server v0.0.2. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -61,34 +61,43 @@ pub use client::{Client, CollectionScope, ExportOutputStream, ItemStream, PageSt
 pub use errors::{ApiError, ApiErrorResponse};
 pub use resources::*;
 pub use types::{
-    AuthProvidersResponse, AuthenticationConfig, BaseUrl, CURRENT_IMPORT_VERSION, ClassHistory,
-    ClassKey, ClassParams, ClearRateLimitResponse, ClientAllowlistStatus, CollectionHistory,
-    CollectionKey, CountsResponse, Credentials, DatabaseConfig, DbStateResponse, EventConfig,
-    EventDelivery, EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryQueueHealth,
-    EventDeliveryStatus, EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth,
-    EventResponse, EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKind,
-    EventSubscription, EventSubscriptionDeliveryHealth, EventSubscriptionFilter,
-    EventSubscriptionId, EventWorkerHealth, EventWorkerWakeupStats, ExportConfig,
-    ExportContentType, ExportInclude, ExportIncludeRelatedDirection, ExportIncludeRelatedObject,
-    ExportIncludeRelatedSort, ExportJsonResponse, ExportLimits, ExportMeta,
-    ExportMissingDataPolicy, ExportRelationContext, ExportRequest, ExportResult, ExportScope,
-    ExportScopeKind, ExportTaskDetails, ExportTemplateHistory, ExportTemplateKind,
-    ExportTemplateRunRequest, ExportWarning, GroupKey, HistoryId, HistoryMetadata, ImportAtomicity,
-    ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
-    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportGraph, ImportMode,
-    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportRequest,
-    ImportResultId, ImportRunResult, ImportTaskDetails, ImportTaskResultResponse,
+    AuthProvidersResponse, AuthenticationConfig, BackupConfig, BackupDocument, BackupHistory,
+    BackupManifest, BackupRequest, BackupState, BackupTaskDetails, BaseUrl, CURRENT_BACKUP_VERSION,
+    CURRENT_IMPORT_VERSION, ClassComputationState, ClassHistory, ClassKey, ClassParams,
+    ClearRateLimitResponse, ClientAllowlistStatus, CollectionHistory, CollectionKey,
+    ComputedFieldDefinition, ComputedFieldDefinitionId, ComputedFieldDefinitionPatch,
+    ComputedFieldDefinitionRequest, ComputedFieldDeleteResponse, ComputedFieldError,
+    ComputedFieldListResponse, ComputedFieldMutationResponse, ComputedFieldOperation,
+    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedFieldVisibility,
+    ComputedObject, ComputedObjectScopes, ComputedResultType, ComputedScope, CountsResponse,
+    Credentials, DatabaseConfig, DbStateResponse, EventConfig, EventDelivery,
+    EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryQueueHealth, EventDeliveryStatus,
+    EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
+    EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSubscription,
+    EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventSubscriptionId,
+    EventWorkerHealth, EventWorkerWakeupStats, ExportConfig, ExportContentType, ExportInclude,
+    ExportIncludeRelatedDirection, ExportIncludeRelatedObject, ExportIncludeRelatedSort,
+    ExportJsonResponse, ExportLimits, ExportMeta, ExportMissingDataPolicy, ExportRelationContext,
+    ExportRequest, ExportResult, ExportScope, ExportScopeKind, ExportTaskDetails,
+    ExportTemplateHistory, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning, GroupKey,
+    HistoryId, HistoryMetadata, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
+    ImportCollectionInput, ImportCollectionPermissionInput, ImportCollisionPolicy, ImportGraph,
+    ImportMode, ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy,
+    ImportRequest, ImportResultId, ImportRunResult, ImportTaskDetails, ImportTaskResultResponse,
     LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, LoginRateLimitConfig,
     LoginRateLimitEntry, LoginRateLimitState, LogoutTokenRequest, NetworkConfig, NewEventSink,
-    NewEventSubscription, ObjectHistory, ObjectKey, PaginationConfig, PermissionId, Permissions,
-    PrincipalId, PrincipalSettings, ProbeResponse, ReleaseRateLimitResponse, RemoteCallConfig,
-    RemoteCallResultId, RemoteTargetHistory, RunningConfig, SecretStatus, ServerConfig, TaskConfig,
-    TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks, TaskProgress,
-    TaskQueueStateResponse, TaskResponse, TaskStatus, TlsConfig, Token, TokenId, TypedObject,
-    UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
-    UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
-    UserParams,
+    NewEventSubscription, ObjectHistory, ObjectKey, PaginationConfig, PermissionConfig,
+    PermissionId, Permissions, PersonalComputedFieldDefinitionRequest, PrincipalId,
+    PrincipalSettings, ProbeResponse, RESTORE_CONFIRMATION_PHRASE, ReleaseRateLimitResponse,
+    RemoteCallConfig, RemoteCallResultId, RemoteTargetHistory, RestoreCapability, RestoreConfig,
+    RestoreConfirmRequest, RestoreId, RestoreJobStatus, RestoreStageResponse,
+    RestoreValidationSummary, RunningConfig, RunningLoginRateLimitConfig, SecretStatus,
+    ServerConfig, SharedComputedScope, TaskConfig, TaskDetails, TaskEventId, TaskEventResponse,
+    TaskId, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
+    TlsConfig, Token, TokenId, TypedObject, UnifiedSearchBatchResponse, UnifiedSearchDoneEvent,
+    UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext,
+    UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink,
+    UpdateEventSubscription, UserParams,
 };
 
 #[cfg(feature = "blocking")]

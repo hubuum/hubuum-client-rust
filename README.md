@@ -2,7 +2,7 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.4.1 targets Hubuum server v0.0.2. The exact tested image and
+`hubuum_client` 0.5.0 targets Hubuum server v0.0.2. The exact tested image and
 the history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
@@ -16,7 +16,9 @@ the history for earlier client releases are recorded in
 - **Lazy and bounded I/O**: stream cursor pages, individual items, search events, and export bytes without buffering entire result sets.
 - **Safe extension points**: inject a custom or mock transport, issue authenticated requests to newly added relative routes, and configure retries and response-size limits.
 - **Typed object payloads**: decode object `data` into application structs and optionally derive JSON Schema with the `typed-schemas` feature.
-- **Exports, export templates, and imports**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
+- **Exports, imports, and full-system backups**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
+- **Administrative recovery**: inspect redacted runtime configuration and stage, confirm, or inspect destructive restores with explicit capability handling.
+- **Computed fields**: manage shared class definitions and personal definitions, preview expressions, request rebuilds, and read enriched objects.
 - **Principal-centric identity**: users and service accounts are principals, with group membership, scoped tokens, and effective permission helpers.
 - **Scoped identity providers**: discover available providers before login,
   authenticate against named scopes, filter principals by scope, inspect provider
@@ -30,14 +32,14 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.4.1"
+hubuum_client = "0.5.0"
 ```
 
 Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.4.1", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.5.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
@@ -140,6 +142,40 @@ let imported = client
 println!("{} changes applied", imported.succeeded());
 ```
 
+Backups use the same task pattern. Restore confirmation is intentionally a
+separate, destructive step and status inspection uses its one-time capability
+instead of bearer authentication:
+
+```rust
+let document = client
+    .backups()
+    .run(hubuum_client::BackupRequest::default())
+    .send()
+    .await?;
+
+let staged = client.restores().stage(&document).await?;
+let capability = staged.restore_capability.clone().expect("one-time capability");
+let status = client.restore_status(staged.id, &capability).await?;
+```
+
+Shared and personal computed fields use typed definitions. Enriched object
+reads opt into both computed scopes:
+
+```rust
+use hubuum_client::{ComputedFieldDefinitionRequest, ComputedFieldOperation, ComputedResultType};
+
+let definition = ComputedFieldDefinitionRequest::new(
+    "total",
+    "Total",
+    ComputedFieldOperation::Sum { paths: vec!["/subtotal".into(), "/tax".into()] },
+    ComputedResultType::Number,
+);
+client.computed_fields(class_id).create(definition).await?;
+
+let object = client.computed_object(class_id, object_id).await?;
+println!("{:?}", object.computed.shared.values.get("total"));
+```
+
 Unified search is exposed through `client.search(...)`:
 
 ```rust
@@ -170,6 +206,7 @@ let settings = client
 - [Client setup](docs/client-setup.md): async and blocking initialization, token login, and builder options.
 - [Querying resources](docs/querying.md): resource CRUD, typed filters, pagination, related-object traversal, and error details.
 - [Exports, imports, and tasks](docs/exports-and-tasks.md): export templates, rendered output, task polling, and import results.
+- [Backups, restores, and computed fields](docs/backups-and-computed-fields.md): administrative recovery, capability handling, definition lifecycles, previews, rebuilds, and enriched reads.
 - [Advanced usage](docs/advanced.md): lazy streams, retries, body limits, typed payloads, scoped navigation, mock transports, and raw requests.
 - [Principal settings](docs/principal-settings.md): current-principal and administrative preference management with JSON Merge Patch.
 - [Scoped authentication](docs/scoped-auth.md): provider-scoped login, identity

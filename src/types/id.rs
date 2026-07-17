@@ -82,3 +82,5 @@ define_id!(EventDeliveryId, i64);
 define_id!(RemoteCallResultId, i32);
 define_id!(HistoryId, i64);
 define_id!(PermissionId, i32);
+define_id!(ComputedFieldDefinitionId, i32);
+define_id!(RestoreId, i64);

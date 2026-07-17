@@ -18,16 +18,22 @@ use crate::resources::{
     RemoteTargetId, ServiceAccount,
 };
 use crate::types::{
-    AuthProvidersResponse, BaseUrl, ClassHistory, ClearRateLimitResponse, CollectionHistory,
-    CountsResponse, Credentials, DbStateResponse, EventDelivery, EventDeliveryHealthResponse,
-    EventDeliveryId, EventDeliveryUpdateResponse, EventResponse, EventSubscription,
-    EventSubscriptionId, ExportContentType, ExportJsonResponse, ExportRequest, ExportResult,
-    ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportRequest,
-    ImportRunResult, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
-    NewEventSubscription, ObjectHistory, PrincipalId, PrincipalSettings, ProbeResponse,
-    ReleaseRateLimitResponse, RemoteTargetHistory, RunningConfig, SortDirection, TaskEventResponse,
-    TaskId, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
+    AuthProvidersResponse, BackupDocument, BackupRequest, BaseUrl, ClassComputationState,
+    ClassHistory, ClearRateLimitResponse, CollectionHistory, ComputedFieldDefinition,
+    ComputedFieldDefinitionId, ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest,
+    ComputedFieldDeleteResponse, ComputedFieldListResponse, ComputedFieldMutationResponse,
+    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedObject, CountsResponse,
+    Credentials, DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryId,
+    EventDeliveryUpdateResponse, EventResponse, EventSubscription, EventSubscriptionId,
+    ExportContentType, ExportJsonResponse, ExportRequest, ExportResult, ExportTemplateHistory,
+    ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportRequest, ImportRunResult,
+    ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
+    ObjectHistory, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings,
+    ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability,
+    RestoreConfirmRequest, RestoreId, RestoreStageResponse, RunningConfig, SortDirection,
+    TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
+    TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    UpdateEventSubscription,
 };
 use crate::{ObjectRelation, QueryFilter};
 
@@ -190,6 +196,71 @@ impl<S> Client<S> {
 
     pub fn retry_policy(&self) -> &shared::RetryPolicy {
         &self.options.retry_policy
+    }
+
+    /// Inspect a staged restore using only its one-time capability.
+    ///
+    /// This is available in both authentication states because a successful
+    /// restore invalidates the bearer token that originally staged it.
+    pub fn restore_status(
+        &self,
+        restore_id: impl Into<RestoreId>,
+        capability: &RestoreCapability,
+    ) -> Result<RestoreStageResponse, ApiError> {
+        let restore_id = restore_id.into();
+        let url_params = vec![(Cow::Borrowed("restore_id"), restore_id.to_string().into())];
+        let request_url = shared::build_request_url(
+            &reqwest::Method::GET,
+            self.build_url(&Endpoint::RestoreStatus, url_params.clone()),
+            &url_params,
+            vec![],
+        )?;
+        let headers = [(
+            "X-Hubuum-Restore-Capability",
+            capability.as_str().to_owned(),
+        )];
+
+        let raw = if let Some(transport) = &self.transport {
+            let plan = shared::build_unauthenticated_request_plan(
+                &reqwest::Method::GET,
+                &request_url,
+                &headers,
+            )?;
+            let response = self.execute_transport_with_retry(
+                &reqwest::Method::GET,
+                false,
+                transport.as_ref(),
+                plan,
+            )?;
+            shared::process_transport_response(
+                &reqwest::Method::GET,
+                &request_url,
+                response,
+                &self.options,
+            )?
+        } else {
+            debug!("GET {}", shared::redacted_url_for_log(&request_url));
+            let request = self
+                .http_client
+                .get(&request_url)
+                .header(headers[0].0, &headers[0].1);
+            let response = self.send_with_retry(&reqwest::Method::GET, false, request)?;
+            let response = self.check_success(&reqwest::Method::GET, &request_url, response)?;
+            let status = response.status();
+            let (next_cursor, total_count, content_type) =
+                shared::response_metadata(response.headers());
+            let body = shared::read_blocking_body(response, self.options.max_response_body_bytes)?;
+            shared::RawResponse {
+                status,
+                body,
+                next_cursor,
+                total_count,
+                content_type,
+            }
+        };
+
+        shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?
+            .ok_or_else(|| ApiError::EmptyResult("Restore status returned empty result".into()))
     }
 }
 
@@ -1096,6 +1167,46 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), vec![("class_id", class_id.to_string())])
     }
 
+    /// Query objects with shared and personal computed scopes included.
+    pub fn computed_objects(&self, class_id: impl Into<ClassId>) -> CursorRequest<ComputedObject> {
+        let class_id = class_id.into();
+        CursorRequest::new(
+            self.clone(),
+            Endpoint::Objects,
+            vec![(Cow::Borrowed("class_id"), class_id.to_string().into())],
+        )
+        .query_param("include", "computed")
+    }
+
+    /// Fetch one object with shared and personal computed scopes included.
+    pub fn computed_object(
+        &self,
+        class_id: impl Into<ClassId>,
+        object_id: impl Into<ObjectId>,
+    ) -> Result<ComputedObject, ApiError> {
+        let class_id = class_id.into();
+        let object_id = object_id.into();
+        self.request_with_endpoint::<EmptyPostParams, ComputedObject>(
+            reqwest::Method::GET,
+            &Endpoint::ObjectsById,
+            vec![
+                (Cow::Borrowed("class_id"), class_id.to_string().into()),
+                (Cow::Borrowed("object_id"), object_id.to_string().into()),
+            ],
+            vec![QueryFilter::raw("include", "computed")],
+            EmptyPostParams,
+        )?
+        .ok_or_else(|| ApiError::EmptyResult("Computed object returned empty result".into()))
+    }
+
+    pub fn computed_fields(&self, class_id: impl Into<ClassId>) -> SharedComputedFields {
+        SharedComputedFields::new(self.clone(), class_id.into())
+    }
+
+    pub fn personal_computed_fields(&self) -> PersonalComputedFields {
+        PersonalComputedFields::new(self.clone())
+    }
+
     pub fn typed_class<T>(&self, class_id: impl Into<ClassId>) -> TypedClass<T> {
         TypedClass {
             client: self.clone(),
@@ -1309,6 +1420,14 @@ impl Client<Authenticated> {
 
     pub fn exports(&self) -> Exports {
         Exports::new(self.clone())
+    }
+
+    pub fn backups(&self) -> Backups {
+        Backups::new(self.clone())
+    }
+
+    pub fn restores(&self) -> Restores {
+        Restores::new(self.clone())
     }
 
     pub fn imports(&self) -> Imports {
@@ -1991,6 +2110,399 @@ impl EventDeliveries {
             .ok_or(ApiError::EmptyResult(format!(
                 "Event delivery {operation} returned empty result"
             )))
+    }
+}
+
+/// Shared computed-field definitions and rebuild state for one class.
+pub struct SharedComputedFields {
+    client: Client<Authenticated>,
+    class_id: ClassId,
+}
+
+impl SharedComputedFields {
+    fn new(client: Client<Authenticated>, class_id: ClassId) -> Self {
+        Self { client, class_id }
+    }
+
+    fn class_params(&self) -> UrlParams {
+        vec![(Cow::Borrowed("class_id"), self.class_id.to_string().into())]
+    }
+
+    pub fn list(&self) -> Result<ComputedFieldListResponse, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, ComputedFieldListResponse>(
+                reqwest::Method::GET,
+                &Endpoint::ClassComputedFields,
+                self.class_params(),
+                vec![],
+                EmptyPostParams,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Shared computed fields returned empty result".into())
+            })
+    }
+
+    pub fn create(
+        &self,
+        request: ComputedFieldDefinitionRequest,
+    ) -> Result<ComputedFieldMutationResponse, ApiError> {
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::ClassComputedFields,
+                self.class_params(),
+                vec![],
+                request,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Computed-field create returned empty result".into())
+            })
+    }
+
+    pub fn update(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+        patch: ComputedFieldDefinitionPatch,
+    ) -> Result<ComputedFieldMutationResponse, ApiError> {
+        let field_id = field_id.into();
+        let mut params = self.class_params();
+        params.push((Cow::Borrowed("patch_id"), field_id.to_string().into()));
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::PATCH,
+                &Endpoint::ClassComputedFields,
+                params,
+                vec![],
+                patch,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Computed-field update returned empty result".into())
+            })
+    }
+
+    pub fn delete(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+        expected_revision: i64,
+    ) -> Result<ComputedFieldDeleteResponse, ApiError> {
+        let path = Endpoint::ClassComputedFieldById
+            .path()
+            .replace("{class_id}", &self.class_id.to_string())
+            .replace("{field_id}", &field_id.into().to_string());
+        let raw = self
+            .client
+            .raw(reqwest::Method::DELETE, path)
+            .query_param("expected_revision", expected_revision)
+            .execute()?;
+        serde_json::from_str(&raw.body).map_err(ApiError::from)
+    }
+
+    pub fn preview(
+        &self,
+        request: ComputedFieldPreviewRequest,
+    ) -> Result<ComputedFieldPreviewResponse, ApiError> {
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::ClassComputedFieldsPreview,
+                self.class_params(),
+                vec![],
+                request,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Computed-field preview returned empty result".into())
+            })
+    }
+
+    pub fn rebuild(&self) -> Result<ClassComputationState, ApiError> {
+        self.client
+            .request_with_endpoint::<EmptyPostParams, ClassComputationState>(
+                reqwest::Method::POST,
+                &Endpoint::ClassComputedFieldsRebuild,
+                self.class_params(),
+                vec![],
+                EmptyPostParams,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Computed-field rebuild returned empty result".into())
+            })
+    }
+}
+
+/// Personal computed-field definitions owned by the current human user.
+pub struct PersonalComputedFields {
+    client: Client<Authenticated>,
+}
+
+impl PersonalComputedFields {
+    fn new(client: Client<Authenticated>) -> Self {
+        Self { client }
+    }
+
+    pub fn query(&self) -> CursorRequest<ComputedFieldDefinition> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::MeComputedFields,
+            UrlParams::default(),
+        )
+    }
+
+    pub fn for_class(
+        &self,
+        class_id: impl Into<ClassId>,
+    ) -> CursorRequest<ComputedFieldDefinition> {
+        self.query().query_param("class_id", class_id.into())
+    }
+
+    pub fn create(
+        &self,
+        request: PersonalComputedFieldDefinitionRequest,
+    ) -> Result<ComputedFieldDefinition, ApiError> {
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::MeComputedFields,
+                UrlParams::default(),
+                vec![],
+                request,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Personal computed-field create returned empty result".into())
+            })
+    }
+
+    pub fn update(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+        patch: ComputedFieldDefinitionPatch,
+    ) -> Result<ComputedFieldDefinition, ApiError> {
+        let field_id = field_id.into();
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::PATCH,
+                &Endpoint::MeComputedFields,
+                vec![(Cow::Borrowed("patch_id"), field_id.to_string().into())],
+                vec![],
+                patch,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Personal computed-field update returned empty result".into())
+            })
+    }
+
+    pub fn delete(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+        expected_revision: i64,
+    ) -> Result<(), ApiError> {
+        let path = Endpoint::MeComputedFieldById
+            .path()
+            .replace("{field_id}", &field_id.into().to_string());
+        self.client
+            .raw(reqwest::Method::DELETE, path)
+            .query_param("expected_revision", expected_revision)
+            .execute()?;
+        Ok(())
+    }
+
+    pub fn preview(
+        &self,
+        request: ComputedFieldPreviewRequest,
+    ) -> Result<ComputedFieldPreviewResponse, ApiError> {
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::MeComputedFieldsPreview,
+                UrlParams::default(),
+                vec![],
+                request,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult(
+                    "Personal computed-field preview returned empty result".into(),
+                )
+            })
+    }
+}
+
+pub struct Backups {
+    client: Client<Authenticated>,
+}
+
+impl Backups {
+    fn new(client: Client<Authenticated>) -> Self {
+        Self { client }
+    }
+
+    pub fn submit(&self, request: BackupRequest) -> BackupSubmitOp {
+        BackupSubmitOp::new(self.client.clone(), request)
+    }
+
+    pub fn get(&self, task_id: impl Into<TaskId>) -> Result<TaskResponse, ApiError> {
+        let task_id = task_id.into();
+        self.client
+            .request_with_endpoint::<EmptyPostParams, TaskResponse>(
+                reqwest::Method::GET,
+                &Endpoint::BackupByTaskId,
+                vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
+                vec![],
+                EmptyPostParams,
+            )?
+            .ok_or_else(|| ApiError::EmptyResult("Backup returned empty result".into()))
+    }
+
+    pub fn output(&self, task_id: impl Into<TaskId>) -> Result<BackupDocument, ApiError> {
+        let task_id = task_id.into();
+        self.client
+            .request_with_endpoint::<EmptyPostParams, BackupDocument>(
+                reqwest::Method::GET,
+                &Endpoint::BackupOutput,
+                vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
+                vec![],
+                EmptyPostParams,
+            )?
+            .ok_or_else(|| ApiError::EmptyResult("Backup output returned empty result".into()))
+    }
+
+    pub fn run(&self, request: BackupRequest) -> BackupRunOp {
+        BackupRunOp::new(self.client.clone(), request)
+    }
+}
+
+pub struct BackupSubmitOp {
+    client: Client<Authenticated>,
+    request: BackupRequest,
+    idempotency_key: Option<String>,
+}
+
+impl BackupSubmitOp {
+    fn new(client: Client<Authenticated>, request: BackupRequest) -> Self {
+        Self {
+            client,
+            request,
+            idempotency_key: None,
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(idempotency_key.into());
+        self
+    }
+
+    pub fn send(self) -> Result<TaskResponse, ApiError> {
+        let mut headers = Vec::new();
+        if let Some(key) = self.idempotency_key {
+            headers.push(("Idempotency-Key", key));
+        }
+        let raw = self.client.request_with_endpoint_raw_with_headers(
+            reqwest::Method::POST,
+            &Endpoint::Backups,
+            UrlParams::default(),
+            vec![],
+            self.request,
+            &headers,
+        )?;
+        shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?
+            .ok_or_else(|| ApiError::EmptyResult("Backup submit returned empty result".into()))
+    }
+}
+
+pub struct BackupRunOp {
+    client: Client<Authenticated>,
+    submit: BackupSubmitOp,
+    poll_interval: std::time::Duration,
+    timeout: Option<std::time::Duration>,
+}
+
+impl BackupRunOp {
+    fn new(client: Client<Authenticated>, request: BackupRequest) -> Self {
+        Self {
+            submit: BackupSubmitOp::new(client.clone(), request),
+            client,
+            poll_interval: std::time::Duration::from_secs(1),
+            timeout: Some(std::time::Duration::from_secs(300)),
+        }
+    }
+
+    pub fn idempotency_key(mut self, idempotency_key: impl Into<String>) -> Self {
+        self.submit = self.submit.idempotency_key(idempotency_key);
+        self
+    }
+
+    pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
+        self.poll_interval = interval;
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub fn send(self) -> Result<BackupDocument, ApiError> {
+        let task = self.submit.send()?;
+        let task = Tasks::new(self.client.clone())
+            .wait(task.id)
+            .poll_interval(self.poll_interval)
+            .timeout(self.timeout)
+            .send()?;
+        if task.status.is_success() {
+            Backups::new(self.client).output(task.id)
+        } else {
+            Err(ApiError::Api(format!(
+                "Task {} {}: {}",
+                task.id,
+                task.status,
+                task.summary.unwrap_or_else(|| "no summary".to_string())
+            )))
+        }
+    }
+}
+
+pub struct Restores {
+    client: Client<Authenticated>,
+}
+
+impl Restores {
+    fn new(client: Client<Authenticated>) -> Self {
+        Self { client }
+    }
+
+    pub fn stage(&self, document: &BackupDocument) -> Result<RestoreStageResponse, ApiError> {
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::Restores,
+                UrlParams::default(),
+                vec![],
+                document,
+            )?
+            .ok_or_else(|| ApiError::EmptyResult("Restore stage returned empty result".into()))
+    }
+
+    pub fn confirm(
+        &self,
+        restore_id: impl Into<RestoreId>,
+        request: RestoreConfirmRequest,
+    ) -> Result<RestoreStageResponse, ApiError> {
+        let restore_id = restore_id.into();
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::RestoreConfirm,
+                vec![(Cow::Borrowed("restore_id"), restore_id.to_string().into())],
+                vec![],
+                request,
+            )?
+            .ok_or_else(|| ApiError::EmptyResult("Restore confirm returned empty result".into()))
+    }
+
+    pub fn status(
+        &self,
+        restore_id: impl Into<RestoreId>,
+        capability: &RestoreCapability,
+    ) -> Result<RestoreStageResponse, ApiError> {
+        self.client.restore_status(restore_id, capability)
     }
 }
 

@@ -10,6 +10,7 @@ use super::{HubuumDateTime, ImportResultId, PrincipalId, TaskEventId, TaskId};
 pub enum TaskKind {
     Import,
     Export,
+    Backup,
     Reindex,
     RemoteCall,
     #[serde(other)]
@@ -67,6 +68,8 @@ pub struct TaskLinks {
     pub import_results: Option<String>,
     pub export: Option<String>,
     pub export_output: Option<String>,
+    pub backup: Option<String>,
+    pub backup_output: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -87,10 +90,21 @@ pub struct ExportTaskDetails {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BackupTaskDetails {
+    pub output_url: String,
+    pub output_available: bool,
+    pub output_expired: bool,
+    pub byte_size: Option<i64>,
+    pub output_expires_at: Option<HubuumDateTime>,
+    pub sha256: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskDetails {
     #[serde(rename = "import")]
     pub import_details: Option<ImportTaskDetails>,
     pub export: Option<ExportTaskDetails>,
+    pub backup: Option<BackupTaskDetails>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

@@ -1,7 +1,9 @@
 use hubuum_client::{
     ApiError, BaseUrl, ClassPost, ClassRelationPost, Client, CollectionPatch, CollectionPost,
-    Credentials, GroupPatch, LOCAL_IDENTITY_SCOPE, ObjectPatch, ObjectRelationPost, QueryFilter,
-    Token, UserPatch,
+    ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest, ComputedFieldOperation,
+    ComputedFieldPreviewRequest, ComputedResultType, Credentials, GroupPatch, LOCAL_IDENTITY_SCOPE,
+    ObjectPatch, ObjectPost, ObjectRelationPost, PersonalComputedFieldDefinitionRequest,
+    QueryFilter, Token, UserPatch,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -62,6 +64,127 @@ fn async_meta_db_available_connections_non_negative() {
         .expect("async meta_db failed");
 
     assert!(db.available_connections >= 0);
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn async_v002_shared_and_personal_computed_field_lifecycle() {
+    let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
+    let client = harness.client.clone();
+    let (_, admin_group_id) = harness
+        .block_on(async_admin_context(&client))
+        .expect("failed to resolve admin context");
+    let (collection_id, class_id) = harness
+        .block_on(create_async_permission_sandbox(
+            &client,
+            admin_group_id,
+            "computed-fields",
+        ))
+        .expect("failed to create computed-field sandbox");
+    let object = harness
+        .block_on(client.objects(class_id).create_raw(ObjectPost {
+            name: unique_case_prefix("computed-object"),
+            collection_id,
+            hubuum_class_id: class_id,
+            description: "computed-field integration object".to_string(),
+            data: Some(json!({"source": "live-value"})),
+        }))
+        .expect("failed to create computed-field object");
+
+    let definition = || {
+        ComputedFieldDefinitionRequest::new(
+            "shared_source",
+            "Shared source",
+            ComputedFieldOperation::FirstNonNull {
+                paths: vec!["/source".to_string()],
+            },
+            ComputedResultType::String,
+        )
+    };
+    let shared = harness
+        .block_on(client.computed_fields(class_id).create(definition()))
+        .expect("shared computed field should create");
+    if let Some(task_id) = shared.state.active_task_id {
+        harness
+            .block_on(
+                client
+                    .tasks()
+                    .wait(task_id)
+                    .poll_interval(std::time::Duration::from_millis(100))
+                    .timeout(Some(std::time::Duration::from_secs(60)))
+                    .send(),
+            )
+            .expect("shared computed-field rebuild should finish");
+    }
+
+    let personal_definition = ComputedFieldDefinitionRequest::new(
+        "personal_source",
+        "Personal source",
+        ComputedFieldOperation::FirstNonNull {
+            paths: vec!["/source".to_string()],
+        },
+        ComputedResultType::String,
+    );
+    let personal = harness
+        .block_on(client.personal_computed_fields().create(
+            PersonalComputedFieldDefinitionRequest::new(class_id, personal_definition.clone()),
+        ))
+        .expect("personal computed field should create");
+
+    let enriched = harness
+        .block_on(client.computed_object(class_id, object.id))
+        .expect("computed object should decode");
+    assert_eq!(
+        (
+            enriched.computed.shared.values.get("shared_source"),
+            enriched
+                .computed
+                .personal
+                .as_ref()
+                .and_then(|scope| scope.values.get("personal_source")),
+        ),
+        (Some(&json!("live-value")), Some(&json!("live-value")))
+    );
+
+    let preview = harness
+        .block_on(
+            client.personal_computed_fields().preview(
+                ComputedFieldPreviewRequest::for_data(
+                    personal_definition,
+                    json!({"source": "preview-value"}),
+                )
+                .for_class(class_id),
+            ),
+        )
+        .expect("personal computed preview should succeed");
+    assert_eq!(preview.value, json!("preview-value"));
+
+    let shared_updated = harness
+        .block_on(client.computed_fields(class_id).update(
+            shared.definition.id,
+            ComputedFieldDefinitionPatch::new(shared.definition.revision).label("Renamed source"),
+        ))
+        .expect("shared computed field should update");
+    harness
+        .block_on(client.computed_fields(class_id).delete(
+            shared_updated.definition.id,
+            shared_updated.definition.revision,
+        ))
+        .expect("shared computed field should delete");
+
+    let personal_updated = harness
+        .block_on(client.personal_computed_fields().update(
+            personal.id,
+            ComputedFieldDefinitionPatch::new(personal.revision).label("Renamed personal source"),
+        ))
+        .expect("personal computed field should update");
+    harness
+        .block_on(
+            client
+                .personal_computed_fields()
+                .delete(personal_updated.id, personal_updated.revision),
+        )
+        .expect("personal computed field should delete");
 }
 
 #[test]

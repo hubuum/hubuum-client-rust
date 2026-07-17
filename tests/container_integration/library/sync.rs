@@ -1,7 +1,7 @@
 use hubuum_client::{
-    ApiError, BaseUrl, ClassPost, ClassRelationPost, CollectionPatch, CollectionPost, Credentials,
-    GroupPatch, LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, ObjectPatch,
-    ObjectRelationPost, QueryFilter, Token, UserPatch, blocking,
+    ApiError, BackupRequest, BaseUrl, ClassPost, ClassRelationPost, CollectionPatch,
+    CollectionPost, Credentials, GroupPatch, LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE,
+    LOCAL_PROVIDER_KIND, ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch, blocking,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -59,6 +59,46 @@ fn sync_meta_db_available_connections_non_negative() {
     let db = harness.client.meta_db().expect("sync meta_db failed");
 
     assert!(db.available_connections >= 0);
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn sync_v002_admin_config_backup_and_restore_staging_roundtrip() {
+    let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
+
+    let config = harness
+        .client
+        .admin_config()
+        .expect("v0.0.2 admin config should decode");
+    assert!(config.backups.max_output_bytes > 0);
+    assert!(config.restores.max_upload_bytes > 0);
+    assert!(!config.permissions.backend.is_empty());
+
+    let document = harness
+        .client
+        .backups()
+        .run(BackupRequest::default())
+        .poll_interval(std::time::Duration::from_millis(100))
+        .timeout(Some(std::time::Duration::from_secs(60)))
+        .send()
+        .expect("backup should complete and return its document");
+    assert!(document.has_supported_version());
+
+    let staged = harness
+        .client
+        .restores()
+        .stage(&document)
+        .expect("backup document should stage for restore");
+    let capability = staged
+        .restore_capability
+        .clone()
+        .expect("restore stage should return its one-time capability");
+    let status_client = blocking::Client::try_new(harness.client.base_url().clone())
+        .expect("capability-only client should build");
+    let status = status_client
+        .restore_status(staged.id, &capability)
+        .expect("restore status should not require bearer authentication");
+    assert_eq!(status.sha256, staged.sha256);
 }
 
 #[test]

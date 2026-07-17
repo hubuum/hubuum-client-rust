@@ -5,10 +5,12 @@ use std::str::FromStr;
 use futures_util::TryStreamExt;
 use httpmock::prelude::*;
 use hubuum_client::types::{
-    EventSinkKind, ExportContentType, ExportRequest, ExportScope, ExportScopeKind,
-    ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportGraph, ImportRequest,
-    NewEventSink, NewEventSubscription, Permissions, SortDirection, UnifiedSearchEvent,
-    UnifiedSearchKind, UpdateEventSubscription,
+    BackupRequest, ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest,
+    ComputedFieldOperation, ComputedFieldPreviewRequest, ComputedResultType, EventSinkKind,
+    ExportContentType, ExportRequest, ExportScope, ExportScopeKind, ExportTemplateRunRequest,
+    FilterOperator, HubuumDateTime, ImportGraph, ImportRequest, NewEventSink, NewEventSubscription,
+    Permissions, PersonalComputedFieldDefinitionRequest, RestoreCapability, RestoreConfirmRequest,
+    SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
 };
 use hubuum_client::{ApiError, BaseUrl, ClassGet, Client, Credentials, ExportResult, blocking};
 use serde_json::json;
@@ -132,6 +134,7 @@ fn group_permission_json(collection_id: i32, group_id: i32, groupname: &str) -> 
 fn running_config_json() -> serde_json::Value {
     json!({
         "server": {
+            "runtime_role": "api",
             "bind_ip": "127.0.0.1",
             "bind_port": 8080,
             "log_level": "info",
@@ -155,6 +158,10 @@ fn running_config_json() -> serde_json::Value {
         "tasks": {
             "workers": 4,
             "poll_interval_ms": 250,
+            "lease_seconds": 120,
+            "heartbeat_seconds": 30,
+            "recovery_interval_seconds": 60,
+            "computed_reindex_batch_size": 100,
             "import_max_active_per_user": 2,
             "export_max_active_per_user": 3,
             "remote_call_max_active_per_user": 4
@@ -190,6 +197,15 @@ fn running_config_json() -> serde_json::Value {
             "stage_timeout_ms": 30000,
             "database_statement_timeout_ms": 30000
         },
+        "backups": {
+            "output_retention_hours": 24,
+            "max_active_tasks_per_user": 1,
+            "max_output_bytes": 134217728
+        },
+        "restores": {
+            "stage_retention_minutes": 30,
+            "max_upload_bytes": 134217728
+        },
         "remote_calls": {
             "timeout_ms": 10000,
             "max_response_bytes": 1048576,
@@ -210,8 +226,20 @@ fn running_config_json() -> serde_json::Value {
                 "backoff_base_seconds": 300,
                 "backoff_max_seconds": 86400,
                 "subnet_prefix_v4": 24,
-                "subnet_prefix_v6": 64
+                "subnet_prefix_v6": 64,
+                "backend": "memory",
+                "valkey_url": { "configured": false },
+                "valkey_prefix": "hubuum:login-rate-limit:",
+                "valkey_io_timeout_ms": 1000
             }
+        },
+        "permissions": {
+            "backend": "database",
+            "treetop_url": { "configured": false },
+            "treetop_connect_timeout_ms": 1000,
+            "treetop_request_timeout_ms": 5000,
+            "treetop_ca_certificate_configured": false,
+            "treetop_accept_invalid_certificates": false
         },
         "pagination": {
             "default_page_limit": 100,
@@ -226,6 +254,144 @@ fn running_config_json() -> serde_json::Value {
                 "allows_any": true,
                 "network_count": 0
             }
+        }
+    })
+}
+
+fn backup_document_json() -> serde_json::Value {
+    json!({
+        "backup_version": 3,
+        "created_at": ts(),
+        "source_version": "0.0.2",
+        "state": { "sections": {} },
+        "history": { "sections": {} },
+        "manifest": { "item_counts": { "principals": 1 }, "exclusions": [] }
+    })
+}
+
+fn backup_task_json() -> serde_json::Value {
+    json!({
+        "id": 44,
+        "kind": "backup",
+        "status": "succeeded",
+        "submitted_by": 1,
+        "created_at": ts(),
+        "started_at": ts(),
+        "finished_at": ts(),
+        "progress": { "total_items": 1, "processed_items": 1, "success_items": 1, "failed_items": 0 },
+        "summary": "Backup complete",
+        "request_redacted_at": null,
+        "links": {
+            "task": "/api/v1/tasks/44",
+            "events": "/api/v1/tasks/44/events",
+            "backup": "/api/v1/backups/44",
+            "backup_output": "/api/v1/backups/44/output"
+        },
+        "details": {
+            "backup": {
+                "output_url": "/api/v1/backups/44/output",
+                "output_available": true,
+                "output_expired": false,
+                "byte_size": 512,
+                "output_expires_at": ts(),
+                "sha256": "abc123"
+            }
+        }
+    })
+}
+
+fn restore_stage_json(status: &str, include_capability: bool) -> serde_json::Value {
+    json!({
+        "id": 9,
+        "status": status,
+        "requested_by": 1,
+        "requested_by_identity_scope": "local",
+        "requested_by_name": "admin",
+        "sha256": "abc123",
+        "byte_size": 512,
+        "expires_at": ts(),
+        "error": null,
+        "confirmed_at": null,
+        "started_at": null,
+        "finished_at": null,
+        "created_at": ts(),
+        "updated_at": ts(),
+        "validation": {
+            "backup_version": 3,
+            "source_version": "0.0.2",
+            "includes_history": true,
+            "total_items": 1
+        },
+        "restore_capability": include_capability.then_some("restore-secret")
+    })
+}
+
+fn computation_state_json() -> serde_json::Value {
+    json!({
+        "class_id": 42,
+        "evaluation_revision": 3,
+        "rebuild_status": "ready",
+        "active_task_id": null,
+        "last_error": null,
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn computed_definition_json(visibility: &str) -> serde_json::Value {
+    json!({
+        "id": 7,
+        "class_id": 42,
+        "visibility": visibility,
+        "owner_user_id": (visibility == "personal").then_some(1),
+        "key": "total",
+        "label": "Total",
+        "description": "Subtotal plus tax",
+        "operation": { "type": "sum", "paths": ["/subtotal", "/tax"] },
+        "result_type": "number",
+        "enabled": true,
+        "revision": 2,
+        "semantics_version": 1,
+        "created_by": 1,
+        "updated_by": 1,
+        "created_at": ts(),
+        "updated_at": ts()
+    })
+}
+
+fn computed_request() -> ComputedFieldDefinitionRequest {
+    ComputedFieldDefinitionRequest::new(
+        "total",
+        "Total",
+        ComputedFieldOperation::Sum {
+            paths: vec!["/subtotal".into(), "/tax".into()],
+        },
+        ComputedResultType::Number,
+    )
+    .description("Subtotal plus tax")
+}
+
+fn computed_object_json(include_personal: bool) -> serde_json::Value {
+    json!({
+        "id": 5,
+        "name": "invoice",
+        "collection_id": 7,
+        "hubuum_class_id": 42,
+        "description": "Object",
+        "data": {"subtotal": 10, "tax": 2.5},
+        "created_at": ts(),
+        "updated_at": ts(),
+        "computed": {
+            "shared": {
+                "revision": 3,
+                "materialization_stale": false,
+                "values": {"total": 12.5},
+                "errors": {}
+            },
+            "personal": include_personal.then(|| json!({
+                "values": {"total": 12.5},
+                "errors": {}
+            }))
         }
     })
 }
@@ -1623,6 +1789,8 @@ fn sync_supports_meta_endpoints() {
         .expect("admin_config request should succeed");
     assert_eq!(config.server.bind_port, 8080);
     assert!(config.database.url.configured);
+    assert_eq!(config.backups.output_retention_hours, 24);
+    assert_eq!(config.permissions.backend, "database");
     assert_eq!(config.pagination.max_page_limit, 1000);
 
     counts.assert_calls(1);
@@ -1706,6 +1874,8 @@ async fn async_supports_meta_endpoints() {
         .expect("admin_config request should succeed");
     assert_eq!(config.server.bind_port, 8080);
     assert!(config.authentication.stable_token_hash_key_configured);
+    assert_eq!(config.tasks.computed_reindex_batch_size, 100);
+    assert_eq!(config.restores.stage_retention_minutes, 30);
     assert_eq!(config.network.client_allowlist.network_count, 0);
 
     counts.assert_calls(1);
@@ -4136,4 +4306,336 @@ fn sync_healthz_probe_succeeds_without_auth() {
     assert_eq!(probe.status, "ok");
 
     healthz.assert_calls(1);
+}
+
+#[test]
+fn sync_backups_and_restores_cover_privileged_and_capability_routes() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let submit = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/backups")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .header("idempotency-key", "backup-once")
+            .json_body(json!({"include_history": true}));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(backup_task_json());
+    });
+    let output = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/backups/44/output")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(backup_document_json());
+    });
+    let stage = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/restores")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .json_body(backup_document_json());
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(restore_stage_json("validated", true));
+    });
+    let status = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/restores/9/status")
+            .header("x-hubuum-restore-capability", "restore-secret")
+            .header_missing("authorization");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(restore_stage_json("validated", false));
+    });
+    let confirm = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/restores/9/confirm")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .json_body(json!({
+                "restore_capability": "restore-secret",
+                "sha256": "abc123",
+                "confirmation": "REPLACE ALL HUBUUM DATA"
+            }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(restore_stage_json("succeeded", false));
+    });
+
+    let client = sync_client(&server);
+    let task = client
+        .backups()
+        .submit(BackupRequest::default())
+        .idempotency_key("backup-once")
+        .send()
+        .expect("backup submit should succeed");
+    let document = client
+        .backups()
+        .output(task.id)
+        .expect("backup output should decode");
+    assert!(document.has_supported_version());
+
+    let staged = client
+        .restores()
+        .stage(&document)
+        .expect("restore stage should succeed");
+    let capability = staged
+        .restore_capability
+        .clone()
+        .expect("stage should return the one-time capability");
+    let inspected = client
+        .restore_status(staged.id, &capability)
+        .expect("capability-only status should succeed");
+    assert_eq!(inspected.sha256, "abc123");
+
+    let restored = client
+        .restores()
+        .confirm(
+            staged.id,
+            RestoreConfirmRequest::new(capability, staged.sha256),
+        )
+        .expect("restore confirm should succeed");
+    assert!(restored.status.is_terminal());
+
+    submit.assert_calls(1);
+    output.assert_calls(1);
+    stage.assert_calls(1);
+    status.assert_calls(1);
+    confirm.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_restore_status_is_available_without_bearer_authentication() {
+    let server = MockServer::start();
+    let status = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/restores/9/status")
+            .header("x-hubuum-restore-capability", "restore-secret")
+            .header_missing("authorization");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(restore_stage_json("validated", false));
+    });
+
+    let client = Client::from_url(server.base_url()).expect("client should build");
+    let response = client
+        .restore_status(9, &RestoreCapability::new("restore-secret"))
+        .await
+        .expect("unauthenticated restore status should succeed");
+    assert_eq!(response.id, 9);
+    status.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_shared_computed_field_lifecycle_uses_class_scoped_routes() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let shared_list = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/computed-fields")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "definitions": [computed_definition_json("shared")],
+                "state": computation_state_json()
+            }));
+    });
+    let shared_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/classes/42/computed-fields")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "definition": computed_definition_json("shared"),
+                "state": computation_state_json()
+            }));
+    });
+    let shared_update = server.mock(|when, then| {
+        when.method(PATCH)
+            .path("/api/v1/classes/42/computed-fields/7")
+            .json_body(json!({"expected_revision": 2, "label": "Grand total"}));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "definition": computed_definition_json("shared"),
+                "state": computation_state_json()
+            }));
+    });
+    let shared_delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/classes/42/computed-fields/7")
+            .query_param("expected_revision", "2");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "deleted_definition_id": 7,
+                "state": computation_state_json()
+            }));
+    });
+    let shared_preview = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/classes/42/computed-fields/preview");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"value": 12.5, "error": null}));
+    });
+    let shared_rebuild = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/classes/42/computed-fields/rebuild");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(computation_state_json());
+    });
+    let client = async_client(&server).await;
+    let shared = client.computed_fields(42);
+    assert_eq!(shared.list().await.unwrap().definitions.len(), 1);
+    assert_eq!(
+        shared
+            .create(computed_request())
+            .await
+            .unwrap()
+            .definition
+            .id,
+        7
+    );
+    shared
+        .update(7, ComputedFieldDefinitionPatch::new(2).label("Grand total"))
+        .await
+        .unwrap();
+    assert_eq!(shared.delete(7, 2).await.unwrap().deleted_definition_id, 7);
+    assert_eq!(
+        shared
+            .preview(ComputedFieldPreviewRequest::for_data(
+                computed_request(),
+                json!({"subtotal": 10, "tax": 2.5}),
+            ))
+            .await
+            .unwrap()
+            .value,
+        json!(12.5)
+    );
+    assert_eq!(shared.rebuild().await.unwrap().evaluation_revision, 3);
+
+    for mock in [
+        shared_list,
+        shared_create,
+        shared_update,
+        shared_delete,
+        shared_preview,
+        shared_rebuild,
+    ] {
+        mock.assert_calls(1);
+    }
+}
+
+#[tokio::test]
+async fn async_personal_computed_field_lifecycle_uses_current_user_routes() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let list = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/me/computed-fields")
+            .query_param("class_id", "42");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([computed_definition_json("personal")]));
+    });
+    let create = server.mock(|when, then| {
+        when.method(POST).path("/api/v1/iam/me/computed-fields");
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(computed_definition_json("personal"));
+    });
+    let update = server.mock(|when, then| {
+        when.method(PATCH).path("/api/v1/iam/me/computed-fields/7");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(computed_definition_json("personal"));
+    });
+    let delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/iam/me/computed-fields/7")
+            .query_param("expected_revision", "2");
+        then.status(204);
+    });
+    let preview = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/iam/me/computed-fields/preview");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"value": 12.5, "error": null}));
+    });
+
+    let client = async_client(&server).await;
+    let personal = client.personal_computed_fields();
+    assert_eq!(personal.for_class(42).list().await.unwrap().len(), 1);
+    let created = personal
+        .create(PersonalComputedFieldDefinitionRequest::new(
+            42,
+            computed_request(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(created.id, 7);
+    personal
+        .update(7, ComputedFieldDefinitionPatch::new(2).enabled(false))
+        .await
+        .unwrap();
+    personal.delete(7, 2).await.unwrap();
+    let result = personal
+        .preview(
+            ComputedFieldPreviewRequest::for_data(
+                computed_request(),
+                json!({"subtotal": 10, "tax": 2.5}),
+            )
+            .for_class(42),
+        )
+        .await
+        .unwrap();
+    assert_eq!(result.value, json!(12.5));
+
+    for mock in [list, create, update, delete, preview] {
+        mock.assert_calls(1);
+    }
+}
+
+#[rstest::rstest]
+#[case::list(true)]
+#[case::single(false)]
+#[tokio::test]
+async fn async_computed_object_reads_opt_into_computed_scopes(#[case] list: bool) {
+    let server = MockServer::start();
+    mock_login(&server);
+    let path = if list {
+        "/api/v1/classes/42/"
+    } else {
+        "/api/v1/classes/42/5"
+    };
+    let body = if list {
+        json!([computed_object_json(true)])
+    } else {
+        computed_object_json(false)
+    };
+    let request = server.mock(move |when, then| {
+        when.method(GET)
+            .path(path)
+            .query_param("include", "computed");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(body);
+    });
+
+    let client = async_client(&server).await;
+    let object = if list {
+        client.computed_objects(42).list().await.unwrap().remove(0)
+    } else {
+        client.computed_object(42, 5).await.unwrap()
+    };
+    assert_eq!(object.computed.shared.values["total"], json!(12.5));
+    request.assert_calls(1);
 }

@@ -30,6 +30,7 @@ pub struct DbStateResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LoginRateLimitConfig {
     pub enabled: bool,
+    pub backend: String,
     pub max_attempts: u64,
     pub max_attempts_per_ip: u64,
     pub max_attempts_per_subnet: u64,
@@ -84,7 +85,7 @@ mod tests {
     fn login_rate_limit_state_deserializes() {
         let state: LoginRateLimitState = serde_json::from_value(serde_json::json!({
             "config": {
-                "enabled": true, "max_attempts": 5, "max_attempts_per_ip": 20,
+                "enabled": true, "backend": "memory", "max_attempts": 5, "max_attempts_per_ip": 20,
                 "max_attempts_per_subnet": 100, "window_seconds": 300,
                 "backoff_base_seconds": 300, "backoff_max_seconds": 86400,
                 "subnet_prefix_v4": 24, "subnet_prefix_v6": 64

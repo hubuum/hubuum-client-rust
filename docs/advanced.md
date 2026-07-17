@@ -36,7 +36,13 @@ which reports only whether each value is configured.
 let config = client.admin_config().await?;
 println!("page limit: {}", config.pagination.max_page_limit);
 println!("TLS enabled: {}", config.server.tls.enabled);
+println!("backup retention: {} hours", config.backups.output_retention_hours);
+println!("permission backend: {}", config.permissions.backend);
 ```
+
+The endpoint is read-only. Secret values are never returned; fields such as
+`treetop_url`, `database.url`, and `provider_config_path` expose configuration
+status only.
 
 ## Lazy Pagination and Search
 

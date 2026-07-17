@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use super::LoginRateLimitConfig;
-
 /// Redacted effective process configuration returned by the administrative
 /// configuration endpoint.
 #[non_exhaustive]
@@ -12,8 +10,11 @@ pub struct RunningConfig {
     pub tasks: TaskConfig,
     pub events: EventConfig,
     pub exports: ExportConfig,
+    pub backups: BackupConfig,
+    pub restores: RestoreConfig,
     pub remote_calls: RemoteCallConfig,
     pub authentication: AuthenticationConfig,
+    pub permissions: PermissionConfig,
     pub pagination: PaginationConfig,
     pub network: NetworkConfig,
 }
@@ -21,6 +22,7 @@ pub struct RunningConfig {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ServerConfig {
+    pub runtime_role: String,
     pub bind_ip: String,
     pub bind_port: u32,
     pub log_level: String,
@@ -61,6 +63,10 @@ pub struct DatabaseConfig {
 pub struct TaskConfig {
     pub workers: u64,
     pub poll_interval_ms: u64,
+    pub lease_seconds: u64,
+    pub heartbeat_seconds: u64,
+    pub recovery_interval_seconds: u64,
+    pub computed_reindex_batch_size: u64,
     pub import_max_active_per_user: u64,
     pub export_max_active_per_user: u64,
     pub remote_call_max_active_per_user: u64,
@@ -105,6 +111,21 @@ pub struct ExportConfig {
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BackupConfig {
+    pub output_retention_hours: i64,
+    pub max_active_tasks_per_user: u64,
+    pub max_output_bytes: u64,
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RestoreConfig {
+    pub stage_retention_minutes: i64,
+    pub max_upload_bytes: u64,
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RemoteCallConfig {
     pub timeout_ms: u64,
     pub max_response_bytes: u64,
@@ -119,7 +140,37 @@ pub struct AuthenticationConfig {
     pub admin_groupname: String,
     pub admin_identity_scope: Option<String>,
     pub provider_config_path: SecretStatus,
-    pub login_rate_limit: LoginRateLimitConfig,
+    pub login_rate_limit: RunningLoginRateLimitConfig,
+}
+
+/// Redacted login rate-limit configuration in the administrative process view.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RunningLoginRateLimitConfig {
+    pub enabled: bool,
+    pub max_attempts: u64,
+    pub max_attempts_per_ip: u64,
+    pub max_attempts_per_subnet: u64,
+    pub window_seconds: u64,
+    pub backoff_base_seconds: u64,
+    pub backoff_max_seconds: u64,
+    pub subnet_prefix_v4: u8,
+    pub subnet_prefix_v6: u8,
+    pub backend: String,
+    pub valkey_url: SecretStatus,
+    pub valkey_prefix: String,
+    pub valkey_io_timeout_ms: u64,
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PermissionConfig {
+    pub backend: String,
+    pub treetop_url: SecretStatus,
+    pub treetop_connect_timeout_ms: u64,
+    pub treetop_request_timeout_ms: u64,
+    pub treetop_ca_certificate_configured: bool,
+    pub treetop_accept_invalid_certificates: bool,
 }
 
 #[non_exhaustive]

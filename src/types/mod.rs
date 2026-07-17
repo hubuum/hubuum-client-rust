@@ -1,5 +1,7 @@
 mod auth;
+mod backup;
 mod baseurl;
+mod computed;
 mod config;
 mod datetime;
 mod event;
@@ -21,10 +23,24 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
 
 pub use auth::{AuthProvidersResponse, Credentials, LogoutTokenRequest, Token};
+pub use backup::{
+    BackupDocument, BackupHistory, BackupManifest, BackupRequest, BackupState,
+    CURRENT_BACKUP_VERSION, RESTORE_CONFIRMATION_PHRASE, RestoreCapability, RestoreConfirmRequest,
+    RestoreJobStatus, RestoreStageResponse, RestoreValidationSummary,
+};
 pub use baseurl::BaseUrl;
+pub use computed::{
+    ClassComputationState, ComputedFieldDefinition, ComputedFieldDefinitionPatch,
+    ComputedFieldDefinitionRequest, ComputedFieldDeleteResponse, ComputedFieldError,
+    ComputedFieldListResponse, ComputedFieldMutationResponse, ComputedFieldOperation,
+    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedFieldVisibility,
+    ComputedObject, ComputedObjectScopes, ComputedResultType, ComputedScope,
+    PersonalComputedFieldDefinitionRequest, SharedComputedScope,
+};
 pub use config::{
-    AuthenticationConfig, ClientAllowlistStatus, DatabaseConfig, EventConfig, ExportConfig,
-    NetworkConfig, PaginationConfig, RemoteCallConfig, RunningConfig, SecretStatus, ServerConfig,
+    AuthenticationConfig, BackupConfig, ClientAllowlistStatus, DatabaseConfig, EventConfig,
+    ExportConfig, NetworkConfig, PaginationConfig, PermissionConfig, RemoteCallConfig,
+    RestoreConfig, RunningConfig, RunningLoginRateLimitConfig, SecretStatus, ServerConfig,
     TaskConfig, TlsConfig,
 };
 pub use datetime::HubuumDateTime;
@@ -48,8 +64,8 @@ pub use history::{
     RemoteTargetHistory,
 };
 pub use id::{
-    EventDeliveryId, EventSubscriptionId, HistoryId, ImportResultId, PermissionId, PrincipalId,
-    RemoteCallResultId, TaskEventId, TaskId, TokenId,
+    ComputedFieldDefinitionId, EventDeliveryId, EventSubscriptionId, HistoryId, ImportResultId,
+    PermissionId, PrincipalId, RemoteCallResultId, RestoreId, TaskEventId, TaskId, TokenId,
 };
 pub(crate) use identity::default_local_identity_value;
 pub use identity::{LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND};
@@ -77,8 +93,9 @@ pub use search::{
 };
 pub use settings::PrincipalSettings;
 pub use task::{
-    ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse, TaskDetails, TaskEventResponse,
-    TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
+    BackupTaskDetails, ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse, TaskDetails,
+    TaskEventResponse, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse,
+    TaskStatus,
 };
 pub use typed_object::TypedObject;
 #[cfg(feature = "typed-schemas")]

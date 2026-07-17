@@ -141,6 +141,16 @@ mod parity_contract {
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ObjectRelation> =
                 $module::Client::<Authenticated>::object_relation;
             let _ = $module::Client::<Authenticated>::exports;
+            let _ = $module::Client::<Authenticated>::backups;
+            let _ = $module::Client::<Authenticated>::restores;
+            let _: fn(&$module::Client<Authenticated>, ClassId) -> $module::SharedComputedFields =
+                $module::Client::<Authenticated>::computed_fields;
+            let _ = $module::Client::<Authenticated>::personal_computed_fields;
+            let _: fn(
+                &$module::Client<Authenticated>,
+                ClassId,
+            ) -> $module::CursorRequest<crate::types::ComputedObject> =
+                $module::Client::<Authenticated>::computed_objects;
             let _ = $module::Client::<Authenticated>::imports;
             let _ = $module::Client::<Authenticated>::tasks;
         };
@@ -247,6 +257,23 @@ mod parity_contract {
         };
     }
 
+    macro_rules! assert_v002_surface {
+        ($module:ident) => {
+            let _ = $module::Backups::submit;
+            let _ = $module::Backups::run;
+            let _ = $module::BackupSubmitOp::send;
+            let _ = $module::BackupRunOp::send;
+            let _ = $module::Restores::stage;
+            let _ = $module::SharedComputedFields::list;
+            let _ = $module::SharedComputedFields::create;
+            let _ = $module::SharedComputedFields::preview;
+            let _ = $module::SharedComputedFields::rebuild;
+            let _ = $module::PersonalComputedFields::query;
+            let _ = $module::PersonalComputedFields::create;
+            let _ = $module::PersonalComputedFields::preview;
+        };
+    }
+
     macro_rules! assert_handle_extension_surface {
         ($module:ident) => {
             let _ = $module::Handle::<Class>::objects;
@@ -306,6 +333,8 @@ mod parity_contract {
         assert_filter_builder_surface!(async_client);
         assert_cursor_request_surface!(sync_client);
         assert_cursor_request_surface!(async_client);
+        assert_v002_surface!(sync_client);
+        assert_v002_surface!(async_client);
 
         assert_resource_surface!(sync_client);
         assert_resource_surface!(async_client);

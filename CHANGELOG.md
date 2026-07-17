@@ -6,12 +6,18 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
-## [0.4.1] - 2026-07-17
+## [0.5.0] - 2026-07-17
 
 ### Added
 
 - A compatibility history records the server target and immutable integration
   image used for each reproducibly tested client release.
+- Typed backup submission, task inspection, output retrieval, and high-level
+  backup runners for async and blocking clients.
+- Typed destructive-restore staging, confirmation, and capability-only status
+  inspection, with secret-bearing values redacted from debug output.
+- Shared and personal computed-field definition, preview, update, deletion,
+  rebuild, and computed-object read APIs.
 
 ### Changed
 
@@ -21,6 +27,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - The pinned OpenAPI contract now tracks the final server v0.0.2 release while
   scheduled drift and integration jobs continue checking the server's `main`
   branch for forward compatibility.
+- Administrative configuration models now cover the backup, restore,
+  permissions, task lease/recovery, and computed reindex settings introduced by
+  server v0.0.2.
 
 ## [0.4.0] - 2026-07-13
 
