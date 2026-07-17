@@ -1,12 +1,13 @@
-# Known server OpenAPI gaps
+# Known Hubuum server v0.0.2 OpenAPI gaps
 
-The client contract snapshot records these server-spec limitations explicitly:
+The pinned client contract records these limitations in the server v0.0.2
+specification explicitly:
 
-- `info.version` is still `0.0.1` and does not identify the deployed API revision.
 - `GET /api/v1/search/stream` describes SSE in prose but does not declare a
   `text/event-stream` response content type or event schema.
 - Import and export submission support `Idempotency-Key` in the server and client,
   but the header is not represented as an operation parameter.
 
-The scheduled drift job should remain strict about operation changes. These gaps
-can be removed from this document when the server specification is corrected.
+The scheduled drift job remains strict about changes on the server's `main`
+branch. These gaps can be removed when a targeted server specification corrects
+them.

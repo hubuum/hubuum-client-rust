@@ -5,6 +5,9 @@
 
 //! A hubuum API client library.
 //!
+//! Version 0.4.1 targets Hubuum server v0.0.2. See the repository's
+//! `COMPATIBILITY.md` for the tested image digest and compatibility history.
+//!
 //! async:
 //! ```no_run
 //! # #[cfg(feature = "async")]
@@ -39,6 +42,9 @@ pub mod resources;
 pub mod types;
 
 mod endpoints;
+
+/// Hubuum server release targeted by this client release.
+pub const TARGET_SERVER_VERSION: &str = "0.0.2";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]

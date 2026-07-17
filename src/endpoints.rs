@@ -14,6 +14,9 @@ pub enum Endpoint {
     MetaDb,
     MetaTasks,
     AdminConfig,
+    Backups,
+    BackupByTaskId,
+    BackupOutput,
     Users,
     UsersById,
     UserEvents,
@@ -27,6 +30,9 @@ pub enum Endpoint {
     PrincipalTokenRevoke,
     PrincipalSettings,
     Me,
+    MeComputedFields,
+    MeComputedFieldsPreview,
+    MeComputedFieldById,
     MeGroups,
     MePermissions,
     MeSettings,
@@ -38,6 +44,10 @@ pub enum Endpoint {
     GroupMembersAddRemove,
     Classes,
     ClassesById,
+    ClassComputedFields,
+    ClassComputedFieldsPreview,
+    ClassComputedFieldsRebuild,
+    ClassComputedFieldById,
     ClassPermissions,
     ClassEvents,
     ClassHistory,
@@ -111,6 +121,9 @@ pub enum Endpoint {
     RemoteTargetHistory,
     RemoteTargetHistoryAsOf,
     RemoteTargetInvoke,
+    Restores,
+    RestoreConfirm,
+    RestoreStatus,
     Healthz,
     Readyz,
 }
@@ -129,6 +142,9 @@ impl Endpoint {
             Endpoint::MetaDb => "/api/v0/meta/db",
             Endpoint::MetaTasks => "/api/v0/meta/tasks",
             Endpoint::AdminConfig => "/api/v1/admin/config",
+            Endpoint::Backups => "/api/v1/backups",
+            Endpoint::BackupByTaskId => "/api/v1/backups/{task_id}",
+            Endpoint::BackupOutput => "/api/v1/backups/{task_id}/output",
             Endpoint::Users => "/api/v1/iam/users",
             Endpoint::UsersById => "/api/v1/iam/users/{user_id}",
             Endpoint::UserEvents => "/api/v1/iam/users/{user_id}/events",
@@ -146,6 +162,9 @@ impl Endpoint {
             }
             Endpoint::PrincipalSettings => "/api/v1/iam/principals/{principal_id}/settings",
             Endpoint::Me => "/api/v1/iam/me",
+            Endpoint::MeComputedFields => "/api/v1/iam/me/computed-fields",
+            Endpoint::MeComputedFieldsPreview => "/api/v1/iam/me/computed-fields/preview",
+            Endpoint::MeComputedFieldById => "/api/v1/iam/me/computed-fields/{field_id}",
             Endpoint::MeGroups => "/api/v1/iam/me/groups",
             Endpoint::MePermissions => "/api/v1/iam/me/permissions",
             Endpoint::MeSettings => "/api/v1/iam/me/settings",
@@ -159,6 +178,16 @@ impl Endpoint {
             }
             Endpoint::Classes => "/api/v1/classes",
             Endpoint::ClassesById => "/api/v1/classes/{class_id}",
+            Endpoint::ClassComputedFields => "/api/v1/classes/{class_id}/computed-fields",
+            Endpoint::ClassComputedFieldsPreview => {
+                "/api/v1/classes/{class_id}/computed-fields/preview"
+            }
+            Endpoint::ClassComputedFieldsRebuild => {
+                "/api/v1/classes/{class_id}/computed-fields/rebuild"
+            }
+            Endpoint::ClassComputedFieldById => {
+                "/api/v1/classes/{class_id}/computed-fields/{field_id}"
+            }
             Endpoint::ClassPermissions => "/api/v1/classes/{class_id}/permissions",
             Endpoint::ClassEvents => "/api/v1/classes/{class_id}/events",
             Endpoint::ClassHistory => "/api/v1/classes/{class_id}/history",
@@ -264,6 +293,9 @@ impl Endpoint {
                 "/api/v1/remote-targets/{remote_target_id}/history/as-of"
             }
             Endpoint::RemoteTargetInvoke => "/api/v1/remote-targets/{target_id}/invoke",
+            Endpoint::Restores => "/api/v1/restores",
+            Endpoint::RestoreConfirm => "/api/v1/restores/{restore_id}/confirm",
+            Endpoint::RestoreStatus => "/api/v1/restores/{restore_id}/status",
             Endpoint::Healthz => "/healthz",
             Endpoint::Readyz => "/readyz",
         }
@@ -307,7 +339,7 @@ mod test {
             .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(client_paths, spec_paths);
-        assert_eq!(contract["operation_count"], 159);
+        assert_eq!(contract["operation_count"], 176);
     }
     use std::str::FromStr;
     use yare::parameterized;
@@ -323,6 +355,9 @@ mod test {
         meta_db = { Endpoint::MetaDb, "/api/v0/meta/db" },
         meta_tasks = { Endpoint::MetaTasks, "/api/v0/meta/tasks" },
         admin_config = { Endpoint::AdminConfig, "/api/v1/admin/config" },
+        backups = { Endpoint::Backups, "/api/v1/backups" },
+        backup_by_task_id = { Endpoint::BackupByTaskId, "/api/v1/backups/{task_id}" },
+        backup_output = { Endpoint::BackupOutput, "/api/v1/backups/{task_id}/output" },
         get_user = { Endpoint::Users, "/api/v1/iam/users" },
         get_user_by_id = { Endpoint::UsersById, "/api/v1/iam/users/{user_id}" },
         user_events = { Endpoint::UserEvents, "/api/v1/iam/users/{user_id}/events" },
@@ -335,6 +370,9 @@ mod test {
         principal_token_revoke = { Endpoint::PrincipalTokenRevoke, "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke" },
         principal_settings = { Endpoint::PrincipalSettings, "/api/v1/iam/principals/{principal_id}/settings" },
         me = { Endpoint::Me, "/api/v1/iam/me" },
+        me_computed_fields = { Endpoint::MeComputedFields, "/api/v1/iam/me/computed-fields" },
+        me_computed_fields_preview = { Endpoint::MeComputedFieldsPreview, "/api/v1/iam/me/computed-fields/preview" },
+        me_computed_field_by_id = { Endpoint::MeComputedFieldById, "/api/v1/iam/me/computed-fields/{field_id}" },
         me_groups = { Endpoint::MeGroups, "/api/v1/iam/me/groups" },
         me_permissions = { Endpoint::MePermissions, "/api/v1/iam/me/permissions" },
         me_settings = { Endpoint::MeSettings, "/api/v1/iam/me/settings" },
@@ -344,6 +382,10 @@ mod test {
         group_members_add_remove = { Endpoint::GroupMembersAddRemove, "/api/v1/iam/groups/{group_id}/members/{principal_id}" },
         get_class_permissions = { Endpoint::ClassPermissions, "/api/v1/classes/{class_id}/permissions" },
         get_class_by_id = { Endpoint::ClassesById, "/api/v1/classes/{class_id}" },
+        class_computed_fields = { Endpoint::ClassComputedFields, "/api/v1/classes/{class_id}/computed-fields" },
+        class_computed_fields_preview = { Endpoint::ClassComputedFieldsPreview, "/api/v1/classes/{class_id}/computed-fields/preview" },
+        class_computed_fields_rebuild = { Endpoint::ClassComputedFieldsRebuild, "/api/v1/classes/{class_id}/computed-fields/rebuild" },
+        class_computed_field_by_id = { Endpoint::ClassComputedFieldById, "/api/v1/classes/{class_id}/computed-fields/{field_id}" },
         get_class_related_classes = { Endpoint::ClassRelatedClasses, "/api/v1/classes/{class_id}/related/classes" },
         get_class_related_relations = { Endpoint::ClassRelatedRelations, "/api/v1/classes/{class_id}/related/relations" },
         get_class_related_graph = { Endpoint::ClassRelatedGraph, "/api/v1/classes/{class_id}/related/graph" },
@@ -386,6 +428,9 @@ mod test {
         remote_targets = { Endpoint::RemoteTargets, "/api/v1/remote-targets" },
         remote_target_by_id = { Endpoint::RemoteTargetsById, "/api/v1/remote-targets/{target_id}" },
         remote_target_invoke = { Endpoint::RemoteTargetInvoke, "/api/v1/remote-targets/{target_id}/invoke" },
+        restores = { Endpoint::Restores, "/api/v1/restores" },
+        restore_confirm = { Endpoint::RestoreConfirm, "/api/v1/restores/{restore_id}/confirm" },
+        restore_status = { Endpoint::RestoreStatus, "/api/v1/restores/{restore_id}/status" },
         healthz = { Endpoint::Healthz, "/healthz" },
         readyz = { Endpoint::Readyz, "/readyz" }
     )]

@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.1",
+  "api_version": "0.0.2",
   "openapi": "3.1.0",
-  "operation_count": 159,
+  "operation_count": 176,
   "operations": [
     {
       "method": "POST",
@@ -220,6 +220,9 @@
         ],
         "403": [
           "application/json"
+        ],
+        "503": [
+          "application/json"
         ]
       },
       "security": [
@@ -246,6 +249,9 @@
           "application/json"
         ],
         "403": [
+          "application/json"
+        ],
+        "503": [
           "application/json"
         ]
       },
@@ -277,6 +283,9 @@
           "application/json"
         ],
         "404": [
+          "application/json"
+        ],
+        "503": [
           "application/json"
         ]
       },
@@ -323,6 +332,99 @@
           "application/json"
         ],
         "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1Backups",
+      "parameters": [],
+      "path": "/api/v1/backups",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1BackupsByTaskId",
+      "parameters": [
+        "path:task_id"
+      ],
+      "path": "/api/v1/backups/{task_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1BackupsByTaskIdOutput",
+      "parameters": [
+        "path:task_id"
+      ],
+      "path": "/api/v1/backups/{task_id}/output",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "410": [
           "application/json"
         ]
       },
@@ -472,6 +574,7 @@
       "parameters": [
         "path:class_id",
         "query:cursor",
+        "query:include",
         "query:include_total",
         "query:limit",
         "query:sort"
@@ -516,6 +619,162 @@
           "application/json"
         ],
         "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdComputedFields",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/computed-fields",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdComputedFields",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/computed-fields",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdComputedFieldsPreview",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/computed-fields/preview",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdComputedFieldsRebuild",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/computed-fields/rebuild",
+      "request_content": [],
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByClassIdComputedFieldsByFieldId",
+      "parameters": [
+        "path:class_id",
+        "path:field_id",
+        "query:expected_revision"
+      ],
+      "path": "/api/v1/classes/{class_id}/computed-fields/{field_id}",
+      "request_content": [],
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1ClassesByClassIdComputedFieldsByFieldId",
+      "parameters": [
+        "path:class_id",
+        "path:field_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/computed-fields/{field_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
           "application/json"
         ],
         "409": [
@@ -1018,7 +1277,8 @@
       "operation_id": "getApiV1ClassesByClassIdByObjectId",
       "parameters": [
         "path:class_id",
-        "path:object_id"
+        "path:object_id",
+        "query:include"
       ],
       "path": "/api/v1/classes/{class_id}/{object_id}",
       "request_content": [],
@@ -1096,6 +1356,9 @@
           "application/json"
         ],
         "401": [
+          "application/json"
+        ],
+        "404": [
           "application/json"
         ]
       },
@@ -2592,6 +2855,9 @@
         "401": [
           "application/json"
         ],
+        "403": [
+          "application/json"
+        ],
         "409": [
           "application/json"
         ],
@@ -2926,6 +3192,117 @@
           "application/json"
         ],
         "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamMeComputedFields",
+      "parameters": [
+        "query:class_id"
+      ],
+      "path": "/api/v1/iam/me/computed-fields",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamMeComputedFields",
+      "parameters": [],
+      "path": "/api/v1/iam/me/computed-fields",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamMeComputedFieldsPreview",
+      "parameters": [],
+      "path": "/api/v1/iam/me/computed-fields/preview",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1IamMeComputedFieldsByFieldId",
+      "parameters": [
+        "path:field_id",
+        "query:expected_revision"
+      ],
+      "path": "/api/v1/iam/me/computed-fields/{field_id}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1IamMeComputedFieldsByFieldId",
+      "parameters": [
+        "path:field_id"
+      ],
+      "path": "/api/v1/iam/me/computed-fields/{field_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "409": [
           "application/json"
         ]
       },
@@ -3739,6 +4116,9 @@
         "401": [
           "application/json"
         ],
+        "403": [
+          "application/json"
+        ],
         "409": [
           "application/json"
         ],
@@ -4295,6 +4675,101 @@
       ]
     },
     {
+      "method": "POST",
+      "operation_id": "postApiV1Restores",
+      "parameters": [],
+      "path": "/api/v1/restores",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "413": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1RestoresByRestoreIdConfirm",
+      "parameters": [
+        "path:restore_id"
+      ],
+      "path": "/api/v1/restores/{restore_id}/confirm",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "410": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1RestoresByRestoreIdStatus",
+      "parameters": [
+        "path:restore_id"
+      ],
+      "path": "/api/v1/restores/{restore_id}/status",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "restore_capability": []
+        }
+      ]
+    },
+    {
       "method": "GET",
       "operation_id": "getApiV1Search",
       "parameters": [
@@ -4473,12 +4948,20 @@
       "security": []
     }
   ],
-  "path_count": 109,
-  "schema_count": 175,
+  "path_count": 122,
+  "schema_count": 221,
   "schema_names": [
     "ApiErrorResponse",
     "AuthProvidersResponse",
     "AuthenticationConfig",
+    "BackupConfig",
+    "BackupDocument",
+    "BackupHistory",
+    "BackupManifest",
+    "BackupRequest",
+    "BackupState",
+    "BackupTaskDetails",
+    "ClassComputationState",
     "ClassKey",
     "ClearRateLimitResponse",
     "ClientAllowlistStatus",
@@ -4486,6 +4969,18 @@
     "CollectionHistory",
     "CollectionID",
     "CollectionKey",
+    "ComputedFieldDefinition",
+    "ComputedFieldDefinitionPatch",
+    "ComputedFieldDefinitionRequest",
+    "ComputedFieldDeleteResponse",
+    "ComputedFieldErrorResponse",
+    "ComputedFieldListResponse",
+    "ComputedFieldMutationResponse",
+    "ComputedFieldPreviewRequest",
+    "ComputedFieldPreviewResponse",
+    "ComputedObjectScopesResponse",
+    "ComputedResultType",
+    "ComputedScopeResponse",
     "CountsResponse",
     "CurrentTokenMetadata",
     "DatabaseConfig",
@@ -4503,6 +4998,7 @@
     "EventSink",
     "EventSinkDeliveryHealth",
     "EventSinkID",
+    "EventSinkKey",
     "EventSinkKind",
     "EventSubscription",
     "EventSubscriptionDeliveryHealth",
@@ -4548,22 +5044,35 @@
     "HubuumClassRelationID",
     "HubuumClassWithPath",
     "HubuumObject",
+    "HubuumObjectComputedResponse",
     "HubuumObjectHistory",
     "HubuumObjectID",
+    "HubuumObjectReadResponse",
     "HubuumObjectRelation",
     "HubuumObjectRelationID",
     "HubuumObjectWithPath",
+    "IdentityScopeKey",
     "ImportAtomicity",
     "ImportClassInput",
     "ImportClassRelationInput",
     "ImportCollectionInput",
     "ImportCollectionPermissionInput",
     "ImportCollisionPolicy",
+    "ImportEventSinkInput",
+    "ImportEventSubscriptionInput",
+    "ImportExportTemplateInput",
     "ImportGraph",
+    "ImportGroupInput",
+    "ImportGroupMembershipInput",
+    "ImportIdentityScopeInput",
+    "ImportMembershipSourceInput",
     "ImportMode",
     "ImportObjectInput",
     "ImportObjectRelationInput",
     "ImportPermissionPolicy",
+    "ImportPrincipalInput",
+    "ImportPrincipalSubtype",
+    "ImportRemoteTargetInput",
     "ImportRequest",
     "ImportTaskDetails",
     "ImportTaskResultResponse",
@@ -4587,6 +5096,7 @@
     "NewHubuumClassRelationFromClass",
     "NewHubuumObject",
     "NewHubuumObjectRelation",
+    "NewHubuumObjectRequest",
     "NewRemoteTarget",
     "NewServiceAccount",
     "NewTokenRequest",
@@ -4595,8 +5105,11 @@
     "ObjectsByClass",
     "PaginationConfig",
     "Permission",
+    "PermissionConfig",
     "Permissions",
+    "PersonalComputedFieldDefinitionRequest",
     "PrincipalCollectionPermissions",
+    "PrincipalKey",
     "PrincipalMemberResponse",
     "PrincipalSettings",
     "PrincipalToken",
@@ -4617,10 +5130,17 @@
     "RemoteTargetID",
     "RemoteTargetInvokeRequest",
     "RemoteTargetSubjectType",
+    "RestoreConfig",
+    "RestoreConfirmRequest",
+    "RestoreJobStatus",
+    "RestoreStageResponse",
+    "RestoreTimestamps",
+    "RestoreValidationSummary",
     "RunningConfig",
     "SecretStatus",
     "ServerConfig",
     "ServiceAccountResponse",
+    "SharedComputedScopeResponse",
     "TaskConfig",
     "TaskDetails",
     "TaskEventResponse",
@@ -4647,10 +5167,11 @@
     "UpdateGroup",
     "UpdateHubuumClass",
     "UpdateHubuumObject",
+    "UpdateHubuumObjectRequest",
     "UpdateRemoteTarget",
     "UpdateServiceAccount",
     "UpdateUser",
     "UserResponse"
   ],
-  "spec_sha256": "ba6b289cf2f1d92cd8230e62c447291514e8e66835b7d245bd320d74884aeca7"
+  "spec_sha256": "05f8614e221a5592782599d8ffe4255ad059c2098405a871cab0188e74c3faed"
 }

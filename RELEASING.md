@@ -39,15 +39,21 @@ before creating the release tag that should publish it.
 
 1. Update the client and derive manifest versions to the next release number.
 2. Keep `hubuum_client_derive`'s dependency version in the root `Cargo.toml` in sync.
-3. Add a dated `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md`.
-4. Update the crates.io version snippet in `README.md`.
-5. Run:
+3. Set `[package.metadata.hubuum].server-version` and `server-image` to the
+   targeted server release and its immutable image digest.
+4. Update the required CI image and pinned OpenAPI source to the same server
+   release. Keep scheduled forward-compatibility checks on server `main`.
+5. Add the client/server pair and test evidence to `COMPATIBILITY.md`.
+6. Add a dated `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md` that names
+   the targeted server release.
+7. Update the crates.io version and compatibility statements in `README.md`.
+8. Run:
 
    ```bash
    ./scripts/check-release.sh vX.Y.Z
    ```
 
-6. Push a tag like `vX.Y.Z`.
+9. Push a tag like `vX.Y.Z`.
 
 The `Release` GitHub Actions workflow validates the release metadata, checks the
 workspace, lists all packaged files, and publishes both crates to crates.io

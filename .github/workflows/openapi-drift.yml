@@ -15,5 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Compare with Server OpenAPI
-        run: python3 scripts/openapi-contract.py check
+      - name: Compare with Latest Server OpenAPI
+        run: >-
+          python3 scripts/openapi-contract.py check
+          --spec https://raw.githubusercontent.com/hubuum/hubuum/main/docs/openapi.json

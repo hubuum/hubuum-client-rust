@@ -6,6 +6,22 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-17
+
+### Added
+
+- A compatibility history records the server target and immutable integration
+  image used for each reproducibly tested client release.
+
+### Changed
+
+- This release explicitly targets Hubuum server v0.0.2. Required CI and the
+  full library and consumer integration suites use the final v0.0.2 image at
+  `sha256:8f543383b422124546c8d337fd557e1b182b1b6c7078d7870d3c5cd4f955ef1f`.
+- The pinned OpenAPI contract now tracks the final server v0.0.2 release while
+  scheduled drift and integration jobs continue checking the server's `main`
+  branch for forward compatibility.
+
 ## [0.4.0] - 2026-07-13
 
 ### Breaking
