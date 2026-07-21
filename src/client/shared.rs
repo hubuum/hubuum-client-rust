@@ -496,13 +496,13 @@ pub(crate) fn build_request_url(
 }
 
 fn ensure_no_unresolved_url_params(url: &str) -> Result<(), ApiError> {
-    if let Some(start) = url.find('{') {
-        if let Some(end_offset) = url[start + 1..].find('}') {
-            let end = start + 1 + end_offset;
-            return Err(ApiError::MissingUrlParameter(
-                url[start + 1..end].to_string(),
-            ));
-        }
+    if let Some(start) = url.find('{')
+        && let Some(end_offset) = url[start + 1..].find('}')
+    {
+        let end = start + 1 + end_offset;
+        return Err(ApiError::MissingUrlParameter(
+            url[start + 1..end].to_string(),
+        ));
     }
 
     Ok(())

@@ -12,7 +12,7 @@ const DB_PASSWORD: &str = "hubuum_password";
 const DB_NAME: &str = "hubuum";
 const DB_IMAGE_DEFAULT: &str = "postgres:18";
 const SERVER_IMAGE_DEFAULT: &str = "ghcr.io/hubuum/hubuum-server:main";
-const LDAP_IMAGE_DEFAULT: &str = "ghcr.io/rroemhild/docker-test-openldap@sha256:08a769cd1a8c8a17cba7fba28bc3443722203dd101b4f3628929a4ee30b50ec4";
+const LDAP_IMAGE_DEFAULT: &str = "ghcr.io/rroemhild/docker-test-openldap@sha256:3470e15c60119a1c0392cc162cdce71edfb42b55affdc69da574012f956317cd";
 const AUTH_CONFIG_DEFAULT: &str = "tests/container_integration/fixtures/auth-providers.toml";
 const LDAP_CERTIFICATE_SCRIPT: &str =
     "tests/container_integration/fixtures/generate-ldap-certificates.sh";

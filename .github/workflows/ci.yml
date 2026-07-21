@@ -94,14 +94,14 @@ jobs:
         run: cargo check -p hubuum_client --locked ${{ matrix.flags }}
 
   msrv:
-    name: MSRV (Rust 1.86)
+    name: MSRV (Rust 1.88)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install Rust 1.86
-        uses: dtolnay/rust-toolchain@1.86
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@1.88
 
       - name: Cache Cargo Artifacts
         uses: Swatinem/rust-cache@v2
@@ -138,7 +138,7 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check bans licenses sources
-          rust-version: 1.86
+          rust-version: 1.88
 
   semver:
     name: Public API Compatibility

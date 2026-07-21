@@ -38,6 +38,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   OpenAPI contract plus immutable multi-platform server image
   `sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186`.
 - Event list builders now expose the server's `include_total` control.
+- Rust dependencies are refreshed to their latest releases, including `syn` 3
+  and `httpmock` 0.8.3, the workspace MSRV is raised to Rust 1.88, and the
+  pinned OpenLDAP integration fixture now tracks its current image.
 
 ## [0.5.1] - 2026-07-17
 
