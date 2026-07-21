@@ -13,7 +13,9 @@ use crate::client::sync::{
     GraphRequest as SyncGraphRequest, Handle as SyncHandle,
 };
 use crate::{
-    ApiError, ClassId, ClassRelationId, CollectionId, endpoints::Endpoint, types::HubuumDateTime,
+    ApiError, ClassId, ClassRelationId, CollectionId,
+    endpoints::Endpoint,
+    types::{ComputedFieldSelector, HubuumDateTime},
 };
 
 #[allow(dead_code)]
@@ -22,7 +24,9 @@ pub struct ObjectResource {
     #[api(read_only)]
     pub id: i32,
     pub name: String,
+    #[api(post_optional)]
     pub collection_id: CollectionId,
+    #[api(post_optional)]
     pub hubuum_class_id: ClassId,
     pub description: String,
     #[api(optional)]
@@ -66,8 +70,164 @@ pub struct RelatedObjectGraph {
     pub relations: Vec<ObjectRelation>,
 }
 
+/// One RFC 6902 operation applied relative to an object's raw `data` value.
+#[non_exhaustive]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+#[serde(tag = "op", rename_all = "lowercase")]
+pub enum ObjectDataPatchOperation {
+    Add {
+        path: String,
+        value: serde_json::Value,
+    },
+    Remove {
+        path: String,
+    },
+    Replace {
+        path: String,
+        value: serde_json::Value,
+    },
+    Move {
+        from: String,
+        path: String,
+    },
+    Copy {
+        from: String,
+        path: String,
+    },
+    Test {
+        path: String,
+        value: serde_json::Value,
+    },
+}
+
+/// RFC 6902 document accepted by the object-data patch endpoints.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
+#[serde(transparent)]
+pub struct ObjectDataPatchDocument(pub Vec<ObjectDataPatchOperation>);
+
+impl ObjectDataPatchDocument {
+    pub fn new(operations: impl IntoIterator<Item = ObjectDataPatchOperation>) -> Self {
+        Self(operations.into_iter().collect())
+    }
+
+    pub fn push(&mut self, operation: ObjectDataPatchOperation) {
+        self.0.push(operation);
+    }
+}
+
+impl std::ops::Deref for ObjectDataPatchDocument {
+    type Target = [ObjectDataPatchOperation];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<Vec<ObjectDataPatchOperation>> for ObjectDataPatchDocument {
+    fn from(operations: Vec<ObjectDataPatchOperation>) -> Self {
+        Self(operations)
+    }
+}
+
+/// One ordered dimension in an object aggregate query.
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ObjectAggregateDimension {
+    Name,
+    Description,
+    CollectionId,
+    CreatedAt,
+    UpdatedAt,
+    JsonData(Vec<String>),
+    Computed(ComputedFieldSelector),
+}
+
+impl ObjectAggregateDimension {
+    pub fn json_data<I, S>(path: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        Self::JsonData(path.into_iter().map(Into::into).collect())
+    }
+
+    pub fn shared_computed(key: impl Into<String>) -> Self {
+        Self::Computed(ComputedFieldSelector::shared(key))
+    }
+
+    pub fn personal_computed(key: impl Into<String>) -> Self {
+        Self::Computed(ComputedFieldSelector::personal(key))
+    }
+}
+
+impl std::fmt::Display for ObjectAggregateDimension {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Name => formatter.write_str("name"),
+            Self::Description => formatter.write_str("description"),
+            Self::CollectionId => formatter.write_str("collection_id"),
+            Self::CreatedAt => formatter.write_str("created_at"),
+            Self::UpdatedAt => formatter.write_str("updated_at"),
+            Self::JsonData(path) => write!(formatter, "json_data.{}", path.join(",")),
+            Self::Computed(selector) => selector.fmt(formatter),
+        }
+    }
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ObjectAggregateSort {
+    DimensionsAsc,
+    DimensionsDesc,
+    ObjectCountAsc,
+    ObjectCountDesc,
+}
+
+impl std::fmt::Display for ObjectAggregateSort {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::DimensionsAsc => formatter.write_str("dimensions.asc"),
+            Self::DimensionsDesc => formatter.write_str("dimensions.desc"),
+            Self::ObjectCountAsc => formatter.write_str("object_count.asc"),
+            Self::ObjectCountDesc => formatter.write_str("object_count.desc"),
+        }
+    }
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ObjectAggregateValueState {
+    Value,
+    Null,
+    Missing,
+    Unavailable,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct ObjectAggregateDimensionValue {
+    pub field: String,
+    pub state: ObjectAggregateValueState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct ObjectAggregateRow {
+    pub dimensions: Vec<ObjectAggregateDimensionValue>,
+    pub object_count: i64,
+}
+
 #[cfg(feature = "blocking")]
 impl SyncHandle<Object> {
+    /// Atomically apply an RFC 6902 patch to this object's raw data document.
+    pub fn patch_data(&self, patch: &ObjectDataPatchDocument) -> Result<Object, ApiError> {
+        self.client()
+            .patch_object_data(self.resource().hubuum_class_id, self.resource().id, patch)
+    }
+
     pub fn related_objects(&self) -> SyncCursorRequest<ObjectWithPath> {
         SyncCursorRequest::new(
             self.client().clone(),
@@ -266,6 +426,13 @@ impl SyncGraphRequest<RelatedObjectGraph> {
 
 #[cfg(feature = "async")]
 impl AsyncHandle<Object> {
+    /// Atomically apply an RFC 6902 patch to this object's raw data document.
+    pub async fn patch_data(&self, patch: &ObjectDataPatchDocument) -> Result<Object, ApiError> {
+        self.client()
+            .patch_object_data(self.resource().hubuum_class_id, self.resource().id, patch)
+            .await
+    }
+
     pub fn related_objects(&self) -> AsyncCursorRequest<ObjectWithPath> {
         AsyncCursorRequest::new(
             self.client().clone(),
@@ -466,5 +633,73 @@ impl AsyncGraphRequest<RelatedObjectGraph> {
 
     pub fn ignore_self_class(self, ignore_self_class: bool) -> Self {
         self.query_param("ignore_self_class", ignore_self_class)
+    }
+}
+
+#[cfg(test)]
+mod v003_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn json_patch_document_serializes_every_rfc6902_operation() {
+        let document = ObjectDataPatchDocument::new([
+            ObjectDataPatchOperation::Add {
+                path: "/a".into(),
+                value: json!(1),
+            },
+            ObjectDataPatchOperation::Remove { path: "/b".into() },
+            ObjectDataPatchOperation::Replace {
+                path: "/c".into(),
+                value: json!(2),
+            },
+            ObjectDataPatchOperation::Move {
+                from: "/a".into(),
+                path: "/d".into(),
+            },
+            ObjectDataPatchOperation::Copy {
+                from: "/c".into(),
+                path: "/e".into(),
+            },
+            ObjectDataPatchOperation::Test {
+                path: "/e".into(),
+                value: json!(2),
+            },
+        ]);
+        assert_eq!(
+            serde_json::to_value(document).unwrap(),
+            json!([
+                {"op": "add", "path": "/a", "value": 1},
+                {"op": "remove", "path": "/b"},
+                {"op": "replace", "path": "/c", "value": 2},
+                {"op": "move", "from": "/a", "path": "/d"},
+                {"op": "copy", "from": "/c", "path": "/e"},
+                {"op": "test", "path": "/e", "value": 2}
+            ])
+        );
+    }
+
+    #[test]
+    fn aggregate_query_values_match_the_server_contract() {
+        assert_eq!(ObjectAggregateDimension::Name.to_string(), "name");
+        assert_eq!(
+            ObjectAggregateDimension::json_data(["region", "zone"]).to_string(),
+            "json_data.region,zone"
+        );
+        assert_eq!(
+            ObjectAggregateDimension::shared_computed("risk").to_string(),
+            "computed.shared.risk"
+        );
+        assert_eq!(
+            ObjectAggregateSort::ObjectCountDesc.to_string(),
+            "object_count.desc"
+        );
+
+        let row: ObjectAggregateRow = serde_json::from_value(json!({
+            "dimensions": [{"field": "name", "state": "future_state"}],
+            "object_count": 3
+        }))
+        .unwrap();
+        assert_eq!(row.dimensions[0].state, ObjectAggregateValueState::Unknown);
     }
 }

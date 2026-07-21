@@ -1,9 +1,10 @@
 use hubuum_client::{
-    ApiError, BaseUrl, ClassPost, ClassRelationPost, Client, CollectionPatch, CollectionPost,
-    ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest, ComputedFieldOperation,
-    ComputedFieldPreviewRequest, ComputedResultType, Credentials, GroupPatch, LOCAL_IDENTITY_SCOPE,
-    ObjectPatch, ObjectPost, ObjectRelationPost, PersonalComputedFieldDefinitionRequest,
-    QueryFilter, Token, UserPatch,
+    ApiError, BaseUrl, ClassPatch, ClassPost, ClassRelationPost, Client, CollectionPatch,
+    CollectionPost, ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest,
+    ComputedFieldOperation, ComputedFieldPreviewRequest, ComputedResultType, Credentials,
+    GroupPatch, LOCAL_IDENTITY_SCOPE, ObjectAggregateDimension, ObjectAggregateSort,
+    ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectPatch, ObjectPost, ObjectRelationPost,
+    PersonalComputedFieldDefinitionRequest, QueryFilter, Token, UserPatch,
     types::{FilterOperator, Permissions, SortDirection},
 };
 use rstest::rstest;
@@ -67,6 +68,176 @@ fn async_meta_db_available_connections_non_negative() {
 }
 
 #[test]
+#[ignore = "requires Docker and Hubuum server v0.0.3 image"]
+fn async_v003_exact_names_aggregates_patching_and_public_config() {
+    let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
+    let client = harness.client.clone();
+    let (_, admin_group_id) = harness
+        .block_on(async_admin_context(&client))
+        .expect("failed to resolve admin context");
+    let (collection_id, _) = harness
+        .block_on(create_async_permission_sandbox(
+            &client,
+            admin_group_id,
+            "v003-natural-keys",
+        ))
+        .expect("failed to create v0.0.3 sandbox");
+    let numeric_name = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock should follow Unix epoch")
+        .as_nanos()
+        .to_string();
+    let class = harness
+        .block_on(client.classes().create_raw(ClassPost {
+            name: numeric_name.clone(),
+            description: "numeric-looking exact-name class".to_string(),
+            collection_id,
+            json_schema: None,
+            validate_schema: None,
+        }))
+        .expect("numeric-looking class should create");
+
+    let public_client =
+        Client::try_new(client.base_url().clone()).expect("unauthenticated client should build");
+    let config = harness
+        .block_on(public_client.config())
+        .expect("public client config should decode");
+    assert!(config.pagination.default_page_limit > 0);
+    assert!(config.pagination.max_page_limit >= config.pagination.default_page_limit);
+
+    let direct = harness
+        .block_on(client.classes().get_by_name(&numeric_name))
+        .expect("numeric-looking name should use the exact-name route");
+    assert_eq!(direct.id(), class.id);
+
+    let scope = client.class_by_name(&numeric_name);
+    harness
+        .block_on(scope.update(ClassPatch {
+            name: None,
+            description: Some("updated through exact-name route".to_string()),
+            collection_id,
+            json_schema: None,
+            validate_schema: None,
+        }))
+        .expect("class exact-name update should succeed");
+    assert_eq!(
+        harness
+            .block_on(scope.get())
+            .expect("class exact-name get should succeed")
+            .id(),
+        class.id
+    );
+
+    let object = harness
+        .block_on(scope.objects().create(
+            numeric_name.clone(),
+            "numeric-looking exact-name object",
+            json!({"owner": "inventory"}),
+        ))
+        .expect("path-inferred object create should succeed");
+    assert_eq!(object.collection_id, collection_id);
+    assert_eq!(object.hubuum_class_id, class.id);
+
+    let object_scope = scope.objects().by_name(&numeric_name);
+    assert_eq!(
+        harness
+            .block_on(object_scope.get())
+            .expect("object exact-name get should succeed")
+            .id(),
+        object.id
+    );
+    harness
+        .block_on(object_scope.update(ObjectPatch {
+            name: None,
+            collection_id: None,
+            hubuum_class_id: None,
+            description: Some("updated exact-name object".to_string()),
+            data: None,
+        }))
+        .expect("object exact-name update should succeed");
+
+    let name_patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
+        path: "/owner".to_string(),
+        value: json!("network"),
+    }]);
+    let patched = harness
+        .block_on(object_scope.patch_data(&name_patch))
+        .expect("object exact-name JSON patch should succeed");
+    assert_eq!(patched.data, Some(json!({"owner": "network"})));
+
+    let id_patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Add {
+        path: "/verified".to_string(),
+        value: json!(true),
+    }]);
+    let patched = harness
+        .block_on(client.patch_object_data(class.id, object.id, &id_patch))
+        .expect("object ID JSON patch should succeed");
+    assert_eq!(
+        patched.data,
+        Some(json!({"owner": "network", "verified": true}))
+    );
+
+    let by_name_page = harness
+        .block_on(
+            scope
+                .object_aggregates()
+                .group_by(ObjectAggregateDimension::Name)
+                .aggregate_sort(ObjectAggregateSort::ObjectCountDesc)
+                .include_total(true)
+                .page(),
+        )
+        .expect("exact-name aggregate should succeed");
+    assert_eq!(by_name_page.items[0].object_count, 1);
+    assert_eq!(by_name_page.total_count, Some(1));
+    assert!(by_name_page.page_limit.is_some());
+    let by_id_rows = harness
+        .block_on(
+            client
+                .object_aggregates(class.id)
+                .group_by(ObjectAggregateDimension::Name)
+                .list(),
+        )
+        .expect("class-ID aggregate should succeed");
+    assert_eq!(by_id_rows.len(), 1);
+
+    assert_eq!(
+        harness
+            .block_on(scope.objects().query().list())
+            .expect("exact-name object list should succeed")
+            .len(),
+        1
+    );
+    harness
+        .block_on(scope.permissions().list())
+        .expect("exact-name permissions should succeed");
+    harness
+        .block_on(scope.related_classes().list())
+        .expect("exact-name related classes should succeed");
+    harness
+        .block_on(scope.related_relations().list())
+        .expect("exact-name related relations should succeed");
+    harness
+        .block_on(scope.related_graph().send())
+        .expect("exact-name class graph should succeed");
+    harness
+        .block_on(object_scope.related_objects().list())
+        .expect("exact-name related objects should succeed");
+    harness
+        .block_on(object_scope.related_relations().list())
+        .expect("exact-name object relations should succeed");
+    harness
+        .block_on(object_scope.related_graph().send())
+        .expect("exact-name object graph should succeed");
+
+    harness
+        .block_on(object_scope.delete())
+        .expect("object exact-name delete should succeed");
+    harness
+        .block_on(scope.delete())
+        .expect("class exact-name delete should succeed");
+}
+
+#[test]
 #[ignore = "requires Docker and hubuum server image"]
 fn async_v002_shared_and_personal_computed_field_lifecycle() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
@@ -84,8 +255,8 @@ fn async_v002_shared_and_personal_computed_field_lifecycle() {
     let object = harness
         .block_on(client.objects(class_id).create_raw(ObjectPost {
             name: unique_case_prefix("computed-object"),
-            collection_id,
-            hubuum_class_id: class_id,
+            collection_id: Some(collection_id),
+            hubuum_class_id: Some(class_id),
             description: "computed-field integration object".to_string(),
             data: Some(json!({"source": "live-value"})),
         }))

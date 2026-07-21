@@ -22,6 +22,7 @@ use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";
+pub(crate) const PAGE_LIMIT_HEADER: &str = "X-Page-Limit";
 
 pub const DEFAULT_MAX_RESPONSE_BODY_BYTES: usize = 16 * 1024 * 1024;
 pub const DEFAULT_MAX_ERROR_BODY_BYTES: usize = 64 * 1024;
@@ -192,8 +193,7 @@ pub(crate) fn build_request_plan<T: Serialize>(
         plan.headers.insert(name, value);
     }
     if matches!(*method, Method::POST | Method::PUT | Method::PATCH) {
-        plan.headers.insert(
-            reqwest::header::CONTENT_TYPE,
+        plan.headers.entry(reqwest::header::CONTENT_TYPE).or_insert(
             reqwest::header::HeaderValue::from_static("application/json"),
         );
         plan = plan.with_body(serde_json::to_vec(body)?);
@@ -241,12 +241,13 @@ pub(crate) fn process_transport_response(
             content_length: Some(response.body.len() as u64),
         });
     }
-    let (next_cursor, total_count, content_type) = response_metadata(&response.headers);
+    let (next_cursor, total_count, page_limit, content_type) = response_metadata(&response.headers);
     Ok(RawResponse {
         status: response.status,
         body: String::from_utf8_lossy(&response.body).into_owned(),
         next_cursor,
         total_count,
+        page_limit,
         content_type,
     })
 }
@@ -378,6 +379,8 @@ pub struct Page<T> {
     pub next_cursor: Option<String>,
     /// Exact number of matching items across all pages, when supplied by the server.
     pub total_count: Option<u64>,
+    /// Effective page size after applying the server's default and maximum.
+    pub page_limit: Option<usize>,
 }
 
 impl<T> Page<T> {
@@ -445,6 +448,7 @@ pub(crate) struct RawResponse {
     pub body: String,
     pub next_cursor: Option<String>,
     pub total_count: Option<u64>,
+    pub page_limit: Option<usize>,
     pub content_type: Option<ExportContentType>,
 }
 
@@ -521,7 +525,12 @@ fn url_param<'a>(url_params: &'a UrlParams, key: &str) -> Option<&'a str> {
 
 pub(crate) fn response_metadata(
     headers: &HeaderMap,
-) -> (Option<String>, Option<u64>, Option<ExportContentType>) {
+) -> (
+    Option<String>,
+    Option<u64>,
+    Option<usize>,
+    Option<ExportContentType>,
+) {
     let next_cursor = headers
         .get(NEXT_CURSOR_HEADER)
         .and_then(|value| value.to_str().ok())
@@ -530,11 +539,15 @@ pub(crate) fn response_metadata(
         .get(TOTAL_COUNT_HEADER)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse().ok());
+    let page_limit = headers
+        .get(PAGE_LIMIT_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse().ok());
     let content_type = headers
         .get(CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .and_then(ExportContentType::from_header);
-    (next_cursor, total_count, content_type)
+    (next_cursor, total_count, page_limit, content_type)
 }
 
 pub(crate) fn parse_http_error_message(body: &str) -> String {
@@ -584,12 +597,14 @@ pub(crate) fn parse_page_response<U: DeserializeOwned>(
 ) -> Result<Page<U>, ApiError> {
     let next_cursor = raw.next_cursor;
     let total_count = raw.total_count;
+    let page_limit = raw.page_limit;
     let items: Vec<U> = parse_response(method, raw.status, raw.body)?
         .ok_or(ApiError::EmptyResult("GET returned empty result".into()))?;
     Ok(Page {
         items,
         next_cursor,
         total_count,
+        page_limit,
     })
 }
 
@@ -1282,6 +1297,7 @@ mod test {
                 body: "[{\"id\":1}]".to_string(),
                 next_cursor: Some("abc".to_string()),
                 total_count: Some(12),
+                page_limit: Some(25),
                 content_type: Some(ExportContentType::ApplicationJson),
             },
         )
@@ -1295,6 +1311,7 @@ mod test {
         assert_eq!(AsRef::<[serde_json::Value]>::as_ref(&page).len(), 1);
         assert_eq!(page.next_cursor.as_deref(), Some("abc"));
         assert_eq!(page.total_count, Some(12));
+        assert_eq!(page.page_limit, Some(25));
     }
 
     #[test]

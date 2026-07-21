@@ -1,6 +1,7 @@
 # Backups, Restores, and Computed Fields
 
-These APIs target Hubuum server v0.0.2. They are available on both the default
+These APIs were introduced for Hubuum server v0.0.2 and remain available on the
+current target. They are available on both the default
 async client and `hubuum_client::blocking::Client`; remove `.await` for the
 blocking equivalents.
 

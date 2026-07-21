@@ -33,15 +33,15 @@ pub use computed::{
     ClassComputationState, ComputedFieldDefinition, ComputedFieldDefinitionPatch,
     ComputedFieldDefinitionRequest, ComputedFieldDeleteResponse, ComputedFieldError,
     ComputedFieldListResponse, ComputedFieldMutationResponse, ComputedFieldOperation,
-    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedFieldVisibility,
-    ComputedObject, ComputedObjectScopes, ComputedResultType, ComputedScope,
-    PersonalComputedFieldDefinitionRequest, SharedComputedScope,
+    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedFieldQueryScope,
+    ComputedFieldSelector, ComputedFieldVisibility, ComputedObject, ComputedObjectScopes,
+    ComputedResultType, ComputedScope, PersonalComputedFieldDefinitionRequest, SharedComputedScope,
 };
 pub use config::{
-    AuthenticationConfig, BackupConfig, ClientAllowlistStatus, DEFAULT_METRICS_PATH,
-    DatabaseConfig, EventConfig, ExportConfig, NetworkConfig, PaginationConfig, PermissionConfig,
-    RemoteCallConfig, RestoreConfig, RunningConfig, RunningLoginRateLimitConfig, SecretStatus,
-    ServerConfig, TaskConfig, TlsConfig,
+    AuthenticationConfig, BackupConfig, ClientAllowlistStatus, ClientConfig,
+    ClientPaginationConfig, DEFAULT_METRICS_PATH, DatabaseConfig, EventConfig, ExportConfig,
+    NetworkConfig, PaginationConfig, PermissionConfig, RemoteCallConfig, RestoreConfig,
+    RunningConfig, RunningLoginRateLimitConfig, SecretStatus, ServerConfig, TaskConfig, TlsConfig,
 };
 pub use datetime::HubuumDateTime;
 pub use event::{

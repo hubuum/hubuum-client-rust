@@ -5,7 +5,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.5.1 targets Hubuum server v0.0.2. See the repository's
+//! Version 0.6.0 targets Hubuum server v0.0.3. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -44,7 +44,7 @@ pub mod types;
 mod endpoints;
 
 /// Hubuum server release targeted by this client release.
-pub const TARGET_SERVER_VERSION: &str = "0.0.2";
+pub const TARGET_SERVER_VERSION: &str = "0.0.3";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
@@ -57,20 +57,24 @@ pub use client::{
     TransportResponse, Unauthenticated,
 };
 #[cfg(feature = "async")]
-pub use client::{Client, CollectionScope, ExportOutputStream, ItemStream, PageStream, TypedClass};
+pub use client::{
+    ClassNameObjects, ClassNameScope, Client, CollectionScope, ExportOutputStream, ItemStream,
+    ObjectNameScope, PageStream, TypedClass,
+};
 pub use errors::{ApiError, ApiErrorResponse};
 pub use resources::*;
 pub use types::{
     AuthProvidersResponse, AuthenticationConfig, BackupConfig, BackupDocument, BackupHistory,
     BackupManifest, BackupRequest, BackupState, BackupTaskDetails, BaseUrl, CURRENT_BACKUP_VERSION,
     CURRENT_IMPORT_VERSION, ClassComputationState, ClassHistory, ClassKey, ClassParams,
-    ClearRateLimitResponse, ClientAllowlistStatus, CollectionHistory, CollectionKey,
-    ComputedFieldDefinition, ComputedFieldDefinitionId, ComputedFieldDefinitionPatch,
-    ComputedFieldDefinitionRequest, ComputedFieldDeleteResponse, ComputedFieldError,
-    ComputedFieldListResponse, ComputedFieldMutationResponse, ComputedFieldOperation,
-    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedFieldVisibility,
-    ComputedObject, ComputedObjectScopes, ComputedResultType, ComputedScope, CountsResponse,
-    Credentials, DEFAULT_METRICS_PATH, DatabaseConfig, DbStateResponse, EventConfig, EventDelivery,
+    ClearRateLimitResponse, ClientAllowlistStatus, ClientConfig, ClientPaginationConfig,
+    CollectionHistory, CollectionKey, ComputedFieldDefinition, ComputedFieldDefinitionId,
+    ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest, ComputedFieldDeleteResponse,
+    ComputedFieldError, ComputedFieldListResponse, ComputedFieldMutationResponse,
+    ComputedFieldOperation, ComputedFieldPreviewRequest, ComputedFieldPreviewResponse,
+    ComputedFieldQueryScope, ComputedFieldSelector, ComputedFieldVisibility, ComputedObject,
+    ComputedObjectScopes, ComputedResultType, ComputedScope, CountsResponse, Credentials,
+    DEFAULT_METRICS_PATH, DatabaseConfig, DbStateResponse, EventConfig, EventDelivery,
     EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryQueueHealth, EventDeliveryStatus,
     EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
     EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSubscription,

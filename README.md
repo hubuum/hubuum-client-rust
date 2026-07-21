@@ -2,7 +2,7 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.5.1 targets Hubuum server v0.0.2. The exact tested image and
+`hubuum_client` 0.6.0 targets Hubuum server v0.0.3. The exact tested image and
 the history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
@@ -19,6 +19,9 @@ the history for earlier client releases are recorded in
 - **Exports, imports, and full-system backups**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
 - **Administrative recovery**: inspect redacted runtime configuration and stage, confirm, or inspect destructive restores with explicit capability handling.
 - **Computed fields**: manage shared class definitions and personal definitions, preview expressions, request rebuilds, and read enriched objects.
+- **Natural-key routing**: address classes and objects by exact names, including numeric-looking names, across CRUD, permissions, relations, and graph operations.
+- **Object aggregates and patching**: group permission-visible objects by typed dimensions, filter or sort by computed fields, and atomically patch object data with RFC 6902 documents.
+- **Effective pagination metadata**: discover public pagination limits and inspect the server-applied page limit alongside cursors and optional totals.
 - **Principal-centric identity**: users and service accounts are principals, with group membership, scoped tokens, and effective permission helpers.
 - **Scoped identity providers**: discover available providers before login,
   authenticate against named scopes, filter principals by scope, inspect provider
@@ -33,14 +36,14 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.5.1"
+hubuum_client = "0.6.0"
 ```
 
 Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.5.1", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.6.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
@@ -123,6 +126,34 @@ let classes = client
     .list()
     .await?;
 ```
+
+Exact-name scopes avoid ambiguity when a class or object name contains only
+digits. The same scopes expose aggregates and atomic object-data patches:
+
+```rust
+use hubuum_client::{
+    ObjectAggregateDimension, ObjectDataPatchDocument, ObjectDataPatchOperation,
+};
+
+let class = client.class_by_name("123");
+let object = class.objects().by_name("456");
+let patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
+    path: "/owner".into(),
+    value: serde_json::json!("network"),
+}]);
+object.patch_data(&patch).await?;
+
+let page = class
+    .object_aggregates()
+    .group_by(ObjectAggregateDimension::Name)
+    .include_total(true)
+    .page()
+    .await?;
+println!("server applied page limit {:?}", page.page_limit);
+```
+
+Pagination defaults are public and can be discovered before login with
+`Client::config()`.
 
 Exports and imports are task-backed. High-level helpers submit work, poll the task to completion, and return the final output:
 

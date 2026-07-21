@@ -45,6 +45,14 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let plural_name = format_ident!("{}", pluralize(&name));
     let async_checked_name = format_ident!("Async{}Create", name);
     let sync_checked_name = format_ident!("Sync{}Create", name);
+    let (name_item_endpoint, name_param) = if name == "Class" {
+        (
+            quote!(Some(crate::endpoints::Endpoint::ClassesByName)),
+            "class_name",
+        )
+    } else {
+        (quote!(None), "name")
+    };
 
     let name_field = match base_name.trim_end_matches("Resource") {
         "Group" => format_ident!("groupname"),
@@ -367,6 +375,8 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
             const COLLECTION_ENDPOINT: crate::endpoints::Endpoint = crate::endpoints::Endpoint::#endpoint;
             const ITEM_ENDPOINT: Option<crate::endpoints::Endpoint> = Some(crate::endpoints::Endpoint::#item_endpoint);
             const ID_PARAM: &'static str = #id_param;
+            const NAME_ITEM_ENDPOINT: Option<crate::endpoints::Endpoint> = #name_item_endpoint;
+            const NAME_PARAM: &'static str = #name_param;
 
             fn endpoint(&self) -> crate::endpoints::Endpoint {
                 Self::COLLECTION_ENDPOINT

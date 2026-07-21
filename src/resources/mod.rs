@@ -25,8 +25,11 @@ pub use self::export_template::{
 };
 pub use self::group::{Group, GroupGet, GroupId, GroupPatch, GroupPost};
 pub use self::object::{
-    Object, ObjectGet, ObjectId, ObjectPatch, ObjectPost, ObjectRelation, ObjectRelationGet,
-    ObjectRelationId, ObjectRelationPatch, ObjectRelationPost, ObjectWithPath, RelatedObjectGraph,
+    Object, ObjectAggregateDimension, ObjectAggregateDimensionValue, ObjectAggregateRow,
+    ObjectAggregateSort, ObjectAggregateValueState, ObjectDataPatchDocument,
+    ObjectDataPatchOperation, ObjectGet, ObjectId, ObjectPatch, ObjectPost, ObjectRelation,
+    ObjectRelationGet, ObjectRelationId, ObjectRelationPatch, ObjectRelationPost, ObjectWithPath,
+    RelatedObjectGraph,
 };
 pub use self::remote_target::RemoteTargetId;
 pub use self::service_account::{
@@ -81,6 +84,8 @@ pub trait ApiResource: sealed::Sealed + Default {
     const COLLECTION_ENDPOINT: Endpoint;
     const ITEM_ENDPOINT: Option<Endpoint> = None;
     const ID_PARAM: &'static str = "id";
+    const NAME_ITEM_ENDPOINT: Option<Endpoint> = None;
+    const NAME_PARAM: &'static str = Self::NAME_FIELD;
 
     fn endpoint(&self) -> Endpoint;
     fn build_params(filters: Vec<(String, FilterOperator, String)>) -> Vec<QueryFilter>;

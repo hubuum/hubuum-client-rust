@@ -4,8 +4,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use hubuum_client::{
-    ApiError, BaseUrl, ExportContentType, ExportTemplateKind, MockTransport, RetryPolicy,
-    TaskStatus, Token, TransportResponse, TypedObject, blocking,
+    ApiError, BaseUrl, ExportContentType, ExportTemplateKind, MockTransport,
+    ObjectDataPatchDocument, ObjectDataPatchOperation, RetryPolicy, TaskStatus, Token,
+    TransportResponse, TypedObject, blocking,
 };
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -242,6 +243,44 @@ fn raw_json_requests_set_content_type_for_custom_transports() {
     );
     assert_eq!(request.body(), br#"{"password":"consumer-secret"}"#);
     assert!(!format!("{request:?}").contains("consumer-secret"));
+}
+
+#[test]
+fn object_data_patch_preserves_its_media_type_for_custom_transports() {
+    let transport = MockTransport::default();
+    transport.push_response(
+        TransportResponse::json(
+            StatusCode::OK,
+            &json!({
+                "id": 9,
+                "name": "router",
+                "collection_id": 7,
+                "hubuum_class_id": 42,
+                "description": "Router",
+                "data": {"owner": "network"},
+                "created_at": "2026-07-21T10:00:00Z",
+                "updated_at": "2026-07-21T10:00:00Z"
+            }),
+        )
+        .unwrap(),
+    );
+    let client = blocking_mock_client(transport.clone(), 1024);
+    let patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
+        path: "/owner".into(),
+        value: json!("network"),
+    }]);
+
+    client.patch_object_data(42, 9, &patch).unwrap();
+
+    let request = transport.requests().pop().unwrap();
+    assert_eq!(
+        request.headers.get(reqwest::header::CONTENT_TYPE).unwrap(),
+        "application/json-patch+json"
+    );
+    assert_eq!(
+        request.body(),
+        br#"[{"op":"replace","path":"/owner","value":"network"}]"#
+    );
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

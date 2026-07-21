@@ -61,6 +61,60 @@ pub enum ComputedFieldVisibility {
     Unknown,
 }
 
+/// Computed-field namespace accepted by object filters, sorts, and aggregates.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComputedFieldQueryScope {
+    Shared,
+    Personal,
+}
+
+impl std::fmt::Display for ComputedFieldQueryScope {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Shared => formatter.write_str("shared"),
+            Self::Personal => formatter.write_str("personal"),
+        }
+    }
+}
+
+/// A named computed field used in an object query.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ComputedFieldSelector {
+    scope: ComputedFieldQueryScope,
+    key: String,
+}
+
+impl ComputedFieldSelector {
+    pub fn shared(key: impl Into<String>) -> Self {
+        Self {
+            scope: ComputedFieldQueryScope::Shared,
+            key: key.into(),
+        }
+    }
+
+    pub fn personal(key: impl Into<String>) -> Self {
+        Self {
+            scope: ComputedFieldQueryScope::Personal,
+            key: key.into(),
+        }
+    }
+
+    pub const fn scope(&self) -> ComputedFieldQueryScope {
+        self.scope
+    }
+
+    pub fn key(&self) -> &str {
+        &self.key
+    }
+}
+
+impl std::fmt::Display for ComputedFieldSelector {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "computed.{}.{}", self.scope, self.key)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ComputedFieldDefinition {
     pub id: ComputedFieldDefinitionId,
@@ -379,5 +433,17 @@ mod tests {
         assert_eq!(value["class_id"], 2);
         assert_eq!(value["object_id"], 4);
         assert!(value.get("data").is_none());
+    }
+
+    #[test]
+    fn query_selectors_use_shared_and_personal_namespaces() {
+        let shared = ComputedFieldSelector::shared("risk");
+        assert_eq!(shared.scope(), ComputedFieldQueryScope::Shared);
+        assert_eq!(shared.key(), "risk");
+        assert_eq!(shared.to_string(), "computed.shared.risk");
+        assert_eq!(
+            ComputedFieldSelector::personal("rank").to_string(),
+            "computed.personal.rank"
+        );
     }
 }

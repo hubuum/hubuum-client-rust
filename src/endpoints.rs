@@ -13,6 +13,7 @@ pub enum Endpoint {
     MetaCounts,
     MetaDb,
     MetaTasks,
+    ClientConfig,
     AdminConfig,
     Backups,
     BackupByTaskId,
@@ -44,6 +45,13 @@ pub enum Endpoint {
     GroupMembersAddRemove,
     Classes,
     ClassesById,
+    ClassesByName,
+    ClassByNameObjects,
+    ClassByNameObjectAggregates,
+    ClassByNamePermissions,
+    ClassByNameRelatedClasses,
+    ClassByNameRelatedRelations,
+    ClassByNameRelatedGraph,
     ClassComputedFields,
     ClassComputedFieldsPreview,
     ClassComputedFieldsRebuild,
@@ -55,6 +63,7 @@ pub enum Endpoint {
     ClassRelatedClasses,
     ClassRelatedRelations,
     ClassRelatedGraph,
+    ClassObjectAggregates,
     ClassRelationsFromClass,
     ClassRelationFromClassById,
     Collections,
@@ -76,6 +85,12 @@ pub enum Endpoint {
     CollectionHasPermissions,
     Objects,
     ObjectsById,
+    ObjectData,
+    ObjectByName,
+    ObjectByNameData,
+    ObjectByNameRelatedObjects,
+    ObjectByNameRelatedRelations,
+    ObjectByNameRelatedGraph,
     ObjectRelatedObjects,
     ObjectEvents,
     ObjectHistory,
@@ -141,6 +156,7 @@ impl Endpoint {
             Endpoint::MetaCounts => "/api/v0/meta/counts",
             Endpoint::MetaDb => "/api/v0/meta/db",
             Endpoint::MetaTasks => "/api/v0/meta/tasks",
+            Endpoint::ClientConfig => "/api/v1/config",
             Endpoint::AdminConfig => "/api/v1/admin/config",
             Endpoint::Backups => "/api/v1/backups",
             Endpoint::BackupByTaskId => "/api/v1/backups/{task_id}",
@@ -178,6 +194,21 @@ impl Endpoint {
             }
             Endpoint::Classes => "/api/v1/classes",
             Endpoint::ClassesById => "/api/v1/classes/{class_id}",
+            Endpoint::ClassesByName => "/api/v1/classes/by-name/{class_name}",
+            Endpoint::ClassByNameObjects => "/api/v1/classes/by-name/{class_name}/objects",
+            Endpoint::ClassByNameObjectAggregates => {
+                "/api/v1/classes/by-name/{class_name}/object-aggregates"
+            }
+            Endpoint::ClassByNamePermissions => "/api/v1/classes/by-name/{class_name}/permissions",
+            Endpoint::ClassByNameRelatedClasses => {
+                "/api/v1/classes/by-name/{class_name}/related/classes"
+            }
+            Endpoint::ClassByNameRelatedRelations => {
+                "/api/v1/classes/by-name/{class_name}/related/relations"
+            }
+            Endpoint::ClassByNameRelatedGraph => {
+                "/api/v1/classes/by-name/{class_name}/related/graph"
+            }
             Endpoint::ClassComputedFields => "/api/v1/classes/{class_id}/computed-fields",
             Endpoint::ClassComputedFieldsPreview => {
                 "/api/v1/classes/{class_id}/computed-fields/preview"
@@ -195,6 +226,7 @@ impl Endpoint {
             Endpoint::ClassRelatedClasses => "/api/v1/classes/{class_id}/related/classes",
             Endpoint::ClassRelatedRelations => "/api/v1/classes/{class_id}/related/relations",
             Endpoint::ClassRelatedGraph => "/api/v1/classes/{class_id}/related/graph",
+            Endpoint::ClassObjectAggregates => "/api/v1/classes/{class_id}/object-aggregates",
             Endpoint::ClassRelationsFromClass => "/api/v1/classes/{class_id}/relations",
             Endpoint::ClassRelationFromClassById => {
                 "/api/v1/classes/{class_id}/relations/{relation_id}"
@@ -236,6 +268,22 @@ impl Endpoint {
 
             Endpoint::Objects => "/api/v1/classes/{class_id}/",
             Endpoint::ObjectsById => "/api/v1/classes/{class_id}/{object_id}",
+            Endpoint::ObjectData => "/api/v1/classes/{class_id}/{object_id}/data",
+            Endpoint::ObjectByName => {
+                "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}"
+            }
+            Endpoint::ObjectByNameData => {
+                "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}/data"
+            }
+            Endpoint::ObjectByNameRelatedObjects => {
+                "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}/related/objects"
+            }
+            Endpoint::ObjectByNameRelatedRelations => {
+                "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}/related/relations"
+            }
+            Endpoint::ObjectByNameRelatedGraph => {
+                "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}/related/graph"
+            }
             Endpoint::ObjectRelatedObjects => {
                 "/api/v1/classes/{class_id}/objects/{object_id}/related/objects"
             }
@@ -339,7 +387,7 @@ mod test {
             .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(client_paths, spec_paths);
-        assert_eq!(contract["operation_count"], 176);
+        assert_eq!(contract["operation_count"], 196);
     }
     use std::str::FromStr;
     use yare::parameterized;

@@ -6,6 +6,39 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-21
+
+### Breaking
+
+- `ObjectPost::collection_id` and `ObjectPost::hubuum_class_id` are now optional
+  so class-scoped and natural-key object creation can let the server infer both
+  values from the request path.
+- `Page<T>` now includes `page_limit`, exposing the effective server-applied
+  limit from the `X-Page-Limit` response header.
+
+### Added
+
+- Exact class- and object-name scopes, including numeric-looking names, cover
+  CRUD, permissions, related resources, relations, and graph operations for
+  async and blocking clients.
+- Permission-aware object aggregates support ordered typed dimensions,
+  aggregate sorting, computed-field filters, cursor pagination, total counts,
+  and both class-ID and exact-name routes.
+- Atomic object-data updates use typed RFC 6902 documents across numeric,
+  exact-name, and object-handle APIs with the required
+  `application/json-patch+json` media type.
+- Public client configuration exposes the server's default and maximum
+  pagination limits without authentication.
+- Object list builders can filter and sort through typed shared or personal
+  computed-field selectors.
+
+### Changed
+
+- This release explicitly targets Hubuum server v0.0.3 and pins its 196-operation
+  OpenAPI contract plus immutable multi-platform server image
+  `sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186`.
+- Event list builders now expose the server's `include_total` control.
+
 ## [0.5.1] - 2026-07-17
 
 ### Added

@@ -3,6 +3,21 @@ use serde::{Deserialize, Serialize};
 /// Default path of the Hubuum Prometheus scrape endpoint.
 pub const DEFAULT_METRICS_PATH: &str = "/metrics";
 
+/// Unauthenticated capability information needed by API consumers.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ClientConfig {
+    pub pagination: ClientPaginationConfig,
+}
+
+/// Effective pagination defaults and limits advertised by the server.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ClientPaginationConfig {
+    pub default_page_limit: u64,
+    pub max_page_limit: u64,
+}
+
 /// Redacted effective process configuration returned by the administrative
 /// configuration endpoint.
 #[non_exhaustive]

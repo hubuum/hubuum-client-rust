@@ -15,8 +15,8 @@ pub mod transport;
 
 #[cfg(feature = "async")]
 pub use self::r#async::{
-    Client, CollectionScope, ExportOutputStream, ItemStream, PageStream, PrincipalSettingsScope,
-    TypedClass,
+    ClassNameObjects, ClassNameScope, Client, CollectionScope, ExportOutputStream, ItemStream,
+    ObjectNameScope, PageStream, PrincipalSettingsScope, TypedClass,
 };
 pub(crate) use self::shared::redacted_url_for_log;
 pub use self::shared::{
@@ -111,6 +111,7 @@ mod parity_contract {
             let _ = $module::Client::<Unauthenticated>::base_url;
             let _ = $module::Client::<Unauthenticated>::http_client;
             let _ = $module::Client::<Unauthenticated>::auth_providers;
+            let _ = $module::Client::<Unauthenticated>::config;
             let _ = $module::Client::<Unauthenticated>::healthz;
             let _ = $module::Client::<Unauthenticated>::readyz;
             let _ = $module::Client::<Unauthenticated>::metrics;
@@ -245,6 +246,7 @@ mod parity_contract {
     macro_rules! assert_cursor_request_surface {
         ($module:ident) => {
             let _ = $module::EventListRequest::all;
+            let _ = $module::EventListRequest::include_total;
             let _ = $module::HistoryRequest::<crate::types::ClassHistory>::all;
             let _ = $module::HistoryRequest::<crate::types::ClassHistory>::include_total;
             let _ = $module::TaskListRequest::all;
@@ -273,6 +275,59 @@ mod parity_contract {
             let _ = $module::PersonalComputedFields::query;
             let _ = $module::PersonalComputedFields::create;
             let _ = $module::PersonalComputedFields::preview;
+        };
+    }
+
+    macro_rules! assert_v003_surface {
+        ($module:ident) => {
+            let _ = |client: &$module::Client<Authenticated>| {
+                let _ = client.class_by_name(String::new());
+                let _ = client.object_aggregates(1);
+                let patch = crate::resources::ObjectDataPatchDocument::default();
+                std::mem::drop(client.patch_object_data(1, 1, &patch));
+            };
+
+            let _ = $module::ClassNameScope::get;
+            let _ = $module::ClassNameScope::update;
+            let _ = $module::ClassNameScope::delete;
+            let _ = $module::ClassNameScope::objects;
+            let _ = $module::ClassNameScope::object_aggregates;
+            let _ = $module::ClassNameScope::permissions;
+            let _ = $module::ClassNameScope::related_classes;
+            let _ = $module::ClassNameScope::related_relations;
+            let _ = $module::ClassNameScope::related_graph;
+
+            let _ = $module::ClassNameObjects::query;
+            let _ = $module::ClassNameObjects::create_raw;
+            let _ = |objects: &$module::ClassNameObjects| {
+                std::mem::drop(objects.create(
+                    String::new(),
+                    String::new(),
+                    serde_json::Value::Null,
+                ));
+                let _ = objects.by_name(String::new());
+            };
+
+            let _ = $module::ObjectNameScope::get;
+            let _ = $module::ObjectNameScope::get_computed;
+            let _ = $module::ObjectNameScope::update;
+            let _ = $module::ObjectNameScope::delete;
+            let _ = $module::ObjectNameScope::patch_data;
+            let _ = $module::ObjectNameScope::related_objects;
+            let _ = $module::ObjectNameScope::related_relations;
+            let _ = $module::ObjectNameScope::related_graph;
+
+            let _ = $module::CursorRequest::<Object>::computed_filter::<i32>;
+            let _ = $module::CursorRequest::<Object>::computed_sort;
+            let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::group_by;
+            let _ = |request: $module::CursorRequest<crate::resources::ObjectAggregateRow>| {
+                request.group_by_all(Vec::<crate::resources::ObjectAggregateDimension>::new())
+            };
+            let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::aggregate_sort;
+            let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::computed_filter::<
+                i32,
+            >;
+            let _ = $module::Handle::<Object>::patch_data;
         };
     }
 
@@ -337,6 +392,8 @@ mod parity_contract {
         assert_cursor_request_surface!(async_client);
         assert_v002_surface!(sync_client);
         assert_v002_surface!(async_client);
+        assert_v003_surface!(sync_client);
+        assert_v003_surface!(async_client);
 
         assert_resource_surface!(sync_client);
         assert_resource_surface!(async_client);

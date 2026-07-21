@@ -326,8 +326,8 @@ pub(crate) fn create_sync_object(
     let name = format!("{prefix}-object");
     let object = client.objects(class_id).create_raw(ObjectPost {
         name: name.clone(),
-        collection_id,
-        hubuum_class_id: class_id,
+        collection_id: Some(collection_id),
+        hubuum_class_id: Some(class_id),
         description: "integration object".to_string(),
         data: None,
     })?;
@@ -378,8 +378,8 @@ pub(crate) async fn create_async_object(
         .objects(class_id)
         .create_raw(ObjectPost {
             name: name.clone(),
-            collection_id,
-            hubuum_class_id: class_id,
+            collection_id: Some(collection_id),
+            hubuum_class_id: Some(class_id),
             description: "integration object".to_string(),
             data: None,
         })
