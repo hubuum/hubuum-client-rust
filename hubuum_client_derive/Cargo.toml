@@ -1,8 +1,8 @@
 [package]
 name = "hubuum_client_derive"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2024"
-rust-version = "1.86"
+rust-version = "1.88"
 license = "MIT"
 description = "Procedural macros used by hubuum_client to define Hubuum API resources."
 repository = "https://github.com/hubuum/hubuum-client-rust"
@@ -15,6 +15,6 @@ categories = ["development-tools::procedural-macro-helpers"]
 proc-macro = true
 
 [dependencies]
-syn = "2"
+syn = "3"
 quote = "1.0"
 proc-macro2 = "1.0"

@@ -9,7 +9,7 @@ import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "openapi" / "operations.json"
-DEFAULT_SPEC = "https://raw.githubusercontent.com/hubuum/hubuum/v0.0.2/docs/openapi.json"
+DEFAULT_SPEC = "https://raw.githubusercontent.com/hubuum/hubuum/v0.0.3/docs/openapi.json"
 METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
 
 

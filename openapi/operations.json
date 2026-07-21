@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.2",
+  "api_version": "0.0.3",
   "openapi": "3.1.0",
-  "operation_count": 176,
+  "operation_count": 196,
   "operations": [
     {
       "method": "POST",
@@ -492,6 +492,550 @@
     },
     {
       "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByNameByClassName",
+      "parameters": [
+        "path:class_name"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassName",
+      "parameters": [
+        "path:class_name"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1ClassesByNameByClassName",
+      "parameters": [
+        "path:class_name"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameObjectAggregates",
+      "parameters": [
+        "path:class_name",
+        "query:group_by",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/object-aggregates",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "413": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameObjects",
+      "parameters": [
+        "path:class_name",
+        "query:cursor",
+        "query:include",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/objects",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByNameByClassNameObjects",
+      "parameters": [
+        "path:class_name"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/objects",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByNameByClassNameObjectsByNameByObjectName",
+      "parameters": [
+        "path:class_name",
+        "path:object_name"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}",
+      "request_content": [],
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameObjectsByNameByObjectName",
+      "parameters": [
+        "path:class_name",
+        "path:object_name",
+        "query:include"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1ClassesByNameByClassNameObjectsByNameByObjectName",
+      "parameters": [
+        "path:class_name",
+        "path:object_name"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1ClassesByNameByClassNameObjectsByNameByObjectNameData",
+      "parameters": [
+        "path:class_name",
+        "path:object_name"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}/data",
+      "request_content": [
+        "application/json-patch+json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "406": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "413": [
+          "application/json"
+        ],
+        "415": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameObjectsByNameByObjectNameRelatedGraph",
+      "parameters": [
+        "path:class_name",
+        "path:object_name"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}/related/graph",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameObjectsByNameByObjectNameRelatedObjects",
+      "parameters": [
+        "path:class_name",
+        "path:object_name",
+        "query:cursor",
+        "query:ignore_classes",
+        "query:ignore_self_class",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}/related/objects",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameObjectsByNameByObjectNameRelatedRelations",
+      "parameters": [
+        "path:class_name",
+        "path:object_name",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/objects/by-name/{object_name}/related/relations",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNamePermissions",
+      "parameters": [
+        "path:class_name",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/permissions",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameRelatedClasses",
+      "parameters": [
+        "path:class_name",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/related/classes",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameRelatedGraph",
+      "parameters": [
+        "path:class_name"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/related/graph",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameRelatedRelations",
+      "parameters": [
+        "path:class_name",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/related/relations",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
       "operation_id": "deleteApiV1ClassesByClassId",
       "parameters": [
         "path:class_id"
@@ -797,6 +1341,7 @@
         "query:actor_user_id",
         "query:collection_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -876,6 +1421,39 @@
           "application/json"
         ],
         "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdObjectAggregates",
+      "parameters": [
+        "path:class_id",
+        "query:group_by",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/object-aggregates",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "413": [
           "application/json"
         ]
       },
@@ -1331,6 +1909,55 @@
       ]
     },
     {
+      "method": "PATCH",
+      "operation_id": "patchApiV1ClassesByClassIdByObjectIdData",
+      "parameters": [
+        "path:class_id",
+        "path:object_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}/data",
+      "request_content": [
+        "application/json-patch+json"
+      ],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "406": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "413": [
+          "application/json"
+        ],
+        "415": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
       "method": "GET",
       "operation_id": "getApiV1ClassesByClassIdByObjectIdEvents",
       "parameters": [
@@ -1341,6 +1968,7 @@
         "query:actor_user_id",
         "query:collection_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -1622,7 +2250,11 @@
       "method": "GET",
       "operation_id": "getApiV1CollectionsByCollectionIdEventSubscriptions",
       "parameters": [
-        "path:collection_id"
+        "path:collection_id",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
       ],
       "path": "/api/v1/collections/{collection_id}/event-subscriptions",
       "request_content": [],
@@ -1784,6 +2416,7 @@
         "query:actor_kind",
         "query:actor_user_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -2231,9 +2864,26 @@
     },
     {
       "method": "GET",
+      "operation_id": "getApiV1Config",
+      "parameters": [],
+      "path": "/api/v1/config",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "GET",
       "operation_id": "getApiV1EventDeliveries",
       "parameters": [
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:sort"
       ],
@@ -2372,7 +3022,12 @@
     {
       "method": "GET",
       "operation_id": "getApiV1EventSinks",
-      "parameters": [],
+      "parameters": [
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
       "path": "/api/v1/event-sinks",
       "request_content": [],
       "responses": {
@@ -2527,6 +3182,7 @@
         "query:cursor",
         "query:entity_id",
         "query:entity_type",
+        "query:include_total",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -2710,6 +3366,7 @@
         "query:actor_user_id",
         "query:collection_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -3080,6 +3737,7 @@
         "query:actor_user_id",
         "query:collection_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -3205,7 +3863,11 @@
       "method": "GET",
       "operation_id": "getApiV1IamMeComputedFields",
       "parameters": [
-        "query:class_id"
+        "query:class_id",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
       ],
       "path": "/api/v1/iam/me/computed-fields",
       "request_content": [],
@@ -4074,6 +4736,7 @@
         "query:actor_user_id",
         "query:collection_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -4164,7 +4827,11 @@
       "method": "GET",
       "operation_id": "getApiV1ImportsByTaskIdResults",
       "parameters": [
-        "path:task_id"
+        "path:task_id",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
       ],
       "path": "/api/v1/imports/{task_id}/results",
       "request_content": [],
@@ -4399,7 +5066,12 @@
     {
       "method": "GET",
       "operation_id": "getApiV1RemoteTargets",
-      "parameters": [],
+      "parameters": [
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
       "path": "/api/v1/remote-targets",
       "request_content": [],
       "responses": {
@@ -4614,6 +5286,7 @@
         "query:actor_user_id",
         "query:collection_id",
         "query:cursor",
+        "query:include_total",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -4894,7 +5567,11 @@
       "method": "GET",
       "operation_id": "getApiV1TasksByTaskIdEvents",
       "parameters": [
-        "path:task_id"
+        "path:task_id",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
       ],
       "path": "/api/v1/tasks/{task_id}/events",
       "request_content": [],
@@ -4948,9 +5625,10 @@
       "security": []
     }
   ],
-  "path_count": 122,
-  "schema_count": 221,
+  "path_count": 137,
+  "schema_count": 234,
   "schema_names": [
+    "AddOperation",
     "ApiErrorResponse",
     "AuthProvidersResponse",
     "AuthenticationConfig",
@@ -4965,6 +5643,8 @@
     "ClassKey",
     "ClearRateLimitResponse",
     "ClientAllowlistStatus",
+    "ClientConfig",
+    "ClientPaginationConfig",
     "Collection",
     "CollectionHistory",
     "CollectionID",
@@ -4981,6 +5661,7 @@
     "ComputedObjectScopesResponse",
     "ComputedResultType",
     "ComputedScopeResponse",
+    "CopyOperation",
     "CountsResponse",
     "CurrentTokenMetadata",
     "DatabaseConfig",
@@ -5085,6 +5766,7 @@
     "LogoutTokenRequest",
     "MeResponse",
     "MessageResponse",
+    "MoveOperation",
     "NetworkConfig",
     "NewCollectionWithAssignee",
     "NewEventSink",
@@ -5101,9 +5783,14 @@
     "NewServiceAccount",
     "NewTokenRequest",
     "NewUser",
+    "ObjectAggregateDimensionValue",
+    "ObjectAggregateRow",
+    "ObjectAggregateValueState",
+    "ObjectDataPatchDocument",
     "ObjectKey",
     "ObjectsByClass",
     "PaginationConfig",
+    "PatchOperation",
     "Permission",
     "PermissionConfig",
     "Permissions",
@@ -5130,6 +5817,8 @@
     "RemoteTargetID",
     "RemoteTargetInvokeRequest",
     "RemoteTargetSubjectType",
+    "RemoveOperation",
+    "ReplaceOperation",
     "RestoreConfig",
     "RestoreConfirmRequest",
     "RestoreJobStatus",
@@ -5150,6 +5839,7 @@
     "TaskQueueStateResponse",
     "TaskResponse",
     "TaskStatus",
+    "TestOperation",
     "TlsConfig",
     "UnifiedSearchBatchResponse",
     "UnifiedSearchDoneEvent",
@@ -5173,5 +5863,5 @@
     "UpdateUser",
     "UserResponse"
   ],
-  "spec_sha256": "05f8614e221a5592782599d8ffe4255ad059c2098405a871cab0188e74c3faed"
+  "spec_sha256": "445790c5a43b6f6414c1e507e9e50a109dfb8b7b6287a047efca2db21e384fb4"
 }

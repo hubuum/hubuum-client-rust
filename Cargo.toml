@@ -4,11 +4,11 @@ resolver = "3"
 
 [package]
 name = "hubuum_client"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2024"
-rust-version = "1.86"
+rust-version = "1.88"
 license = "MIT"
-description = "Rust client library targeting Hubuum server v0.0.2 with synchronous and asynchronous interfaces."
+description = "Rust client library targeting Hubuum server v0.0.3 with synchronous and asynchronous interfaces."
 repository = "https://github.com/hubuum/hubuum-client-rust"
 documentation = "https://docs.rs/hubuum_client"
 readme = "README.md"
@@ -17,8 +17,8 @@ categories = ["api-bindings"]
 exclude = [".github/", "openapi/", "scripts/", "tests/"]
 
 [package.metadata.hubuum]
-server-version = "0.0.2"
-server-image = "ghcr.io/hubuum/hubuum-server@sha256:8f543383b422124546c8d337fd557e1b182b1b6c7078d7870d3c5cd4f955ef1f"
+server-version = "0.0.3"
+server-image = "ghcr.io/hubuum/hubuum-server@sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186"
 
 [features]
 default = ["async"]
@@ -38,7 +38,7 @@ integration-tests = []
 typed-schemas = ["dep:schemars"]
 
 [dependencies]
-hubuum_client_derive = { version = "0.5.1", path = "./hubuum_client_derive" }
+hubuum_client_derive = { version = "0.6.0", path = "./hubuum_client_derive" }
 reqwest = { version = "0.13", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -40,6 +40,9 @@ pub enum ApiError {
     #[error("Invalid URL: {0}")]
     UrlParse(#[from] url::ParseError),
 
+    #[error("Invalid URL path: {0}")]
+    InvalidUrlPath(String),
+
     #[error("URL serialization error: {0}")]
     UrlSerialize(#[from] serde_urlencoded::ser::Error),
 
@@ -124,6 +127,9 @@ impl std::fmt::Debug for ApiError {
                 f.debug_tuple("InvalidBaseUrl").field(message).finish()
             }
             Self::UrlParse(error) => f.debug_tuple("UrlParse").field(error).finish(),
+            Self::InvalidUrlPath(message) => {
+                f.debug_tuple("InvalidUrlPath").field(message).finish()
+            }
             Self::UrlSerialize(error) => f.debug_tuple("UrlSerialize").field(error).finish(),
             Self::QueryEncoding(message) => f.debug_tuple("QueryEncoding").field(message).finish(),
             Self::InvalidPrincipalSettings => f.write_str("InvalidPrincipalSettings"),

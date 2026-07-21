@@ -81,8 +81,8 @@ impl E2EHarness {
 
         let object = self.client.objects(class.id).create_raw(ObjectPost {
             name: format!("{prefix}-object"),
-            collection_id: collection.id,
-            hubuum_class_id: class.id,
+            collection_id: Some(collection.id),
+            hubuum_class_id: Some(class.id),
             description: "e2e object".to_string(),
             data: Some(serde_json::json!({ "source": "e2e-client" })),
         })?;

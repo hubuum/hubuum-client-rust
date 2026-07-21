@@ -3,15 +3,20 @@ use reqwest::Response;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::borrow::Cow;
 use std::marker::PhantomData;
+use std::sync::{Arc, OnceLock};
 
 use super::{
     Authenticated, ClientCore, GetID, IntoQueryFilters, Unauthenticated, UrlParams, shared,
 };
+use crate::QueryFilter;
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{
-    ApiResource, Class, ClassId, ClassRelation, Collection, CollectionId, EventSink,
-    ExportTemplate, ExportTemplateId, Group, GroupId, Object, ObjectId, User, UserId,
+    ApiResource, Class, ClassId, ClassPatch, ClassRelation, ClassWithPath, Collection,
+    CollectionId, EventSink, ExportTemplate, ExportTemplateId, Group, GroupId,
+    GroupPermissionsResult, Object, ObjectAggregateDimension, ObjectAggregateRow,
+    ObjectAggregateSort, ObjectDataPatchDocument, ObjectId, ObjectPatch, ObjectPost,
+    ObjectRelation, ObjectWithPath, RelatedClassGraph, RelatedObjectGraph, User, UserId,
 };
 use crate::resources::{
     MeResponse, PrincipalCollectionPermissions, PrincipalTokenMetadata, RemoteTarget,
@@ -19,23 +24,22 @@ use crate::resources::{
 };
 use crate::types::{
     AuthProvidersResponse, BackupDocument, BackupRequest, BaseUrl, ClassComputationState,
-    ClassHistory, ClearRateLimitResponse, CollectionHistory, ComputedFieldDefinition,
+    ClassHistory, ClearRateLimitResponse, ClientConfig, CollectionHistory, ComputedFieldDefinition,
     ComputedFieldDefinitionId, ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest,
     ComputedFieldDeleteResponse, ComputedFieldListResponse, ComputedFieldMutationResponse,
-    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedObject, CountsResponse,
-    Credentials, DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryId,
-    EventDeliveryUpdateResponse, EventResponse, EventSubscription, EventSubscriptionId,
-    ExportContentType, ExportJsonResponse, ExportRequest, ExportResult, ExportTemplateHistory,
-    ExportTemplateRunRequest, FilterOperator, HubuumDateTime, ImportRequest, ImportRunResult,
-    ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
-    ObjectHistory, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings,
-    ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability,
-    RestoreConfirmRequest, RestoreId, RestoreStageResponse, RunningConfig, SortDirection,
-    TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
-    TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
-    UpdateEventSubscription,
+    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedFieldSelector,
+    ComputedObject, CountsResponse, Credentials, DbStateResponse, EventDelivery,
+    EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryUpdateResponse, EventResponse,
+    EventSubscription, EventSubscriptionId, ExportContentType, ExportJsonResponse, ExportRequest,
+    ExportResult, ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator, HubuumDateTime,
+    ImportRequest, ImportRunResult, ImportTaskResultResponse, LoginRateLimitState,
+    LogoutTokenRequest, NewEventSubscription, ObjectHistory,
+    PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings, ProbeResponse,
+    ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability, RestoreConfirmRequest,
+    RestoreId, RestoreStageResponse, RunningConfig, SortDirection, TaskEventResponse, TaskId,
+    TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
 };
-use crate::{ObjectRelation, QueryFilter};
 
 #[derive(Deserialize, Debug)]
 struct DeleteResponse;
@@ -227,6 +231,51 @@ impl<S> Client<S> {
         &self.options.retry_policy
     }
 
+    /// Fetch the server's unauthenticated client capability configuration.
+    pub async fn config(&self) -> Result<ClientConfig, ApiError> {
+        let url = self.build_url(&Endpoint::ClientConfig, UrlParams::default());
+        let raw = if let Some(transport) = &self.transport {
+            let plan =
+                shared::build_unauthenticated_request_plan(&reqwest::Method::GET, &url, &[])?;
+            let response = self
+                .execute_transport_with_retry(
+                    &reqwest::Method::GET,
+                    false,
+                    transport.as_ref(),
+                    plan,
+                )
+                .await?;
+            shared::process_transport_response(
+                &reqwest::Method::GET,
+                &url,
+                response,
+                &self.options,
+            )?
+        } else {
+            let response = self
+                .send_with_retry(&reqwest::Method::GET, false, self.http_client.get(&url))
+                .await?;
+            let response = self
+                .check_success(&reqwest::Method::GET, &url, response)
+                .await?;
+            let status = response.status();
+            let body =
+                shared::read_async_body(response, self.options.max_response_body_bytes).await?;
+            shared::RawResponse {
+                status,
+                body,
+                next_cursor: None,
+                total_count: None,
+                page_limit: None,
+                content_type: None,
+            }
+        };
+
+        shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?.ok_or_else(|| {
+            ApiError::EmptyResult("Client configuration returned an empty response".into())
+        })
+    }
+
     /// Fetch Prometheus exposition text from the server's default `/metrics`
     /// path without bearer authentication.
     pub async fn metrics(&self) -> Result<String, ApiError> {
@@ -332,7 +381,7 @@ impl<S> Client<S> {
                 .check_success(&reqwest::Method::GET, &request_url, response)
                 .await?;
             let status = response.status();
-            let (next_cursor, total_count, content_type) =
+            let (next_cursor, total_count, page_limit, content_type) =
                 shared::response_metadata(response.headers());
             let body =
                 shared::read_async_body(response, self.options.max_response_body_bytes).await?;
@@ -341,6 +390,7 @@ impl<S> Client<S> {
                 body,
                 next_cursor,
                 total_count,
+                page_limit,
                 content_type,
             }
         };
@@ -617,6 +667,23 @@ impl Client<Authenticated> {
             client: self.clone(),
             method,
             path: path.into(),
+            path_has_encoded_segments: false,
+            query: Vec::new(),
+            headers: Vec::new(),
+            body: None,
+        }
+    }
+
+    fn raw_with_encoded_segments(
+        &self,
+        method: reqwest::Method,
+        path: impl Into<String>,
+    ) -> RawRequest {
+        RawRequest {
+            client: self.clone(),
+            method,
+            path: path.into(),
+            path_has_encoded_segments: true,
             query: Vec::new(),
             headers: Vec::new(),
             body: None,
@@ -913,7 +980,7 @@ impl Client<Authenticated> {
         trace!("Request took {:?}", now.elapsed());
         let response = self.check_success(&method, &request_url, response).await?;
         let status = response.status();
-        let (next_cursor, total_count, content_type) =
+        let (next_cursor, total_count, page_limit, content_type) =
             shared::response_metadata(response.headers());
         let body = shared::read_async_body(response, self.options.max_response_body_bytes).await?;
         debug!("Response: {} ({} bytes)", status, body.len());
@@ -923,6 +990,7 @@ impl Client<Authenticated> {
             body,
             next_cursor,
             total_count,
+            page_limit,
             content_type,
         })
     }
@@ -1221,6 +1289,44 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
+    /// Address a class by its exact natural key, including numeric-looking names.
+    pub fn class_by_name(&self, class_name: impl Into<String>) -> ClassNameScope {
+        ClassNameScope::new(self.clone(), class_name.into())
+    }
+
+    async fn resolve_class_name_id(
+        &self,
+        class_name: &str,
+        cached_id: &OnceLock<ClassId>,
+    ) -> Result<ClassId, ApiError> {
+        if let Some(class_id) = cached_id.get() {
+            return Ok(*class_id);
+        }
+
+        let class_id = self.classes().get_by_name(class_name).await?.id();
+        let _ = cached_id.set(class_id);
+        Ok(class_id)
+    }
+
+    async fn resolve_object_name_ids(
+        &self,
+        class_name: &str,
+        object_name: &str,
+        cached_class_id: &OnceLock<ClassId>,
+        cached_object_id: &OnceLock<ObjectId>,
+    ) -> Result<(ClassId, ObjectId), ApiError> {
+        let class_id = self
+            .resolve_class_name_id(class_name, cached_class_id)
+            .await?;
+        if let Some(object_id) = cached_object_id.get() {
+            return Ok((class_id, *object_id));
+        }
+
+        let object_id = self.objects(class_id).get_by_name(object_name).await?.id();
+        let _ = cached_object_id.set(object_id);
+        Ok((class_id, object_id))
+    }
+
     pub fn collections(&self) -> Resource<Collection> {
         Resource::new(self.clone(), UrlParams::default())
     }
@@ -1292,6 +1398,37 @@ impl Client<Authenticated> {
     pub fn objects(&self, class_id: impl Into<ClassId>) -> Resource<Object> {
         let class_id = class_id.into();
         Resource::new(self.clone(), vec![("class_id", class_id.to_string())])
+    }
+
+    /// Build a permission-scoped aggregate query for objects in one class.
+    pub fn object_aggregates(
+        &self,
+        class_id: impl Into<ClassId>,
+    ) -> CursorRequest<ObjectAggregateRow> {
+        let class_id = class_id.into();
+        CursorRequest::new(
+            self.clone(),
+            Endpoint::ClassObjectAggregates,
+            vec![(Cow::Borrowed("class_id"), class_id.to_string().into())],
+        )
+    }
+
+    /// Atomically apply an RFC 6902 patch to one object's raw data document.
+    pub async fn patch_object_data(
+        &self,
+        class_id: impl Into<ClassId>,
+        object_id: impl Into<ObjectId>,
+        patch: &ObjectDataPatchDocument,
+    ) -> Result<Object, ApiError> {
+        let path = Endpoint::ObjectData
+            .path()
+            .replace("{class_id}", &class_id.into().to_string())
+            .replace("{object_id}", &object_id.into().to_string());
+        self.raw(reqwest::Method::PATCH, path)
+            .header("Content-Type", "application/json-patch+json")
+            .json(patch)?
+            .send()
+            .await
     }
 
     /// Query objects with shared and personal computed scopes included.
@@ -1632,6 +1769,7 @@ pub struct RawRequest {
     client: Client<Authenticated>,
     method: reqwest::Method,
     path: String,
+    path_has_encoded_segments: bool,
     query: Vec<(String, String)>,
     headers: Vec<(String, String)>,
     body: Option<serde_json::Value>,
@@ -1663,7 +1801,11 @@ impl RawRequest {
                 "raw requests cannot override the Authorization header".into(),
             ));
         }
-        let url = shared::build_relative_url(&self.client.base_url, &self.path, &self.query)?;
+        let url = if self.path_has_encoded_segments {
+            shared::build_encoded_relative_url(&self.client.base_url, &self.path, &self.query)?
+        } else {
+            shared::build_relative_url(&self.client.base_url, &self.path, &self.query)?
+        };
         let request_url = url.to_string();
 
         if let Some(transport) = &self.client.transport {
@@ -1743,7 +1885,7 @@ impl RawRequest {
             .check_success(&self.method, &request_url, response)
             .await?;
         let status = response.status();
-        let (next_cursor, total_count, content_type) =
+        let (next_cursor, total_count, page_limit, content_type) =
             shared::response_metadata(response.headers());
         let body =
             shared::read_async_body(response, self.client.options.max_response_body_bytes).await?;
@@ -1752,6 +1894,7 @@ impl RawRequest {
             body,
             next_cursor,
             total_count,
+            page_limit,
             content_type,
         })
     }
@@ -1770,6 +1913,486 @@ impl RawRequest {
 
     pub async fn send_text(self) -> Result<String, ApiError> {
         Ok(self.execute().await?.body)
+    }
+}
+
+/// Operations rooted at a class's exact natural key.
+#[derive(Debug, Clone)]
+pub struct ClassNameScope {
+    client: Client<Authenticated>,
+    class_name: String,
+    class_id: Arc<OnceLock<ClassId>>,
+}
+
+impl ClassNameScope {
+    fn new(client: Client<Authenticated>, class_name: String) -> Self {
+        Self {
+            client,
+            class_name,
+            class_id: Arc::new(OnceLock::new()),
+        }
+    }
+
+    fn encoded_name(&self) -> String {
+        shared::encode_path_segment(&self.class_name)
+    }
+
+    fn class_params(&self) -> UrlParams {
+        vec![(Cow::Borrowed("class_name"), self.encoded_name().into())]
+    }
+
+    fn class_path(&self) -> String {
+        Endpoint::ClassesByName
+            .path()
+            .replace("{class_name}", &self.encoded_name())
+    }
+
+    pub fn name(&self) -> &str {
+        &self.class_name
+    }
+
+    pub async fn get(&self) -> Result<Handle<Class>, ApiError> {
+        if shared::requires_name_route_fallback(&self.class_name) {
+            let class = self.client.classes().get_by_name(&self.class_name).await?;
+            let _ = self.class_id.set(class.id());
+            return Ok(class);
+        }
+
+        let class: Class = self
+            .client
+            .request_with_endpoint::<EmptyPostParams, Class>(
+                reqwest::Method::GET,
+                &Endpoint::ClassesByName,
+                self.class_params(),
+                vec![],
+                EmptyPostParams,
+            )
+            .await?
+            .ok_or_else(|| ApiError::EmptyResult("Class returned an empty response".into()))?;
+        let _ = self.class_id.set(class.id);
+        Ok(Handle::new(self.client.clone(), class))
+    }
+
+    pub async fn update(&self, patch: ClassPatch) -> Result<Class, ApiError> {
+        if shared::requires_name_route_fallback(&self.class_name) {
+            let class_id = self
+                .client
+                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .await?;
+            return self.client.classes().update_raw(class_id, patch).await;
+        }
+
+        let class: Class = self
+            .client
+            .raw_with_encoded_segments(reqwest::Method::PATCH, self.class_path())
+            .json(&patch)?
+            .send()
+            .await?;
+        let _ = self.class_id.set(class.id);
+        Ok(class)
+    }
+
+    pub async fn delete(&self) -> Result<(), ApiError> {
+        if shared::requires_name_route_fallback(&self.class_name) {
+            let class_id = self
+                .client
+                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .await?;
+            return self.client.classes().delete(class_id).await;
+        }
+
+        self.client
+            .request_with_endpoint::<EmptyPostParams, ()>(
+                reqwest::Method::DELETE,
+                &Endpoint::ClassesByName,
+                self.class_params(),
+                vec![],
+                EmptyPostParams,
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub fn objects(&self) -> ClassNameObjects {
+        ClassNameObjects {
+            client: self.client.clone(),
+            class_name: self.class_name.clone(),
+            class_id: self.class_id.clone(),
+        }
+    }
+
+    pub fn object_aggregates(&self) -> CursorRequest<ObjectAggregateRow> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::ClassByNameObjectAggregates,
+            self.class_params(),
+        )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassObjectAggregates,
+        )
+    }
+
+    pub fn permissions(&self) -> CursorRequest<GroupPermissionsResult> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::ClassByNamePermissions,
+            self.class_params(),
+        )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassPermissions,
+        )
+    }
+
+    pub fn related_classes(&self) -> CursorRequest<ClassWithPath> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::ClassByNameRelatedClasses,
+            self.class_params(),
+        )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassRelatedClasses,
+        )
+    }
+
+    pub fn related_relations(&self) -> CursorRequest<ClassRelation> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::ClassByNameRelatedRelations,
+            self.class_params(),
+        )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassRelatedRelations,
+        )
+    }
+
+    pub fn related_graph(&self) -> GraphRequest<RelatedClassGraph> {
+        GraphRequest::new(
+            self.client.clone(),
+            Endpoint::ClassByNameRelatedGraph,
+            self.class_params(),
+        )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassRelatedGraph,
+        )
+    }
+}
+
+/// Class-scoped object collection addressed through a class name.
+#[derive(Debug, Clone)]
+pub struct ClassNameObjects {
+    client: Client<Authenticated>,
+    class_name: String,
+    class_id: Arc<OnceLock<ClassId>>,
+}
+
+impl ClassNameObjects {
+    fn class_params(&self) -> UrlParams {
+        vec![(
+            Cow::Borrowed("class_name"),
+            shared::encode_path_segment(&self.class_name).into(),
+        )]
+    }
+
+    pub fn query(&self) -> CursorRequest<Object> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::ClassByNameObjects,
+            self.class_params(),
+        )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::Objects,
+        )
+    }
+
+    pub async fn create_raw(&self, request: ObjectPost) -> Result<Object, ApiError> {
+        if shared::requires_name_route_fallback(&self.class_name) {
+            let class_id = self
+                .client
+                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .await?;
+            return self.client.objects(class_id).create_raw(request).await;
+        }
+
+        let object: Object = self
+            .client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::ClassByNameObjects,
+                self.class_params(),
+                vec![],
+                request,
+            )
+            .await?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Object create returned an empty response".into())
+            })?;
+        let _ = self.class_id.set(object.hubuum_class_id);
+        Ok(object)
+    }
+
+    pub async fn create(
+        &self,
+        name: impl Into<String>,
+        description: impl Into<String>,
+        data: serde_json::Value,
+    ) -> Result<Object, ApiError> {
+        self.create_raw(ObjectPost {
+            name: name.into(),
+            collection_id: None,
+            hubuum_class_id: None,
+            description: description.into(),
+            data: Some(data),
+        })
+        .await
+    }
+
+    pub fn by_name(&self, object_name: impl Into<String>) -> ObjectNameScope {
+        ObjectNameScope {
+            client: self.client.clone(),
+            class_name: self.class_name.clone(),
+            object_name: object_name.into(),
+            class_id: self.class_id.clone(),
+            object_id: Arc::new(OnceLock::new()),
+        }
+    }
+}
+
+/// Operations rooted at exact class and object natural keys.
+#[derive(Debug, Clone)]
+pub struct ObjectNameScope {
+    client: Client<Authenticated>,
+    class_name: String,
+    object_name: String,
+    class_id: Arc<OnceLock<ClassId>>,
+    object_id: Arc<OnceLock<ObjectId>>,
+}
+
+impl ObjectNameScope {
+    fn object_params(&self) -> UrlParams {
+        vec![
+            (
+                Cow::Borrowed("class_name"),
+                shared::encode_path_segment(&self.class_name).into(),
+            ),
+            (
+                Cow::Borrowed("object_name"),
+                shared::encode_path_segment(&self.object_name).into(),
+            ),
+        ]
+    }
+
+    fn object_path(&self, endpoint: Endpoint) -> String {
+        endpoint
+            .path()
+            .replace(
+                "{class_name}",
+                &shared::encode_path_segment(&self.class_name),
+            )
+            .replace(
+                "{object_name}",
+                &shared::encode_path_segment(&self.object_name),
+            )
+    }
+
+    fn requires_fallback(&self) -> bool {
+        shared::requires_name_route_fallback(&self.class_name)
+            || shared::requires_name_route_fallback(&self.object_name)
+    }
+
+    pub async fn get(&self) -> Result<Handle<Object>, ApiError> {
+        if self.requires_fallback() {
+            let class_id = self
+                .client
+                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .await?;
+            let object = self
+                .client
+                .objects(class_id)
+                .get_by_name(&self.object_name)
+                .await?;
+            let _ = self.object_id.set(object.id());
+            return Ok(object);
+        }
+
+        let object: Object = self
+            .client
+            .request_with_endpoint::<EmptyPostParams, Object>(
+                reqwest::Method::GET,
+                &Endpoint::ObjectByName,
+                self.object_params(),
+                vec![],
+                EmptyPostParams,
+            )
+            .await?
+            .ok_or_else(|| ApiError::EmptyResult("Object returned an empty response".into()))?;
+        Ok(Handle::new(self.client.clone(), object))
+    }
+
+    pub async fn get_computed(&self) -> Result<ComputedObject, ApiError> {
+        if self.requires_fallback() {
+            let (class_id, object_id) = self
+                .client
+                .resolve_object_name_ids(
+                    &self.class_name,
+                    &self.object_name,
+                    &self.class_id,
+                    &self.object_id,
+                )
+                .await?;
+            return self.client.computed_object(class_id, object_id).await;
+        }
+
+        self.client
+            .request_with_endpoint::<EmptyPostParams, ComputedObject>(
+                reqwest::Method::GET,
+                &Endpoint::ObjectByName,
+                self.object_params(),
+                vec![QueryFilter::raw("include", "computed")],
+                EmptyPostParams,
+            )
+            .await?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Computed object returned an empty response".into())
+            })
+    }
+
+    pub async fn update(&self, patch: ObjectPatch) -> Result<Object, ApiError> {
+        if self.requires_fallback() {
+            let (class_id, object_id) = self
+                .client
+                .resolve_object_name_ids(
+                    &self.class_name,
+                    &self.object_name,
+                    &self.class_id,
+                    &self.object_id,
+                )
+                .await?;
+            return self
+                .client
+                .objects(class_id)
+                .update_raw(object_id, patch)
+                .await;
+        }
+
+        self.client
+            .raw_with_encoded_segments(
+                reqwest::Method::PATCH,
+                self.object_path(Endpoint::ObjectByName),
+            )
+            .json(&patch)?
+            .send()
+            .await
+    }
+
+    pub async fn delete(&self) -> Result<(), ApiError> {
+        if self.requires_fallback() {
+            let (class_id, object_id) = self
+                .client
+                .resolve_object_name_ids(
+                    &self.class_name,
+                    &self.object_name,
+                    &self.class_id,
+                    &self.object_id,
+                )
+                .await?;
+            return self.client.objects(class_id).delete(object_id).await;
+        }
+
+        self.client
+            .request_with_endpoint::<EmptyPostParams, ()>(
+                reqwest::Method::DELETE,
+                &Endpoint::ObjectByName,
+                self.object_params(),
+                vec![],
+                EmptyPostParams,
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub async fn patch_data(&self, patch: &ObjectDataPatchDocument) -> Result<Object, ApiError> {
+        if self.requires_fallback() {
+            let (class_id, object_id) = self
+                .client
+                .resolve_object_name_ids(
+                    &self.class_name,
+                    &self.object_name,
+                    &self.class_id,
+                    &self.object_id,
+                )
+                .await?;
+            return self
+                .client
+                .patch_object_data(class_id, object_id, patch)
+                .await;
+        }
+
+        self.client
+            .raw_with_encoded_segments(
+                reqwest::Method::PATCH,
+                self.object_path(Endpoint::ObjectByNameData),
+            )
+            .header("Content-Type", "application/json-patch+json")
+            .json(patch)?
+            .send()
+            .await
+    }
+
+    pub fn related_objects(&self) -> CursorRequest<ObjectWithPath> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::ObjectByNameRelatedObjects,
+            self.object_params(),
+        )
+        .with_object_name_fallback(
+            self.class_name.clone(),
+            self.object_name.clone(),
+            self.class_id.clone(),
+            self.object_id.clone(),
+            Endpoint::ObjectRelatedObjects,
+        )
+    }
+
+    pub fn related_relations(&self) -> CursorRequest<ObjectRelation> {
+        CursorRequest::new(
+            self.client.clone(),
+            Endpoint::ObjectByNameRelatedRelations,
+            self.object_params(),
+        )
+        .with_object_name_fallback(
+            self.class_name.clone(),
+            self.object_name.clone(),
+            self.class_id.clone(),
+            self.object_id.clone(),
+            Endpoint::ObjectRelatedRelations,
+        )
+    }
+
+    pub fn related_graph(&self) -> GraphRequest<RelatedObjectGraph> {
+        GraphRequest::new(
+            self.client.clone(),
+            Endpoint::ObjectByNameRelatedGraph,
+            self.object_params(),
+        )
+        .with_object_name_fallback(
+            self.class_name.clone(),
+            self.object_name.clone(),
+            self.class_id.clone(),
+            self.object_id.clone(),
+            Endpoint::ObjectRelatedGraph,
+        )
     }
 }
 
@@ -1985,6 +2608,11 @@ impl EventListRequest {
 
     pub fn limit(mut self, limit: usize) -> Self {
         self.inner = self.inner.limit(limit);
+        self
+    }
+
+    pub fn include_total(mut self, include_total: bool) -> Self {
+        self.inner = self.inner.include_total(include_total);
         self
     }
 
@@ -3829,11 +4457,84 @@ impl<T: ApiResource> shared::QueryFilterTarget for QueryOp<T> {
     }
 }
 
+impl QueryOp<Object> {
+    /// Filter an object list using an enabled shared or owned personal computed field.
+    pub fn computed_filter<V: ToString>(
+        self,
+        selector: ComputedFieldSelector,
+        operator: FilterOperator,
+        value: V,
+    ) -> Self {
+        self.filter(selector.to_string(), operator, value)
+    }
+
+    /// Sort an object list using an enabled shared or owned personal computed field.
+    pub fn computed_sort(self, selector: ComputedFieldSelector, direction: SortDirection) -> Self {
+        self.sort(selector.to_string(), direction)
+    }
+}
+
+#[derive(Debug, Clone)]
+enum NameRouteFallback {
+    Class {
+        class_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        endpoint: Endpoint,
+    },
+    Object {
+        class_name: String,
+        object_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        object_id: Arc<OnceLock<ObjectId>>,
+        endpoint: Endpoint,
+    },
+}
+
+impl NameRouteFallback {
+    async fn resolve(
+        &self,
+        client: &Client<Authenticated>,
+    ) -> Result<(Endpoint, UrlParams), ApiError> {
+        match self {
+            Self::Class {
+                class_name,
+                class_id,
+                endpoint,
+            } => {
+                let class_id = client.resolve_class_name_id(class_name, class_id).await?;
+                Ok((
+                    *endpoint,
+                    vec![(Cow::Borrowed("class_id"), class_id.to_string().into())],
+                ))
+            }
+            Self::Object {
+                class_name,
+                object_name,
+                class_id,
+                object_id,
+                endpoint,
+            } => {
+                let (class_id, object_id) = client
+                    .resolve_object_name_ids(class_name, object_name, class_id, object_id)
+                    .await?;
+                Ok((
+                    *endpoint,
+                    vec![
+                        (Cow::Borrowed("class_id"), class_id.to_string().into()),
+                        (Cow::Borrowed("object_id"), object_id.to_string().into()),
+                    ],
+                ))
+            }
+        }
+    }
+}
+
 pub struct CursorRequest<T> {
     client: Client<Authenticated>,
     endpoint: Endpoint,
     query_params: Vec<QueryFilter>,
     url_params: UrlParams,
+    name_route_fallback: Option<NameRouteFallback>,
     _phantom: PhantomData<T>,
 }
 
@@ -3844,8 +4545,47 @@ impl<T> CursorRequest<T> {
             endpoint,
             query_params: Vec::new(),
             url_params,
+            name_route_fallback: None,
             _phantom: PhantomData,
         }
+    }
+
+    fn with_class_name_fallback(
+        mut self,
+        class_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        endpoint: Endpoint,
+    ) -> Self {
+        if shared::requires_name_route_fallback(&class_name) {
+            self.name_route_fallback = Some(NameRouteFallback::Class {
+                class_name,
+                class_id,
+                endpoint,
+            });
+        }
+        self
+    }
+
+    fn with_object_name_fallback(
+        mut self,
+        class_name: String,
+        object_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        object_id: Arc<OnceLock<ObjectId>>,
+        endpoint: Endpoint,
+    ) -> Self {
+        if shared::requires_name_route_fallback(&class_name)
+            || shared::requires_name_route_fallback(&object_name)
+        {
+            self.name_route_fallback = Some(NameRouteFallback::Object {
+                class_name,
+                object_name,
+                class_id,
+                object_id,
+                endpoint,
+            });
+        }
+        self
     }
 
     pub fn sort_by<V: ToString>(mut self, sort: V) -> Self {
@@ -3927,17 +4667,68 @@ impl<T> CursorRequest<T> {
     }
 }
 
+impl CursorRequest<Object> {
+    /// Filter an object list using an enabled shared or owned personal computed field.
+    pub fn computed_filter<V: ToString>(
+        self,
+        selector: ComputedFieldSelector,
+        operator: FilterOperator,
+        value: V,
+    ) -> Self {
+        self.filter(selector.to_string(), operator, value)
+    }
+
+    /// Sort an object list using an enabled shared or owned personal computed field.
+    pub fn computed_sort(self, selector: ComputedFieldSelector, direction: SortDirection) -> Self {
+        self.sort(selector.to_string(), direction)
+    }
+}
+
+impl CursorRequest<ObjectAggregateRow> {
+    /// Append one ordered aggregation dimension. The server accepts one to three.
+    pub fn group_by(self, dimension: ObjectAggregateDimension) -> Self {
+        self.query_param("group_by", dimension)
+    }
+
+    pub fn group_by_all(
+        mut self,
+        dimensions: impl IntoIterator<Item = ObjectAggregateDimension>,
+    ) -> Self {
+        for dimension in dimensions {
+            self = self.group_by(dimension);
+        }
+        self
+    }
+
+    pub fn aggregate_sort(self, sort: ObjectAggregateSort) -> Self {
+        self.sort_by(sort)
+    }
+
+    pub fn computed_filter<V: ToString>(
+        self,
+        selector: ComputedFieldSelector,
+        operator: FilterOperator,
+        value: V,
+    ) -> Self {
+        self.filter(selector.to_string(), operator, value)
+    }
+}
+
 impl<T> CursorRequest<T>
 where
     T: DeserializeOwned,
 {
     pub async fn page(self) -> Result<shared::Page<T>, ApiError> {
+        let (endpoint, url_params) = match &self.name_route_fallback {
+            Some(fallback) => fallback.resolve(&self.client).await?,
+            None => (self.endpoint, self.url_params),
+        };
         let raw = self
             .client
             .request_with_endpoint_raw(
                 reqwest::Method::GET,
-                &self.endpoint,
-                self.url_params,
+                &endpoint,
+                url_params,
                 self.query_params,
                 EmptyPostParams,
             )
@@ -3969,6 +4760,7 @@ where
                 endpoint: request.endpoint,
                 query_params: request.query_params.clone(),
                 url_params: request.url_params.clone(),
+                name_route_fallback: request.name_route_fallback.clone(),
                 _phantom: PhantomData,
             }
             .page()
@@ -4005,6 +4797,7 @@ where
                     endpoint: self.endpoint,
                     query_params: self.query_params.clone(),
                     url_params: self.url_params.clone(),
+                    name_route_fallback: self.name_route_fallback.clone(),
                     _phantom: PhantomData,
                 })
                 .page()
@@ -4042,6 +4835,7 @@ pub struct GraphRequest<T> {
     endpoint: Endpoint,
     query_params: Vec<QueryFilter>,
     url_params: UrlParams,
+    name_route_fallback: Option<NameRouteFallback>,
     _phantom: PhantomData<T>,
 }
 
@@ -4052,8 +4846,47 @@ impl<T> GraphRequest<T> {
             endpoint,
             query_params: Vec::new(),
             url_params,
+            name_route_fallback: None,
             _phantom: PhantomData,
         }
+    }
+
+    fn with_class_name_fallback(
+        mut self,
+        class_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        endpoint: Endpoint,
+    ) -> Self {
+        if shared::requires_name_route_fallback(&class_name) {
+            self.name_route_fallback = Some(NameRouteFallback::Class {
+                class_name,
+                class_id,
+                endpoint,
+            });
+        }
+        self
+    }
+
+    fn with_object_name_fallback(
+        mut self,
+        class_name: String,
+        object_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        object_id: Arc<OnceLock<ObjectId>>,
+        endpoint: Endpoint,
+    ) -> Self {
+        if shared::requires_name_route_fallback(&class_name)
+            || shared::requires_name_route_fallback(&object_name)
+        {
+            self.name_route_fallback = Some(NameRouteFallback::Object {
+                class_name,
+                object_name,
+                class_id,
+                object_id,
+                endpoint,
+            });
+        }
+        self
     }
 
     pub fn filters<I>(mut self, filters: I) -> Self
@@ -4093,11 +4926,15 @@ where
     T: DeserializeOwned,
 {
     pub async fn send(self) -> Result<T, ApiError> {
+        let (endpoint, url_params) = match &self.name_route_fallback {
+            Some(fallback) => fallback.resolve(&self.client).await?,
+            None => (self.endpoint, self.url_params),
+        };
         self.client
             .request_with_endpoint::<EmptyPostParams, T>(
                 reqwest::Method::GET,
-                &self.endpoint,
-                self.url_params,
+                &endpoint,
+                url_params,
                 self.query_params,
                 EmptyPostParams,
             )
@@ -4311,6 +5148,23 @@ impl<T: ApiResource> shared::QueryFilterTarget for Resource<T> {
     }
 }
 
+impl Resource<Object> {
+    /// Filter an object list using an enabled shared or owned personal computed field.
+    pub fn computed_filter<V: ToString>(
+        self,
+        selector: ComputedFieldSelector,
+        operator: FilterOperator,
+        value: V,
+    ) -> Self {
+        self.filter(selector.to_string(), operator, value)
+    }
+
+    /// Sort an object list using an enabled shared or owned personal computed field.
+    pub fn computed_sort(self, selector: ComputedFieldSelector, direction: SortDirection) -> Self {
+        self.sort(selector.to_string(), direction)
+    }
+}
+
 pub type Handle<T> = shared::Handle<Client<Authenticated>, T>;
 
 impl<T> Resource<T>
@@ -4352,6 +5206,33 @@ where
     }
 
     pub async fn get_by_name(&self, name: &str) -> Result<Handle<T>, ApiError> {
+        if !shared::requires_name_route_fallback(name)
+            && let Some(endpoint) = T::NAME_ITEM_ENDPOINT
+        {
+            let mut url_params = self.url_params.clone();
+            url_params.push((
+                Cow::Borrowed(T::NAME_PARAM),
+                shared::encode_path_segment(name).into(),
+            ));
+            match self
+                .client
+                .request_with_endpoint::<EmptyPostParams, T>(
+                    reqwest::Method::GET,
+                    &endpoint,
+                    url_params,
+                    vec![],
+                    EmptyPostParams,
+                )
+                .await
+            {
+                Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
+                Ok(None) => {}
+                Err(ApiError::HttpWithBody { status, .. })
+                    if status == reqwest::StatusCode::NOT_FOUND => {}
+                Err(error) => return Err(error),
+            }
+        }
+
         let (name_params, filters) = shared::select_name_lookup_params::<T>(name);
         let mut url_params = self.url_params.clone();
         url_params.extend(name_params);

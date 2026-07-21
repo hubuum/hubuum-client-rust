@@ -14,8 +14,8 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  HUBUUM_TARGET_SERVER_VERSION: "0.0.2"
-  HUBUUM_TARGET_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server@sha256:8f543383b422124546c8d337fd557e1b182b1b6c7078d7870d3c5cd4f955ef1f
+  HUBUUM_TARGET_SERVER_VERSION: "0.0.3"
+  HUBUUM_TARGET_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server@sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186
 
 jobs:
   quality:
@@ -94,14 +94,15 @@ jobs:
         run: cargo check -p hubuum_client --locked ${{ matrix.flags }}
 
   msrv:
-    name: MSRV (Rust 1.86)
+    # Keep this check name stable because the main-branch ruleset requires it.
+    name: MSRV
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install Rust 1.86
-        uses: dtolnay/rust-toolchain@1.86
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@1.88
 
       - name: Cache Cargo Artifacts
         uses: Swatinem/rust-cache@v2
@@ -112,7 +113,8 @@ jobs:
         run: cargo check --workspace --all-features --locked
 
   server-contract:
-    name: Server v0.0.2 OpenAPI Contract
+    # Keep this check name stable because the main-branch ruleset requires it.
+    name: OpenAPI Contract
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -138,7 +140,7 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check bans licenses sources
-          rust-version: 1.86
+          rust-version: 1.88
 
   semver:
     name: Public API Compatibility

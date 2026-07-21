@@ -12,7 +12,11 @@ use hubuum_client::types::{
     Permissions, PersonalComputedFieldDefinitionRequest, RestoreCapability, RestoreConfirmRequest,
     SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
 };
-use hubuum_client::{ApiError, BaseUrl, ClassGet, Client, Credentials, ExportResult, blocking};
+use hubuum_client::{
+    ApiError, BaseUrl, ClassGet, ClassPatch, Client, ComputedFieldSelector, Credentials,
+    ExportResult, ObjectAggregateDimension, ObjectAggregateSort, ObjectDataPatchDocument,
+    ObjectDataPatchOperation, ObjectPatch, blocking,
+};
 use serde_json::json;
 
 const USERNAME: &str = "tester";
@@ -4727,4 +4731,358 @@ async fn async_computed_object_reads_opt_into_computed_scopes(#[case] list: bool
     };
     assert_eq!(object.computed.shared.values["total"], json!(12.5));
     request.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_v003_public_config_is_unauthenticated() {
+    let server = MockServer::start();
+    let request = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/config")
+            .header_missing("authorization");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "pagination": {
+                    "default_page_limit": 75,
+                    "max_page_limit": 500
+                }
+            }));
+    });
+
+    let async_config = Client::from_url(server.base_url())
+        .unwrap()
+        .config()
+        .await
+        .unwrap();
+    assert_eq!(async_config.pagination.default_page_limit, 75);
+    assert_eq!(async_config.pagination.max_page_limit, 500);
+    request.assert_calls(1);
+}
+
+#[test]
+fn sync_v003_public_config_is_unauthenticated() {
+    let server = MockServer::start();
+    let request = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/config")
+            .header_missing("authorization");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "pagination": {
+                    "default_page_limit": 75,
+                    "max_page_limit": 500
+                }
+            }));
+    });
+    let config = blocking::Client::from_url(server.base_url())
+        .unwrap()
+        .config()
+        .unwrap();
+    assert_eq!(config.pagination.default_page_limit, 75);
+    assert_eq!(config.pagination.max_page_limit, 500);
+    request.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_v003_natural_key_routes_cover_crud_relations_and_permissions() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let class_path = "/api/v1/classes/by-name/123";
+    let objects_path = "/api/v1/classes/by-name/123/objects";
+    let object_path = "/api/v1/classes/by-name/123/objects/by-name/456";
+
+    let class_get = server.mock(|when, then| {
+        when.method(GET).path(class_path);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("123"));
+    });
+    let class_update = server.mock(|when, then| {
+        when.method(PATCH).path(class_path);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("123"));
+    });
+    let class_delete = server.mock(|when, then| {
+        when.method(DELETE).path(class_path);
+        then.status(204);
+    });
+    let objects_list = server.mock(|when, then| {
+        when.method(GET)
+            .path(objects_path)
+            .query_param("computed.shared.risk__gte", "10")
+            .query_param("sort", "computed.personal.rank.desc")
+            .query_param("include_total", "true");
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-total-count", "1")
+            .header("x-page-limit", "25")
+            .json_body(json!([object_json(9, 42, "456")]));
+    });
+    let object_create = server.mock(|when, then| {
+        when.method(POST).path(objects_path).json_body(json!({
+            "name": "router",
+            "description": "Object",
+            "data": {"owner": "net"}
+        }));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(object_json(10, 42, "router"));
+    });
+    let object_get = server.mock(|when, then| {
+        when.method(GET).path(object_path);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(object_json(9, 42, "456"));
+    });
+    let object_update = server.mock(|when, then| {
+        when.method(PATCH).path(object_path);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(object_json(9, 42, "456"));
+    });
+    let object_delete = server.mock(|when, then| {
+        when.method(DELETE).path(object_path);
+        then.status(204);
+    });
+    let patch_data = server.mock(|when, then| {
+        when.method(PATCH)
+            .path(format!("{object_path}/data"))
+            .header("content-type", "application/json-patch+json")
+            .json_body(json!([{
+                "op": "replace",
+                "path": "/owner",
+                "value": "network"
+            }]));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(object_json(9, 42, "456"));
+    });
+    let class_permissions = server.mock(|when, then| {
+        when.method(GET).path(format!("{class_path}/permissions"));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_permission_json(7, 3, "operators")]));
+    });
+    let related_classes = server.mock(|when, then| {
+        when.method(GET)
+            .path(format!("{class_path}/related/classes"));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_with_path_json(77, 7, &[42, 77])]));
+    });
+    let related_class_relations = server.mock(|when, then| {
+        when.method(GET)
+            .path(format!("{class_path}/related/relations"));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_relation_json(55, 42, 77)]));
+    });
+    let related_class_graph = server.mock(|when, then| {
+        when.method(GET).path(format!("{class_path}/related/graph"));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(related_class_graph_json());
+    });
+    let related_objects = server.mock(|when, then| {
+        when.method(GET)
+            .path(format!("{object_path}/related/objects"));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_with_path_json(10, 77, &[9, 10])]));
+    });
+    let related_object_relations = server.mock(|when, then| {
+        when.method(GET)
+            .path(format!("{object_path}/related/relations"));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_relation_json(66, 9, 10, 55)]));
+    });
+    let related_object_graph = server.mock(|when, then| {
+        when.method(GET)
+            .path(format!("{object_path}/related/graph"));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(related_object_graph_json());
+    });
+
+    let client = async_client(&server).await;
+    assert_eq!(client.classes().get_by_name("123").await.unwrap().id(), 42);
+    let class = client.class_by_name("123");
+    assert_eq!(class.name(), "123");
+    assert_eq!(class.get().await.unwrap().id(), 42);
+    class
+        .update(ClassPatch {
+            name: Some("123".into()),
+            description: Some("Class".into()),
+            collection_id: 7.into(),
+            json_schema: None,
+            validate_schema: None,
+        })
+        .await
+        .unwrap();
+
+    let page = class
+        .objects()
+        .query()
+        .computed_filter(
+            ComputedFieldSelector::shared("risk"),
+            FilterOperator::Gte { is_negated: false },
+            10,
+        )
+        .computed_sort(ComputedFieldSelector::personal("rank"), SortDirection::Desc)
+        .include_total(true)
+        .page()
+        .await
+        .unwrap();
+    assert_eq!(page.items.len(), 1);
+    assert_eq!(page.total_count, Some(1));
+    assert_eq!(page.page_limit, Some(25));
+    assert_eq!(
+        class
+            .objects()
+            .create("router", "Object", json!({"owner": "net"}))
+            .await
+            .unwrap()
+            .name,
+        "router"
+    );
+
+    let object = class.objects().by_name("456");
+    assert_eq!(object.get().await.unwrap().id(), 9);
+    object
+        .update(ObjectPatch {
+            name: Some("456".into()),
+            collection_id: None,
+            hubuum_class_id: None,
+            description: None,
+            data: None,
+        })
+        .await
+        .unwrap();
+    let document = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
+        path: "/owner".into(),
+        value: json!("network"),
+    }]);
+    object.patch_data(&document).await.unwrap();
+
+    assert_eq!(class.permissions().list().await.unwrap().len(), 1);
+    assert_eq!(class.related_classes().list().await.unwrap().len(), 1);
+    assert_eq!(class.related_relations().list().await.unwrap().len(), 1);
+    assert_eq!(class.related_graph().send().await.unwrap().classes.len(), 1);
+    assert_eq!(object.related_objects().list().await.unwrap().len(), 1);
+    assert_eq!(object.related_relations().list().await.unwrap().len(), 1);
+    assert_eq!(
+        object.related_graph().send().await.unwrap().objects.len(),
+        1
+    );
+
+    object.delete().await.unwrap();
+    class.delete().await.unwrap();
+
+    assert_eq!(class_get.calls(), 2);
+    for mock in [
+        class_update,
+        class_delete,
+        objects_list,
+        object_create,
+        object_get,
+        object_update,
+        object_delete,
+        patch_data,
+        class_permissions,
+        related_classes,
+        related_class_relations,
+        related_class_graph,
+        related_objects,
+        related_object_relations,
+        related_object_graph,
+    ] {
+        mock.assert_calls(1);
+    }
+}
+
+#[tokio::test]
+async fn async_v003_object_aggregates_support_id_and_name_scopes() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let aggregate_body = json!([{
+        "dimensions": [
+            {"field": "name", "state": "value", "value": "router"},
+            {"field": "json_data.region,zone", "state": "missing"}
+        ],
+        "object_count": 2
+    }]);
+    let by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/object-aggregates")
+            .query_param("group_by", "name")
+            .query_param("group_by", "json_data.region,zone")
+            .query_param("sort", "object_count.desc")
+            .query_param("include_total", "true");
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-total-count", "1")
+            .header("x-page-limit", "100")
+            .json_body(aggregate_body.clone());
+    });
+    let by_name = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/by-name/123/object-aggregates")
+            .query_param("group_by", "computed.shared.risk")
+            .query_param("computed.personal.rank__lt", "5");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(aggregate_body);
+    });
+    let numeric_patch = server.mock(|when, then| {
+        when.method(PATCH)
+            .path("/api/v1/classes/42/9/data")
+            .header("content-type", "application/json-patch+json");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(object_json(9, 42, "router"));
+    });
+
+    let client = async_client(&server).await;
+    let page = client
+        .object_aggregates(42)
+        .group_by_all([
+            ObjectAggregateDimension::Name,
+            ObjectAggregateDimension::json_data(["region", "zone"]),
+        ])
+        .aggregate_sort(ObjectAggregateSort::ObjectCountDesc)
+        .include_total(true)
+        .page()
+        .await
+        .unwrap();
+    assert_eq!(page.items[0].object_count, 2);
+    assert_eq!(page.total_count, Some(1));
+    assert_eq!(page.page_limit, Some(100));
+
+    let rows = client
+        .class_by_name("123")
+        .object_aggregates()
+        .group_by(ObjectAggregateDimension::shared_computed("risk"))
+        .computed_filter(
+            ComputedFieldSelector::personal("rank"),
+            FilterOperator::Lt { is_negated: false },
+            5,
+        )
+        .list()
+        .await
+        .unwrap();
+    assert_eq!(rows.len(), 1);
+
+    let patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Test {
+        path: "/owner".into(),
+        value: json!("infra"),
+    }]);
+    client.patch_object_data(42, 9, &patch).await.unwrap();
+
+    by_id.assert_calls(1);
+    by_name.assert_calls(1);
+    numeric_patch.assert_calls(1);
 }
