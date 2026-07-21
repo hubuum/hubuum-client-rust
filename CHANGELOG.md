@@ -12,9 +12,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 - `ObjectPost::collection_id` and `ObjectPost::hubuum_class_id` are now optional
   so class-scoped and natural-key object creation can let the server infer both
-  values from the request path.
-- `Page<T>` now includes `page_limit`, exposing the effective server-applied
-  limit from the `X-Page-Limit` response header.
+  values from the request path. Existing struct literals must wrap explicit IDs
+  in `Some(...)`; class-scoped creation can instead omit both fields.
 
 ### Added
 
@@ -31,6 +30,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   pagination limits without authentication.
 - Object list builders can filter and sort through typed shared or personal
   computed-field selectors.
+- `Page<T>` now includes `page_limit`, exposing the effective server-applied
+  limit from the `X-Page-Limit` response header. This is additive because
+  `Page<T>` is non-exhaustive.
 
 ### Changed
 
