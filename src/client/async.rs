@@ -3,6 +3,7 @@ use reqwest::Response;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::borrow::Cow;
 use std::marker::PhantomData;
+use std::sync::{Arc, OnceLock};
 
 use super::{
     Authenticated, ClientCore, GetID, IntoQueryFilters, Unauthenticated, UrlParams, shared,
@@ -1293,6 +1294,39 @@ impl Client<Authenticated> {
         ClassNameScope::new(self.clone(), class_name.into())
     }
 
+    async fn resolve_class_name_id(
+        &self,
+        class_name: &str,
+        cached_id: &OnceLock<ClassId>,
+    ) -> Result<ClassId, ApiError> {
+        if let Some(class_id) = cached_id.get() {
+            return Ok(*class_id);
+        }
+
+        let class_id = self.classes().get_by_name(class_name).await?.id();
+        let _ = cached_id.set(class_id);
+        Ok(class_id)
+    }
+
+    async fn resolve_object_name_ids(
+        &self,
+        class_name: &str,
+        object_name: &str,
+        cached_class_id: &OnceLock<ClassId>,
+        cached_object_id: &OnceLock<ObjectId>,
+    ) -> Result<(ClassId, ObjectId), ApiError> {
+        let class_id = self
+            .resolve_class_name_id(class_name, cached_class_id)
+            .await?;
+        if let Some(object_id) = cached_object_id.get() {
+            return Ok((class_id, *object_id));
+        }
+
+        let object_id = self.objects(class_id).get_by_name(object_name).await?.id();
+        let _ = cached_object_id.set(object_id);
+        Ok((class_id, object_id))
+    }
+
     pub fn collections(&self) -> Resource<Collection> {
         Resource::new(self.clone(), UrlParams::default())
     }
@@ -1887,11 +1921,16 @@ impl RawRequest {
 pub struct ClassNameScope {
     client: Client<Authenticated>,
     class_name: String,
+    class_id: Arc<OnceLock<ClassId>>,
 }
 
 impl ClassNameScope {
     fn new(client: Client<Authenticated>, class_name: String) -> Self {
-        Self { client, class_name }
+        Self {
+            client,
+            class_name,
+            class_id: Arc::new(OnceLock::new()),
+        }
     }
 
     fn encoded_name(&self) -> String {
@@ -1913,7 +1952,13 @@ impl ClassNameScope {
     }
 
     pub async fn get(&self) -> Result<Handle<Class>, ApiError> {
-        let class = self
+        if shared::requires_name_route_fallback(&self.class_name) {
+            let class = self.client.classes().get_by_name(&self.class_name).await?;
+            let _ = self.class_id.set(class.id());
+            return Ok(class);
+        }
+
+        let class: Class = self
             .client
             .request_with_endpoint::<EmptyPostParams, Class>(
                 reqwest::Method::GET,
@@ -1924,18 +1969,38 @@ impl ClassNameScope {
             )
             .await?
             .ok_or_else(|| ApiError::EmptyResult("Class returned an empty response".into()))?;
+        let _ = self.class_id.set(class.id);
         Ok(Handle::new(self.client.clone(), class))
     }
 
     pub async fn update(&self, patch: ClassPatch) -> Result<Class, ApiError> {
-        self.client
+        if shared::requires_name_route_fallback(&self.class_name) {
+            let class_id = self
+                .client
+                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .await?;
+            return self.client.classes().update_raw(class_id, patch).await;
+        }
+
+        let class: Class = self
+            .client
             .raw_with_encoded_segments(reqwest::Method::PATCH, self.class_path())
             .json(&patch)?
             .send()
-            .await
+            .await?;
+        let _ = self.class_id.set(class.id);
+        Ok(class)
     }
 
     pub async fn delete(&self) -> Result<(), ApiError> {
+        if shared::requires_name_route_fallback(&self.class_name) {
+            let class_id = self
+                .client
+                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .await?;
+            return self.client.classes().delete(class_id).await;
+        }
+
         self.client
             .request_with_endpoint::<EmptyPostParams, ()>(
                 reqwest::Method::DELETE,
@@ -1952,6 +2017,7 @@ impl ClassNameScope {
         ClassNameObjects {
             client: self.client.clone(),
             class_name: self.class_name.clone(),
+            class_id: self.class_id.clone(),
         }
     }
 
@@ -1961,6 +2027,11 @@ impl ClassNameScope {
             Endpoint::ClassByNameObjectAggregates,
             self.class_params(),
         )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassObjectAggregates,
+        )
     }
 
     pub fn permissions(&self) -> CursorRequest<GroupPermissionsResult> {
@@ -1968,6 +2039,11 @@ impl ClassNameScope {
             self.client.clone(),
             Endpoint::ClassByNamePermissions,
             self.class_params(),
+        )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassPermissions,
         )
     }
 
@@ -1977,6 +2053,11 @@ impl ClassNameScope {
             Endpoint::ClassByNameRelatedClasses,
             self.class_params(),
         )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassRelatedClasses,
+        )
     }
 
     pub fn related_relations(&self) -> CursorRequest<ClassRelation> {
@@ -1984,6 +2065,11 @@ impl ClassNameScope {
             self.client.clone(),
             Endpoint::ClassByNameRelatedRelations,
             self.class_params(),
+        )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassRelatedRelations,
         )
     }
 
@@ -1993,6 +2079,11 @@ impl ClassNameScope {
             Endpoint::ClassByNameRelatedGraph,
             self.class_params(),
         )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::ClassRelatedGraph,
+        )
     }
 }
 
@@ -2001,6 +2092,7 @@ impl ClassNameScope {
 pub struct ClassNameObjects {
     client: Client<Authenticated>,
     class_name: String,
+    class_id: Arc<OnceLock<ClassId>>,
 }
 
 impl ClassNameObjects {
@@ -2017,10 +2109,24 @@ impl ClassNameObjects {
             Endpoint::ClassByNameObjects,
             self.class_params(),
         )
+        .with_class_name_fallback(
+            self.class_name.clone(),
+            self.class_id.clone(),
+            Endpoint::Objects,
+        )
     }
 
     pub async fn create_raw(&self, request: ObjectPost) -> Result<Object, ApiError> {
-        self.client
+        if shared::requires_name_route_fallback(&self.class_name) {
+            let class_id = self
+                .client
+                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .await?;
+            return self.client.objects(class_id).create_raw(request).await;
+        }
+
+        let object: Object = self
+            .client
             .request_with_endpoint(
                 reqwest::Method::POST,
                 &Endpoint::ClassByNameObjects,
@@ -2029,7 +2135,11 @@ impl ClassNameObjects {
                 request,
             )
             .await?
-            .ok_or_else(|| ApiError::EmptyResult("Object create returned an empty response".into()))
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Object create returned an empty response".into())
+            })?;
+        let _ = self.class_id.set(object.hubuum_class_id);
+        Ok(object)
     }
 
     pub async fn create(
@@ -2053,6 +2163,8 @@ impl ClassNameObjects {
             client: self.client.clone(),
             class_name: self.class_name.clone(),
             object_name: object_name.into(),
+            class_id: self.class_id.clone(),
+            object_id: Arc::new(OnceLock::new()),
         }
     }
 }
@@ -2063,6 +2175,8 @@ pub struct ObjectNameScope {
     client: Client<Authenticated>,
     class_name: String,
     object_name: String,
+    class_id: Arc<OnceLock<ClassId>>,
+    object_id: Arc<OnceLock<ObjectId>>,
 }
 
 impl ObjectNameScope {
@@ -2092,8 +2206,27 @@ impl ObjectNameScope {
             )
     }
 
+    fn requires_fallback(&self) -> bool {
+        shared::requires_name_route_fallback(&self.class_name)
+            || shared::requires_name_route_fallback(&self.object_name)
+    }
+
     pub async fn get(&self) -> Result<Handle<Object>, ApiError> {
-        let object = self
+        if self.requires_fallback() {
+            let class_id = self
+                .client
+                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .await?;
+            let object = self
+                .client
+                .objects(class_id)
+                .get_by_name(&self.object_name)
+                .await?;
+            let _ = self.object_id.set(object.id());
+            return Ok(object);
+        }
+
+        let object: Object = self
             .client
             .request_with_endpoint::<EmptyPostParams, Object>(
                 reqwest::Method::GET,
@@ -2108,6 +2241,19 @@ impl ObjectNameScope {
     }
 
     pub async fn get_computed(&self) -> Result<ComputedObject, ApiError> {
+        if self.requires_fallback() {
+            let (class_id, object_id) = self
+                .client
+                .resolve_object_name_ids(
+                    &self.class_name,
+                    &self.object_name,
+                    &self.class_id,
+                    &self.object_id,
+                )
+                .await?;
+            return self.client.computed_object(class_id, object_id).await;
+        }
+
         self.client
             .request_with_endpoint::<EmptyPostParams, ComputedObject>(
                 reqwest::Method::GET,
@@ -2123,6 +2269,23 @@ impl ObjectNameScope {
     }
 
     pub async fn update(&self, patch: ObjectPatch) -> Result<Object, ApiError> {
+        if self.requires_fallback() {
+            let (class_id, object_id) = self
+                .client
+                .resolve_object_name_ids(
+                    &self.class_name,
+                    &self.object_name,
+                    &self.class_id,
+                    &self.object_id,
+                )
+                .await?;
+            return self
+                .client
+                .objects(class_id)
+                .update_raw(object_id, patch)
+                .await;
+        }
+
         self.client
             .raw_with_encoded_segments(
                 reqwest::Method::PATCH,
@@ -2134,6 +2297,19 @@ impl ObjectNameScope {
     }
 
     pub async fn delete(&self) -> Result<(), ApiError> {
+        if self.requires_fallback() {
+            let (class_id, object_id) = self
+                .client
+                .resolve_object_name_ids(
+                    &self.class_name,
+                    &self.object_name,
+                    &self.class_id,
+                    &self.object_id,
+                )
+                .await?;
+            return self.client.objects(class_id).delete(object_id).await;
+        }
+
         self.client
             .request_with_endpoint::<EmptyPostParams, ()>(
                 reqwest::Method::DELETE,
@@ -2147,6 +2323,22 @@ impl ObjectNameScope {
     }
 
     pub async fn patch_data(&self, patch: &ObjectDataPatchDocument) -> Result<Object, ApiError> {
+        if self.requires_fallback() {
+            let (class_id, object_id) = self
+                .client
+                .resolve_object_name_ids(
+                    &self.class_name,
+                    &self.object_name,
+                    &self.class_id,
+                    &self.object_id,
+                )
+                .await?;
+            return self
+                .client
+                .patch_object_data(class_id, object_id, patch)
+                .await;
+        }
+
         self.client
             .raw_with_encoded_segments(
                 reqwest::Method::PATCH,
@@ -2164,6 +2356,13 @@ impl ObjectNameScope {
             Endpoint::ObjectByNameRelatedObjects,
             self.object_params(),
         )
+        .with_object_name_fallback(
+            self.class_name.clone(),
+            self.object_name.clone(),
+            self.class_id.clone(),
+            self.object_id.clone(),
+            Endpoint::ObjectRelatedObjects,
+        )
     }
 
     pub fn related_relations(&self) -> CursorRequest<ObjectRelation> {
@@ -2172,6 +2371,13 @@ impl ObjectNameScope {
             Endpoint::ObjectByNameRelatedRelations,
             self.object_params(),
         )
+        .with_object_name_fallback(
+            self.class_name.clone(),
+            self.object_name.clone(),
+            self.class_id.clone(),
+            self.object_id.clone(),
+            Endpoint::ObjectRelatedRelations,
+        )
     }
 
     pub fn related_graph(&self) -> GraphRequest<RelatedObjectGraph> {
@@ -2179,6 +2385,13 @@ impl ObjectNameScope {
             self.client.clone(),
             Endpoint::ObjectByNameRelatedGraph,
             self.object_params(),
+        )
+        .with_object_name_fallback(
+            self.class_name.clone(),
+            self.object_name.clone(),
+            self.class_id.clone(),
+            self.object_id.clone(),
+            Endpoint::ObjectRelatedGraph,
         )
     }
 }
@@ -4261,11 +4474,67 @@ impl QueryOp<Object> {
     }
 }
 
+#[derive(Debug, Clone)]
+enum NameRouteFallback {
+    Class {
+        class_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        endpoint: Endpoint,
+    },
+    Object {
+        class_name: String,
+        object_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        object_id: Arc<OnceLock<ObjectId>>,
+        endpoint: Endpoint,
+    },
+}
+
+impl NameRouteFallback {
+    async fn resolve(
+        &self,
+        client: &Client<Authenticated>,
+    ) -> Result<(Endpoint, UrlParams), ApiError> {
+        match self {
+            Self::Class {
+                class_name,
+                class_id,
+                endpoint,
+            } => {
+                let class_id = client.resolve_class_name_id(class_name, class_id).await?;
+                Ok((
+                    *endpoint,
+                    vec![(Cow::Borrowed("class_id"), class_id.to_string().into())],
+                ))
+            }
+            Self::Object {
+                class_name,
+                object_name,
+                class_id,
+                object_id,
+                endpoint,
+            } => {
+                let (class_id, object_id) = client
+                    .resolve_object_name_ids(class_name, object_name, class_id, object_id)
+                    .await?;
+                Ok((
+                    *endpoint,
+                    vec![
+                        (Cow::Borrowed("class_id"), class_id.to_string().into()),
+                        (Cow::Borrowed("object_id"), object_id.to_string().into()),
+                    ],
+                ))
+            }
+        }
+    }
+}
+
 pub struct CursorRequest<T> {
     client: Client<Authenticated>,
     endpoint: Endpoint,
     query_params: Vec<QueryFilter>,
     url_params: UrlParams,
+    name_route_fallback: Option<NameRouteFallback>,
     _phantom: PhantomData<T>,
 }
 
@@ -4276,8 +4545,47 @@ impl<T> CursorRequest<T> {
             endpoint,
             query_params: Vec::new(),
             url_params,
+            name_route_fallback: None,
             _phantom: PhantomData,
         }
+    }
+
+    fn with_class_name_fallback(
+        mut self,
+        class_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        endpoint: Endpoint,
+    ) -> Self {
+        if shared::requires_name_route_fallback(&class_name) {
+            self.name_route_fallback = Some(NameRouteFallback::Class {
+                class_name,
+                class_id,
+                endpoint,
+            });
+        }
+        self
+    }
+
+    fn with_object_name_fallback(
+        mut self,
+        class_name: String,
+        object_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        object_id: Arc<OnceLock<ObjectId>>,
+        endpoint: Endpoint,
+    ) -> Self {
+        if shared::requires_name_route_fallback(&class_name)
+            || shared::requires_name_route_fallback(&object_name)
+        {
+            self.name_route_fallback = Some(NameRouteFallback::Object {
+                class_name,
+                object_name,
+                class_id,
+                object_id,
+                endpoint,
+            });
+        }
+        self
     }
 
     pub fn sort_by<V: ToString>(mut self, sort: V) -> Self {
@@ -4411,12 +4719,16 @@ where
     T: DeserializeOwned,
 {
     pub async fn page(self) -> Result<shared::Page<T>, ApiError> {
+        let (endpoint, url_params) = match &self.name_route_fallback {
+            Some(fallback) => fallback.resolve(&self.client).await?,
+            None => (self.endpoint, self.url_params),
+        };
         let raw = self
             .client
             .request_with_endpoint_raw(
                 reqwest::Method::GET,
-                &self.endpoint,
-                self.url_params,
+                &endpoint,
+                url_params,
                 self.query_params,
                 EmptyPostParams,
             )
@@ -4448,6 +4760,7 @@ where
                 endpoint: request.endpoint,
                 query_params: request.query_params.clone(),
                 url_params: request.url_params.clone(),
+                name_route_fallback: request.name_route_fallback.clone(),
                 _phantom: PhantomData,
             }
             .page()
@@ -4484,6 +4797,7 @@ where
                     endpoint: self.endpoint,
                     query_params: self.query_params.clone(),
                     url_params: self.url_params.clone(),
+                    name_route_fallback: self.name_route_fallback.clone(),
                     _phantom: PhantomData,
                 })
                 .page()
@@ -4521,6 +4835,7 @@ pub struct GraphRequest<T> {
     endpoint: Endpoint,
     query_params: Vec<QueryFilter>,
     url_params: UrlParams,
+    name_route_fallback: Option<NameRouteFallback>,
     _phantom: PhantomData<T>,
 }
 
@@ -4531,8 +4846,47 @@ impl<T> GraphRequest<T> {
             endpoint,
             query_params: Vec::new(),
             url_params,
+            name_route_fallback: None,
             _phantom: PhantomData,
         }
+    }
+
+    fn with_class_name_fallback(
+        mut self,
+        class_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        endpoint: Endpoint,
+    ) -> Self {
+        if shared::requires_name_route_fallback(&class_name) {
+            self.name_route_fallback = Some(NameRouteFallback::Class {
+                class_name,
+                class_id,
+                endpoint,
+            });
+        }
+        self
+    }
+
+    fn with_object_name_fallback(
+        mut self,
+        class_name: String,
+        object_name: String,
+        class_id: Arc<OnceLock<ClassId>>,
+        object_id: Arc<OnceLock<ObjectId>>,
+        endpoint: Endpoint,
+    ) -> Self {
+        if shared::requires_name_route_fallback(&class_name)
+            || shared::requires_name_route_fallback(&object_name)
+        {
+            self.name_route_fallback = Some(NameRouteFallback::Object {
+                class_name,
+                object_name,
+                class_id,
+                object_id,
+                endpoint,
+            });
+        }
+        self
     }
 
     pub fn filters<I>(mut self, filters: I) -> Self
@@ -4572,11 +4926,15 @@ where
     T: DeserializeOwned,
 {
     pub async fn send(self) -> Result<T, ApiError> {
+        let (endpoint, url_params) = match &self.name_route_fallback {
+            Some(fallback) => fallback.resolve(&self.client).await?,
+            None => (self.endpoint, self.url_params),
+        };
         self.client
             .request_with_endpoint::<EmptyPostParams, T>(
                 reqwest::Method::GET,
-                &self.endpoint,
-                self.url_params,
+                &endpoint,
+                url_params,
                 self.query_params,
                 EmptyPostParams,
             )
@@ -4848,7 +5206,9 @@ where
     }
 
     pub async fn get_by_name(&self, name: &str) -> Result<Handle<T>, ApiError> {
-        if let Some(endpoint) = T::NAME_ITEM_ENDPOINT {
+        if !shared::requires_name_route_fallback(name)
+            && let Some(endpoint) = T::NAME_ITEM_ENDPOINT
+        {
             let mut url_params = self.url_params.clone();
             url_params.push((
                 Cow::Borrowed(T::NAME_PARAM),

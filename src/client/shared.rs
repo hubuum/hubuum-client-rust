@@ -139,7 +139,23 @@ pub(crate) fn build_encoded_relative_url(
     path: &str,
     query: &[(String, String)],
 ) -> Result<url::Url, ApiError> {
+    reject_url_dot_segments(path)?;
     build_relative_url_impl(base_url, path, query, false)
+}
+
+fn reject_url_dot_segments(value: &str) -> Result<(), ApiError> {
+    let path = value.split(['?', '#']).next().unwrap_or(value);
+    if path.split('/').any(|segment| {
+        matches!(segment, "." | "..")
+            || segment.eq_ignore_ascii_case("%2e")
+            || segment.eq_ignore_ascii_case("%2e%2e")
+    }) {
+        return Err(ApiError::InvalidUrlPath(
+            "standalone `.` and `..` segments cannot be addressed because URL parsing normalizes them"
+                .into(),
+        ));
+    }
+    Ok(())
 }
 
 fn build_relative_url_impl(
@@ -399,6 +415,16 @@ pub(crate) fn encode_path_segment(segment: &str) -> String {
     utf8_percent_encode(segment, PATH_SEGMENT).to_string()
 }
 
+/// Whether an opaque name cannot safely be represented as a URL path segment
+/// by `url::Url`.
+///
+/// WHATWG URL parsing normalizes both literal and percent-encoded standalone
+/// dot segments. Name-addressed scopes resolve these two valid names through
+/// collection queries and continue on the equivalent ID-addressed routes.
+pub(crate) fn requires_name_route_fallback(name: &str) -> bool {
+    matches!(name, "." | "..")
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Page<T> {
@@ -499,6 +525,7 @@ pub(crate) fn build_request_url(
     query_params: Vec<QueryFilter>,
 ) -> Result<String, ApiError> {
     ensure_no_unresolved_url_params(&url)?;
+    reject_url_dot_segments(&url)?;
 
     if *method == reqwest::Method::GET {
         let query = query_params.into_query_string()?;
@@ -1173,6 +1200,12 @@ mod test {
         assert_eq!(encode_path_segment("a?b#c"), "a%3Fb%23c");
         assert_eq!(encode_path_segment("a b"), "a%20b");
         assert_eq!(encode_path_segment("a%b"), "a%25b");
+        assert_eq!(encode_path_segment("."), ".");
+        assert_eq!(encode_path_segment(".."), "..");
+        assert_eq!(encode_path_segment("a.b"), "a.b");
+        assert!(requires_name_route_fallback("."));
+        assert!(requires_name_route_fallback(".."));
+        assert!(!requires_name_route_fallback("a/../b"));
     }
 
     #[test]

@@ -185,6 +185,214 @@ async fn async_exact_name_routes_preserve_opaque_path_segments() {
     assert_exact_name_requests(&transport, class_path, &object_path);
 }
 
+fn enqueue_dot_name_responses(transport: &MockTransport, class_name: &str, object_name: &str) {
+    for body in [
+        json!([exact_name_class_json(class_name)]),
+        exact_name_class_json(class_name),
+        json!([exact_name_object_json(object_name)]),
+        exact_name_object_json(object_name),
+        exact_name_object_json(object_name),
+        json!([]),
+        json!({"classes": [], "relations": []}),
+        json!([]),
+        json!({"objects": [], "relations": []}),
+    ] {
+        transport.push_response(TransportResponse::json(StatusCode::OK, &body).unwrap());
+    }
+    transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+    transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+}
+
+fn assert_dot_name_requests(transport: &MockTransport, class_name: &str, object_name: &str) {
+    let requests = transport.requests();
+    let class_query = format!("name__equals={class_name}");
+    let object_query = format!("name__equals={object_name}");
+    assert_eq!(requests.len(), 11);
+    assert_eq!(requests[0].method, Method::GET);
+    assert_eq!(requests[0].url.path(), "/api/v1/classes");
+    assert_eq!(requests[0].url.query(), Some(class_query.as_str()));
+    assert_eq!(requests[1].method, Method::PATCH);
+    assert_eq!(requests[1].url.path(), "/api/v1/classes/42");
+    assert_eq!(requests[2].method, Method::GET);
+    assert_eq!(requests[2].url.path(), "/api/v1/classes/42/");
+    assert_eq!(requests[2].url.query(), Some(object_query.as_str()));
+    assert_eq!(requests[3].method, Method::PATCH);
+    assert_eq!(requests[3].url.path(), "/api/v1/classes/42/9");
+    assert_eq!(requests[4].method, Method::PATCH);
+    assert_eq!(requests[4].url.path(), "/api/v1/classes/42/9/data");
+    assert_eq!(
+        requests[4]
+            .headers
+            .get(reqwest::header::CONTENT_TYPE)
+            .unwrap(),
+        "application/json-patch+json"
+    );
+    assert_eq!(requests[5].method, Method::GET);
+    assert_eq!(requests[5].url.path(), "/api/v1/classes/42/permissions");
+    assert_eq!(requests[6].method, Method::GET);
+    assert_eq!(requests[6].url.path(), "/api/v1/classes/42/related/graph");
+    assert_eq!(requests[7].method, Method::GET);
+    assert_eq!(
+        requests[7].url.path(),
+        "/api/v1/classes/42/objects/9/related/objects"
+    );
+    assert_eq!(requests[8].method, Method::GET);
+    assert_eq!(
+        requests[8].url.path(),
+        "/api/v1/classes/42/objects/9/related/graph"
+    );
+    assert_eq!(requests[9].method, Method::DELETE);
+    assert_eq!(requests[9].url.path(), "/api/v1/classes/42/9");
+    assert_eq!(requests[10].method, Method::DELETE);
+    assert_eq!(requests[10].url.path(), "/api/v1/classes/42");
+}
+
+#[test]
+fn blocking_exact_name_routes_resolve_dot_segments_to_id_routes() {
+    for (class_name, object_name) in [(".", ".."), ("..", ".")] {
+        let transport = MockTransport::default();
+        enqueue_dot_name_responses(&transport, class_name, object_name);
+        let client = blocking_mock_client(transport.clone(), 4096);
+
+        let class = client.class_by_name(class_name);
+        class.get().unwrap();
+        class.update(class_patch()).unwrap();
+        let object = class.objects().by_name(object_name);
+        object.get().unwrap();
+        object.update(object_patch()).unwrap();
+        object.patch_data(&object_data_patch()).unwrap();
+        class.permissions().list().unwrap();
+        class.related_graph().send().unwrap();
+        object.related_objects().list().unwrap();
+        object.related_graph().send().unwrap();
+        object.delete().unwrap();
+        class.delete().unwrap();
+
+        assert_dot_name_requests(&transport, class_name, object_name);
+    }
+}
+
+#[tokio::test]
+async fn async_exact_name_routes_resolve_dot_segments_to_id_routes() {
+    for (class_name, object_name) in [(".", ".."), ("..", ".")] {
+        let transport = MockTransport::default();
+        enqueue_dot_name_responses(&transport, class_name, object_name);
+        let client =
+            hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("consumer-secret"));
+
+        let class = client.class_by_name(class_name);
+        class.get().await.unwrap();
+        class.update(class_patch()).await.unwrap();
+        let object = class.objects().by_name(object_name);
+        object.get().await.unwrap();
+        object.update(object_patch()).await.unwrap();
+        object.patch_data(&object_data_patch()).await.unwrap();
+        class.permissions().list().await.unwrap();
+        class.related_graph().send().await.unwrap();
+        object.related_objects().list().await.unwrap();
+        object.related_graph().send().await.unwrap();
+        object.delete().await.unwrap();
+        class.delete().await.unwrap();
+
+        assert_dot_name_requests(&transport, class_name, object_name);
+    }
+}
+
+fn enqueue_dot_scope_builder_responses(transport: &MockTransport) {
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &json!([exact_name_class_json(".")])).unwrap(),
+    );
+    for _ in 0..5 {
+        transport.push_response(TransportResponse::json(StatusCode::OK, &json!([])).unwrap());
+    }
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &json!({"classes": [], "relations": []})).unwrap(),
+    );
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &json!([exact_name_object_json("..")])).unwrap(),
+    );
+    for _ in 0..2 {
+        transport.push_response(TransportResponse::json(StatusCode::OK, &json!([])).unwrap());
+    }
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &json!({"objects": [], "relations": []})).unwrap(),
+    );
+}
+
+fn assert_dot_scope_builder_requests(transport: &MockTransport) {
+    let requests = transport.requests();
+    let expected_paths = [
+        "/api/v1/classes",
+        "/api/v1/classes/42/",
+        "/api/v1/classes/42/object-aggregates",
+        "/api/v1/classes/42/permissions",
+        "/api/v1/classes/42/related/classes",
+        "/api/v1/classes/42/related/relations",
+        "/api/v1/classes/42/related/graph",
+        "/api/v1/classes/42/",
+        "/api/v1/classes/42/objects/9/related/objects",
+        "/api/v1/classes/42/objects/9/related/relations",
+        "/api/v1/classes/42/objects/9/related/graph",
+    ];
+    assert_eq!(requests.len(), expected_paths.len());
+    for (request, expected_path) in requests.iter().zip(expected_paths) {
+        assert_eq!(request.method, Method::GET);
+        assert_eq!(request.url.path(), expected_path);
+    }
+    assert_eq!(requests[0].url.query(), Some("name__equals=."));
+    assert_eq!(requests[7].url.query(), Some("name__equals=.."));
+}
+
+#[test]
+fn blocking_dot_name_scope_builders_use_id_routes() {
+    let transport = MockTransport::default();
+    enqueue_dot_scope_builder_responses(&transport);
+    let client = blocking_mock_client(transport.clone(), 4096);
+    let class = client.class_by_name(".");
+    let object = class.objects().by_name("..");
+
+    class.objects().query().list().unwrap();
+    class.object_aggregates().list().unwrap();
+    class.permissions().list().unwrap();
+    class.related_classes().list().unwrap();
+    class.related_relations().list().unwrap();
+    class.related_graph().send().unwrap();
+    object.related_objects().list().unwrap();
+    object.related_relations().list().unwrap();
+    object.related_graph().send().unwrap();
+
+    assert_dot_scope_builder_requests(&transport);
+}
+
+#[tokio::test]
+async fn async_dot_name_scope_builders_use_id_routes() {
+    let transport = MockTransport::default();
+    enqueue_dot_scope_builder_responses(&transport);
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+    let class = client.class_by_name(".");
+    let object = class.objects().by_name("..");
+
+    class.objects().query().list().await.unwrap();
+    class.object_aggregates().list().await.unwrap();
+    class.permissions().list().await.unwrap();
+    class.related_classes().list().await.unwrap();
+    class.related_relations().list().await.unwrap();
+    class.related_graph().send().await.unwrap();
+    object.related_objects().list().await.unwrap();
+    object.related_relations().list().await.unwrap();
+    object.related_graph().send().await.unwrap();
+
+    assert_dot_scope_builder_requests(&transport);
+}
+
 #[test]
 fn mock_transport_retries_safe_requests_and_redacts_diagnostics() {
     let transport = MockTransport::default();
