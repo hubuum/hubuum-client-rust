@@ -4,8 +4,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use hubuum_client::{
-    ApiError, BaseUrl, ExportContentType, ExportTemplateKind, MockTransport,
-    ObjectDataPatchDocument, ObjectDataPatchOperation, RetryPolicy, TaskStatus, Token,
+    ApiError, BaseUrl, ClassPatch, ExportContentType, ExportTemplateKind, MockTransport,
+    ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectPatch, RetryPolicy, TaskStatus, Token,
     TransportResponse, TypedObject, blocking,
 };
 use reqwest::{Method, StatusCode};
@@ -27,6 +27,162 @@ fn blocking_mock_client(
         .build()
         .unwrap()
         .authenticate(Token::new("consumer-secret"))
+}
+
+fn exact_name_class_json(name: &str) -> serde_json::Value {
+    json!({
+        "id": 42,
+        "name": name,
+        "description": "Class",
+        "collection": {
+            "id": 7,
+            "name": "collection-1",
+            "description": "Collection",
+            "created_at": "2026-07-21T10:00:00Z",
+            "updated_at": "2026-07-21T10:00:00Z"
+        },
+        "json_schema": null,
+        "validate_schema": null,
+        "created_at": "2026-07-21T10:00:00Z",
+        "updated_at": "2026-07-21T10:00:00Z"
+    })
+}
+
+fn exact_name_object_json(name: &str) -> serde_json::Value {
+    json!({
+        "id": 9,
+        "name": name,
+        "collection_id": 7,
+        "hubuum_class_id": 42,
+        "description": "Object",
+        "data": {"owner": "network"},
+        "created_at": "2026-07-21T10:00:00Z",
+        "updated_at": "2026-07-21T10:00:00Z"
+    })
+}
+
+fn enqueue_exact_name_responses(transport: &MockTransport, class_name: &str, object_name: &str) {
+    for body in [
+        exact_name_class_json(class_name),
+        exact_name_class_json(class_name),
+        exact_name_object_json(object_name),
+        exact_name_object_json(object_name),
+        exact_name_object_json(object_name),
+    ] {
+        transport.push_response(TransportResponse::json(StatusCode::OK, &body).unwrap());
+    }
+    transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+    transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+}
+
+fn assert_exact_name_requests(
+    transport: &MockTransport,
+    expected_class_path: &str,
+    expected_object_path: &str,
+) {
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 7);
+    assert_eq!(requests[0].method, Method::GET);
+    assert_eq!(requests[0].url.path(), expected_class_path);
+    assert_eq!(requests[1].method, Method::PATCH);
+    assert_eq!(requests[1].url.path(), expected_class_path);
+    assert_eq!(requests[2].method, Method::GET);
+    assert_eq!(requests[2].url.path(), expected_object_path);
+    assert_eq!(requests[3].method, Method::PATCH);
+    assert_eq!(requests[3].url.path(), expected_object_path);
+    assert_eq!(requests[4].method, Method::PATCH);
+    assert_eq!(
+        requests[4].url.path(),
+        format!("{expected_object_path}/data")
+    );
+    assert_eq!(
+        requests[4]
+            .headers
+            .get(reqwest::header::CONTENT_TYPE)
+            .unwrap(),
+        "application/json-patch+json"
+    );
+    assert_eq!(requests[5].method, Method::DELETE);
+    assert_eq!(requests[5].url.path(), expected_object_path);
+    assert_eq!(requests[6].method, Method::DELETE);
+    assert_eq!(requests[6].url.path(), expected_class_path);
+}
+
+fn class_patch() -> ClassPatch {
+    ClassPatch {
+        name: None,
+        description: Some("updated".into()),
+        collection_id: 7.into(),
+        json_schema: None,
+        validate_schema: None,
+    }
+}
+
+fn object_patch() -> ObjectPatch {
+    ObjectPatch {
+        name: None,
+        collection_id: None,
+        hubuum_class_id: None,
+        description: Some("updated".into()),
+        data: None,
+    }
+}
+
+fn object_data_patch() -> ObjectDataPatchDocument {
+    ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
+        path: "/owner".into(),
+        value: json!("network"),
+    }])
+}
+
+#[test]
+fn blocking_exact_name_routes_preserve_opaque_path_segments() {
+    let class_name = r"a/../b\class";
+    let object_name = r"x/./y\object";
+    let transport = MockTransport::default();
+    enqueue_exact_name_responses(&transport, class_name, object_name);
+    let client = blocking_mock_client(transport.clone(), 4096);
+
+    let class = client.class_by_name(class_name);
+    class.get().unwrap();
+    class.update(class_patch()).unwrap();
+    let object = class.objects().by_name(object_name);
+    object.get().unwrap();
+    object.update(object_patch()).unwrap();
+    object.patch_data(&object_data_patch()).unwrap();
+    object.delete().unwrap();
+    class.delete().unwrap();
+
+    let class_path = "/api/v1/classes/by-name/a%2F..%2Fb%5Cclass";
+    let object_path = format!("{class_path}/objects/by-name/x%2F.%2Fy%5Cobject");
+    assert_exact_name_requests(&transport, class_path, &object_path);
+}
+
+#[tokio::test]
+async fn async_exact_name_routes_preserve_opaque_path_segments() {
+    let class_name = r"a/../b\class";
+    let object_name = r"x/./y\object";
+    let transport = MockTransport::default();
+    enqueue_exact_name_responses(&transport, class_name, object_name);
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    let class = client.class_by_name(class_name);
+    class.get().await.unwrap();
+    class.update(class_patch()).await.unwrap();
+    let object = class.objects().by_name(object_name);
+    object.get().await.unwrap();
+    object.update(object_patch()).await.unwrap();
+    object.patch_data(&object_data_patch()).await.unwrap();
+    object.delete().await.unwrap();
+    class.delete().await.unwrap();
+
+    let class_path = "/api/v1/classes/by-name/a%2F..%2Fb%5Cclass";
+    let object_path = format!("{class_path}/objects/by-name/x%2F.%2Fy%5Cobject");
+    assert_exact_name_requests(&transport, class_path, &object_path);
 }
 
 #[test]

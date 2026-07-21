@@ -124,6 +124,30 @@ pub(crate) fn build_relative_url(
     path: &str,
     query: &[(String, String)],
 ) -> Result<url::Url, ApiError> {
+    build_relative_url_impl(base_url, path, query, true)
+}
+
+/// Join a relative path assembled internally from fixed endpoint text and
+/// dynamic segments escaped with [`encode_path_segment`].
+///
+/// Percent-encoded slashes in those opaque segments must not be decoded for
+/// traversal validation: a name such as `a/../b` is one encoded segment, not
+/// three structural path segments. Public raw request paths continue to use
+/// [`build_relative_url`] and its stricter decoded-path checks.
+pub(crate) fn build_encoded_relative_url(
+    base_url: &BaseUrl,
+    path: &str,
+    query: &[(String, String)],
+) -> Result<url::Url, ApiError> {
+    build_relative_url_impl(base_url, path, query, false)
+}
+
+fn build_relative_url_impl(
+    base_url: &BaseUrl,
+    path: &str,
+    query: &[(String, String)],
+    validate_decoded_path: bool,
+) -> Result<url::Url, ApiError> {
     let invalid_path = || {
         ApiError::InvalidBaseUrl(
             "raw request paths must stay within the configured base URL".into(),
@@ -143,16 +167,18 @@ pub(crate) fn build_relative_url(
     if relative_path.starts_with('/') {
         return Err(invalid_path());
     }
-    let decoded_path = percent_decode_str(relative_path)
-        .decode_utf8()
-        .map_err(|_| invalid_path())?;
-    if decoded_path.starts_with('/')
-        || decoded_path.starts_with('\\')
-        || decoded_path
-            .split(['/', '\\'])
-            .any(|segment| matches!(segment, "." | ".."))
-    {
-        return Err(invalid_path());
+    if validate_decoded_path {
+        let decoded_path = percent_decode_str(relative_path)
+            .decode_utf8()
+            .map_err(|_| invalid_path())?;
+        if decoded_path.starts_with('/')
+            || decoded_path.starts_with('\\')
+            || decoded_path
+                .split(['/', '\\'])
+                .any(|segment| matches!(segment, "." | ".."))
+        {
+            return Err(invalid_path());
+        }
     }
 
     let mut url = base_url.as_url().join(relative_path)?;
@@ -360,6 +386,7 @@ const PATH_SEGMENT: &AsciiSet = &CONTROLS
     .add(b'#')
     .add(b'%')
     .add(b'/')
+    .add(b'\\')
     .add(b'<')
     .add(b'>')
     .add(b'?')
@@ -1142,6 +1169,7 @@ mod test {
         assert_eq!(encode_path_segment("dTp0ZXN0-_"), "dTp0ZXN0-_");
         // Reserved / delimiter characters are percent-encoded.
         assert_eq!(encode_path_segment("a/b"), "a%2Fb");
+        assert_eq!(encode_path_segment(r"a\b"), "a%5Cb");
         assert_eq!(encode_path_segment("a?b#c"), "a%3Fb%23c");
         assert_eq!(encode_path_segment("a b"), "a%20b");
         assert_eq!(encode_path_segment("a%b"), "a%25b");

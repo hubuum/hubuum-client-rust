@@ -616,6 +616,23 @@ impl Client<Authenticated> {
             client: self.clone(),
             method,
             path: path.into(),
+            path_has_encoded_segments: false,
+            query: Vec::new(),
+            headers: Vec::new(),
+            body: None,
+        }
+    }
+
+    fn raw_with_encoded_segments(
+        &self,
+        method: reqwest::Method,
+        path: impl Into<String>,
+    ) -> RawRequest {
+        RawRequest {
+            client: self.clone(),
+            method,
+            path: path.into(),
+            path_has_encoded_segments: true,
             query: Vec::new(),
             headers: Vec::new(),
             body: None,
@@ -1617,6 +1634,7 @@ pub struct RawRequest {
     client: Client<Authenticated>,
     method: reqwest::Method,
     path: String,
+    path_has_encoded_segments: bool,
     query: Vec<(String, String)>,
     headers: Vec<(String, String)>,
     body: Option<serde_json::Value>,
@@ -1648,7 +1666,11 @@ impl RawRequest {
                 "raw requests cannot override the Authorization header".into(),
             ));
         }
-        let url = shared::build_relative_url(&self.client.base_url, &self.path, &self.query)?;
+        let url = if self.path_has_encoded_segments {
+            shared::build_encoded_relative_url(&self.client.base_url, &self.path, &self.query)?
+        } else {
+            shared::build_relative_url(&self.client.base_url, &self.path, &self.query)?
+        };
         let request_url = url.to_string();
 
         if let Some(transport) = &self.client.transport {
@@ -1799,7 +1821,7 @@ impl ClassNameScope {
 
     pub fn update(&self, patch: ClassPatch) -> Result<Class, ApiError> {
         self.client
-            .raw(reqwest::Method::PATCH, self.class_path())
+            .raw_with_encoded_segments(reqwest::Method::PATCH, self.class_path())
             .json(&patch)?
             .send()
     }
@@ -1987,7 +2009,7 @@ impl ObjectNameScope {
 
     pub fn update(&self, patch: ObjectPatch) -> Result<Object, ApiError> {
         self.client
-            .raw(
+            .raw_with_encoded_segments(
                 reqwest::Method::PATCH,
                 self.object_path(Endpoint::ObjectByName),
             )
@@ -2008,7 +2030,7 @@ impl ObjectNameScope {
 
     pub fn patch_data(&self, patch: &ObjectDataPatchDocument) -> Result<Object, ApiError> {
         self.client
-            .raw(
+            .raw_with_encoded_segments(
                 reqwest::Method::PATCH,
                 self.object_path(Endpoint::ObjectByNameData),
             )
