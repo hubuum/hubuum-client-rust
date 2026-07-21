@@ -94,7 +94,8 @@ jobs:
         run: cargo check -p hubuum_client --locked ${{ matrix.flags }}
 
   msrv:
-    name: MSRV (Rust 1.88)
+    # Keep this check name stable because the main-branch ruleset requires it.
+    name: MSRV
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -112,7 +113,8 @@ jobs:
         run: cargo check --workspace --all-features --locked
 
   server-contract:
-    name: Server v0.0.3 OpenAPI Contract
+    # Keep this check name stable because the main-branch ruleset requires it.
+    name: OpenAPI Contract
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
