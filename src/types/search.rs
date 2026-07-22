@@ -94,19 +94,10 @@ impl UnifiedSearchEvent {
     }
 
     pub fn parse_sse_stream(body: &str) -> Result<Vec<Self>, ApiError> {
-        let mut events = Vec::new();
         let mut decoder = UnifiedSearchSseDecoder::default();
-
-        for line in body.lines() {
-            if let Some(event) = decoder.push_line(line) {
-                events.push(event?);
-            }
-        }
-
-        if let Some(event) = decoder.finish() {
-            events.push(event?);
-        }
-        Ok(events)
+        let mut events = decoder.push_bytes(body.as_bytes());
+        events.extend(decoder.finish());
+        events.into_iter().collect()
     }
 }
 
@@ -114,21 +105,70 @@ impl UnifiedSearchEvent {
 pub(crate) struct UnifiedSearchSseDecoder {
     event_name: Option<String>,
     data_lines: Vec<String>,
+    pending_line: Vec<u8>,
+    pending_cr: bool,
+    buffered_event_bytes: usize,
+    max_event_bytes: usize,
     first_line: bool,
 }
 
 impl Default for UnifiedSearchSseDecoder {
     fn default() -> Self {
-        Self {
-            event_name: None,
-            data_lines: Vec::new(),
-            first_line: true,
-        }
+        Self::with_max_event_bytes(usize::MAX)
     }
 }
 
 impl UnifiedSearchSseDecoder {
-    pub(crate) fn push_line(&mut self, line: &str) -> Option<Result<UnifiedSearchEvent, ApiError>> {
+    pub(crate) fn with_max_event_bytes(max_event_bytes: usize) -> Self {
+        Self {
+            event_name: None,
+            data_lines: Vec::new(),
+            pending_line: Vec::new(),
+            pending_cr: false,
+            buffered_event_bytes: 0,
+            max_event_bytes,
+            first_line: true,
+        }
+    }
+
+    pub(crate) fn push_bytes(&mut self, bytes: &[u8]) -> Vec<Result<UnifiedSearchEvent, ApiError>> {
+        let mut events = Vec::new();
+        for &byte in bytes {
+            if self.pending_cr {
+                self.pending_cr = false;
+                if byte == b'\n' {
+                    if let Err(error) = self.count_byte() {
+                        events.push(Err(error));
+                        break;
+                    }
+                    if Self::push_finished_line(&mut events, self.finish_line()) {
+                        break;
+                    }
+                    continue;
+                }
+                if Self::push_finished_line(&mut events, self.finish_line()) {
+                    break;
+                }
+            }
+
+            if let Err(error) = self.count_byte() {
+                events.push(Err(error));
+                break;
+            }
+            match byte {
+                b'\r' => self.pending_cr = true,
+                b'\n' => {
+                    if Self::push_finished_line(&mut events, self.finish_line()) {
+                        break;
+                    }
+                }
+                _ => self.pending_line.push(byte),
+            }
+        }
+        events
+    }
+
+    fn push_line(&mut self, line: &str) -> Option<Result<UnifiedSearchEvent, ApiError>> {
         let line = if self.first_line {
             self.first_line = false;
             line.strip_prefix('\u{feff}').unwrap_or(line)
@@ -155,8 +195,62 @@ impl UnifiedSearchSseDecoder {
         None
     }
 
-    pub(crate) fn finish(&mut self) -> Option<Result<UnifiedSearchEvent, ApiError>> {
-        self.dispatch()
+    pub(crate) fn finish(&mut self) -> Vec<Result<UnifiedSearchEvent, ApiError>> {
+        let mut events = Vec::new();
+        if self.pending_cr {
+            self.pending_cr = false;
+            if Self::push_finished_line(&mut events, self.finish_line()) {
+                return events;
+            }
+        }
+        if !self.pending_line.is_empty()
+            && Self::push_finished_line(&mut events, self.finish_line())
+        {
+            return events;
+        }
+        if let Some(event) = self.dispatch() {
+            events.push(event);
+        }
+        events
+    }
+
+    fn count_byte(&mut self) -> Result<(), ApiError> {
+        self.buffered_event_bytes = self.buffered_event_bytes.saturating_add(1);
+        if self.buffered_event_bytes > self.max_event_bytes {
+            return Err(ApiError::ResponseTooLarge {
+                limit: self.max_event_bytes,
+                content_length: None,
+            });
+        }
+        Ok(())
+    }
+
+    fn finish_line(&mut self) -> Result<Option<UnifiedSearchEvent>, ApiError> {
+        let line = std::mem::take(&mut self.pending_line);
+        let line = std::str::from_utf8(&line).map_err(|error| {
+            ApiError::DeserializationError(format!("invalid UTF-8 in SSE frame: {error}"))
+        })?;
+        let event_boundary = line.is_empty();
+        let event = self.push_line(line).transpose()?;
+        if event_boundary {
+            self.buffered_event_bytes = 0;
+        }
+        Ok(event)
+    }
+
+    fn push_finished_line(
+        events: &mut Vec<Result<UnifiedSearchEvent, ApiError>>,
+        event: Result<Option<UnifiedSearchEvent>, ApiError>,
+    ) -> bool {
+        match event {
+            Ok(Some(event)) => events.push(Ok(event)),
+            Ok(None) => {}
+            Err(error) => {
+                events.push(Err(error));
+                return true;
+            }
+        }
+        false
     }
 
     fn dispatch(&mut self) -> Option<Result<UnifiedSearchEvent, ApiError>> {
@@ -176,7 +270,7 @@ impl UnifiedSearchSseDecoder {
 mod tests {
     use super::{
         UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchEvent,
-        UnifiedSearchStartedEvent,
+        UnifiedSearchSseDecoder, UnifiedSearchStartedEvent,
     };
 
     #[test]
@@ -244,5 +338,74 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn byte_decoder_handles_fragmented_utf8() {
+        let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(128);
+        let payload = "data: grøsser\n\n".as_bytes();
+        let split = payload
+            .windows(2)
+            .position(|window| window[0] == 0xc3 && window[1] == 0xb8)
+            .expect("payload should contain a multi-byte character")
+            + 1;
+
+        assert!(decoder.push_bytes(&payload[..split]).is_empty());
+        let events = decoder
+            .push_bytes(&payload[split..])
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("fragmented UTF-8 should decode after the line is complete");
+
+        assert_eq!(
+            events,
+            vec![UnifiedSearchEvent::Unknown {
+                event: "message".to_string(),
+                data: "grøsser".to_string(),
+            }]
+        );
+    }
+
+    #[test]
+    fn byte_decoder_accepts_standard_line_endings() {
+        for payload in ["data: ok\n\n", "data: ok\r\n\r\n", "data: ok\r\r"] {
+            let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(128);
+            let events = decoder
+                .push_bytes(payload.as_bytes())
+                .into_iter()
+                .chain(decoder.finish())
+                .collect::<Result<Vec<_>, _>>()
+                .expect("standard SSE line ending should decode");
+            assert_eq!(
+                events,
+                vec![UnifiedSearchEvent::Unknown {
+                    event: "message".to_string(),
+                    data: "ok".to_string(),
+                }]
+            );
+        }
+    }
+
+    #[test]
+    fn byte_decoder_preserves_events_before_size_error() {
+        let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(32);
+        let payload = format!("data: ok\n\ndata: {}", "x".repeat(40));
+        let events = decoder.push_bytes(payload.as_bytes());
+
+        assert_eq!(events.len(), 2);
+        assert_eq!(
+            events[0].as_ref().expect("first event should be retained"),
+            &UnifiedSearchEvent::Unknown {
+                event: "message".to_string(),
+                data: "ok".to_string(),
+            }
+        );
+        assert!(matches!(
+            events[1],
+            Err(crate::ApiError::ResponseTooLarge {
+                limit: 32,
+                content_length: None,
+            })
+        ));
     }
 }

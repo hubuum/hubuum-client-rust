@@ -86,7 +86,7 @@ pub use remote::{
     RemoteTarget, RemoteTargetGet, RemoteTargetInvokeRequest, RemoteTargetSubjectType,
     UpdateRemoteTarget,
 };
-#[cfg(feature = "blocking")]
+#[cfg(any(feature = "async", feature = "blocking"))]
 pub(crate) use search::UnifiedSearchSseDecoder;
 pub use search::{
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,

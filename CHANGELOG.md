@@ -13,6 +13,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Unified-search streams now apply `max_response_body_bytes` to each buffered
+  SSE event across async and blocking clients, preventing an unterminated or
+  oversized event from growing client memory without bound.
 - Blocking unified-search streams now match async SSE field handling: unnamed
   events use the standard `message` type, one optional leading value space is
   removed without stripping significant whitespace, comment and empty frames

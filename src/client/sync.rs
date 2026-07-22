@@ -3909,18 +3909,20 @@ pub struct UnifiedSearchRequest {
 }
 
 pub struct BlockingUnifiedSearchStream {
-    lines: std::io::Lines<std::io::BufReader<StreamingResponse>>,
+    response: StreamingResponse,
     decoder: UnifiedSearchSseDecoder,
+    pending_events: std::collections::VecDeque<Result<UnifiedSearchEvent, ApiError>>,
+    buffer: Box<[u8; 8192]>,
     finished: bool,
 }
 
 impl BlockingUnifiedSearchStream {
-    fn new(response: StreamingResponse) -> Self {
-        use std::io::BufRead;
-
+    fn new(response: StreamingResponse, max_event_bytes: usize) -> Self {
         Self {
-            lines: std::io::BufReader::new(response).lines(),
-            decoder: UnifiedSearchSseDecoder::default(),
+            response,
+            decoder: UnifiedSearchSseDecoder::with_max_event_bytes(max_event_bytes),
+            pending_events: std::collections::VecDeque::new(),
+            buffer: Box::new([0; 8192]),
             finished: false,
         }
     }
@@ -3933,18 +3935,33 @@ impl Iterator for BlockingUnifiedSearchStream {
         if self.finished {
             return None;
         }
+        if let Some(event) = self.pending_events.pop_front() {
+            if event.is_err() {
+                self.finished = true;
+            }
+            return Some(event);
+        }
 
         loop {
-            match self.lines.next() {
-                Some(Ok(line)) => {
-                    if let Some(event) = self.decoder.push_line(&line) {
+            match std::io::Read::read(&mut self.response, self.buffer.as_mut_slice()) {
+                Ok(0) => {
+                    self.finished = true;
+                    self.pending_events.extend(self.decoder.finish());
+                    return self.pending_events.pop_front();
+                }
+                Ok(bytes_read) => {
+                    self.pending_events
+                        .extend(self.decoder.push_bytes(&self.buffer[..bytes_read]));
+                    if let Some(event) = self.pending_events.pop_front() {
+                        if event.is_err() {
+                            self.finished = true;
+                        }
                         return Some(event);
                     }
                 }
-                Some(Err(error)) => return Some(Err(ApiError::Io(error))),
-                None => {
+                Err(error) => {
                     self.finished = true;
-                    return self.decoder.finish();
+                    return Some(Err(ApiError::Io(error)));
                 }
             }
         }
@@ -4039,6 +4056,7 @@ impl UnifiedSearchRequest {
     }
 
     pub fn stream(self) -> Result<BlockingUnifiedSearchStream, ApiError> {
+        let max_event_bytes = self.client.options.max_response_body_bytes;
         let mut query_params = self.query_params;
         query_params.push(QueryFilter::raw("q", self.query));
 
@@ -4048,7 +4066,7 @@ impl UnifiedSearchRequest {
             query_params,
         )?;
 
-        Ok(BlockingUnifiedSearchStream::new(response))
+        Ok(BlockingUnifiedSearchStream::new(response, max_event_bytes))
     }
 
     pub fn collect_stream(self) -> Result<Vec<UnifiedSearchEvent>, ApiError> {
