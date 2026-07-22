@@ -32,6 +32,44 @@ fn blocking_mock_client(
         .authenticate(Token::new("consumer-secret"))
 }
 
+fn invalid_utf8_response() -> TransportResponse {
+    TransportResponse {
+        status: StatusCode::OK,
+        headers: reqwest::header::HeaderMap::new(),
+        body: vec![b'[', b'"', 0xff, b'"', b']'],
+    }
+}
+
+fn assert_invalid_utf8_error(error: ApiError) {
+    assert!(matches!(
+        error,
+        ApiError::DeserializationError(message)
+            if message == "response body is not valid UTF-8 at byte 2"
+    ));
+}
+
+#[test]
+fn blocking_success_responses_reject_invalid_utf8() {
+    let transport = MockTransport::default();
+    transport.push_response(invalid_utf8_response());
+    let client = blocking_mock_client(transport, 4096);
+
+    assert_invalid_utf8_error(client.classes().list().unwrap_err());
+}
+
+#[tokio::test]
+async fn async_success_responses_reject_invalid_utf8() {
+    let transport = MockTransport::default();
+    transport.push_response(invalid_utf8_response());
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    assert_invalid_utf8_error(client.classes().list().await.unwrap_err());
+}
+
 fn queued_export_task_json() -> serde_json::Value {
     json!({
         "id": 12,

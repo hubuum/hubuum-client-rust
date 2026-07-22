@@ -305,7 +305,7 @@ pub(crate) fn process_transport_response(
     let (next_cursor, total_count, page_limit, content_type) = response_metadata(&response.headers);
     Ok(RawResponse {
         status: response.status,
-        body: String::from_utf8_lossy(&response.body).into_owned(),
+        body: decode_response_text(response.body)?,
         next_cursor,
         total_count,
         page_limit,
@@ -351,6 +351,15 @@ fn retry_after(headers: &HeaderMap) -> Option<std::time::Duration> {
     retry_at.duration_since(std::time::SystemTime::now()).ok()
 }
 
+fn decode_response_text(body: Vec<u8>) -> Result<String, ApiError> {
+    String::from_utf8(body).map_err(|error| {
+        ApiError::DeserializationError(format!(
+            "response body is not valid UTF-8 at byte {}",
+            error.utf8_error().valid_up_to()
+        ))
+    })
+}
+
 #[cfg(feature = "async")]
 pub(crate) async fn read_async_body(
     response: reqwest::Response,
@@ -378,7 +387,7 @@ pub(crate) async fn read_async_body(
         }
         body.extend_from_slice(&chunk);
     }
-    Ok(String::from_utf8_lossy(&body).into_owned())
+    decode_response_text(body)
 }
 
 #[cfg(feature = "async")]
@@ -425,7 +434,7 @@ pub(crate) fn read_blocking_body(
             content_length,
         });
     }
-    Ok(String::from_utf8_lossy(&body).into_owned())
+    decode_response_text(body)
 }
 
 #[cfg(feature = "blocking")]
@@ -1414,6 +1423,37 @@ mod test {
         .expect("DELETE URL should build");
 
         assert_eq!(url, "https://api.example.com/api/v1/relations/classes/55");
+    }
+
+    #[test]
+    fn successful_response_text_rejects_invalid_utf8() {
+        let error = decode_response_text(vec![b'{', b'"', 0xff, b'"', b'}'])
+            .expect_err("invalid UTF-8 must not be rewritten");
+
+        assert!(matches!(
+            error,
+            ApiError::DeserializationError(message)
+                if message == "response body is not valid UTF-8 at byte 2"
+        ));
+    }
+
+    #[test]
+    fn custom_transport_success_rejects_invalid_utf8() {
+        let response = super::super::transport::TransportResponse {
+            status: StatusCode::OK,
+            headers: HeaderMap::new(),
+            body: vec![b'{', b'"', 0xff, b'"', b'}'],
+        };
+
+        let error = process_transport_response(
+            &reqwest::Method::GET,
+            "https://api.example.com/api/v1/classes",
+            response,
+            &ClientOptions::default(),
+        )
+        .expect_err("invalid UTF-8 must not reach JSON parsing");
+
+        assert!(matches!(error, ApiError::DeserializationError(_)));
     }
 
     #[test]
