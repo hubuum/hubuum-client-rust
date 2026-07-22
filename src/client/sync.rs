@@ -38,7 +38,8 @@ use crate::types::{
     ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability, RestoreConfirmRequest,
     RestoreId, RestoreStageResponse, RunningConfig, SortDirection, TaskEventResponse, TaskId,
     TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UnifiedSearchSseDecoder,
+    UpdateEventSubscription,
 };
 
 #[derive(Deserialize, Debug)]
@@ -3909,8 +3910,7 @@ pub struct UnifiedSearchRequest {
 
 pub struct BlockingUnifiedSearchStream {
     lines: std::io::Lines<std::io::BufReader<StreamingResponse>>,
-    event_name: Option<String>,
-    data_lines: Vec<String>,
+    decoder: UnifiedSearchSseDecoder,
     finished: bool,
 }
 
@@ -3920,25 +3920,9 @@ impl BlockingUnifiedSearchStream {
 
         Self {
             lines: std::io::BufReader::new(response).lines(),
-            event_name: None,
-            data_lines: Vec::new(),
+            decoder: UnifiedSearchSseDecoder::default(),
             finished: false,
         }
-    }
-
-    fn flush(&mut self) -> Option<Result<UnifiedSearchEvent, ApiError>> {
-        if self.event_name.is_none() && self.data_lines.is_empty() {
-            return None;
-        }
-        let Some(event) = self.event_name.take() else {
-            self.data_lines.clear();
-            return Some(Err(ApiError::DeserializationError(
-                "SSE event missing event name".into(),
-            )));
-        };
-        let data = self.data_lines.join("\n");
-        self.data_lines.clear();
-        Some(UnifiedSearchEvent::from_sse_parts(event, data))
     }
 }
 
@@ -3952,23 +3936,15 @@ impl Iterator for BlockingUnifiedSearchStream {
 
         loop {
             match self.lines.next() {
-                Some(Ok(line)) if line.is_empty() => {
-                    if let Some(event) = self.flush() {
-                        return Some(event);
-                    }
-                }
-                Some(Ok(line)) if line.starts_with(':') => {}
                 Some(Ok(line)) => {
-                    if let Some(value) = line.strip_prefix("event:") {
-                        self.event_name = Some(value.trim().to_string());
-                    } else if let Some(value) = line.strip_prefix("data:") {
-                        self.data_lines.push(value.trim_start().to_string());
+                    if let Some(event) = self.decoder.push_line(&line) {
+                        return Some(event);
                     }
                 }
                 Some(Err(error)) => return Some(Err(ApiError::Io(error))),
                 None => {
                     self.finished = true;
-                    return self.flush();
+                    return self.decoder.finish();
                 }
             }
         }

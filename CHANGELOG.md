@@ -13,6 +13,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Blocking unified-search streams now match async SSE field handling: unnamed
+  events use the standard `message` type, one optional leading value space is
+  removed without stripping significant whitespace, comment and empty frames
+  are ignored, and an initial byte-order mark is accepted.
 - Dynamic endpoint parameters are encoded centrally as opaque URL path
   segments, preventing delimiters in low-level `UrlParams` or resource
   identifiers from altering the request target.

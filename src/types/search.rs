@@ -79,7 +79,10 @@ impl UnifiedSearchEvent {
         event: impl Into<String>,
         data: impl Into<String>,
     ) -> Result<Self, ApiError> {
-        let event = event.into();
+        let mut event = event.into();
+        if event.is_empty() {
+            event = "message".to_string();
+        }
         let data = data.into();
         match event.as_str() {
             "started" => Ok(Self::Started(serde_json::from_str(&data)?)),
@@ -92,49 +95,80 @@ impl UnifiedSearchEvent {
 
     pub fn parse_sse_stream(body: &str) -> Result<Vec<Self>, ApiError> {
         let mut events = Vec::new();
-        let mut event_name: Option<String> = None;
-        let mut data_lines: Vec<String> = Vec::new();
-
-        let flush = |event_name: &mut Option<String>,
-                     data_lines: &mut Vec<String>,
-                     events: &mut Vec<Self>|
-         -> Result<(), ApiError> {
-            if event_name.is_none() && data_lines.is_empty() {
-                return Ok(());
-            }
-
-            let name = event_name.take().ok_or_else(|| {
-                ApiError::DeserializationError("SSE event missing event name".into())
-            })?;
-            let data = data_lines.join("\n");
-            data_lines.clear();
-
-            events.push(Self::from_sse_parts(name, data)?);
-            Ok(())
-        };
+        let mut decoder = UnifiedSearchSseDecoder::default();
 
         for line in body.lines() {
-            if line.is_empty() {
-                flush(&mut event_name, &mut data_lines, &mut events)?;
-                continue;
-            }
-
-            if line.starts_with(':') {
-                continue;
-            }
-
-            if let Some(rest) = line.strip_prefix("event:") {
-                event_name = Some(rest.trim().to_string());
-                continue;
-            }
-
-            if let Some(rest) = line.strip_prefix("data:") {
-                data_lines.push(rest.trim_start().to_string());
+            if let Some(event) = decoder.push_line(line) {
+                events.push(event?);
             }
         }
 
-        flush(&mut event_name, &mut data_lines, &mut events)?;
+        if let Some(event) = decoder.finish() {
+            events.push(event?);
+        }
         Ok(events)
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct UnifiedSearchSseDecoder {
+    event_name: Option<String>,
+    data_lines: Vec<String>,
+    first_line: bool,
+}
+
+impl Default for UnifiedSearchSseDecoder {
+    fn default() -> Self {
+        Self {
+            event_name: None,
+            data_lines: Vec::new(),
+            first_line: true,
+        }
+    }
+}
+
+impl UnifiedSearchSseDecoder {
+    pub(crate) fn push_line(&mut self, line: &str) -> Option<Result<UnifiedSearchEvent, ApiError>> {
+        let line = if self.first_line {
+            self.first_line = false;
+            line.strip_prefix('\u{feff}').unwrap_or(line)
+        } else {
+            line
+        };
+
+        if line.is_empty() {
+            return self.dispatch();
+        }
+        if line.starts_with(':') {
+            return None;
+        }
+
+        let (field, value) = match line.split_once(':') {
+            Some((field, value)) => (field, value.strip_prefix(' ').unwrap_or(value)),
+            None => (line, ""),
+        };
+        match field {
+            "event" => self.event_name = Some(value.to_string()),
+            "data" => self.data_lines.push(value.to_string()),
+            _ => {}
+        }
+        None
+    }
+
+    pub(crate) fn finish(&mut self) -> Option<Result<UnifiedSearchEvent, ApiError>> {
+        self.dispatch()
+    }
+
+    fn dispatch(&mut self) -> Option<Result<UnifiedSearchEvent, ApiError>> {
+        if self.data_lines.is_empty() {
+            self.event_name = None;
+            return None;
+        }
+
+        let event = self.event_name.take().unwrap_or_default();
+        let data = self.data_lines.join("\n");
+        self.data_lines.clear();
+        Some(UnifiedSearchEvent::from_sse_parts(event, data))
     }
 }
 
@@ -180,6 +214,35 @@ mod tests {
             UnifiedSearchEvent::Done(UnifiedSearchDoneEvent {
                 query: "server".to_string(),
             })
+        );
+    }
+
+    #[test]
+    fn parse_sse_stream_follows_event_stream_field_rules() {
+        let body = concat!(
+            "\u{feff}: heartbeat\n",
+            "event: ignored-without-data\n\n",
+            "data: first\n",
+            "data:  second\n\n",
+            "event: future-event \n",
+            "data\n\n",
+        );
+
+        let events = UnifiedSearchEvent::parse_sse_stream(body)
+            .expect("valid SSE field syntax should parse");
+
+        assert_eq!(
+            events,
+            vec![
+                UnifiedSearchEvent::Unknown {
+                    event: "message".to_string(),
+                    data: "first\n second".to_string(),
+                },
+                UnifiedSearchEvent::Unknown {
+                    event: "future-event ".to_string(),
+                    data: String::new(),
+                },
+            ]
         );
     }
 }

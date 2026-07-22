@@ -3560,12 +3560,16 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
         then.status(200)
             .header("content-type", "text/event-stream")
             .body(concat!(
-                "event: started\n",
+                "\u{feff}event: started\n",
                 "data: {\"query\":\"server\"}\n\n",
                 "event: batch\n",
                 "data: {\"kind\":\"object\",\"collections\":[],\"classes\":[],\"objects\":[],\"next\":null}\n\n",
                 "event: done\n",
                 "data: {\"query\":\"server\"}\n\n",
+                ": heartbeat\n",
+                "event: ignored-without-data\n\n",
+                "data: future\n",
+                "data:  payload\n\n",
             ));
     });
 
@@ -3593,6 +3597,13 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
     assert!(matches!(events[1], UnifiedSearchEvent::Batch(_)));
     assert!(matches!(events[2], UnifiedSearchEvent::Done(_)));
+    assert_eq!(
+        events[3],
+        UnifiedSearchEvent::Unknown {
+            event: "message".to_string(),
+            data: "future\n payload".to_string(),
+        }
+    );
 
     search.assert_calls(1);
     stream.assert_calls(1);
@@ -3627,6 +3638,10 @@ async fn async_unified_search_supports_grouped_results_and_stream_events() {
                 "data: {\"query\":\"server\"}\n\n",
                 "event: done\n",
                 "data: {\"query\":\"server\"}\n\n",
+                ": heartbeat\n",
+                "event: ignored-without-data\n\n",
+                "data: future\n",
+                "data:  payload\n\n",
             ));
     });
 
@@ -3651,6 +3666,13 @@ async fn async_unified_search_supports_grouped_results_and_stream_events() {
         .expect("stream events should decode");
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
     assert!(matches!(events[1], UnifiedSearchEvent::Done(_)));
+    assert_eq!(
+        events[2],
+        UnifiedSearchEvent::Unknown {
+            event: "message".to_string(),
+            data: "future\n payload".to_string(),
+        }
+    );
 
     search.assert_calls(1);
     stream.assert_calls(1);
