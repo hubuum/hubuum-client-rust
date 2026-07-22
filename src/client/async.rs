@@ -949,7 +949,7 @@ impl Client<Authenticated> {
             .request_with_endpoint_raw(
                 reqwest::Method::DELETE,
                 &Endpoint::MetaLoginRateLimitById,
-                vec![(Cow::Borrowed("id"), shared::encode_path_segment(id).into())],
+                vec![(Cow::Borrowed("id"), id.to_string().into())],
                 vec![],
                 EmptyPostParams,
             )
@@ -2089,7 +2089,7 @@ impl ClassNameScope {
     }
 
     fn class_params(&self) -> UrlParams {
-        vec![(Cow::Borrowed("class_name"), self.encoded_name().into())]
+        vec![(Cow::Borrowed("class_name"), self.class_name.clone().into())]
     }
 
     fn class_path(&self) -> String {
@@ -2248,10 +2248,7 @@ pub struct ClassNameObjects {
 
 impl ClassNameObjects {
     fn class_params(&self) -> UrlParams {
-        vec![(
-            Cow::Borrowed("class_name"),
-            shared::encode_path_segment(&self.class_name).into(),
-        )]
+        vec![(Cow::Borrowed("class_name"), self.class_name.clone().into())]
     }
 
     pub fn query(&self) -> CursorRequest<Object> {
@@ -2333,13 +2330,10 @@ pub struct ObjectNameScope {
 impl ObjectNameScope {
     fn object_params(&self) -> UrlParams {
         vec![
-            (
-                Cow::Borrowed("class_name"),
-                shared::encode_path_segment(&self.class_name).into(),
-            ),
+            (Cow::Borrowed("class_name"), self.class_name.clone().into()),
             (
                 Cow::Borrowed("object_name"),
-                shared::encode_path_segment(&self.object_name).into(),
+                self.object_name.clone().into(),
             ),
         ]
     }
@@ -3734,7 +3728,10 @@ impl ExportTemplateSubmitOp {
             .request_with_endpoint_raw_with_headers(
                 reqwest::Method::POST,
                 &Endpoint::ExportTemplateExports,
-                vec![(Cow::Borrowed("template_id"), self.template_id.into())],
+                vec![(
+                    Cow::Borrowed("template_id"),
+                    self.template_id.clone().into(),
+                )],
                 vec![],
                 self.request,
                 &headers,
@@ -5338,10 +5335,7 @@ where
             && let Some(endpoint) = T::NAME_ITEM_ENDPOINT
         {
             let mut url_params = self.url_params.clone();
-            url_params.push((
-                Cow::Borrowed(T::NAME_PARAM),
-                shared::encode_path_segment(name).into(),
-            ));
+            url_params.push((Cow::Borrowed(T::NAME_PARAM), name.to_string().into()));
             match self
                 .client
                 .request_with_endpoint::<EmptyPostParams, T>(

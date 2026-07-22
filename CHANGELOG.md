@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Fixed
+
+- Dynamic endpoint parameters are encoded centrally as opaque URL path
+  segments, preventing delimiters in low-level `UrlParams` or resource
+  identifiers from altering the request target.
+
 ## [0.6.1] - 2026-07-23
 
 ### Security
