@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use futures_util::TryStreamExt;
+use futures_util::{StreamExt, TryStreamExt};
 use httpmock::MockServer;
 use hubuum_client::{
     ApiError, BaseUrl, ClassPatch, Credentials, ExportContentType, ExportTemplateKind,
@@ -19,9 +19,19 @@ fn blocking_mock_client(
     transport: MockTransport,
     max_body_bytes: usize,
 ) -> blocking::Client<hubuum_client::Authenticated> {
+    blocking_limited_mock_client(transport, max_body_bytes, 10_000, 1_000_000)
+}
+
+fn blocking_limited_mock_client(
+    transport: MockTransport,
+    max_body_bytes: usize,
+    max_pages: usize,
+    max_items: usize,
+) -> blocking::Client<hubuum_client::Authenticated> {
     blocking::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
         .with_transport(Arc::new(transport))
         .max_response_body_bytes(max_body_bytes)
+        .auto_pagination_limits(max_pages, max_items)
         .retry_policy(RetryPolicy {
             max_attempts: 2,
             initial_delay: Duration::ZERO,
@@ -456,6 +466,107 @@ async fn async_public_and_auth_calls_use_custom_transport() {
     assert_eq!(client.healthz().await.unwrap().status, "healthy");
     assert_eq!(client.readyz().await.unwrap().status, "ready");
     assert_public_client_requests(&transport);
+}
+
+fn paginated_response(body: serde_json::Value, next_cursor: Option<&str>) -> TransportResponse {
+    let mut response = TransportResponse::json(StatusCode::OK, &body).unwrap();
+    if let Some(next_cursor) = next_cursor {
+        response.headers.insert(
+            "x-next-cursor",
+            reqwest::header::HeaderValue::from_str(next_cursor).unwrap(),
+        );
+    }
+    response
+}
+
+fn group_json(id: i32) -> serde_json::Value {
+    json!({
+        "id": id,
+        "groupname": format!("group-{id}"),
+        "description": "Group",
+        "created_at": "2026-07-21T10:00:00Z",
+        "updated_at": "2026-07-21T10:00:00Z"
+    })
+}
+
+#[test]
+fn blocking_lazy_pagination_honors_page_and_item_limits() {
+    let page_transport = MockTransport::default();
+    page_transport.push_response(paginated_response(
+        json!([exact_name_class_json("server")]),
+        Some("next-page"),
+    ));
+    let page_client = blocking_limited_mock_client(page_transport.clone(), 4096, 1, 10);
+    let mut pages = page_client.classes().pages();
+
+    assert_eq!(pages.next().unwrap().unwrap().len(), 1);
+    assert!(matches!(
+        pages.next(),
+        Some(Err(ApiError::PaginationLimit { pages: 1, items: 1 }))
+    ));
+    assert!(pages.next().is_none());
+    assert_eq!(page_transport.requests().len(), 1);
+
+    let item_transport = MockTransport::default();
+    item_transport.push_response(paginated_response(
+        json!([group_json(1), group_json(2)]),
+        None,
+    ));
+    let item_client = blocking_limited_mock_client(item_transport.clone(), 4096, 10, 1);
+    let mut items = item_client.me_groups_request().items();
+
+    assert!(matches!(
+        items.next(),
+        Some(Err(ApiError::PaginationLimit { pages: 1, items: 2 }))
+    ));
+    assert!(items.next().is_none());
+    assert_eq!(item_transport.requests().len(), 1);
+}
+
+#[tokio::test]
+async fn async_lazy_pagination_honors_page_and_item_limits() {
+    let page_transport = MockTransport::default();
+    page_transport.push_response(paginated_response(
+        json!([exact_name_class_json("server")]),
+        Some("next-page"),
+    ));
+    let page_client =
+        hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+            .with_transport(Arc::new(page_transport.clone()))
+            .auto_pagination_limits(1, 10)
+            .build()
+            .unwrap()
+            .authenticate(Token::new("consumer-secret"));
+    let mut pages = page_client.classes().pages();
+
+    assert_eq!(pages.next().await.unwrap().unwrap().len(), 1);
+    assert!(matches!(
+        pages.next().await,
+        Some(Err(ApiError::PaginationLimit { pages: 1, items: 1 }))
+    ));
+    assert!(pages.next().await.is_none());
+    assert_eq!(page_transport.requests().len(), 1);
+
+    let item_transport = MockTransport::default();
+    item_transport.push_response(paginated_response(
+        json!([group_json(1), group_json(2)]),
+        None,
+    ));
+    let item_client =
+        hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+            .with_transport(Arc::new(item_transport.clone()))
+            .auto_pagination_limits(10, 1)
+            .build()
+            .unwrap()
+            .authenticate(Token::new("consumer-secret"));
+    let mut items = item_client.me_groups_request().items();
+
+    assert!(matches!(
+        items.next().await,
+        Some(Err(ApiError::PaginationLimit { pages: 1, items: 2 }))
+    ));
+    assert!(items.next().await.is_none());
+    assert_eq!(item_transport.requests().len(), 1);
 }
 
 fn exact_name_class_json(name: &str) -> serde_json::Value {
