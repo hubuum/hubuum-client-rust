@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Typed effective-permission lookup for any principal through
+  `Client::principal_permissions`, plus `permissions()` convenience methods on
+  user and service-account handles.
+
 ### Changed
 
 - Custom-transport retry plans now share their immutable serialized request

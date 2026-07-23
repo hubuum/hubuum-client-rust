@@ -270,6 +270,22 @@ fn mock_paginated_handle_lists(server: &MockServer) {
     );
 }
 
+fn principal_permissions_json(
+    collection_id: i32,
+    group_id: i32,
+    groupname: &str,
+) -> serde_json::Value {
+    json!({
+        "collection_id": collection_id,
+        "collection_name": format!("collection-{collection_id}"),
+        "grants": [{
+            "group_id": group_id,
+            "groupname": groupname,
+            "permissions": ["ReadCollection"]
+        }]
+    })
+}
+
 fn running_config_json() -> serde_json::Value {
     json!({
         "server": {
@@ -2307,6 +2323,15 @@ fn sync_supports_user_group_and_token_endpoints() {
             }]));
     });
 
+    let user_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/principals/11/permissions")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([principal_permissions_json(7, 10, "admins")]));
+    });
+
     let user_anonymize = server.mock(|when, then| {
         when.method(POST)
             .path("/api/v1/iam/users/11/anonymize")
@@ -2340,6 +2365,15 @@ fn sync_supports_user_group_and_token_endpoints() {
     assert_eq!(tokens[0].principal_id, 11);
     assert_eq!(tokens[0].id, 1);
 
+    let direct_permissions = client
+        .principal_permissions(11)
+        .expect("principal permissions request should succeed");
+    let handle_permissions = user
+        .permissions()
+        .expect("user permissions request should succeed");
+    assert_eq!(handle_permissions, direct_permissions);
+    assert_eq!(handle_permissions[0].grants[0].group_id, 10);
+
     user.anonymize().expect("user anonymize should succeed");
 
     let group = client
@@ -2352,6 +2386,7 @@ fn sync_supports_user_group_and_token_endpoints() {
     user_by_id.assert_calls(1);
     user_groups.assert_calls(1);
     user_tokens.assert_calls(1);
+    user_permissions.assert_calls(2);
     user_anonymize.assert_calls(1);
     group_by_id.assert_calls(1);
 }
@@ -2393,6 +2428,15 @@ async fn async_supports_user_group_and_token_endpoints() {
             }]));
     });
 
+    let user_permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/principals/11/permissions")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([principal_permissions_json(7, 10, "admins")]));
+    });
+
     let group_by_id = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/iam/groups/10")
@@ -2426,6 +2470,17 @@ async fn async_supports_user_group_and_token_endpoints() {
     assert_eq!(tokens[0].principal_id, 11);
     assert_eq!(tokens[0].id, 1);
 
+    let direct_permissions = client
+        .principal_permissions(11)
+        .await
+        .expect("principal permissions request should succeed");
+    let handle_permissions = user
+        .permissions()
+        .await
+        .expect("user permissions request should succeed");
+    assert_eq!(handle_permissions, direct_permissions);
+    assert_eq!(handle_permissions[0].grants[0].group_id, 10);
+
     let group = client
         .groups()
         .get(10)
@@ -2437,6 +2492,7 @@ async fn async_supports_user_group_and_token_endpoints() {
     user_by_id.assert_calls(1);
     user_groups.assert_calls(1);
     user_tokens.assert_calls(1);
+    user_permissions.assert_calls(2);
     group_by_id.assert_calls(1);
 }
 
@@ -4613,6 +4669,15 @@ fn sync_service_account_create_and_disable() {
             }));
     });
 
+    let permissions = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/principals/5/permissions")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([principal_permissions_json(7, 10, "admins")]));
+    });
+
     let client = sync_client(&server);
     let created = client
         .service_accounts()
@@ -4630,11 +4695,16 @@ fn sync_service_account_create_and_disable() {
         .service_accounts()
         .get(5)
         .expect("service account select should succeed");
+    let permission_rows = sa
+        .permissions()
+        .expect("service account permissions should succeed");
+    assert_eq!(permission_rows[0].grants[0].group_id, 10);
     let disabled = sa.disable().expect("disable should succeed");
     assert!(disabled.disabled_at.is_some());
 
     create.assert_calls(1);
     select.assert_calls(1);
+    permissions.assert_calls(1);
     disable.assert_calls(1);
 }
 

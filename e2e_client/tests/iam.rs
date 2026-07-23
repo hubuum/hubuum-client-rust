@@ -72,6 +72,19 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
         .users()
         .get(user.id)
         .expect("created user should be selectable");
+    let direct_user_permissions = harness
+        .client
+        .principal_permissions(user.id)
+        .expect("explicit user permissions should list");
+    let handle_user_permissions = user_handle
+        .permissions()
+        .expect("user handle permissions should list");
+    assert_eq!(handle_user_permissions.len(), direct_user_permissions.len());
+    assert!(
+        handle_user_permissions
+            .iter()
+            .all(|entry| !entry.collection_name.is_empty())
+    );
     let raw_user_token = user_handle
         .tokens_create(
             NewTokenRequest::new()
@@ -136,6 +149,14 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
         .service_accounts()
         .get(service_account.id)
         .expect("service account should be selectable");
+    let service_account_permissions = service_account_handle
+        .permissions()
+        .expect("service account permissions should list");
+    assert!(
+        service_account_permissions
+            .iter()
+            .all(|entry| !entry.collection_name.is_empty())
+    );
     let raw_service_token = service_account_handle
         .tokens_create(NewTokenRequest::new().name("e2e-service-token"))
         .expect("service account token should mint");

@@ -21,7 +21,7 @@ use crate::resources::user::{
     principal_token_create_sync, principal_token_revoke_sync, principal_tokens_sync,
 };
 use crate::{
-    ApiError, GroupId, NewTokenRequest, PrincipalTokenMetadata,
+    ApiError, GroupId, NewTokenRequest, PrincipalCollectionPermissions, PrincipalTokenMetadata,
     endpoints::Endpoint,
     types::{HubuumDateTime, PrincipalId, TokenId},
 };
@@ -63,6 +63,12 @@ impl SyncHandle<ServiceAccount> {
         self.client().principal_settings(self.id())
     }
 
+    /// Effective permissions for this service account, grouped by collection
+    /// and granting group.
+    pub fn permissions(&self) -> Result<Vec<PrincipalCollectionPermissions>, ApiError> {
+        self.client().principal_permissions(self.id())
+    }
+
     /// Disable this service account. Returns the updated service account.
     pub fn disable(&self) -> Result<ServiceAccount, ApiError> {
         let url_params = vec![(
@@ -100,6 +106,12 @@ impl SyncHandle<ServiceAccount> {
 impl AsyncHandle<ServiceAccount> {
     pub fn settings(&self) -> AsyncPrincipalSettingsScope {
         self.client().principal_settings(self.id())
+    }
+
+    /// Effective permissions for this service account, grouped by collection
+    /// and granting group.
+    pub async fn permissions(&self) -> Result<Vec<PrincipalCollectionPermissions>, ApiError> {
+        self.client().principal_permissions(self.id()).await
     }
 
     /// Disable this service account. Returns the updated service account.
