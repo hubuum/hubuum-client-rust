@@ -754,15 +754,21 @@ pub(crate) fn parse_response<U: DeserializeOwned>(
     }
 
     let mut deserializer = serde_json::Deserializer::from_str(&response_text);
-    match serde_path_to_error::deserialize(&mut deserializer) {
-        Ok(obj) => Ok(Some(obj)),
-        Err(error) => Err(ApiError::DeserializationError(format!(
+    let obj = serde_path_to_error::deserialize(&mut deserializer).map_err(|error| {
+        ApiError::DeserializationError(format!(
             "failed to decode {} at {}: {}",
             type_name::<U>(),
             error.path(),
             error.inner()
-        ))),
-    }
+        ))
+    })?;
+    deserializer.end().map_err(|error| {
+        ApiError::DeserializationError(format!(
+            "failed to decode {}: trailing data: {error}",
+            type_name::<U>()
+        ))
+    })?;
+    Ok(Some(obj))
 }
 
 pub(crate) fn parse_page_response<U: DeserializeOwned>(
@@ -1543,6 +1549,33 @@ mod test {
         .expect("empty successful body should return None");
 
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn parse_response_rejects_trailing_json_data() {
+        let err = parse_response::<serde_json::Value>(
+            &reqwest::Method::GET,
+            StatusCode::OK,
+            r#"{"ok":true} {"ignored":true}"#.to_string(),
+        )
+        .expect_err("trailing JSON data should fail");
+
+        assert!(
+            matches!(err, ApiError::DeserializationError(message) if message.contains("trailing data"))
+        );
+    }
+
+    #[test]
+    fn parse_response_allows_trailing_whitespace() {
+        let result = parse_response::<serde_json::Value>(
+            &reqwest::Method::GET,
+            StatusCode::OK,
+            "{\"ok\":true}\n\t ".to_string(),
+        )
+        .expect("JSON followed only by whitespace should succeed")
+        .expect("JSON response should be present");
+
+        assert_eq!(result["ok"], true);
     }
 
     #[test]
