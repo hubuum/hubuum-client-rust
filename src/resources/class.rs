@@ -92,7 +92,7 @@ impl SyncHandle<Class> {
     }
 
     pub fn objects(&self) -> Result<Vec<SyncHandle<Object>>, ApiError> {
-        let raw: Vec<Object> = self.objects_query().list()?;
+        let raw: Vec<Object> = self.objects_query().all()?;
 
         Ok(raw
             .into_iter()
@@ -134,18 +134,7 @@ impl SyncHandle<Class> {
     }
 
     pub fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
-        let url_params = vec![(Cow::Borrowed("class_id"), self.id().to_string().into())];
-        let res = self
-            .client()
-            .request_with_endpoint::<SyncEmptyPostParams, Vec<GroupPermissionsResult>>(
-                reqwest::Method::GET,
-                &Endpoint::ClassPermissions,
-                url_params,
-                vec![],
-                SyncEmptyPostParams {},
-            )?;
-
-        Ok(res.unwrap_or_default())
+        self.permissions_request().all()
     }
 
     pub fn permissions_request(&self) -> SyncCursorRequest<GroupPermissionsResult> {
@@ -261,7 +250,7 @@ impl AsyncHandle<Class> {
     }
 
     pub async fn objects(&self) -> Result<Vec<AsyncHandle<Object>>, ApiError> {
-        let raw: Vec<Object> = self.objects_query().list().await?;
+        let raw: Vec<Object> = self.objects_query().all().await?;
         Ok(raw
             .into_iter()
             .map(|obj| AsyncHandle::new(self.client().clone(), obj))
@@ -285,19 +274,7 @@ impl AsyncHandle<Class> {
     }
 
     pub async fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
-        let url_params = vec![(Cow::Borrowed("class_id"), self.id().to_string().into())];
-        let res = self
-            .client()
-            .request_with_endpoint::<AsyncEmptyPostParams, Vec<GroupPermissionsResult>>(
-                reqwest::Method::GET,
-                &Endpoint::ClassPermissions,
-                url_params,
-                vec![],
-                AsyncEmptyPostParams {},
-            )
-            .await?;
-
-        Ok(res.unwrap_or_default())
+        self.permissions_request().all().await
     }
 
     pub fn permissions_request(&self) -> AsyncCursorRequest<GroupPermissionsResult> {

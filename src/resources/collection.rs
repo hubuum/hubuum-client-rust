@@ -127,24 +127,7 @@ impl SyncHandle<Collection> {
     }
 
     pub fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
-        let url_params = vec![(
-            Cow::Borrowed("collection_id"),
-            self.resource().id.to_string().into(),
-        )];
-        let res = self
-            .client()
-            .request_with_endpoint::<SyncEmptyPostParams, Vec<GroupPermissionsResult>>(
-                reqwest::Method::GET,
-                &Endpoint::CollectionPermissions,
-                url_params,
-                vec![],
-                SyncEmptyPostParams {},
-            )?;
-
-        match res {
-            None => Ok(vec![]),
-            Some(users) => Ok(users),
-        }
+        self.permissions_request().all()
     }
 
     pub fn replace_permissions(
@@ -336,29 +319,7 @@ impl SyncHandle<Collection> {
         &self,
         principal_id: impl Into<PrincipalId>,
     ) -> Result<Vec<GroupPermissionsResult>, ApiError> {
-        let principal_id = principal_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (
-                Cow::Borrowed("principal_id"),
-                principal_id.to_string().into(),
-            ),
-        ];
-
-        let res = self
-            .client()
-            .request_with_endpoint::<SyncEmptyPostParams, Vec<GroupPermissionsResult>>(
-                reqwest::Method::GET,
-                &Endpoint::CollectionPrincipalPermissions,
-                url_params,
-                vec![],
-                SyncEmptyPostParams {},
-            )?;
-
-        Ok(res.unwrap_or_default())
+        self.principal_permissions_request(principal_id).all()
     }
 
     pub fn effective_group_permissions(
@@ -541,25 +502,7 @@ impl AsyncHandle<Collection> {
     }
 
     pub async fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
-        let url_params = vec![(
-            Cow::Borrowed("collection_id"),
-            self.resource().id.to_string().into(),
-        )];
-        let res = self
-            .client()
-            .request_with_endpoint::<AsyncEmptyPostParams, Vec<GroupPermissionsResult>>(
-                reqwest::Method::GET,
-                &Endpoint::CollectionPermissions,
-                url_params,
-                vec![],
-                AsyncEmptyPostParams {},
-            )
-            .await?;
-
-        match res {
-            None => Ok(vec![]),
-            Some(users) => Ok(users),
-        }
+        self.permissions_request().all().await
     }
 
     pub async fn replace_permissions(
@@ -759,30 +702,7 @@ impl AsyncHandle<Collection> {
         &self,
         principal_id: impl Into<PrincipalId>,
     ) -> Result<Vec<GroupPermissionsResult>, ApiError> {
-        let principal_id = principal_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (
-                Cow::Borrowed("principal_id"),
-                principal_id.to_string().into(),
-            ),
-        ];
-
-        let res = self
-            .client()
-            .request_with_endpoint::<AsyncEmptyPostParams, Vec<GroupPermissionsResult>>(
-                reqwest::Method::GET,
-                &Endpoint::CollectionPrincipalPermissions,
-                url_params,
-                vec![],
-                AsyncEmptyPostParams {},
-            )
-            .await?;
-
-        Ok(res.unwrap_or_default())
+        self.principal_permissions_request(principal_id).all().await
     }
 
     pub async fn effective_group_permissions(

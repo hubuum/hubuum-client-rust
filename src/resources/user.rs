@@ -76,32 +76,16 @@ impl SyncHandle<User> {
     }
 
     pub fn groups(&self) -> Result<Vec<SyncHandle<Group>>, ApiError> {
-        let url_params = vec![(Cow::Borrowed("principal_id"), self.id().to_string().into())];
-        let res = self
-            .client()
-            .request_with_endpoint::<SyncEmptyPostParams, Vec<Group>>(
-                reqwest::Method::GET,
-                &Endpoint::PrincipalGroups,
-                url_params,
-                vec![],
-                SyncEmptyPostParams {},
-            )?;
-
-        match res {
-            None => Ok(vec![]),
-            Some(groups) => Ok(groups
-                .into_iter()
-                .map(|group| SyncHandle::new(self.client().clone(), group))
-                .collect()),
-        }
+        Ok(self
+            .groups_request()
+            .all()?
+            .into_iter()
+            .map(|group| SyncHandle::new(self.client().clone(), group))
+            .collect())
     }
 
     pub fn tokens_request(&self) -> SyncCursorRequest<PrincipalTokenMetadata> {
-        SyncCursorRequest::new(
-            self.client().clone(),
-            Endpoint::PrincipalTokens,
-            vec![(Cow::Borrowed("principal_id"), self.id().to_string().into())],
-        )
+        principal_tokens_request_sync(self.client(), self.id())
     }
 
     pub fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
@@ -163,33 +147,17 @@ impl AsyncHandle<User> {
     }
 
     pub async fn groups(&self) -> Result<Vec<AsyncHandle<Group>>, ApiError> {
-        let url_params = vec![(Cow::Borrowed("principal_id"), self.id().to_string().into())];
-        let res = self
-            .client()
-            .request_with_endpoint::<AsyncEmptyPostParams, Vec<Group>>(
-                reqwest::Method::GET,
-                &Endpoint::PrincipalGroups,
-                url_params,
-                vec![],
-                AsyncEmptyPostParams {},
-            )
-            .await?;
-
-        match res {
-            None => Ok(vec![]),
-            Some(groups) => Ok(groups
-                .into_iter()
-                .map(|group| AsyncHandle::new(self.client().clone(), group))
-                .collect()),
-        }
+        Ok(self
+            .groups_request()
+            .all()
+            .await?
+            .into_iter()
+            .map(|group| AsyncHandle::new(self.client().clone(), group))
+            .collect())
     }
 
     pub fn tokens_request(&self) -> AsyncCursorRequest<PrincipalTokenMetadata> {
-        AsyncCursorRequest::new(
-            self.client().clone(),
-            Endpoint::PrincipalTokens,
-            vec![(Cow::Borrowed("principal_id"), self.id().to_string().into())],
-        )
+        principal_tokens_request_async(self.client(), self.id())
     }
 
     pub async fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
@@ -247,23 +215,27 @@ struct SetPasswordBody {
 // handles (a principal id is the user/service-account id).
 
 #[cfg(feature = "blocking")]
+fn principal_tokens_request_sync(
+    client: &crate::client::sync::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+) -> SyncCursorRequest<PrincipalTokenMetadata> {
+    let principal_id = principal_id.into();
+    SyncCursorRequest::new(
+        client.clone(),
+        Endpoint::PrincipalTokens,
+        vec![(
+            Cow::Borrowed("principal_id"),
+            principal_id.to_string().into(),
+        )],
+    )
+}
+
+#[cfg(feature = "blocking")]
 pub(crate) fn principal_tokens_sync(
     client: &crate::client::sync::Client<crate::Authenticated>,
     principal_id: impl Into<PrincipalId>,
 ) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-    let principal_id = principal_id.into();
-    let url_params = vec![(
-        Cow::Borrowed("principal_id"),
-        principal_id.to_string().into(),
-    )];
-    let res = client.request_with_endpoint::<SyncEmptyPostParams, Vec<PrincipalTokenMetadata>>(
-        reqwest::Method::GET,
-        &Endpoint::PrincipalTokens,
-        url_params,
-        vec![],
-        SyncEmptyPostParams {},
-    )?;
-    Ok(res.unwrap_or_default())
+    principal_tokens_request_sync(client, principal_id).all()
 }
 
 #[cfg(feature = "blocking")]
@@ -311,25 +283,29 @@ pub(crate) fn principal_token_revoke_sync(
 }
 
 #[cfg(feature = "async")]
+fn principal_tokens_request_async(
+    client: &crate::client::r#async::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+) -> AsyncCursorRequest<PrincipalTokenMetadata> {
+    let principal_id = principal_id.into();
+    AsyncCursorRequest::new(
+        client.clone(),
+        Endpoint::PrincipalTokens,
+        vec![(
+            Cow::Borrowed("principal_id"),
+            principal_id.to_string().into(),
+        )],
+    )
+}
+
+#[cfg(feature = "async")]
 pub(crate) async fn principal_tokens_async(
     client: &crate::client::r#async::Client<crate::Authenticated>,
     principal_id: impl Into<PrincipalId>,
 ) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-    let principal_id = principal_id.into();
-    let url_params = vec![(
-        Cow::Borrowed("principal_id"),
-        principal_id.to_string().into(),
-    )];
-    let res = client
-        .request_with_endpoint::<AsyncEmptyPostParams, Vec<PrincipalTokenMetadata>>(
-            reqwest::Method::GET,
-            &Endpoint::PrincipalTokens,
-            url_params,
-            vec![],
-            AsyncEmptyPostParams {},
-        )
-        .await?;
-    Ok(res.unwrap_or_default())
+    principal_tokens_request_async(client, principal_id)
+        .all()
+        .await
 }
 
 #[cfg(feature = "async")]
