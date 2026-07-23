@@ -109,6 +109,9 @@ pub enum ApiError {
     #[error("Automatic pagination exceeded its safety limit ({pages} pages, {items} items)")]
     PaginationLimit { pages: usize, items: usize },
 
+    #[error("Token scopes must be omitted or contain at least one permission")]
+    InvalidTokenScopes,
+
     #[error("Unknown permission `{0}`")]
     UnknownPermission(#[from] strum::ParseError),
 }
@@ -212,6 +215,7 @@ impl std::fmt::Debug for ApiError {
                 .field("pages", pages)
                 .field("items", items)
                 .finish(),
+            Self::InvalidTokenScopes => f.write_str("InvalidTokenScopes"),
             Self::UnknownPermission(error) => {
                 f.debug_tuple("UnknownPermission").field(error).finish()
             }

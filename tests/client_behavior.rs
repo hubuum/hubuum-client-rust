@@ -5009,6 +5009,82 @@ fn sync_user_token_create_with_scopes_returns_raw_token() {
 }
 
 #[test]
+fn sync_user_token_create_rejects_empty_scopes_before_request() {
+    use hubuum_client::NewTokenRequest;
+
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let user_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!(user_json(11, "alice")));
+    });
+
+    let token_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/iam/principals/11/tokens")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201).body("unexpected-token");
+    });
+
+    let client = sync_client(&server);
+    let user = client.users().get(11).expect("user select should succeed");
+    let error = user
+        .tokens_create(NewTokenRequest::new().scopes(vec![]))
+        .expect_err("empty scopes should be rejected");
+
+    assert!(matches!(error, ApiError::InvalidTokenScopes));
+    user_by_id.assert_calls(1);
+    token_create.assert_calls(0);
+}
+
+#[tokio::test]
+async fn async_service_account_token_create_rejects_empty_scopes_before_request() {
+    use hubuum_client::NewTokenRequest;
+
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let service_account_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/service-accounts/5")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(service_account_json(5, "dns-sync", 10));
+    });
+
+    let token_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/iam/principals/5/tokens")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201).body("unexpected-token");
+    });
+
+    let client = async_client(&server).await;
+    let service_account = client
+        .service_accounts()
+        .get(5)
+        .await
+        .expect("service account select should succeed");
+    let error = service_account
+        .tokens_create(NewTokenRequest {
+            scopes: Some(vec![]),
+            ..NewTokenRequest::new()
+        })
+        .await
+        .expect_err("empty scopes should be rejected");
+
+    assert!(matches!(error, ApiError::InvalidTokenScopes));
+    service_account_by_id.assert_calls(1);
+    token_create.assert_calls(0);
+}
+
+#[test]
 fn sync_remote_target_invoke_returns_task() {
     use hubuum_client::{RemoteInvocationSubject, RemoteTargetInvokeRequest};
 

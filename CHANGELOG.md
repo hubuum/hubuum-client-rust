@@ -51,6 +51,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Reject empty principal-token scope sets before sending a request, preserving
+  the explicit distinction between unscoped tokens and invalid scoped-token
+  requests for user and service-account handles.
 - Typed response decoding now rejects trailing non-whitespace data after a valid
   JSON value instead of silently accepting and ignoring it.
 - Export responses recognize known HTTP media types case-insensitively, so

@@ -256,6 +256,7 @@ pub(crate) fn principal_token_create_sync(
     principal_id: impl Into<PrincipalId>,
     request: NewTokenRequest,
 ) -> Result<String, ApiError> {
+    request.validate()?;
     let principal_id = principal_id.into();
     let url_params = vec![(
         Cow::Borrowed("principal_id"),
@@ -326,6 +327,7 @@ pub(crate) async fn principal_token_create_async(
     principal_id: impl Into<PrincipalId>,
     request: NewTokenRequest,
 ) -> Result<String, ApiError> {
+    request.validate()?;
     let principal_id = principal_id.into();
     let url_params = vec![(
         Cow::Borrowed("principal_id"),
