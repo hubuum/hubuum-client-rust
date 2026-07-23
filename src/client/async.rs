@@ -269,7 +269,7 @@ impl ClientBuilder {
 }
 
 impl<S> ClientCore for Client<S> {
-    fn build_url(&self, endpoint: &Endpoint, url_params: UrlParams) -> String {
+    fn build_url(&self, endpoint: &Endpoint, url_params: &UrlParams) -> String {
         shared::build_url(self.base_url(), endpoint, url_params)
     }
 }
@@ -299,7 +299,7 @@ impl<S> Client<S> {
 
     /// Fetch the server's unauthenticated client capability configuration.
     pub async fn config(&self) -> Result<ClientConfig, ApiError> {
-        let url = self.build_url(&Endpoint::ClientConfig, UrlParams::default());
+        let url = self.build_url(&Endpoint::ClientConfig, &UrlParams::default());
         let raw = if let Some(transport) = self.transport() {
             let plan =
                 shared::build_unauthenticated_request_plan(&reqwest::Method::GET, &url, &[])?;
@@ -405,7 +405,7 @@ impl<S> Client<S> {
         let url_params = vec![(Cow::Borrowed("restore_id"), restore_id.to_string().into())];
         let request_url = shared::build_request_url(
             &reqwest::Method::GET,
-            self.build_url(&Endpoint::RestoreStatus, url_params.clone()),
+            self.build_url(&Endpoint::RestoreStatus, &url_params),
             &url_params,
             vec![],
         )?;
@@ -619,7 +619,7 @@ impl Client<Unauthenticated> {
         endpoint: &Endpoint,
         empty_message: &str,
     ) -> Result<T, ApiError> {
-        let url = self.build_url(endpoint, UrlParams::default());
+        let url = self.build_url(endpoint, &UrlParams::default());
         let raw = if let Some(transport) = self.transport() {
             let plan =
                 shared::build_unauthenticated_request_plan(&reqwest::Method::GET, &url, &[])?;
@@ -671,7 +671,7 @@ impl Client<Unauthenticated> {
     }
 
     pub async fn login(&self, credentials: Credentials) -> Result<Client<Authenticated>, ApiError> {
-        let login_url = self.build_url(&Endpoint::Login, UrlParams::default());
+        let login_url = self.build_url(&Endpoint::Login, &UrlParams::default());
         let raw = if let Some(transport) = self.transport() {
             let plan = shared::build_unauthenticated_json_request_plan(
                 &reqwest::Method::POST,
@@ -725,7 +725,7 @@ impl Client<Unauthenticated> {
     }
 
     pub async fn login_with_token(&self, token: Token) -> Result<Client<Authenticated>, ApiError> {
-        let url = self.build_url(&Endpoint::LoginWithToken, UrlParams::default());
+        let url = self.build_url(&Endpoint::LoginWithToken, &UrlParams::default());
         if let Some(transport) = self.transport() {
             let plan = shared::build_request_plan(
                 &reqwest::Method::GET,
@@ -1042,7 +1042,7 @@ impl Client<Authenticated> {
     ) -> Result<StreamingResponse, ApiError> {
         use futures_util::StreamExt;
 
-        let base_url = self.build_url(endpoint, url_params.clone());
+        let base_url = self.build_url(endpoint, &url_params);
         let request_url =
             shared::build_request_url(&reqwest::Method::GET, base_url, &url_params, query_params)?;
         debug!("GET {}", shared::redacted_url_for_log(&request_url));
@@ -1113,7 +1113,7 @@ impl Client<Authenticated> {
         post_params: T,
         headers: &[(&str, String)],
     ) -> Result<shared::RawResponse, ApiError> {
-        let base_url = self.build_url(endpoint, url_params.clone());
+        let base_url = self.build_url(endpoint, &url_params);
         let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
         let has_idempotency_key = shared::has_valid_idempotency_key(
             headers.iter().map(|(name, value)| (*name, value.as_str())),

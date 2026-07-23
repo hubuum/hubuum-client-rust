@@ -48,6 +48,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   formatting avoid intermediate `String` allocations on their common
   successful paths while preserving the existing wire and query
   representations.
+- Endpoint URL rendering now borrows dynamic path parameters instead of cloning
+  their owned keys and values before every async and blocking request.
 
 ### Fixed
 
