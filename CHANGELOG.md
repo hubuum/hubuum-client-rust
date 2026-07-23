@@ -10,6 +10,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 - Custom-transport retry plans now share their immutable serialized request
   body across clones instead of copying the full payload for every attempt.
+- Authenticated client and handle clones now share immutable bearer-token
+  storage instead of duplicating the secret string on every clone.
 
 ### Fixed
 
