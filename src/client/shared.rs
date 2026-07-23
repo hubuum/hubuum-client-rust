@@ -643,7 +643,7 @@ impl std::fmt::Debug for RawResponse {
     }
 }
 
-pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: UrlParams) -> String {
+pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: &UrlParams) -> String {
     let mut url = format!("{}{}", base_url.as_str(), endpoint.trim_start_matches('/'));
 
     for (key, value) in url_params {
@@ -1383,30 +1383,29 @@ mod test {
     #[test]
     fn build_url_replaces_placeholders() {
         let base_url = BaseUrl::from_str("https://api.example.com").unwrap();
-        let url = build_url(
-            &base_url,
-            &Endpoint::GroupMembers,
-            vec![(Cow::Borrowed("group_id"), Cow::Borrowed("10"))],
-        );
+        let url_params = vec![(
+            Cow::Owned("group_id".to_string()),
+            Cow::Owned("10".to_string()),
+        )];
+        let url = build_url(&base_url, &Endpoint::GroupMembers, &url_params);
         assert_eq!(url, "https://api.example.com/api/v1/iam/groups/10/members");
+        assert_eq!(url_params[0].1, "10");
     }
 
     #[test]
     fn build_url_treats_placeholder_values_as_opaque_segments() {
         let base_url = BaseUrl::from_str("https://api.example.com").unwrap();
-        let url = build_url(
-            &base_url,
-            &Endpoint::GroupMembers,
-            vec![(
-                Cow::Borrowed("group_id"),
-                Cow::Borrowed(r"1/../2?scope#frag%2F\tail"),
-            )],
-        );
+        let url_params = vec![(
+            Cow::Owned("group_id".to_string()),
+            Cow::Owned(r"1/../2?scope#frag%2F\tail".to_string()),
+        )];
+        let url = build_url(&base_url, &Endpoint::GroupMembers, &url_params);
 
         assert_eq!(
             url,
             "https://api.example.com/api/v1/iam/groups/1%2F..%2F2%3Fscope%23frag%252F%5Ctail/members"
         );
+        assert_eq!(url_params[0].1, r"1/../2?scope#frag%2F\tail");
     }
 
     #[test]
