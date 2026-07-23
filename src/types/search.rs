@@ -208,9 +208,6 @@ impl UnifiedSearchSseDecoder {
         {
             return events;
         }
-        if let Some(event) = self.dispatch() {
-            events.push(event);
-        }
         events
     }
 
@@ -383,6 +380,21 @@ mod tests {
                     data: "ok".to_string(),
                 }]
             );
+        }
+    }
+
+    #[test]
+    fn byte_decoder_discards_unterminated_event_at_eof() {
+        for payload in ["data: incomplete", "data: incomplete\n"] {
+            let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(128);
+            let events = decoder
+                .push_bytes(payload.as_bytes())
+                .into_iter()
+                .chain(decoder.finish())
+                .collect::<Result<Vec<_>, _>>()
+                .expect("unterminated SSE input should be discarded without an error");
+
+            assert!(events.is_empty());
         }
     }
 

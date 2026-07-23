@@ -16,10 +16,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Unified-search streams now apply `max_response_body_bytes` to each buffered
   SSE event across async and blocking clients, preventing an unterminated or
   oversized event from growing client memory without bound.
-- Blocking unified-search streams now match async SSE field handling: unnamed
-  events use the standard `message` type, one optional leading value space is
-  removed without stripping significant whitespace, comment and empty frames
-  are ignored, and an initial byte-order mark is accepted.
+- Unified-search SSE decoding is now consistent across the public parser and
+  async and blocking streams: unnamed events use the standard `message` type,
+  one optional leading value space is removed without stripping significant
+  whitespace, comment and empty frames are ignored, an initial byte-order mark
+  is accepted, and incomplete events at end-of-stream are discarded.
 - Dynamic endpoint parameters are encoded centrally as opaque URL path
   segments, preventing delimiters in low-level `UrlParams` or resource
   identifiers from altering the request target.
