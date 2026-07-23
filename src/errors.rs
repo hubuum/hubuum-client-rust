@@ -52,6 +52,9 @@ pub enum ApiError {
     #[error("Principal settings must be a JSON object")]
     InvalidPrincipalSettings,
 
+    #[error("Remote target invocation {field} must be a JSON object")]
+    InvalidRemoteInvocationObject { field: &'static str },
+
     #[error("Missing location header for: {0}")]
     MissingLocationHeader(String),
 
@@ -153,6 +156,10 @@ impl std::fmt::Debug for ApiError {
             Self::UrlSerialize(error) => f.debug_tuple("UrlSerialize").field(error).finish(),
             Self::QueryEncoding(message) => f.debug_tuple("QueryEncoding").field(message).finish(),
             Self::InvalidPrincipalSettings => f.write_str("InvalidPrincipalSettings"),
+            Self::InvalidRemoteInvocationObject { field } => f
+                .debug_struct("InvalidRemoteInvocationObject")
+                .field("field", field)
+                .finish(),
             Self::MissingLocationHeader(message) => f
                 .debug_tuple("MissingLocationHeader")
                 .field(message)

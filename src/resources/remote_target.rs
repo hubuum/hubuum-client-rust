@@ -161,6 +161,7 @@ impl crate::resources::ApiResource for RemoteTarget {
 impl SyncHandle<RemoteTarget> {
     /// Invoke this remote target. Returns the async task tracking the call.
     pub fn invoke(&self, request: RemoteTargetInvokeRequest) -> Result<TaskResponse, ApiError> {
+        request.validate()?;
         let url_params = vec![(Cow::Borrowed("target_id"), self.id().to_string().into())];
         self.client()
             .request_with_endpoint::<RemoteTargetInvokeRequest, TaskResponse>(
@@ -183,6 +184,7 @@ impl AsyncHandle<RemoteTarget> {
         &self,
         request: RemoteTargetInvokeRequest,
     ) -> Result<TaskResponse, ApiError> {
+        request.validate()?;
         let url_params = vec![(Cow::Borrowed("target_id"), self.id().to_string().into())];
         self.client()
             .request_with_endpoint::<RemoteTargetInvokeRequest, TaskResponse>(
