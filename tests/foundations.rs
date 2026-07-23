@@ -228,6 +228,12 @@ fn streaming_transport_response(
     }
 }
 
+const STREAMING_EXPORT_BODY: &str = concat!(
+    "hostname\n",
+    "node-000000000000000000000000000000000000000000000000000000000000000000000000\n",
+);
+const STREAMING_EVENT_LIMIT: usize = 64;
+
 fn assert_stream_requests(transport: &MockTransport) {
     let requests = transport.requests();
     assert_eq!(requests.len(), 2);
@@ -251,7 +257,7 @@ fn blocking_streaming_calls_use_custom_transport() {
     let transport = MockTransport::default();
     transport.push_response(streaming_transport_response(
         "text/csv",
-        "hostname\nnode-1\n",
+        STREAMING_EXPORT_BODY,
     ));
     transport.push_response(streaming_transport_response(
         "text/event-stream",
@@ -262,14 +268,17 @@ fn blocking_streaming_calls_use_custom_transport() {
             "data: {\"query\":\"server\"}\n\n",
         ),
     ));
-    let client = blocking_mock_client(transport.clone(), 1);
+    let client = blocking_mock_client(transport.clone(), STREAMING_EVENT_LIMIT);
 
     let mut output = client.exports().output_stream(7).unwrap();
     assert_eq!(output.content_type, ExportContentType::TextCsv);
-    assert_eq!(output.content_length, Some(16));
+    assert_eq!(
+        output.content_length,
+        Some(STREAMING_EXPORT_BODY.len() as u64)
+    );
     let mut body = String::new();
     output.read_to_string(&mut body).unwrap();
-    assert_eq!(body, "hostname\nnode-1\n");
+    assert_eq!(body, STREAMING_EXPORT_BODY);
 
     let events = client
         .search("server")
@@ -287,7 +296,7 @@ async fn async_streaming_calls_use_custom_transport() {
     let transport = MockTransport::default();
     transport.push_response(streaming_transport_response(
         "text/csv",
-        "hostname\nnode-1\n",
+        STREAMING_EXPORT_BODY,
     ));
     transport.push_response(streaming_transport_response(
         "text/event-stream",
@@ -300,16 +309,19 @@ async fn async_streaming_calls_use_custom_transport() {
     ));
     let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
         .with_transport(Arc::new(transport.clone()))
-        .max_response_body_bytes(1)
+        .max_response_body_bytes(STREAMING_EVENT_LIMIT)
         .build()
         .unwrap()
         .authenticate(Token::new("consumer-secret"));
 
     let output = client.exports().output_stream(7).await.unwrap();
     assert_eq!(output.content_type, ExportContentType::TextCsv);
-    assert_eq!(output.content_length, Some(16));
+    assert_eq!(
+        output.content_length,
+        Some(STREAMING_EXPORT_BODY.len() as u64)
+    );
     let chunks = output.try_collect::<Vec<_>>().await.unwrap();
-    assert_eq!(chunks.concat(), b"hostname\nnode-1\n");
+    assert_eq!(chunks.concat(), STREAMING_EXPORT_BODY.as_bytes());
 
     let events = client
         .search("server")

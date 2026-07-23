@@ -23,8 +23,10 @@ let client = hubuum_client::Client::builder_from_url("https://hubuum.example")?
 ```
 
 Normal responses and error previews have independent limits. Exceeding the
-normal limit returns `ApiError::ResponseTooLarge`; streaming export methods are
-the intended path for larger payloads.
+normal limit returns `ApiError::ResponseTooLarge`. For unified-search streams,
+the normal limit applies independently to each buffered SSE event so a long
+stream remains supported without allowing one event to grow without bound.
+Streaming export methods are the intended path for larger payloads.
 
 ## Redirect Policy
 

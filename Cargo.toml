@@ -29,7 +29,6 @@ async = [
     "reqwest/stream",
     "dep:async-stream",
     "dep:bytes",
-    "dep:eventsource-stream",
     "dep:futures-core",
     "dep:futures-util",
 ]
@@ -54,7 +53,6 @@ strum = { version = "0.28", features = ["derive", "strum_macros"] }
 tokio = { version = "1", features = ["fs", "io-util", "time"], optional = true }
 async-stream = { version = "0.3", optional = true }
 bytes = { version = "1", optional = true }
-eventsource-stream = { version = "0.2", optional = true }
 fastrand = "2"
 futures-core = { version = "0.3", optional = true }
 futures-util = { version = "0.3", optional = true }

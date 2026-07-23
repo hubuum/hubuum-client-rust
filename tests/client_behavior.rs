@@ -3560,12 +3560,16 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
         then.status(200)
             .header("content-type", "text/event-stream")
             .body(concat!(
-                "event: started\n",
+                "\u{feff}event: started\n",
                 "data: {\"query\":\"server\"}\n\n",
                 "event: batch\n",
                 "data: {\"kind\":\"object\",\"collections\":[],\"classes\":[],\"objects\":[],\"next\":null}\n\n",
                 "event: done\n",
                 "data: {\"query\":\"server\"}\n\n",
+                ": heartbeat\n",
+                "event: ignored-without-data\n\n",
+                "data: future\n",
+                "data:  payload\n\n",
             ));
     });
 
@@ -3593,6 +3597,13 @@ fn sync_unified_search_supports_grouped_results_and_stream_events() {
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
     assert!(matches!(events[1], UnifiedSearchEvent::Batch(_)));
     assert!(matches!(events[2], UnifiedSearchEvent::Done(_)));
+    assert_eq!(
+        events[3],
+        UnifiedSearchEvent::Unknown {
+            event: "message".to_string(),
+            data: "future\n payload".to_string(),
+        }
+    );
 
     search.assert_calls(1);
     stream.assert_calls(1);
@@ -3627,6 +3638,10 @@ async fn async_unified_search_supports_grouped_results_and_stream_events() {
                 "data: {\"query\":\"server\"}\n\n",
                 "event: done\n",
                 "data: {\"query\":\"server\"}\n\n",
+                ": heartbeat\n",
+                "event: ignored-without-data\n\n",
+                "data: future\n",
+                "data:  payload\n\n",
             ));
     });
 
@@ -3651,8 +3666,100 @@ async fn async_unified_search_supports_grouped_results_and_stream_events() {
         .expect("stream events should decode");
     assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
     assert!(matches!(events[1], UnifiedSearchEvent::Done(_)));
+    assert_eq!(
+        events[2],
+        UnifiedSearchEvent::Unknown {
+            event: "message".to_string(),
+            data: "future\n payload".to_string(),
+        }
+    );
 
     search.assert_calls(1);
+    stream.assert_calls(1);
+}
+
+#[test]
+fn sync_unified_search_bounds_each_sse_event() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let stream = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/search/stream")
+            .query_param("q", "server");
+        then.status(200)
+            .header("content-type", "text/event-stream")
+            .body(format!(
+                "event: started\ndata: {{\"query\":\"server\"}}\n\ndata: {}",
+                "x".repeat(256)
+            ));
+    });
+    let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
+    let client = blocking::Client::builder(base_url)
+        .max_response_body_bytes(128)
+        .build()
+        .expect("sync client should build")
+        .login(Credentials::new(USERNAME, PASSWORD))
+        .expect("sync login should succeed");
+
+    let mut events = client
+        .search("server")
+        .stream()
+        .expect("stream request should succeed");
+    assert!(matches!(
+        events.next(),
+        Some(Ok(UnifiedSearchEvent::Started(_)))
+    ));
+    assert!(matches!(
+        events.next(),
+        Some(Err(ApiError::ResponseTooLarge {
+            limit: 128,
+            content_length: None,
+        }))
+    ));
+    assert!(events.next().is_none());
+    stream.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_unified_search_bounds_each_sse_event() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let stream = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/search/stream")
+            .query_param("q", "server");
+        then.status(200)
+            .header("content-type", "text/event-stream")
+            .body(format!(
+                "event: started\ndata: {{\"query\":\"server\"}}\n\ndata: {}",
+                "x".repeat(256)
+            ));
+    });
+    let base_url = BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid");
+    let client = Client::builder(base_url)
+        .max_response_body_bytes(128)
+        .build()
+        .expect("async client should build")
+        .login(Credentials::new(USERNAME, PASSWORD))
+        .await
+        .expect("async login should succeed");
+
+    let mut events = client
+        .search("server")
+        .stream()
+        .await
+        .expect("stream request should succeed");
+    assert!(matches!(
+        futures_util::TryStreamExt::try_next(&mut events).await,
+        Ok(Some(UnifiedSearchEvent::Started(_)))
+    ));
+    assert!(matches!(
+        futures_util::TryStreamExt::try_next(&mut events).await,
+        Err(ApiError::ResponseTooLarge {
+            limit: 128,
+            content_length: None,
+        })
+    ));
     stream.assert_calls(1);
 }
 

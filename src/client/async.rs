@@ -38,7 +38,8 @@ use crate::types::{
     ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability, RestoreConfirmRequest,
     RestoreId, RestoreStageResponse, RunningConfig, SortDirection, TaskEventResponse, TaskId,
     TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UnifiedSearchSseDecoder,
+    UpdateEventSubscription,
 };
 
 #[derive(Deserialize, Debug)]
@@ -4242,7 +4243,6 @@ impl UnifiedSearchRequest {
     }
 
     pub async fn stream(self) -> Result<UnifiedSearchEventStream, ApiError> {
-        use eventsource_stream::Eventsource;
         use futures_util::StreamExt;
 
         let mut query_params = self.query_params;
@@ -4257,13 +4257,19 @@ impl UnifiedSearchRequest {
             )
             .await?;
 
-        let events = response.into_body().eventsource().map(|event| {
-            let event = event.map_err(|error| {
-                ApiError::DeserializationError(format!("invalid SSE frame: {error}"))
-            })?;
-            UnifiedSearchEvent::from_sse_parts(event.event, event.data)
-        });
-        Ok(Box::pin(events))
+        let max_event_bytes = self.client.options.max_response_body_bytes;
+        let mut bytes = response.into_body();
+        Ok(Box::pin(async_stream::try_stream! {
+            let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(max_event_bytes);
+            while let Some(chunk) = bytes.next().await {
+                for event in decoder.push_bytes(&chunk?) {
+                    yield event?;
+                }
+            }
+            for event in decoder.finish() {
+                yield event?;
+            }
+        }))
     }
 
     pub async fn collect_stream(self) -> Result<Vec<UnifiedSearchEvent>, ApiError> {
