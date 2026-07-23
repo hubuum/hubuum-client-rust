@@ -569,6 +569,20 @@ async fn async_lazy_pagination_honors_page_and_item_limits() {
     assert_eq!(item_transport.requests().len(), 1);
 }
 
+fn trailing_counts_response() -> TransportResponse {
+    TransportResponse {
+        status: StatusCode::OK,
+        headers: reqwest::header::HeaderMap::new(),
+        body: br#"{"total_objects":0,"total_classes":0} {"ignored":true}"#.to_vec(),
+    }
+}
+
+fn assert_trailing_data_error(error: ApiError) {
+    assert!(
+        matches!(error, ApiError::DeserializationError(message) if message.contains("trailing data"))
+    );
+}
+
 fn exact_name_class_json(name: &str) -> serde_json::Value {
     json!({
         "id": 42,
@@ -673,6 +687,37 @@ fn object_data_patch() -> ObjectDataPatchDocument {
         path: "/owner".into(),
         value: json!("network"),
     }])
+}
+
+#[test]
+fn blocking_typed_responses_reject_trailing_json_data() {
+    let transport = MockTransport::default();
+    transport.push_response(trailing_counts_response());
+    let client = blocking_mock_client(transport, 4096);
+
+    let error = client
+        .meta_counts()
+        .expect_err("trailing JSON data should fail");
+
+    assert_trailing_data_error(error);
+}
+
+#[tokio::test]
+async fn async_typed_responses_reject_trailing_json_data() {
+    let transport = MockTransport::default();
+    transport.push_response(trailing_counts_response());
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    let error = client
+        .meta_counts()
+        .await
+        .expect_err("trailing JSON data should fail");
+
+    assert_trailing_data_error(error);
 }
 
 #[test]

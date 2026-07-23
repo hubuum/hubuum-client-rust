@@ -51,6 +51,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Typed response decoding now rejects trailing non-whitespace data after a valid
+  JSON value instead of silently accepting and ignoring it.
 - Export responses recognize known HTTP media types case-insensitively, so
   mixed-case `Content-Type` headers are decoded through the same async and
   blocking paths as their lowercase equivalents.
