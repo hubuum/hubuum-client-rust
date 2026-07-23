@@ -1,0 +1,5 @@
+error: ApiResource can only be derived for structs
+ --> tests/trybuild/api_resource_fail_enum.rs:4:6
+  |
+4 | enum WidgetResource {
+  |      ^^^^^^^^^^^^^^

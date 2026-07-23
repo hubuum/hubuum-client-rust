@@ -13,6 +13,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   identifiers from altering the request target.
 - Successful JSON and text responses now reject invalid UTF-8 instead of
   silently replacing malformed bytes before parsing or returning the body.
+- Invalid `ApiResource` derives now emit span-aware compiler diagnostics for
+  unsupported names, item shapes, field layouts, and missing display fields
+  instead of panicking inside the procedural macro.
 
 ## [0.6.1] - 2026-07-23
 

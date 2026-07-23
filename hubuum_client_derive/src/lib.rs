@@ -36,13 +36,28 @@ fn pluralize(name: &syn::Ident) -> String {
 #[proc_macro_derive(ApiResource, attributes(endpoint, api))]
 pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    expand_api_resource(input)
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
+}
+
+fn expand_api_resource(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
 
     let base_name = name.to_string();
-    if !base_name.ends_with("Resource") {
-        panic!("ApiResource only supports structs with names ending in 'Resource'");
+    let Some(resource_name) = base_name.strip_suffix("Resource") else {
+        return Err(syn::Error::new_spanned(
+            name,
+            "ApiResource requires a struct name ending in `Resource`",
+        ));
+    };
+    if resource_name.is_empty() {
+        return Err(syn::Error::new_spanned(
+            name,
+            "ApiResource requires a non-empty resource name before `Resource`",
+        ));
     }
-    let name = format_ident!("{}", base_name.trim_end_matches("Resource"));
+    let name = format_ident!("{resource_name}");
     let id_name = format_ident!("{}Id", name);
     let plural_name = format_ident!("{}", pluralize(&name));
     let async_checked_name = format_ident!("Async{}Create", name);
@@ -56,7 +71,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         (quote!(None), "name")
     };
 
-    let name_field = match base_name.trim_end_matches("Resource") {
+    let name_field = match resource_name {
         "Group" => format_ident!("groupname"),
         _ => format_ident!("name"),
     };
@@ -64,9 +79,19 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let fields = match &input.data {
         Data::Struct(data) => match &data.fields {
             Fields::Named(fields) => &fields.named,
-            _ => panic!("ApiResource only supports structs with named fields"),
+            _ => {
+                return Err(syn::Error::new_spanned(
+                    &data.fields,
+                    "ApiResource requires a struct with named fields",
+                ));
+            }
         },
-        _ => panic!("ApiResource only supports structs"),
+        _ => {
+            return Err(syn::Error::new_spanned(
+                &input.ident,
+                "ApiResource can only be derived for structs",
+            ));
+        }
     };
 
     let (main_fields, get_fields, post_fields, patch_fields) = process_fields(fields, &id_name);
@@ -251,7 +276,12 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
     let display_field = display_field_options
         .iter()
         .find(|&field| fields.iter().any(|f| f.ident.as_ref() == Some(field)))
-        .unwrap();
+        .ok_or_else(|| {
+            syn::Error::new_spanned(
+                &input.ident,
+                "ApiResource requires a `name`, `user`, `username`, or `id` field for Display",
+            )
+        })?;
 
     // Generate the Display implementation
     let display_impl = quote! {
@@ -498,7 +528,7 @@ pub fn derive_api_resource(input: TokenStream) -> TokenStream {
         }
     };
 
-    TokenStream::from(expanded)
+    Ok(expanded)
 }
 
 fn has_attribute(field: &syn::Field, attr_name: &str) -> bool {

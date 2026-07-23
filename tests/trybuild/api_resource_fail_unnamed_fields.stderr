@@ -1,0 +1,5 @@
+error: ApiResource requires a struct with named fields
+ --> tests/trybuild/api_resource_fail_unnamed_fields.rs:4:22
+  |
+4 | struct WidgetResource(i32);
+  |                      ^^^^^
