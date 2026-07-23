@@ -102,13 +102,7 @@ fn serialize_backup_datetime<S>(value: &HubuumDateTime, serializer: S) -> Result
 where
     S: Serializer,
 {
-    serializer.serialize_str(
-        &value
-            .0
-            .naive_utc()
-            .format("%Y-%m-%dT%H:%M:%S%.f")
-            .to_string(),
-    )
+    serializer.collect_str(&value.0.naive_utc().format("%Y-%m-%dT%H:%M:%S%.f"))
 }
 
 impl std::fmt::Debug for BackupDocument {
