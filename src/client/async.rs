@@ -3480,8 +3480,7 @@ impl BackupSubmitOp {
 pub struct BackupRunOp {
     client: Client<Authenticated>,
     submit: BackupSubmitOp,
-    poll_interval: std::time::Duration,
-    timeout: Option<std::time::Duration>,
+    wait_options: shared::TaskWaitOptions,
 }
 
 impl BackupRunOp {
@@ -3489,8 +3488,7 @@ impl BackupRunOp {
         Self {
             submit: BackupSubmitOp::new(client.clone(), request),
             client,
-            poll_interval: std::time::Duration::from_secs(1),
-            timeout: Some(std::time::Duration::from_secs(300)),
+            wait_options: shared::TaskWaitOptions::default(),
         }
     }
 
@@ -3500,12 +3498,12 @@ impl BackupRunOp {
     }
 
     pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
-        self.poll_interval = interval;
+        self.wait_options = self.wait_options.with_poll_interval(interval);
         self
     }
 
     pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
-        self.timeout = timeout;
+        self.wait_options = self.wait_options.with_timeout(timeout);
         self
     }
 
@@ -3513,8 +3511,7 @@ impl BackupRunOp {
         let task = self.submit.send().await?;
         let task = Tasks::new(self.client.clone())
             .wait(task.id)
-            .poll_interval(self.poll_interval)
-            .timeout(self.timeout)
+            .with_options(self.wait_options)
             .send()
             .await?;
         if task.status.is_success() {
@@ -3728,8 +3725,7 @@ pub struct ExportRunOp {
     client: Client<Authenticated>,
     request: ExportRequest,
     idempotency_key: Option<String>,
-    poll_interval: std::time::Duration,
-    timeout: Option<std::time::Duration>,
+    wait_options: shared::TaskWaitOptions,
 }
 
 impl ExportRunOp {
@@ -3738,8 +3734,7 @@ impl ExportRunOp {
             client,
             request,
             idempotency_key: None,
-            poll_interval: std::time::Duration::from_secs(1),
-            timeout: Some(std::time::Duration::from_secs(300)),
+            wait_options: shared::TaskWaitOptions::default(),
         }
     }
 
@@ -3749,12 +3744,12 @@ impl ExportRunOp {
     }
 
     pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
-        self.poll_interval = interval;
+        self.wait_options = self.wait_options.with_poll_interval(interval);
         self
     }
 
     pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
-        self.timeout = timeout;
+        self.wait_options = self.wait_options.with_timeout(timeout);
         self
     }
 
@@ -3767,8 +3762,7 @@ impl ExportRunOp {
         let task = submit.send().await?;
         let task = Tasks::new(self.client.clone())
             .wait(task.id)
-            .poll_interval(self.poll_interval)
-            .timeout(self.timeout)
+            .with_options(self.wait_options)
             .send()
             .await?;
         if task.status.is_success() {
@@ -3853,8 +3847,7 @@ impl ExportTemplateSubmitOp {
 pub struct ExportTemplateRunOp {
     client: Client<Authenticated>,
     submit: ExportTemplateSubmitOp,
-    poll_interval: std::time::Duration,
-    timeout: Option<std::time::Duration>,
+    wait_options: shared::TaskWaitOptions,
 }
 
 impl ExportTemplateRunOp {
@@ -3866,8 +3859,7 @@ impl ExportTemplateRunOp {
         Self {
             submit: ExportTemplateSubmitOp::new(client.clone(), template_id, request),
             client,
-            poll_interval: std::time::Duration::from_secs(1),
-            timeout: Some(std::time::Duration::from_secs(300)),
+            wait_options: shared::TaskWaitOptions::default(),
         }
     }
 
@@ -3877,12 +3869,12 @@ impl ExportTemplateRunOp {
     }
 
     pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
-        self.poll_interval = interval;
+        self.wait_options = self.wait_options.with_poll_interval(interval);
         self
     }
 
     pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
-        self.timeout = timeout;
+        self.wait_options = self.wait_options.with_timeout(timeout);
         self
     }
 
@@ -3890,8 +3882,7 @@ impl ExportTemplateRunOp {
         let task = self.submit.send().await?;
         let task = Tasks::new(self.client.clone())
             .wait(task.id)
-            .poll_interval(self.poll_interval)
-            .timeout(self.timeout)
+            .with_options(self.wait_options)
             .send()
             .await?;
         if task.status.is_success() {
@@ -4007,8 +3998,7 @@ pub struct ImportRunOp {
     client: Client<Authenticated>,
     request: ImportRequestPayload,
     idempotency_key: Option<String>,
-    poll_interval: std::time::Duration,
-    timeout: Option<std::time::Duration>,
+    wait_options: shared::TaskWaitOptions,
 }
 
 impl ImportRunOp {
@@ -4017,8 +4007,7 @@ impl ImportRunOp {
             client,
             request,
             idempotency_key: None,
-            poll_interval: std::time::Duration::from_secs(1),
-            timeout: Some(std::time::Duration::from_secs(300)),
+            wait_options: shared::TaskWaitOptions::default(),
         }
     }
 
@@ -4028,12 +4017,12 @@ impl ImportRunOp {
     }
 
     pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
-        self.poll_interval = interval;
+        self.wait_options = self.wait_options.with_poll_interval(interval);
         self
     }
 
     pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
-        self.timeout = timeout;
+        self.wait_options = self.wait_options.with_timeout(timeout);
         self
     }
 
@@ -4046,8 +4035,7 @@ impl ImportRunOp {
         let submitted = submit.send().await?;
         let task = Tasks::new(self.client)
             .wait(submitted.id)
-            .poll_interval(self.poll_interval)
-            .timeout(self.timeout)
+            .with_options(self.wait_options)
             .send()
             .await?;
         if !task.status.is_success() {
@@ -4214,8 +4202,7 @@ impl TaskListRequest {
 pub struct TaskWaitOp {
     client: Client<Authenticated>,
     task_id: TaskId,
-    poll_interval: std::time::Duration,
-    timeout: Option<std::time::Duration>,
+    options: shared::TaskWaitOptions,
 }
 
 impl TaskWaitOp {
@@ -4223,18 +4210,22 @@ impl TaskWaitOp {
         Self {
             client,
             task_id,
-            poll_interval: std::time::Duration::from_secs(1),
-            timeout: Some(std::time::Duration::from_secs(300)),
+            options: shared::TaskWaitOptions::default(),
         }
     }
 
     pub fn poll_interval(mut self, interval: std::time::Duration) -> Self {
-        self.poll_interval = interval;
+        self.options = self.options.with_poll_interval(interval);
         self
     }
 
     pub fn timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
-        self.timeout = timeout;
+        self.options = self.options.with_timeout(timeout);
+        self
+    }
+
+    fn with_options(mut self, options: shared::TaskWaitOptions) -> Self {
+        self.options = options;
         self
     }
 
@@ -4247,7 +4238,7 @@ impl TaskWaitOp {
                 return Ok(task);
             }
             // Sleep at most the remaining time so we never overshoot the deadline.
-            let sleep_for = match self.timeout {
+            let sleep_for = match self.options.timeout() {
                 Some(timeout) => {
                     let elapsed = start.elapsed();
                     if elapsed >= timeout {
@@ -4256,9 +4247,9 @@ impl TaskWaitOp {
                             timeout,
                         });
                     }
-                    self.poll_interval.min(timeout - elapsed)
+                    self.options.poll_interval().min(timeout - elapsed)
                 }
-                None => self.poll_interval,
+                None => self.options.poll_interval(),
             };
             tokio::time::sleep(sleep_for).await;
         }
