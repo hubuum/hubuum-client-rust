@@ -40,6 +40,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Export responses recognize known HTTP media types case-insensitively, so
+  mixed-case `Content-Type` headers are decoded through the same async and
+  blocking paths as their lowercase equivalents.
 - Absolute `Retry-After` dates that have already elapsed now request an
   immediate retry instead of falling back to a randomized exponential delay.
 - The authenticated caller's group and token list helpers now follow cursor

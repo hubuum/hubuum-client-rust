@@ -386,7 +386,7 @@ fn sync_export_run_json_output() {
     server.mock(|when, then| {
         when.method(GET).path("/api/v1/exports/11/output");
         then.status(200)
-            .header("content-type", "application/json")
+            .header("content-type", "Application/JSON; Charset=UTF-8")
             .json_body(json!({"items": [{"id":1}], "meta": {
                 "content_type":"application/json","count":1,
                 "scope":{"class_id":42,"kind":"objects_in_class","object_id":null},
@@ -483,7 +483,7 @@ async fn async_export_run_json_output() {
     server.mock(|when, then| {
         when.method(GET).path("/api/v1/exports/11/output");
         then.status(200)
-            .header("content-type", "application/json")
+            .header("content-type", "Application/JSON; Charset=UTF-8")
             .json_body(json!({"items": [{"id":1}], "meta": {
                 "content_type":"application/json","count":1,
                 "scope":{"class_id":42,"kind":"objects_in_class","object_id":null},
