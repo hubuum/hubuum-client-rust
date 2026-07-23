@@ -15,6 +15,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Async and blocking client clones now share their immutable HTTP runtime and
   configuration, avoiding repeated base-URL and option allocations when
   creating resource handles.
+- Query-filter encoding now streams directly into the form serializer instead
+  of cloning owned keys and values through two intermediate vectors.
 
 ### Fixed
 

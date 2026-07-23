@@ -78,6 +78,33 @@ impl std::fmt::Display for SortDirection {
 }
 
 impl FilterOperator {
+    fn query_suffix(&self) -> &'static str {
+        fn suffix(is_negated: bool, regular: &'static str, negated: &'static str) -> &'static str {
+            if is_negated { negated } else { regular }
+        }
+
+        match self {
+            Self::Equals { is_negated } => suffix(*is_negated, "equals", "not_equals"),
+            Self::IEquals { is_negated } => suffix(*is_negated, "iequals", "not_iequals"),
+            Self::Contains { is_negated } => suffix(*is_negated, "contains", "not_contains"),
+            Self::IContains { is_negated } => suffix(*is_negated, "icontains", "not_icontains"),
+            Self::StartsWith { is_negated } => suffix(*is_negated, "startswith", "not_startswith"),
+            Self::IStartsWith { is_negated } => {
+                suffix(*is_negated, "istartswith", "not_istartswith")
+            }
+            Self::EndsWith { is_negated } => suffix(*is_negated, "endswith", "not_endswith"),
+            Self::IEndsWith { is_negated } => suffix(*is_negated, "iendswith", "not_iendswith"),
+            Self::Like { is_negated } => suffix(*is_negated, "like", "not_like"),
+            Self::Regex { is_negated } => suffix(*is_negated, "regex", "not_regex"),
+            Self::Gt { is_negated } => suffix(*is_negated, "gt", "not_gt"),
+            Self::Gte { is_negated } => suffix(*is_negated, "gte", "not_gte"),
+            Self::Lt { is_negated } => suffix(*is_negated, "lt", "not_lt"),
+            Self::Lte { is_negated } => suffix(*is_negated, "lte", "not_lte"),
+            Self::Between { is_negated } => suffix(*is_negated, "between", "not_between"),
+            Self::Raw => "",
+        }
+    }
+
     /// Checks if the operator is applicable to a given data type.
     pub fn is_applicable_to(&self, data_type: DataType) -> bool {
         type SO = FilterOperator;
@@ -101,102 +128,7 @@ impl FilterOperator {
 
 impl std::fmt::Display for FilterOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            FilterOperator::Equals { is_negated } => {
-                write!(f, "{}", if *is_negated { "not_equals" } else { "equals" })
-            }
-            FilterOperator::IEquals { is_negated } => write!(
-                f,
-                "{}",
-                if *is_negated {
-                    "not_iequals"
-                } else {
-                    "iequals"
-                }
-            ),
-            FilterOperator::Contains { is_negated } => write!(
-                f,
-                "{}",
-                if *is_negated {
-                    "not_contains"
-                } else {
-                    "contains"
-                }
-            ),
-            FilterOperator::IContains { is_negated } => write!(
-                f,
-                "{}",
-                if *is_negated {
-                    "not_icontains"
-                } else {
-                    "icontains"
-                }
-            ),
-            FilterOperator::StartsWith { is_negated } => write!(
-                f,
-                "{}",
-                if *is_negated {
-                    "not_startswith"
-                } else {
-                    "startswith"
-                }
-            ),
-            FilterOperator::IStartsWith { is_negated } => write!(
-                f,
-                "{}",
-                if *is_negated {
-                    "not_istartswith"
-                } else {
-                    "istartswith"
-                }
-            ),
-            FilterOperator::EndsWith { is_negated } => write!(
-                f,
-                "{}",
-                if *is_negated {
-                    "not_endswith"
-                } else {
-                    "endswith"
-                }
-            ),
-            FilterOperator::IEndsWith { is_negated } => write!(
-                f,
-                "{}",
-                if *is_negated {
-                    "not_iendswith"
-                } else {
-                    "iendswith"
-                }
-            ),
-            FilterOperator::Like { is_negated } => {
-                write!(f, "{}", if *is_negated { "not_like" } else { "like" })
-            }
-            FilterOperator::Regex { is_negated } => {
-                write!(f, "{}", if *is_negated { "not_regex" } else { "regex" })
-            }
-            FilterOperator::Gt { is_negated } => {
-                write!(f, "{}", if *is_negated { "not_gt" } else { "gt" })
-            }
-            FilterOperator::Gte { is_negated } => {
-                write!(f, "{}", if *is_negated { "not_gte" } else { "gte" })
-            }
-            FilterOperator::Lt { is_negated } => {
-                write!(f, "{}", if *is_negated { "not_lt" } else { "lt" })
-            }
-            FilterOperator::Lte { is_negated } => {
-                write!(f, "{}", if *is_negated { "not_lte" } else { "lte" })
-            }
-            FilterOperator::Between { is_negated } => write!(
-                f,
-                "{}",
-                if *is_negated {
-                    "not_between"
-                } else {
-                    "between"
-                }
-            ),
-            FilterOperator::Raw => write!(f, ""),
-        }
+        f.write_str(self.query_suffix())
     }
 }
 
@@ -253,28 +185,30 @@ impl QueryFilter {
     }
 }
 
-fn tuples_to_query_string(tuples: Vec<(String, String, String)>) -> Result<String, ApiError> {
-    let params: Vec<(String, String)> = tuples
-        .into_iter()
-        .map(|(key, operator, value)| {
-            if operator.is_empty() {
-                (key, value)
-            } else {
-                (format!("{key}__{operator}"), value)
-            }
-        })
-        .collect();
-
-    serde_urlencoded::to_string(params).map_err(|err| ApiError::QueryEncoding(err.to_string()))
+fn filters_to_query_string<'a>(
+    filters: impl IntoIterator<Item = &'a QueryFilter>,
+) -> Result<String, ApiError> {
+    let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+    for filter in filters {
+        let operator = filter.operator.query_suffix();
+        if operator.is_empty() {
+            serializer.append_pair(&filter.key, &filter.value);
+        } else {
+            serializer.append_pair(&format!("{}__{operator}", filter.key), &filter.value);
+        }
+    }
+    Ok(serializer.finish())
 }
 
 impl IntoQueryTuples for Vec<QueryFilter> {
     fn into_tuples(self) -> Vec<(String, String, String)> {
-        self.iter().map(|filter| filter.as_query_tuple()).collect()
+        self.into_iter()
+            .map(|filter| (filter.key, filter.operator.to_string(), filter.value))
+            .collect()
     }
 
     fn into_query_string(self) -> Result<String, ApiError> {
-        tuples_to_query_string(self.into_tuples())
+        filters_to_query_string(&self)
     }
 }
 
@@ -284,7 +218,7 @@ impl IntoQueryTuples for &Vec<QueryFilter> {
     }
 
     fn into_query_string(self) -> Result<String, ApiError> {
-        tuples_to_query_string(self.into_tuples())
+        filters_to_query_string(self)
     }
 }
 
@@ -294,7 +228,7 @@ impl IntoQueryTuples for &[QueryFilter] {
     }
 
     fn into_query_string(self) -> Result<String, ApiError> {
-        tuples_to_query_string(self.into_tuples())
+        filters_to_query_string(self)
     }
 }
 
@@ -409,6 +343,25 @@ mod tests {
         assert_eq!(from_vec.unwrap_or_default(), expected.to_string());
         assert_eq!(from_ref_vec.unwrap_or_default(), expected.to_string());
         assert_eq!(from_slice.unwrap_or_default(), expected.to_string());
+    }
+
+    #[test]
+    fn into_tuples_is_consistent_across_owned_and_borrowed_filters() {
+        let filters = vec![
+            QueryFilter::filter("name", FilterOperator::Equals { is_negated: true }, "alpha"),
+            QueryFilter::raw("limit", "10"),
+        ];
+        let expected = vec![
+            (
+                "name".to_string(),
+                "not_equals".to_string(),
+                "alpha".to_string(),
+            ),
+            ("limit".to_string(), String::new(), "10".to_string()),
+        ];
+
+        assert_eq!(filters.clone().into_tuples(), expected);
+        assert_eq!(filters.as_slice().into_tuples(), expected);
     }
 
     #[test]
