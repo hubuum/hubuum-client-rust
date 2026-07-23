@@ -1,7 +1,7 @@
 use percent_encoding::{AsciiSet, CONTROLS, percent_decode_str, utf8_percent_encode};
 use reqwest::{
     Method, StatusCode,
-    header::{CONTENT_TYPE, HeaderMap, RETRY_AFTER},
+    header::{CONTENT_TYPE, HeaderMap, HeaderValue, RETRY_AFTER},
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -289,17 +289,13 @@ pub(crate) fn build_request_plan<T: Serialize>(
 ) -> Result<super::transport::RequestPlan, ApiError> {
     let url = url::Url::parse(request_url)?;
     let mut plan = super::transport::RequestPlan::new(method.clone(), url);
-    let authorization = reqwest::header::HeaderValue::from_str(&format!("Bearer {bearer_token}"))
-        .map_err(|error| {
-        ApiError::Transport(format!("invalid authorization header: {error}"))
-    })?;
+    let authorization = bearer_header_value(bearer_token)?;
     plan.headers
         .insert(reqwest::header::AUTHORIZATION, authorization);
     for (name, value) in headers {
         let name = reqwest::header::HeaderName::from_bytes(name.as_bytes())
             .map_err(|error| ApiError::Transport(format!("invalid header name: {error}")))?;
-        let value = reqwest::header::HeaderValue::from_str(value)
-            .map_err(|error| ApiError::Transport(format!("invalid header value: {error}")))?;
+        let value = sensitive_header_value(value)?;
         plan.headers.insert(name, value);
     }
     if matches!(*method, Method::POST | Method::PUT | Method::PATCH) {
@@ -321,11 +317,21 @@ pub(crate) fn build_unauthenticated_request_plan(
     for (name, value) in headers {
         let name = reqwest::header::HeaderName::from_bytes(name.as_bytes())
             .map_err(|error| ApiError::Transport(format!("invalid header name: {error}")))?;
-        let value = reqwest::header::HeaderValue::from_str(value)
-            .map_err(|error| ApiError::Transport(format!("invalid header value: {error}")))?;
+        let value = sensitive_header_value(value)?;
         plan.headers.insert(name, value);
     }
     Ok(plan)
+}
+
+pub(crate) fn sensitive_header_value(value: &str) -> Result<HeaderValue, ApiError> {
+    let mut value = HeaderValue::from_str(value)
+        .map_err(|error| ApiError::Transport(format!("invalid header value: {error}")))?;
+    value.set_sensitive(true);
+    Ok(value)
+}
+
+pub(crate) fn bearer_header_value(token: &str) -> Result<HeaderValue, ApiError> {
+    sensitive_header_value(&format!("Bearer {token}"))
 }
 
 pub(crate) fn build_unauthenticated_json_request_plan<T: Serialize>(
@@ -1425,6 +1431,45 @@ mod test {
                 Err(ApiError::InvalidIdempotencyKey)
             ));
         }
+    }
+
+    #[test]
+    fn request_plans_mark_secret_headers_sensitive() {
+        let authenticated = build_request_plan(
+            &Method::GET,
+            "https://api.example.com/api/v1/classes",
+            &(),
+            "bearer-secret",
+            &[("X-Api-Key", "header-secret".to_string())],
+        )
+        .expect("authenticated request plan should build");
+        let authorization = authenticated
+            .headers
+            .get(reqwest::header::AUTHORIZATION)
+            .expect("authorization header should be present");
+        let api_key = authenticated
+            .headers
+            .get("X-Api-Key")
+            .expect("caller header should be present");
+
+        assert!(authorization.is_sensitive());
+        assert!(api_key.is_sensitive());
+        assert!(!format!("{authorization:?}").contains("bearer-secret"));
+        assert!(!format!("{api_key:?}").contains("header-secret"));
+
+        let capability = build_unauthenticated_request_plan(
+            &Method::GET,
+            "https://api.example.com/api/v1/restores/7/status",
+            &[("X-Hubuum-Restore-Capability", "restore-secret".to_string())],
+        )
+        .expect("capability request plan should build");
+        let capability = capability
+            .headers
+            .get("X-Hubuum-Restore-Capability")
+            .expect("restore capability header should be present");
+
+        assert!(capability.is_sensitive());
+        assert!(!format!("{capability:?}").contains("restore-secret"));
     }
 
     #[test]

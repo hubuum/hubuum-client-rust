@@ -51,6 +51,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Bearer tokens, restore capabilities, and caller-provided raw header values are
+  now marked sensitive for built-in and custom transports, keeping them out of
+  `Debug` output and HTTP/2 dynamic compression tables.
 - Reject object-data patch documents with more than the server's 1,000-operation
   limit before performing exact-name resolution or sending a request.
 - Reject empty principal-token scope sets before sending a request, preserving

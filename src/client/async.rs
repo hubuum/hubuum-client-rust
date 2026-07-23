@@ -440,7 +440,7 @@ impl<S> Client<S> {
                 .runtime
                 .http_client
                 .get(&request_url)
-                .header(headers[0].0, &headers[0].1);
+                .header(headers[0].0, shared::sensitive_header_value(&headers[0].1)?);
             let response = self
                 .send_with_retry(&reqwest::Method::GET, false, request)
                 .await?;
@@ -749,10 +749,7 @@ impl Client<Unauthenticated> {
                 self.options().max_error_body_bytes,
             )?;
         } else {
-            let request = self
-                .http_client()
-                .get(&url)
-                .header("Authorization", format!("Bearer {}", token.as_str()));
+            let request = self.http_client().get(&url).bearer_auth(token.as_str());
             let response = self
                 .send_with_retry(&reqwest::Method::GET, false, request)
                 .await?;
@@ -1085,7 +1082,7 @@ impl Client<Authenticated> {
             .runtime
             .http_client
             .get(&request_url)
-            .header("Authorization", format!("Bearer {}", self.state.token()));
+            .bearer_auth(self.state.token());
         let response = self
             .send_with_retry(&reqwest::Method::GET, false, request)
             .await?;
@@ -1171,10 +1168,10 @@ impl Client<Authenticated> {
         } else {
             return Err(ApiError::UnsupportedHttpOperation(method.to_string()));
         };
-        let request = headers.iter().fold(
-            request.header("Authorization", format!("Bearer {}", self.state.token())),
-            |request, (name, value)| request.header(*name, value),
-        );
+        let mut request = request.bearer_auth(self.state.token());
+        for (name, value) in headers {
+            request = request.header(*name, shared::sensitive_header_value(value)?);
+        }
 
         let now = std::time::Instant::now();
         let response = self
@@ -2068,18 +2065,13 @@ impl RawRequest {
             let mut plan = super::transport::RequestPlan::new(self.method.clone(), url);
             plan.headers.insert(
                 reqwest::header::AUTHORIZATION,
-                reqwest::header::HeaderValue::from_str(&format!(
-                    "Bearer {}",
-                    self.client.state.token()
-                ))
-                .map_err(|error| ApiError::Transport(error.to_string()))?,
+                shared::bearer_header_value(self.client.state.token())?,
             );
             for (name, value) in &self.headers {
                 plan.headers.insert(
                     reqwest::header::HeaderName::from_bytes(name.as_bytes())
                         .map_err(|error| ApiError::Transport(error.to_string()))?,
-                    reqwest::header::HeaderValue::from_str(value)
-                        .map_err(|error| ApiError::Transport(error.to_string()))?,
+                    shared::sensitive_header_value(value)?,
                 );
             }
             if let Some(body) = self.body {
@@ -2115,12 +2107,9 @@ impl RawRequest {
             .runtime
             .http_client
             .request(self.method.clone(), &request_url)
-            .header(
-                reqwest::header::AUTHORIZATION,
-                format!("Bearer {}", self.client.state.token()),
-            );
+            .bearer_auth(self.client.state.token());
         for (name, value) in &self.headers {
-            request = request.header(name, value);
+            request = request.header(name, shared::sensitive_header_value(value)?);
         }
         if let Some(body) = self.body {
             if !has_content_type {
