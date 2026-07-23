@@ -56,6 +56,22 @@ The endpoint is read-only. Secret values are never returned; fields such as
 `treetop_url`, `database.url`, and `provider_config_path` expose configuration
 status only.
 
+## Database Pool State
+
+Authenticated clients can inspect complete PostgreSQL and process-local pool
+telemetry with `meta_db_full()`:
+
+```rust
+let db = client.meta_db_full().await?;
+println!("{} of {} connections in use", db.in_use_connections, db.max_connections);
+println!("{} acquisitions timed out", db.acquisitions_timed_out);
+println!("{} ms spent waiting", db.acquisition_wait_time_ms);
+```
+
+The original `meta_db()` response remains available for source compatibility.
+Use the full response when monitoring pool capacity, acquisition pressure,
+connection churn, or database size.
+
 ## Runtime Metrics
 
 Prometheus exposition text is available without bearer authentication. The

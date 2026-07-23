@@ -414,6 +414,30 @@ fn running_config_json() -> serde_json::Value {
     })
 }
 
+fn db_state_json() -> serde_json::Value {
+    json!({
+        "max_connections": 20,
+        "total_connections": 7,
+        "available_connections": 18,
+        "idle_connections": 5,
+        "in_use_connections": 2,
+        "pending_acquisitions": 1,
+        "acquisitions_started": 101,
+        "acquisitions_direct": 80,
+        "acquisitions_waited": 21,
+        "acquisitions_timed_out": 3,
+        "acquisition_wait_time_ms": 250,
+        "connections_created": 9,
+        "connections_closed_broken": 1,
+        "connections_closed_invalid": 2,
+        "connections_closed_max_lifetime": 3,
+        "connections_closed_idle_timeout": 4,
+        "active_connections": 6,
+        "db_size": 1024,
+        "last_vacuum_time": "2024-01-01T00:00:00Z"
+    })
+}
+
 fn backup_document_json() -> serde_json::Value {
     json!({
         "backup_version": 3,
@@ -2178,13 +2202,7 @@ fn sync_supports_meta_endpoints() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!({
-                "available_connections": 18,
-                "idle_connections": 6,
-                "active_connections": 12,
-                "db_size": 1024,
-                "last_vacuum_time": "2024-01-01T00:00:00Z"
-            }));
+            .json_body(db_state_json());
     });
 
     let admin_config = server.mock(|when, then| {
@@ -2211,10 +2229,23 @@ fn sync_supports_meta_endpoints() {
 
     let db_response = client.meta_db().expect("meta_db request should succeed");
     assert_eq!(db_response.available_connections, 18);
-    assert_eq!(db_response.idle_connections, 6);
-    assert_eq!(db_response.active_connections, 12);
+    assert_eq!(db_response.idle_connections, 5);
+    assert_eq!(db_response.active_connections, 6);
     assert_eq!(db_response.db_size, 1024);
     assert!(db_response.last_vacuum_time.is_some());
+
+    let full_db_response = client
+        .meta_db_full()
+        .expect("meta_db_full request should succeed");
+    assert_eq!(full_db_response.max_connections, 20);
+    assert_eq!(full_db_response.total_connections, 7);
+    assert_eq!(full_db_response.in_use_connections, 2);
+    assert_eq!(full_db_response.pending_acquisitions, 1);
+    assert_eq!(full_db_response.acquisitions_waited, 21);
+    assert_eq!(full_db_response.acquisitions_timed_out, 3);
+    assert_eq!(full_db_response.acquisition_wait_time_ms, 250);
+    assert_eq!(full_db_response.connections_created, 9);
+    assert_eq!(full_db_response.connections_closed_idle_timeout, 4);
 
     let config = client
         .admin_config()
@@ -2226,7 +2257,7 @@ fn sync_supports_meta_endpoints() {
     assert_eq!(config.pagination.max_page_limit, 1000);
 
     counts.assert_calls(1);
-    db.assert_calls(1);
+    db.assert_calls(2);
     admin_config.assert_calls(1);
 }
 
@@ -2258,13 +2289,7 @@ async fn async_supports_meta_endpoints() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!({
-                "available_connections": 18,
-                "idle_connections": 6,
-                "active_connections": 12,
-                "db_size": 1024,
-                "last_vacuum_time": "2024-01-01T00:00:00Z"
-            }));
+            .json_body(db_state_json());
     });
 
     let admin_config = server.mock(|when, then| {
@@ -2295,10 +2320,24 @@ async fn async_supports_meta_endpoints() {
         .await
         .expect("meta_db request should succeed");
     assert_eq!(db_response.available_connections, 18);
-    assert_eq!(db_response.idle_connections, 6);
-    assert_eq!(db_response.active_connections, 12);
+    assert_eq!(db_response.idle_connections, 5);
+    assert_eq!(db_response.active_connections, 6);
     assert_eq!(db_response.db_size, 1024);
     assert!(db_response.last_vacuum_time.is_some());
+
+    let full_db_response = client
+        .meta_db_full()
+        .await
+        .expect("meta_db_full request should succeed");
+    assert_eq!(full_db_response.max_connections, 20);
+    assert_eq!(full_db_response.total_connections, 7);
+    assert_eq!(full_db_response.in_use_connections, 2);
+    assert_eq!(full_db_response.pending_acquisitions, 1);
+    assert_eq!(full_db_response.acquisitions_waited, 21);
+    assert_eq!(full_db_response.acquisitions_timed_out, 3);
+    assert_eq!(full_db_response.acquisition_wait_time_ms, 250);
+    assert_eq!(full_db_response.connections_created, 9);
+    assert_eq!(full_db_response.connections_closed_idle_timeout, 4);
 
     let config = client
         .admin_config()
@@ -2311,7 +2350,7 @@ async fn async_supports_meta_endpoints() {
     assert_eq!(config.network.client_allowlist.network_count, 0);
 
     counts.assert_calls(1);
-    db.assert_calls(1);
+    db.assert_calls(2);
     admin_config.assert_calls(1);
 }
 

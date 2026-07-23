@@ -54,6 +54,15 @@ fn e2e_probe_meta_and_auth_admin_endpoints() {
 
     let db = harness.client.meta_db().expect("meta db endpoint failed");
     assert!(db.available_connections >= 0);
+    let full_db = harness
+        .client
+        .meta_db_full()
+        .expect("full meta db endpoint failed");
+    assert!(full_db.max_connections >= full_db.total_connections);
+    assert!(full_db.total_connections >= full_db.in_use_connections);
+    assert!(full_db.acquisitions_started >= full_db.acquisitions_direct);
+    assert!(full_db.acquisitions_started >= full_db.acquisitions_waited);
+    assert!(full_db.connections_created >= u64::from(full_db.total_connections));
     let tasks = harness
         .client
         .meta_tasks()
