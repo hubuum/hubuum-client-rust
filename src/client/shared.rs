@@ -621,11 +621,7 @@ impl std::fmt::Debug for RawResponse {
 }
 
 pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: UrlParams) -> String {
-    let mut url = format!(
-        "{}{}",
-        base_url.with_trailing_slash(),
-        endpoint.trim_start_matches('/')
-    );
+    let mut url = format!("{}{}", base_url.as_str(), endpoint.trim_start_matches('/'));
 
     for (key, value) in url_params {
         url = url.replace(&format!("{{{key}}}"), &encode_path_segment(value.as_ref()));

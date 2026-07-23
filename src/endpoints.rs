@@ -350,11 +350,7 @@ impl Endpoint {
     }
 
     pub fn complete(&self, baseurl: &BaseUrl) -> String {
-        format!(
-            "{}{}",
-            baseurl.with_trailing_slash(),
-            self.trim_start_matches('/')
-        )
+        format!("{}{}", baseurl.as_str(), self.trim_start_matches('/'))
     }
 
     pub fn trim_start_matches(&self, prefix: char) -> &str {
