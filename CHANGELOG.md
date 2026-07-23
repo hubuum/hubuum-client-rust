@@ -12,6 +12,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   body across clones instead of copying the full payload for every attempt.
 - Authenticated client and handle clones now share immutable bearer-token
   storage instead of duplicating the secret string on every clone.
+- Async and blocking client clones now share their immutable HTTP runtime and
+  configuration, avoiding repeated base-URL and option allocations when
+  creating resource handles.
 
 ### Fixed
 

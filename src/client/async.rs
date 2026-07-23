@@ -126,13 +126,42 @@ impl ExportOutputStream {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Client<S> {
+#[derive(Debug)]
+struct ClientRuntime {
     http_client: reqwest::Client,
-    transport: Option<std::sync::Arc<dyn super::transport::AsyncTransport>>,
+    transport: Option<Arc<dyn super::transport::AsyncTransport>>,
     base_url: BaseUrl,
     options: shared::ClientOptions,
+}
+
+/// Async Hubuum client.
+///
+/// Clones share the immutable HTTP runtime and configuration.
+#[derive(Debug, Clone)]
+pub struct Client<S> {
+    runtime: Arc<ClientRuntime>,
     state: S,
+}
+
+#[cfg(test)]
+mod runtime_sharing_tests {
+    use std::sync::Arc;
+
+    use super::Client;
+    use crate::Token;
+
+    #[test]
+    fn clones_and_authentication_share_runtime() {
+        let client = Client::builder_from_url("https://example.invalid")
+            .expect("base URL should be valid")
+            .build()
+            .expect("client should build");
+        let authenticated = client.authenticate(Token::new("secret"));
+        let cloned = authenticated.clone();
+
+        assert!(Arc::ptr_eq(&client.runtime, &authenticated.runtime));
+        assert!(Arc::ptr_eq(&authenticated.runtime, &cloned.runtime));
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -142,7 +171,7 @@ pub struct ClientBuilder {
     timeout: Option<std::time::Duration>,
     user_agent: Option<String>,
     http_client: Option<reqwest::Client>,
-    transport: Option<std::sync::Arc<dyn super::transport::AsyncTransport>>,
+    transport: Option<Arc<dyn super::transport::AsyncTransport>>,
     options: shared::ClientOptions,
 }
 
@@ -182,10 +211,7 @@ impl ClientBuilder {
         self
     }
 
-    pub fn with_transport(
-        mut self,
-        transport: std::sync::Arc<dyn super::transport::AsyncTransport>,
-    ) -> Self {
+    pub fn with_transport(mut self, transport: Arc<dyn super::transport::AsyncTransport>) -> Self {
         self.transport = Some(transport);
         self
     }
@@ -230,10 +256,12 @@ impl ClientBuilder {
         };
 
         Ok(Client {
-            http_client,
-            transport: self.transport,
-            base_url: self.base_url,
-            options: self.options,
+            runtime: Arc::new(ClientRuntime {
+                http_client,
+                transport: self.transport,
+                base_url: self.base_url,
+                options: self.options,
+            }),
             state: Unauthenticated,
         })
     }
@@ -241,29 +269,37 @@ impl ClientBuilder {
 
 impl<S> ClientCore for Client<S> {
     fn build_url(&self, endpoint: &Endpoint, url_params: UrlParams) -> String {
-        shared::build_url(&self.base_url, endpoint, url_params)
+        shared::build_url(self.base_url(), endpoint, url_params)
     }
 }
 
 impl<S> Client<S> {
     /// API base URL used by this client.
     pub fn base_url(&self) -> &BaseUrl {
-        &self.base_url
+        &self.runtime.base_url
     }
 
     /// Underlying reusable async HTTP client.
     pub fn http_client(&self) -> &reqwest::Client {
-        &self.http_client
+        &self.runtime.http_client
+    }
+
+    fn transport(&self) -> Option<&Arc<dyn super::transport::AsyncTransport>> {
+        self.runtime.transport.as_ref()
+    }
+
+    fn options(&self) -> &shared::ClientOptions {
+        &self.runtime.options
     }
 
     pub fn retry_policy(&self) -> &shared::RetryPolicy {
-        &self.options.retry_policy
+        &self.options().retry_policy
     }
 
     /// Fetch the server's unauthenticated client capability configuration.
     pub async fn config(&self) -> Result<ClientConfig, ApiError> {
         let url = self.build_url(&Endpoint::ClientConfig, UrlParams::default());
-        let raw = if let Some(transport) = &self.transport {
+        let raw = if let Some(transport) = self.transport() {
             let plan =
                 shared::build_unauthenticated_request_plan(&reqwest::Method::GET, &url, &[])?;
             let response = self
@@ -278,18 +314,18 @@ impl<S> Client<S> {
                 &reqwest::Method::GET,
                 &url,
                 response,
-                &self.options,
+                self.options(),
             )?
         } else {
             let response = self
-                .send_with_retry(&reqwest::Method::GET, false, self.http_client.get(&url))
+                .send_with_retry(&reqwest::Method::GET, false, self.http_client().get(&url))
                 .await?;
             let response = self
                 .check_success(&reqwest::Method::GET, &url, response)
                 .await?;
             let status = response.status();
             let body =
-                shared::read_async_body(response, self.options.max_response_body_bytes).await?;
+                shared::read_async_body(response, self.options().max_response_body_bytes).await?;
             shared::RawResponse {
                 status,
                 body,
@@ -318,10 +354,10 @@ impl<S> Client<S> {
     /// its default `/metrics` path. The path remains constrained to the
     /// configured base URL.
     pub async fn metrics_at(&self, path: impl AsRef<str>) -> Result<String, ApiError> {
-        let url = shared::build_relative_url(&self.base_url, path.as_ref(), &[])?;
+        let url = shared::build_relative_url(self.base_url(), path.as_ref(), &[])?;
         let request_url = url.to_string();
 
-        if let Some(transport) = &self.transport {
+        if let Some(transport) = self.transport() {
             let plan = shared::build_unauthenticated_request_plan(
                 &reqwest::Method::GET,
                 &request_url,
@@ -339,20 +375,20 @@ impl<S> Client<S> {
                 &reqwest::Method::GET,
                 &request_url,
                 response,
-                &self.options,
+                self.options(),
             )?
             .body);
         }
 
         debug!("GET {}", shared::redacted_url_for_log(&request_url));
-        let request = self.http_client.get(&request_url);
+        let request = self.http_client().get(&request_url);
         let response = self
             .send_with_retry(&reqwest::Method::GET, false, request)
             .await?;
         let response = self
             .check_success(&reqwest::Method::GET, &request_url, response)
             .await?;
-        shared::read_async_body(response, self.options.max_response_body_bytes).await
+        shared::read_async_body(response, self.options().max_response_body_bytes).await
     }
 
     /// Inspect a staged restore using only its one-time capability.
@@ -377,7 +413,7 @@ impl<S> Client<S> {
             capability.as_str().to_owned(),
         )];
 
-        let raw = if let Some(transport) = &self.transport {
+        let raw = if let Some(transport) = self.transport() {
             let plan = shared::build_unauthenticated_request_plan(
                 &reqwest::Method::GET,
                 &request_url,
@@ -395,11 +431,12 @@ impl<S> Client<S> {
                 &reqwest::Method::GET,
                 &request_url,
                 response,
-                &self.options,
+                self.options(),
             )?
         } else {
             debug!("GET {}", shared::redacted_url_for_log(&request_url));
             let request = self
+                .runtime
                 .http_client
                 .get(&request_url)
                 .header(headers[0].0, &headers[0].1);
@@ -413,7 +450,7 @@ impl<S> Client<S> {
             let (next_cursor, total_count, page_limit, content_type) =
                 shared::response_metadata(response.headers());
             let body =
-                shared::read_async_body(response, self.options.max_response_body_bytes).await?;
+                shared::read_async_body(response, self.options().max_response_body_bytes).await?;
             shared::RawResponse {
                 status,
                 body,
@@ -437,7 +474,8 @@ impl<S> Client<S> {
         if !response.status().is_success() {
             let status = response.status();
             let body =
-                shared::read_async_body_preview(response, self.options.max_error_body_bytes).await;
+                shared::read_async_body_preview(response, self.options().max_error_body_bytes)
+                    .await;
             let error_message = shared::parse_http_error_message(&body);
             return Err(ApiError::HttpWithBody {
                 method: method.clone(),
@@ -456,7 +494,7 @@ impl<S> Client<S> {
         has_idempotency_key: bool,
         request: reqwest::RequestBuilder,
     ) -> Result<Response, ApiError> {
-        let policy = &self.options.retry_policy;
+        let policy = &self.options().retry_policy;
         let attempts = if shared::is_replay_safe(method, has_idempotency_key) {
             policy.max_attempts.max(1)
         } else {
@@ -495,7 +533,7 @@ impl<S> Client<S> {
         transport: &dyn super::transport::AsyncTransport,
         request: super::transport::RequestPlan,
     ) -> Result<super::transport::TransportResponse, ApiError> {
-        let policy = &self.options.retry_policy;
+        let policy = &self.options().retry_policy;
         let attempts = if shared::is_replay_safe(method, has_idempotency_key) {
             policy.max_attempts.max(1)
         } else {
@@ -581,7 +619,7 @@ impl Client<Unauthenticated> {
         empty_message: &str,
     ) -> Result<T, ApiError> {
         let url = self.build_url(endpoint, UrlParams::default());
-        let raw = if let Some(transport) = &self.transport {
+        let raw = if let Some(transport) = self.transport() {
             let plan =
                 shared::build_unauthenticated_request_plan(&reqwest::Method::GET, &url, &[])?;
             let response = self
@@ -596,18 +634,18 @@ impl Client<Unauthenticated> {
                 &reqwest::Method::GET,
                 &url,
                 response,
-                &self.options,
+                self.options(),
             )?
         } else {
             let response = self
-                .send_with_retry(&reqwest::Method::GET, false, self.http_client.get(&url))
+                .send_with_retry(&reqwest::Method::GET, false, self.http_client().get(&url))
                 .await?;
             let response = self
                 .check_success(&reqwest::Method::GET, &url, response)
                 .await?;
             let status = response.status();
             let body =
-                shared::read_async_body(response, self.options.max_response_body_bytes).await?;
+                shared::read_async_body(response, self.options().max_response_body_bytes).await?;
             shared::RawResponse {
                 status,
                 body,
@@ -633,7 +671,7 @@ impl Client<Unauthenticated> {
 
     pub async fn login(&self, credentials: Credentials) -> Result<Client<Authenticated>, ApiError> {
         let login_url = self.build_url(&Endpoint::Login, UrlParams::default());
-        let raw = if let Some(transport) = &self.transport {
+        let raw = if let Some(transport) = self.transport() {
             let plan = shared::build_unauthenticated_json_request_plan(
                 &reqwest::Method::POST,
                 &login_url,
@@ -652,11 +690,11 @@ impl Client<Unauthenticated> {
                 &reqwest::Method::POST,
                 &login_url,
                 response,
-                &self.options,
+                self.options(),
             )?
         } else {
             let response = self
-                .http_client
+                .http_client()
                 .post(&login_url)
                 .json(&credentials)
                 .send()
@@ -666,7 +704,7 @@ impl Client<Unauthenticated> {
                 .await?;
             let status = response.status();
             let body =
-                shared::read_async_body(response, self.options.max_response_body_bytes).await?;
+                shared::read_async_body(response, self.options().max_response_body_bytes).await?;
             shared::RawResponse {
                 status,
                 body,
@@ -680,17 +718,14 @@ impl Client<Unauthenticated> {
             .ok_or_else(|| ApiError::EmptyResult("Login returned no token".into()))?;
 
         Ok(Client {
-            http_client: self.http_client.clone(),
-            transport: self.transport.clone(),
-            base_url: self.base_url.clone(),
-            options: self.options.clone(),
+            runtime: self.runtime.clone(),
             state: Authenticated::new(token),
         })
     }
 
     pub async fn login_with_token(&self, token: Token) -> Result<Client<Authenticated>, ApiError> {
         let url = self.build_url(&Endpoint::LoginWithToken, UrlParams::default());
-        if let Some(transport) = &self.transport {
+        if let Some(transport) = self.transport() {
             let plan = shared::build_request_plan(
                 &reqwest::Method::GET,
                 &url,
@@ -710,11 +745,11 @@ impl Client<Unauthenticated> {
                 &reqwest::Method::GET,
                 &url,
                 response,
-                self.options.max_error_body_bytes,
+                self.options().max_error_body_bytes,
             )?;
         } else {
             let request = self
-                .http_client
+                .http_client()
                 .get(&url)
                 .header("Authorization", format!("Bearer {}", token.as_str()));
             let response = self
@@ -725,10 +760,7 @@ impl Client<Unauthenticated> {
         }
 
         Ok(Client {
-            http_client: self.http_client.clone(),
-            transport: self.transport.clone(),
-            base_url: self.base_url.clone(),
-            options: self.options.clone(),
+            runtime: self.runtime.clone(),
             state: Authenticated::new(token),
         })
     }
@@ -738,10 +770,7 @@ impl Client<Unauthenticated> {
     /// verifies the token at the server boundary.
     pub fn authenticate(&self, token: Token) -> Client<Authenticated> {
         Client {
-            http_client: self.http_client.clone(),
-            transport: self.transport.clone(),
-            base_url: self.base_url.clone(),
-            options: self.options.clone(),
+            runtime: self.runtime.clone(),
             state: Authenticated::new(token),
         }
     }
@@ -828,10 +857,7 @@ impl Client<Authenticated> {
         .await?;
 
         Ok(Client {
-            http_client: self.http_client,
-            transport: self.transport,
-            base_url: self.base_url,
-            options: self.options,
+            runtime: self.runtime,
             state: Unauthenticated,
         })
     }
@@ -1003,7 +1029,7 @@ impl Client<Authenticated> {
             shared::build_request_url(&reqwest::Method::GET, base_url, &url_params, query_params)?;
         debug!("GET {}", shared::redacted_url_for_log(&request_url));
 
-        if let Some(transport) = &self.transport {
+        if let Some(transport) = self.transport() {
             let plan = shared::build_request_plan(
                 &reqwest::Method::GET,
                 &request_url,
@@ -1023,7 +1049,7 @@ impl Client<Authenticated> {
                 &reqwest::Method::GET,
                 &request_url,
                 response,
-                self.options.max_error_body_bytes,
+                self.options().max_error_body_bytes,
             )?;
             let content_length =
                 shared::transport_content_length(&response.headers, response.body.len());
@@ -1038,6 +1064,7 @@ impl Client<Authenticated> {
         }
 
         let request = self
+            .runtime
             .http_client
             .get(&request_url)
             .header("Authorization", format!("Bearer {}", self.state.token()));
@@ -1071,7 +1098,7 @@ impl Client<Authenticated> {
         let base_url = self.build_url(endpoint, url_params.clone());
         let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
 
-        if let Some(transport) = &self.transport {
+        if let Some(transport) = self.transport() {
             let plan = shared::build_request_plan(
                 &method,
                 &request_url,
@@ -1094,26 +1121,35 @@ impl Client<Authenticated> {
                 &method,
                 &request_url,
                 response,
-                &self.options,
+                self.options(),
             );
         }
 
         let log_url = shared::redacted_url_for_log(&request_url);
         let request = if method == reqwest::Method::GET {
             debug!("GET {}", log_url);
-            self.http_client.get(&request_url)
+            self.http_client().get(&request_url)
         } else if method == reqwest::Method::POST {
             debug!("POST {}", log_url);
-            self.http_client.post(&request_url).json(&post_params)
+            self.runtime
+                .http_client
+                .post(&request_url)
+                .json(&post_params)
         } else if method == reqwest::Method::PUT {
             debug!("PUT {}", log_url);
-            self.http_client.put(&request_url).json(&post_params)
+            self.runtime
+                .http_client
+                .put(&request_url)
+                .json(&post_params)
         } else if method == reqwest::Method::PATCH {
             debug!("PATCH {}", log_url);
-            self.http_client.patch(&request_url).json(&post_params)
+            self.runtime
+                .http_client
+                .patch(&request_url)
+                .json(&post_params)
         } else if method == reqwest::Method::DELETE {
             debug!("DELETE {}", log_url);
-            self.http_client.delete(&request_url)
+            self.http_client().delete(&request_url)
         } else {
             return Err(ApiError::UnsupportedHttpOperation(method.to_string()));
         };
@@ -1134,7 +1170,8 @@ impl Client<Authenticated> {
         let status = response.status();
         let (next_cursor, total_count, page_limit, content_type) =
             shared::response_metadata(response.headers());
-        let body = shared::read_async_body(response, self.options.max_response_body_bytes).await?;
+        let body =
+            shared::read_async_body(response, self.options().max_response_body_bytes).await?;
         debug!("Response: {} ({} bytes)", status, body.len());
 
         Ok(shared::RawResponse {
@@ -1954,13 +1991,13 @@ impl RawRequest {
             ));
         }
         let url = if self.path_has_encoded_segments {
-            shared::build_encoded_relative_url(&self.client.base_url, &self.path, &self.query)?
+            shared::build_encoded_relative_url(self.client.base_url(), &self.path, &self.query)?
         } else {
-            shared::build_relative_url(&self.client.base_url, &self.path, &self.query)?
+            shared::build_relative_url(self.client.base_url(), &self.path, &self.query)?
         };
         let request_url = url.to_string();
 
-        if let Some(transport) = &self.client.transport {
+        if let Some(transport) = self.client.transport() {
             let mut plan = super::transport::RequestPlan::new(self.method.clone(), url);
             plan.headers.insert(
                 reqwest::header::AUTHORIZATION,
@@ -2001,7 +2038,7 @@ impl RawRequest {
                 &self.method,
                 &request_url,
                 response,
-                &self.client.options,
+                self.client.options(),
             );
         }
 
@@ -2012,6 +2049,7 @@ impl RawRequest {
         );
         let mut request = self
             .client
+            .runtime
             .http_client
             .request(self.method.clone(), &request_url)
             .header(
@@ -2039,8 +2077,8 @@ impl RawRequest {
         let status = response.status();
         let (next_cursor, total_count, page_limit, content_type) =
             shared::response_metadata(response.headers());
-        let body =
-            shared::read_async_body(response, self.client.options.max_response_body_bytes).await?;
+        let body = shared::read_async_body(response, self.client.options().max_response_body_bytes)
+            .await?;
         Ok(shared::RawResponse {
             status,
             body,
@@ -4257,7 +4295,7 @@ impl UnifiedSearchRequest {
             )
             .await?;
 
-        let max_event_bytes = self.client.options.max_response_body_bytes;
+        let max_event_bytes = self.client.options().max_response_body_bytes;
         let mut bytes = response.into_body();
         Ok(Box::pin(async_stream::try_stream! {
             let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(max_event_bytes);
@@ -4465,7 +4503,7 @@ impl<T: ApiResource> QueryOp<T> {
     pub async fn all(self) -> Result<Vec<T::GetOutput>, ApiError> {
         let mut query = self;
         let mut items = Vec::new();
-        let mut pagination = shared::AutoPaginationGuard::new(&query.client.options);
+        let mut pagination = shared::AutoPaginationGuard::new(query.client.options());
         let mut seen_cursors = shared::pagination_cursors(&query.query_params);
 
         loop {
@@ -4523,7 +4561,7 @@ where
 {
     pub fn pages(mut self) -> PageStream<T::GetOutput> {
         Box::pin(async_stream::try_stream! {
-            let mut pagination = shared::AutoPaginationGuard::new(&self.client.options);
+            let mut pagination = shared::AutoPaginationGuard::new(self.client.options());
             let mut seen_cursors = shared::pagination_cursors(&self.query_params);
             loop {
                 pagination.before_request()?;
@@ -4864,7 +4902,7 @@ where
     pub async fn all(self) -> Result<Vec<T>, ApiError> {
         let mut request = self;
         let mut items = Vec::new();
-        let mut pagination = shared::AutoPaginationGuard::new(&request.client.options);
+        let mut pagination = shared::AutoPaginationGuard::new(request.client.options());
         let mut seen_cursors = shared::pagination_cursors(&request.query_params);
 
         loop {
@@ -4898,7 +4936,7 @@ where
 {
     pub fn pages(mut self) -> PageStream<T> {
         Box::pin(async_stream::try_stream! {
-            let mut pagination = shared::AutoPaginationGuard::new(&self.client.options);
+            let mut pagination = shared::AutoPaginationGuard::new(self.client.options());
             let mut seen_cursors = shared::pagination_cursors(&self.query_params);
             loop {
                 pagination.before_request()?;
