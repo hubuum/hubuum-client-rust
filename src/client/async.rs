@@ -1115,6 +1115,9 @@ impl Client<Authenticated> {
     ) -> Result<shared::RawResponse, ApiError> {
         let base_url = self.build_url(endpoint, url_params.clone());
         let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
+        let has_idempotency_key = shared::has_valid_idempotency_key(
+            headers.iter().map(|(name, value)| (*name, value.as_str())),
+        )?;
 
         if let Some(transport) = self.transport() {
             let plan = shared::build_request_plan(
@@ -1124,9 +1127,6 @@ impl Client<Authenticated> {
                 self.state.token(),
                 headers,
             )?;
-            let has_idempotency_key = headers
-                .iter()
-                .any(|(name, _)| name.eq_ignore_ascii_case("Idempotency-Key"));
             let response = self
                 .execute_transport_with_retry(
                     &method,
@@ -1177,9 +1177,6 @@ impl Client<Authenticated> {
         );
 
         let now = std::time::Instant::now();
-        let has_idempotency_key = headers
-            .iter()
-            .any(|(name, _)| name.eq_ignore_ascii_case("Idempotency-Key"));
         let response = self
             .send_with_retry(&method, has_idempotency_key, request)
             .await?;
@@ -2055,10 +2052,11 @@ impl RawRequest {
             .headers
             .iter()
             .any(|(name, _)| name.eq_ignore_ascii_case("content-type"));
-        let has_idempotency_key = self
-            .headers
-            .iter()
-            .any(|(name, _)| name.eq_ignore_ascii_case("idempotency-key"));
+        let has_idempotency_key = shared::has_valid_idempotency_key(
+            self.headers
+                .iter()
+                .map(|(name, value)| (name.as_str(), value.as_str())),
+        )?;
         let url = if self.path_has_encoded_segments {
             shared::build_encoded_relative_url(self.client.base_url(), &self.path, &self.query)?
         } else {

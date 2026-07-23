@@ -122,6 +122,9 @@ pub enum ApiError {
         max: usize,
     },
 
+    #[error("Idempotency-Key must not be empty or whitespace")]
+    InvalidIdempotencyKey,
+
     #[error("Unknown permission `{0}`")]
     UnknownPermission(#[from] strum::ParseError),
 }
@@ -237,6 +240,7 @@ impl std::fmt::Debug for ApiError {
                 .field("min", min)
                 .field("max", max)
                 .finish(),
+            Self::InvalidIdempotencyKey => f.write_str("InvalidIdempotencyKey"),
             Self::UnknownPermission(error) => {
                 f.debug_tuple("UnknownPermission").field(error).finish()
             }

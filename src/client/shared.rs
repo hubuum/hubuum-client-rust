@@ -143,6 +143,21 @@ pub(crate) fn is_replay_safe(method: &Method, has_idempotency_key: bool) -> bool
     matches!(*method, Method::GET | Method::HEAD | Method::OPTIONS) || has_idempotency_key
 }
 
+pub(crate) fn has_valid_idempotency_key<'a>(
+    headers: impl IntoIterator<Item = (&'a str, &'a str)>,
+) -> Result<bool, ApiError> {
+    let mut present = false;
+    for (name, value) in headers {
+        if name.eq_ignore_ascii_case("idempotency-key") {
+            if value.trim().is_empty() {
+                return Err(ApiError::InvalidIdempotencyKey);
+            }
+            present = true;
+        }
+    }
+    Ok(present)
+}
+
 pub(crate) fn redacted_url_for_log(value: &str) -> String {
     let Ok(mut url) = url::Url::parse(value) else {
         return "[INVALID URL]".to_string();
@@ -1392,6 +1407,24 @@ mod test {
             url,
             "https://api.example.com/api/v1/iam/groups/1%2F..%2F2%3Fscope%23frag%252F%5Ctail/members"
         );
+    }
+
+    #[test]
+    fn idempotency_key_validation_is_case_insensitive_and_rejects_blanks() {
+        assert!(
+            has_valid_idempotency_key([("IDEMPOTENCY-KEY", "task-1")])
+                .expect("nonblank key should be accepted")
+        );
+        assert!(
+            !has_valid_idempotency_key([("content-type", "application/json")])
+                .expect("unrelated headers should be accepted")
+        );
+        for value in ["", " ", "\t"] {
+            assert!(matches!(
+                has_valid_idempotency_key([("Idempotency-Key", value)]),
+                Err(ApiError::InvalidIdempotencyKey)
+            ));
+        }
     }
 
     #[test]

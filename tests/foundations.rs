@@ -6,8 +6,8 @@ use std::time::Duration;
 use futures_util::{StreamExt, TryStreamExt};
 use httpmock::MockServer;
 use hubuum_client::{
-    ApiError, BaseUrl, ClassPatch, Credentials, ExportContentType, ExportTemplateKind,
-    ExportTemplateRunRequest, MockTransport, Object, ObjectDataPatchDocument,
+    ApiError, BackupRequest, BaseUrl, ClassPatch, Credentials, ExportContentType,
+    ExportTemplateKind, ExportTemplateRunRequest, MockTransport, Object, ObjectDataPatchDocument,
     ObjectDataPatchOperation, ObjectPatch, RetryPolicy, TaskStatus, Token, TransportResponse,
     TypedObject, UnifiedSearchEvent, blocking,
 };
@@ -1069,6 +1069,29 @@ fn blocking_typed_requests_reject_invalid_page_limits_before_transport() {
     assert!(transport.requests().is_empty());
 }
 
+#[test]
+fn blocking_requests_reject_blank_idempotency_keys_before_transport() {
+    let transport = MockTransport::default();
+    let client = blocking_mock_client(transport.clone(), 4096);
+
+    assert!(matches!(
+        client
+            .backups()
+            .submit(BackupRequest::default())
+            .idempotency_key("")
+            .send(),
+        Err(ApiError::InvalidIdempotencyKey)
+    ));
+    assert!(matches!(
+        client
+            .raw(Method::POST, "api/v1/extensions/task")
+            .header("idempotency-key", " \t")
+            .send_text(),
+        Err(ApiError::InvalidIdempotencyKey)
+    ));
+    assert!(transport.requests().is_empty());
+}
+
 #[tokio::test]
 async fn async_typed_requests_reject_invalid_page_limits_before_transport() {
     let transport = MockTransport::default();
@@ -1097,6 +1120,35 @@ async fn async_typed_requests_reject_invalid_page_limits_before_transport() {
         assert_invalid_page_limit(error, value);
     }
 
+    assert!(transport.requests().is_empty());
+}
+
+#[tokio::test]
+async fn async_requests_reject_blank_idempotency_keys_before_transport() {
+    let transport = MockTransport::default();
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    assert!(matches!(
+        client
+            .backups()
+            .submit(BackupRequest::default())
+            .idempotency_key("\t")
+            .send()
+            .await,
+        Err(ApiError::InvalidIdempotencyKey)
+    ));
+    assert!(matches!(
+        client
+            .raw(Method::POST, "api/v1/extensions/task")
+            .header("Idempotency-Key", " ")
+            .send_text()
+            .await,
+        Err(ApiError::InvalidIdempotencyKey)
+    ));
     assert!(transport.requests().is_empty());
 }
 
