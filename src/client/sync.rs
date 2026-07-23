@@ -50,7 +50,7 @@ pub struct EmptyPostParams;
 struct StreamingResponse {
     headers: reqwest::header::HeaderMap,
     content_length: Option<u64>,
-    body: Box<dyn std::io::Read + Send>,
+    body: Box<dyn std::io::Read + Send + Sync>,
 }
 
 impl StreamingResponse {
