@@ -384,13 +384,21 @@ pub(crate) fn transport_content_length(headers: &HeaderMap, body_len: usize) -> 
 }
 
 fn retry_after(headers: &HeaderMap) -> Option<std::time::Duration> {
+    retry_after_at(headers, std::time::SystemTime::now())
+}
+
+fn retry_after_at(headers: &HeaderMap, now: std::time::SystemTime) -> Option<std::time::Duration> {
     let value = headers.get(RETRY_AFTER)?.to_str().ok()?;
     if let Ok(seconds) = value.parse::<u64>() {
         return Some(std::time::Duration::from_secs(seconds));
     }
 
     let retry_at = httpdate::parse_http_date(value).ok()?;
-    retry_at.duration_since(std::time::SystemTime::now()).ok()
+    Some(
+        retry_at
+            .duration_since(now)
+            .unwrap_or(std::time::Duration::ZERO),
+    )
 }
 
 fn decode_response_text(body: Vec<u8>) -> Result<String, ApiError> {
@@ -1306,6 +1314,7 @@ pub(crate) fn select_name_lookup_params<T: ApiResource>(
 mod test {
     use super::*;
     use crate::types::FilterOperator;
+    use reqwest::header::HeaderValue;
     use std::borrow::Cow;
     use std::str::FromStr;
 
@@ -1625,6 +1634,44 @@ mod test {
         assert_eq!(
             params,
             vec![QueryFilter::raw("order_by", "created_at.desc")]
+        );
+    }
+
+    #[test]
+    fn retry_after_delta_seconds_are_preserved() {
+        let mut headers = HeaderMap::new();
+        headers.insert(RETRY_AFTER, HeaderValue::from_static("17"));
+
+        assert_eq!(
+            retry_after(&headers),
+            Some(std::time::Duration::from_secs(17))
+        );
+    }
+
+    #[test]
+    fn elapsed_retry_after_date_requests_an_immediate_retry() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            RETRY_AFTER,
+            HeaderValue::from_static("Thu, 01 Jan 1970 00:00:00 GMT"),
+        );
+
+        assert_eq!(retry_after(&headers), Some(std::time::Duration::ZERO));
+    }
+
+    #[test]
+    fn future_retry_after_date_uses_the_remaining_delay() {
+        let now = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
+        let retry_at = now + std::time::Duration::from_secs(90);
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            RETRY_AFTER,
+            HeaderValue::from_str(&httpdate::fmt_http_date(retry_at)).unwrap(),
+        );
+
+        assert_eq!(
+            retry_after_at(&headers, now),
+            Some(std::time::Duration::from_secs(90))
         );
     }
 }
