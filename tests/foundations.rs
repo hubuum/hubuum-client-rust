@@ -253,10 +253,9 @@ fn assert_stream_requests(transport: &MockTransport) {
     assert_eq!(requests[1].url.path(), "/api/v1/search/stream");
     assert_eq!(requests[1].url.query(), Some("q=server"));
     for request in requests {
-        assert_eq!(
-            request.headers.get(reqwest::header::AUTHORIZATION).unwrap(),
-            "Bearer consumer-secret"
-        );
+        let authorization = request.headers.get(reqwest::header::AUTHORIZATION).unwrap();
+        assert_eq!(authorization, "Bearer consumer-secret");
+        assert!(authorization.is_sensitive());
     }
 }
 
@@ -392,13 +391,12 @@ fn assert_public_client_requests(transport: &MockTransport) {
 
     assert_eq!(requests[2].method, Method::GET);
     assert_eq!(requests[2].url.path(), "/api/v0/auth/validate");
-    assert_eq!(
-        requests[2]
-            .headers
-            .get(reqwest::header::AUTHORIZATION)
-            .unwrap(),
-        "Bearer attached-secret"
-    );
+    let authorization = requests[2]
+        .headers
+        .get(reqwest::header::AUTHORIZATION)
+        .unwrap();
+    assert_eq!(authorization, "Bearer attached-secret");
+    assert!(authorization.is_sensitive());
     assert_eq!(requests[3].url.path(), "/healthz");
     assert_eq!(requests[4].url.path(), "/readyz");
     assert!(
@@ -1489,6 +1487,7 @@ fn raw_json_requests_set_content_type_for_custom_transports() {
 
     let _: serde_json::Value = client
         .raw(Method::POST, "api/v1/extensions/action")
+        .header("X-Api-Key", "header-secret")
         .json(&json!({ "password": "consumer-secret" }))
         .unwrap()
         .send()
@@ -1499,8 +1498,17 @@ fn raw_json_requests_set_content_type_for_custom_transports() {
         request.headers.get(reqwest::header::CONTENT_TYPE).unwrap(),
         "application/json"
     );
+    assert!(
+        request
+            .headers
+            .get(reqwest::header::AUTHORIZATION)
+            .unwrap()
+            .is_sensitive()
+    );
+    assert!(request.headers.get("X-Api-Key").unwrap().is_sensitive());
     assert_eq!(request.body(), br#"{"password":"consumer-secret"}"#);
     assert!(!format!("{request:?}").contains("consumer-secret"));
+    assert!(!format!("{request:?}").contains("header-secret"));
 }
 
 #[tokio::test]
@@ -1517,6 +1525,7 @@ async fn async_raw_json_requests_set_content_type_for_custom_transports() {
 
     let _: serde_json::Value = client
         .raw(Method::POST, "api/v1/extensions/action")
+        .header("X-Api-Key", "header-secret")
         .json(&json!({ "password": "consumer-secret" }))
         .unwrap()
         .send()
@@ -1528,8 +1537,17 @@ async fn async_raw_json_requests_set_content_type_for_custom_transports() {
         request.headers.get(reqwest::header::CONTENT_TYPE).unwrap(),
         "application/json"
     );
+    assert!(
+        request
+            .headers
+            .get(reqwest::header::AUTHORIZATION)
+            .unwrap()
+            .is_sensitive()
+    );
+    assert!(request.headers.get("X-Api-Key").unwrap().is_sensitive());
     assert_eq!(request.body(), br#"{"password":"consumer-secret"}"#);
     assert!(!format!("{request:?}").contains("consumer-secret"));
+    assert!(!format!("{request:?}").contains("header-secret"));
 }
 
 #[test]
