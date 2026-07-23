@@ -319,6 +319,8 @@ mod parity_contract {
             let _ = $module::ClassNameScope::related_classes;
             let _ = $module::ClassNameScope::related_relations;
             let _ = $module::ClassNameScope::related_graph;
+            let _ = $module::Imports::submit_full;
+            let _ = $module::Imports::run_full;
 
             let _ = $module::ClassNameObjects::query;
             let _ = $module::ClassNameObjects::create_raw;

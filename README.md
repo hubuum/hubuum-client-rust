@@ -16,7 +16,7 @@ the history for earlier client releases are recorded in
 - **Lazy and bounded I/O**: stream cursor pages, individual items, search events, and export bytes without buffering entire result sets.
 - **Safe extension points**: inject a custom or mock transport, issue authenticated requests to newly added relative routes, and configure retries and response-size limits.
 - **Typed object payloads**: decode object `data` into application structs and optionally derive JSON Schema with the `typed-schemas` feature.
-- **Exports, imports, and full-system backups**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
+- **Exports, complete graph imports, and full-system backups**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
 - **Administrative recovery**: inspect redacted runtime configuration and stage, confirm, or inspect destructive restores with explicit capability handling.
 - **Computed fields**: manage shared class definitions and personal definitions, preview expressions, request rebuilds, and read enriched objects.
 - **Natural-key routing**: address classes and objects by exact names, including numeric-looking names, across CRUD, permissions, relations, and graph operations.
