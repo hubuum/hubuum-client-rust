@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- Backup, export, template-export, and import runners consistently return the
+  structured `ApiError::TaskUnsuccessful` for failed or cancelled tasks without
+  embedding server-supplied task summaries in error text.
+
 ## [0.6.0] - 2026-07-21
 
 ### Breaking

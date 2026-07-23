@@ -18,7 +18,7 @@ use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::ApiResource;
 use crate::types::FilterOperator;
-use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples};
+use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples, TaskResponse};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";
@@ -26,6 +26,13 @@ pub(crate) const PAGE_LIMIT_HEADER: &str = "X-Page-Limit";
 
 pub const DEFAULT_MAX_RESPONSE_BODY_BYTES: usize = 16 * 1024 * 1024;
 pub const DEFAULT_MAX_ERROR_BODY_BYTES: usize = 64 * 1024;
+
+pub(crate) fn unsuccessful_task_error(task: &TaskResponse) -> ApiError {
+    ApiError::TaskUnsuccessful {
+        task_id: task.id,
+        status: task.status,
+    }
+}
 
 /// Retry configuration applied to requests that are safe to replay.
 #[derive(Debug, Clone, PartialEq, Eq)]

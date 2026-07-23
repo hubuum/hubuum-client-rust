@@ -3269,12 +3269,7 @@ impl BackupRunOp {
         if task.status.is_success() {
             Backups::new(self.client).output(task.id).await
         } else {
-            Err(ApiError::Api(format!(
-                "Task {} {}: {}",
-                task.id,
-                task.status,
-                task.summary.unwrap_or_else(|| "no summary".to_string())
-            )))
+            Err(shared::unsuccessful_task_error(&task))
         }
     }
 }
@@ -3533,12 +3528,7 @@ impl ExportRunOp {
         if task.status.is_success() {
             exports.output(task.id).await
         } else {
-            Err(ApiError::Api(format!(
-                "Task {} {}: {}",
-                task.id,
-                task.status,
-                task.summary.unwrap_or_else(|| "no summary".to_string())
-            )))
+            Err(shared::unsuccessful_task_error(&task))
         }
     }
 }
@@ -3658,12 +3648,7 @@ impl ExportTemplateRunOp {
         if task.status.is_success() {
             Exports::new(self.client).output(task.id).await
         } else {
-            Err(ApiError::Api(format!(
-                "Task {} {}: {}",
-                task.id,
-                task.status,
-                task.summary.unwrap_or_else(|| "no summary".to_string())
-            )))
+            Err(shared::unsuccessful_task_error(&task))
         }
     }
 }
@@ -3801,10 +3786,7 @@ impl ImportRunOp {
             .send()
             .await?;
         if !task.status.is_success() {
-            return Err(ApiError::TaskUnsuccessful {
-                task_id: task.id,
-                status: task.status,
-            });
+            return Err(shared::unsuccessful_task_error(&task));
         }
         let changes = imports.results(task.id).all().await?;
         Ok(ImportRunResult { task, changes })

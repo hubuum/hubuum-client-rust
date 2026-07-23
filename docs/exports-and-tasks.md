@@ -105,7 +105,11 @@ let imported = client
 println!("{} succeeded, {} failed", imported.succeeded(), imported.failed());
 ```
 
-Failed and cancelled tasks return `ApiError::TaskUnsuccessful` without fetching result rows. Use distinct idempotency keys for dry-run and mutating imports.
+The high-level backup, export, template-export, and import runners return
+`ApiError::TaskUnsuccessful` for failed and cancelled tasks without fetching
+output or result rows. The error contains the task ID and status; fetch the task
+when its server-supplied summary is needed. Use distinct idempotency keys for
+dry-run and mutating imports.
 
 The lower-level helpers remain available when polling must be controlled directly:
 

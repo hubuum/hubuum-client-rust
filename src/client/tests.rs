@@ -453,7 +453,15 @@ fn sync_export_run_failed_errors() {
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
         .unwrap_err();
-    assert!(matches!(err, ApiError::Api(m) if m.contains("boom")));
+    assert!(!err.to_string().contains("boom"));
+    assert!(!format!("{err:?}").contains("boom"));
+    assert!(matches!(
+        err,
+        ApiError::TaskUnsuccessful {
+            task_id,
+            status: crate::types::TaskStatus::Failed,
+        } if task_id == 11
+    ));
 }
 
 #[tokio::test]
@@ -544,7 +552,15 @@ async fn async_export_run_failed_errors() {
         .send()
         .await
         .unwrap_err();
-    assert!(matches!(err, ApiError::Api(m) if m.contains("stopped")));
+    assert!(!err.to_string().contains("stopped"));
+    assert!(!format!("{err:?}").contains("stopped"));
+    assert!(matches!(
+        err,
+        ApiError::TaskUnsuccessful {
+            task_id,
+            status: crate::types::TaskStatus::Cancelled,
+        } if task_id == 11
+    ));
 }
 
 #[test]
