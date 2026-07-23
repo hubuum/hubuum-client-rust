@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #![cfg_attr(
     not(any(feature = "async", feature = "blocking")),
     allow(dead_code, unused_imports)

@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 // #[derive(ApiResource)]
 // pub struct Class {
 //     #[api(read_only)]
