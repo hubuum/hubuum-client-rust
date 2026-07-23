@@ -27,6 +27,41 @@ pub(crate) const PAGE_LIMIT_HEADER: &str = "X-Page-Limit";
 pub const DEFAULT_MAX_RESPONSE_BODY_BYTES: usize = 16 * 1024 * 1024;
 pub const DEFAULT_MAX_ERROR_BODY_BYTES: usize = 64 * 1024;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct TaskWaitOptions {
+    poll_interval: std::time::Duration,
+    timeout: Option<std::time::Duration>,
+}
+
+impl TaskWaitOptions {
+    pub(crate) fn with_poll_interval(mut self, poll_interval: std::time::Duration) -> Self {
+        self.poll_interval = poll_interval;
+        self
+    }
+
+    pub(crate) fn with_timeout(mut self, timeout: Option<std::time::Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    pub(crate) fn poll_interval(self) -> std::time::Duration {
+        self.poll_interval
+    }
+
+    pub(crate) fn timeout(self) -> Option<std::time::Duration> {
+        self.timeout
+    }
+}
+
+impl Default for TaskWaitOptions {
+    fn default() -> Self {
+        Self {
+            poll_interval: std::time::Duration::from_secs(1),
+            timeout: Some(std::time::Duration::from_secs(300)),
+        }
+    }
+}
+
 /// Retry configuration applied to requests that are safe to replay.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RetryPolicy {
@@ -1361,6 +1396,26 @@ mod test {
     use reqwest::header::HeaderValue;
     use std::borrow::Cow;
     use std::str::FromStr;
+
+    #[test]
+    fn task_wait_options_have_shared_defaults_and_builder_updates() {
+        let defaults = TaskWaitOptions::default();
+        assert_eq!(defaults.poll_interval(), std::time::Duration::from_secs(1));
+        assert_eq!(
+            defaults.timeout(),
+            Some(std::time::Duration::from_secs(300))
+        );
+
+        let customized = defaults
+            .with_poll_interval(std::time::Duration::from_millis(25))
+            .with_timeout(None);
+        assert_eq!(
+            customized.poll_interval(),
+            std::time::Duration::from_millis(25)
+        );
+        assert_eq!(customized.timeout(), None);
+        assert_eq!(defaults.poll_interval(), std::time::Duration::from_secs(1));
+    }
 
     #[test]
     fn encode_path_segment_escapes_reserved_characters() {
