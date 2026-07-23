@@ -13,7 +13,7 @@ impl Default for HubuumDateTime {
 
 impl std::fmt::Display for HubuumDateTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.to_rfc3339())
+        self.0.format("%+").fmt(f)
     }
 }
 
@@ -22,7 +22,26 @@ impl Serialize for HubuumDateTime {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&self.0.to_rfc3339())
+        serializer.collect_str(self)
+    }
+}
+
+struct HubuumDateTimeVisitor;
+
+impl<'de> de::Visitor<'de> for HubuumDateTimeVisitor {
+    type Value = HubuumDateTime;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("an RFC3339 or naive UTC date-time string")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        parse_datetime(value)
+            .map(HubuumDateTime)
+            .map_err(|msg| E::custom(format!("invalid date-time `{value}`: {msg}")))
     }
 }
 
@@ -31,14 +50,11 @@ impl<'de> Deserialize<'de> for HubuumDateTime {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        parse_datetime(&s)
-            .map(Self)
-            .map_err(|msg| de::Error::custom(format!("invalid date-time `{s}`: {msg}")))
+        deserializer.deserialize_str(HubuumDateTimeVisitor)
     }
 }
 
-fn parse_datetime(value: &str) -> Result<DateTime<Utc>, String> {
+fn parse_datetime(value: &str) -> Result<DateTime<Utc>, &'static str> {
     if let Ok(rfc3339) = DateTime::parse_from_rfc3339(value) {
         return Ok(rfc3339.with_timezone(&Utc));
     }
@@ -50,7 +66,7 @@ fn parse_datetime(value: &str) -> Result<DateTime<Utc>, String> {
         }
     }
 
-    Err("expected RFC3339 or yyyy-mm-ddThh:mm:ss(.sss)".to_string())
+    Err("expected RFC3339 or yyyy-mm-ddThh:mm:ss(.sss)")
 }
 
 #[cfg(test)]
@@ -80,6 +96,17 @@ mod tests {
         let dt = HubuumDateTime(inner);
         let encoded = serde_json::to_string(&dt).expect("serialization should succeed");
         assert_eq!(encoded, r#""2024-01-01T00:00:00+00:00""#);
+    }
+
+    #[test]
+    fn serialization_preserves_fractional_precision() {
+        let dt: HubuumDateTime =
+            serde_json::from_str(r#""2024-01-01T00:00:00.123456789Z""#).unwrap();
+
+        assert_eq!(
+            serde_json::to_string(&dt).unwrap(),
+            r#""2024-01-01T00:00:00.123456789+00:00""#
+        );
     }
 
     #[test]

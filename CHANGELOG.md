@@ -33,6 +33,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   into-only ID wrappers work and the typed conversion defines the wire value.
 - `PrincipalSettings::deserialize` now decodes directly from the borrowed JSON
   document, avoiding a deep clone and permitting borrowed typed views.
+- Date-time display, serialization, and deserialization avoid intermediate
+  `String` allocations on their common successful paths while preserving the
+  existing RFC3339 wire and query representation.
 
 ### Fixed
 
