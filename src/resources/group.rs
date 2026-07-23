@@ -14,9 +14,21 @@ use crate::client::sync::{
 };
 use crate::{
     ApiError, PrincipalMember,
+    client::UrlParams,
     endpoints::Endpoint,
     types::{HubuumDateTime, PrincipalId},
 };
+
+fn group_member_url_params(group_id: GroupId, principal_id: impl Into<PrincipalId>) -> UrlParams {
+    let principal_id = principal_id.into();
+    vec![
+        (Cow::Borrowed("group_id"), group_id.to_string().into()),
+        (
+            Cow::Borrowed("principal_id"),
+            principal_id.to_string().into(),
+        ),
+    ]
+}
 
 #[allow(dead_code)]
 #[derive(ApiResource)]
@@ -54,20 +66,8 @@ impl Group {
 
 #[cfg(feature = "blocking")]
 impl SyncHandle<Group> {
-    pub fn add_member(
-        &self,
-        principal_id: impl Into<PrincipalId> + ToString,
-    ) -> Result<(), ApiError> {
-        let url_params = vec![
-            (
-                Cow::Borrowed("group_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (
-                Cow::Borrowed("principal_id"),
-                principal_id.to_string().into(),
-            ),
-        ];
+    pub fn add_member(&self, principal_id: impl Into<PrincipalId>) -> Result<(), ApiError> {
+        let url_params = group_member_url_params(self.id(), principal_id);
 
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, ()>(
@@ -80,20 +80,8 @@ impl SyncHandle<Group> {
         Ok(())
     }
 
-    pub fn remove_member(
-        &self,
-        principal_id: impl Into<PrincipalId> + ToString,
-    ) -> Result<(), ApiError> {
-        let url_params = vec![
-            (
-                Cow::Borrowed("group_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (
-                Cow::Borrowed("principal_id"),
-                principal_id.to_string().into(),
-            ),
-        ];
+    pub fn remove_member(&self, principal_id: impl Into<PrincipalId>) -> Result<(), ApiError> {
+        let url_params = group_member_url_params(self.id(), principal_id);
 
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, ()>(
@@ -138,20 +126,8 @@ impl SyncHandle<Group> {
 
 #[cfg(feature = "async")]
 impl AsyncHandle<Group> {
-    pub async fn add_member(
-        &self,
-        principal_id: impl Into<PrincipalId> + ToString,
-    ) -> Result<(), ApiError> {
-        let url_params = vec![
-            (
-                Cow::Borrowed("group_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (
-                Cow::Borrowed("principal_id"),
-                principal_id.to_string().into(),
-            ),
-        ];
+    pub async fn add_member(&self, principal_id: impl Into<PrincipalId>) -> Result<(), ApiError> {
+        let url_params = group_member_url_params(self.id(), principal_id);
 
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, ()>(
@@ -167,18 +143,9 @@ impl AsyncHandle<Group> {
 
     pub async fn remove_member(
         &self,
-        principal_id: impl Into<PrincipalId> + ToString,
+        principal_id: impl Into<PrincipalId>,
     ) -> Result<(), ApiError> {
-        let url_params = vec![
-            (
-                Cow::Borrowed("group_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (
-                Cow::Borrowed("principal_id"),
-                principal_id.to_string().into(),
-            ),
-        ];
+        let url_params = group_member_url_params(self.id(), principal_id);
 
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, ()>(

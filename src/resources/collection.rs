@@ -149,9 +149,10 @@ impl SyncHandle<Collection> {
 
     pub fn replace_permissions(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permissions: Vec<String>,
     ) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -173,9 +174,10 @@ impl SyncHandle<Collection> {
 
     pub fn grant_permissions(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permissions: Vec<String>,
     ) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -197,8 +199,9 @@ impl SyncHandle<Collection> {
 
     pub fn group_permissions(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
     ) -> Result<PermissionResult, ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -222,10 +225,8 @@ impl SyncHandle<Collection> {
             })
     }
 
-    pub fn revoke_permissions(
-        &self,
-        group_id: impl Into<GroupId> + ToString,
-    ) -> Result<(), ApiError> {
+    pub fn revoke_permissions(&self, group_id: impl Into<GroupId>) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -247,9 +248,10 @@ impl SyncHandle<Collection> {
 
     pub fn has_group_permission(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permission: Permissions,
     ) -> Result<bool, ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -280,9 +282,10 @@ impl SyncHandle<Collection> {
 
     pub fn grant_permission(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permission: Permissions,
     ) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -305,9 +308,10 @@ impl SyncHandle<Collection> {
 
     pub fn revoke_permission(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permission: Permissions,
     ) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -330,8 +334,9 @@ impl SyncHandle<Collection> {
 
     pub fn principal_permissions(
         &self,
-        principal_id: impl Into<PrincipalId> + ToString,
+        principal_id: impl Into<PrincipalId>,
     ) -> Result<Vec<GroupPermissionsResult>, ApiError> {
+        let principal_id = principal_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -358,8 +363,9 @@ impl SyncHandle<Collection> {
 
     pub fn effective_group_permissions(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -383,8 +389,9 @@ impl SyncHandle<Collection> {
 
     pub fn effective_principal_permissions(
         &self,
-        principal_id: impl Into<PrincipalId> + ToString,
+        principal_id: impl Into<PrincipalId>,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
+        let principal_id = principal_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -411,8 +418,9 @@ impl SyncHandle<Collection> {
 
     pub fn principal_permissions_request(
         &self,
-        principal_id: impl Into<PrincipalId> + ToString,
+        principal_id: impl Into<PrincipalId>,
     ) -> SyncCursorRequest<GroupPermissionsResult> {
+        let principal_id = principal_id.into();
         SyncCursorRequest::new(
             self.client().clone(),
             Endpoint::CollectionPrincipalPermissions,
@@ -556,9 +564,10 @@ impl AsyncHandle<Collection> {
 
     pub async fn replace_permissions(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permissions: Vec<String>,
     ) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -581,9 +590,10 @@ impl AsyncHandle<Collection> {
 
     pub async fn grant_permissions(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permissions: Vec<String>,
     ) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -606,8 +616,9 @@ impl AsyncHandle<Collection> {
 
     pub async fn group_permissions(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
     ) -> Result<PermissionResult, ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -632,10 +643,8 @@ impl AsyncHandle<Collection> {
             })
     }
 
-    pub async fn revoke_permissions(
-        &self,
-        group_id: impl Into<GroupId> + ToString,
-    ) -> Result<(), ApiError> {
+    pub async fn revoke_permissions(&self, group_id: impl Into<GroupId>) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -658,9 +667,10 @@ impl AsyncHandle<Collection> {
 
     pub async fn has_group_permission(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permission: Permissions,
     ) -> Result<bool, ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -693,9 +703,10 @@ impl AsyncHandle<Collection> {
 
     pub async fn grant_permission(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permission: Permissions,
     ) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -719,9 +730,10 @@ impl AsyncHandle<Collection> {
 
     pub async fn revoke_permission(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
         permission: Permissions,
     ) -> Result<(), ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -745,8 +757,9 @@ impl AsyncHandle<Collection> {
 
     pub async fn principal_permissions(
         &self,
-        principal_id: impl Into<PrincipalId> + ToString,
+        principal_id: impl Into<PrincipalId>,
     ) -> Result<Vec<GroupPermissionsResult>, ApiError> {
+        let principal_id = principal_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -774,8 +787,9 @@ impl AsyncHandle<Collection> {
 
     pub async fn effective_group_permissions(
         &self,
-        group_id: impl Into<GroupId> + ToString,
+        group_id: impl Into<GroupId>,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
+        let group_id = group_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -800,8 +814,9 @@ impl AsyncHandle<Collection> {
 
     pub async fn effective_principal_permissions(
         &self,
-        principal_id: impl Into<PrincipalId> + ToString,
+        principal_id: impl Into<PrincipalId>,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
+        let principal_id = principal_id.into();
         let url_params = vec![
             (
                 Cow::Borrowed("collection_id"),
@@ -829,8 +844,9 @@ impl AsyncHandle<Collection> {
 
     pub fn principal_permissions_request(
         &self,
-        principal_id: impl Into<PrincipalId> + ToString,
+        principal_id: impl Into<PrincipalId>,
     ) -> AsyncCursorRequest<GroupPermissionsResult> {
+        let principal_id = principal_id.into();
         AsyncCursorRequest::new(
             self.client().clone(),
             Endpoint::CollectionPrincipalPermissions,

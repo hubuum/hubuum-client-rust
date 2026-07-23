@@ -22,6 +22,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   time.
 - Endpoint URL construction now borrows the normalized base URL instead of
   allocating an intermediate copy for every request.
+- Collection-permission and group-membership methods now convert caller inputs
+  to `GroupId` or `PrincipalId` before serializing route parameters, so
+  into-only ID wrappers work and the typed conversion defines the wire value.
 
 ### Fixed
 
