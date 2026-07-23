@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::ApiError;
@@ -43,11 +43,11 @@ impl PrincipalSettings {
         Value::Object(self.0)
     }
 
-    pub fn deserialize<T>(&self) -> Result<T, ApiError>
+    pub fn deserialize<'de, T>(&'de self) -> Result<T, ApiError>
     where
-        T: DeserializeOwned,
+        T: Deserialize<'de>,
     {
-        Ok(serde_json::from_value(Value::Object(self.0.clone()))?)
+        Ok(T::deserialize(&self.0)?)
     }
 
     pub fn get(&self, key: &str) -> Option<&Value> {
@@ -119,6 +119,21 @@ mod tests {
             Preferences {
                 theme: "dark".into()
             }
+        );
+    }
+
+    #[test]
+    fn supports_borrowed_typed_decoding() {
+        #[derive(Debug, Deserialize, PartialEq)]
+        struct BorrowedPreferences<'a> {
+            theme: &'a str,
+        }
+
+        let settings = PrincipalSettings::from_value(json!({ "theme": "dark" })).unwrap();
+
+        assert_eq!(
+            settings.deserialize::<BorrowedPreferences<'_>>().unwrap(),
+            BorrowedPreferences { theme: "dark" }
         );
     }
 

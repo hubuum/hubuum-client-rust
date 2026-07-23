@@ -25,6 +25,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Collection-permission and group-membership methods now convert caller inputs
   to `GroupId` or `PrincipalId` before serializing route parameters, so
   into-only ID wrappers work and the typed conversion defines the wire value.
+- `PrincipalSettings::deserialize` now decodes directly from the borrowed JSON
+  document, avoiding a deep clone and permitting borrowed typed views.
 
 ### Fixed
 
