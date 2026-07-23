@@ -11,6 +11,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Dynamic endpoint parameters are encoded centrally as opaque URL path
   segments, preventing delimiters in low-level `UrlParams` or resource
   identifiers from altering the request target.
+- Successful JSON and text responses now reject invalid UTF-8 instead of
+  silently replacing malformed bytes before parsing or returning the body.
 
 ## [0.6.1] - 2026-07-23
 
