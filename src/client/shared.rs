@@ -18,7 +18,7 @@ use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::ApiResource;
 use crate::types::FilterOperator;
-use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples};
+use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples, TaskResponse};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";
@@ -105,6 +105,11 @@ pub(crate) fn redacted_url_for_log(value: &str) -> String {
     let Ok(mut url) = url::Url::parse(value) else {
         return "[INVALID URL]".to_string();
     };
+    redact_url_query(&mut url);
+    url.to_string()
+}
+
+fn redact_url_query(url: &mut url::Url) {
     let keys = url
         .query_pairs()
         .map(|(key, _)| key.into_owned())
@@ -116,7 +121,13 @@ pub(crate) fn redacted_url_for_log(value: &str) -> String {
             pairs.append_pair(&key, "[REDACTED]");
         }
     }
-    url.to_string()
+}
+
+pub(crate) fn redact_reqwest_error(mut error: reqwest::Error) -> reqwest::Error {
+    if let Some(url) = error.url_mut() {
+        redact_url_query(url);
+    }
+    error
 }
 
 pub(crate) fn build_relative_url(
@@ -260,23 +271,31 @@ pub(crate) fn build_unauthenticated_request_plan(
     Ok(plan)
 }
 
+pub(crate) fn build_unauthenticated_json_request_plan<T: Serialize>(
+    method: &Method,
+    request_url: &str,
+    body: &T,
+    headers: &[(&str, String)],
+) -> Result<super::transport::RequestPlan, ApiError> {
+    let mut plan = build_unauthenticated_request_plan(method, request_url, headers)?;
+    plan.headers.entry(reqwest::header::CONTENT_TYPE).or_insert(
+        reqwest::header::HeaderValue::from_static("application/json"),
+    );
+    Ok(plan.with_body(serde_json::to_vec(body)?))
+}
+
 pub(crate) fn process_transport_response(
     method: &Method,
     request_url: &str,
-    mut response: super::transport::TransportResponse,
+    response: super::transport::TransportResponse,
     options: &ClientOptions,
 ) -> Result<RawResponse, ApiError> {
-    if !response.status.is_success() {
-        response.body.truncate(options.max_error_body_bytes);
-        let body = String::from_utf8_lossy(&response.body).into_owned();
-        return Err(ApiError::HttpWithBody {
-            method: method.clone(),
-            url: request_url.to_string(),
-            status: response.status,
-            message: parse_http_error_message(&body),
-            body,
-        });
-    }
+    let response = check_transport_response_success(
+        method,
+        request_url,
+        response,
+        options.max_error_body_bytes,
+    )?;
     if response.body.len() > options.max_response_body_bytes {
         return Err(ApiError::ResponseTooLarge {
             limit: options.max_response_body_bytes,
@@ -292,6 +311,34 @@ pub(crate) fn process_transport_response(
         page_limit,
         content_type,
     })
+}
+
+pub(crate) fn check_transport_response_success(
+    method: &Method,
+    request_url: &str,
+    mut response: super::transport::TransportResponse,
+    max_error_body_bytes: usize,
+) -> Result<super::transport::TransportResponse, ApiError> {
+    if !response.status.is_success() {
+        response.body.truncate(max_error_body_bytes);
+        let body = String::from_utf8_lossy(&response.body).into_owned();
+        return Err(ApiError::HttpWithBody {
+            method: method.clone(),
+            url: request_url.to_string(),
+            status: response.status,
+            message: parse_http_error_message(&body),
+            body,
+        });
+    }
+    Ok(response)
+}
+
+pub(crate) fn transport_content_length(headers: &HeaderMap, body_len: usize) -> Option<u64> {
+    headers
+        .get(reqwest::header::CONTENT_LENGTH)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse().ok())
+        .or(Some(body_len as u64))
 }
 
 fn retry_after(headers: &HeaderMap) -> Option<std::time::Duration> {
@@ -495,7 +542,7 @@ impl<'a, T> IntoIterator for &'a Page<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) struct RawResponse {
     pub status: StatusCode,
     pub body: String,
@@ -503,6 +550,23 @@ pub(crate) struct RawResponse {
     pub total_count: Option<u64>,
     pub page_limit: Option<usize>,
     pub content_type: Option<ExportContentType>,
+}
+
+impl std::fmt::Debug for RawResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RawResponse")
+            .field("status", &self.status)
+            .field("body", &"[REDACTED]")
+            .field("body_len", &self.body.len())
+            .field(
+                "next_cursor",
+                &self.next_cursor.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("total_count", &self.total_count)
+            .field("page_limit", &self.page_limit)
+            .field("content_type", &self.content_type)
+            .finish()
+    }
 }
 
 pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: UrlParams) -> String {
@@ -731,6 +795,13 @@ pub(crate) fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
             "Type: {name}, Count: {} (expected 1)",
             v.len()
         )))
+    }
+}
+
+pub(crate) fn task_unsuccessful_error(task: &TaskResponse) -> ApiError {
+    ApiError::TaskUnsuccessful {
+        task_id: task.id,
+        status: task.status,
     }
 }
 
@@ -1373,6 +1444,23 @@ mod test {
         assert_eq!(page.next_cursor.as_deref(), Some("abc"));
         assert_eq!(page.total_count, Some(12));
         assert_eq!(page.page_limit, Some(25));
+    }
+
+    #[test]
+    fn raw_response_debug_redacts_body_and_cursor() {
+        let response = RawResponse {
+            status: StatusCode::OK,
+            body: "response-body-secret".into(),
+            next_cursor: Some("cursor-secret".into()),
+            total_count: Some(1),
+            page_limit: Some(25),
+            content_type: Some(ExportContentType::ApplicationJson),
+        };
+        let debug = format!("{response:?}");
+
+        assert!(!debug.contains("response-body-secret"), "{debug}");
+        assert!(!debug.contains("cursor-secret"), "{debug}");
+        assert!(debug.contains("body_len: 20"), "{debug}");
     }
 
     #[test]

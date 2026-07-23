@@ -114,7 +114,7 @@ pub struct ImportCollectionInput {
     pub parent_collection_key: Option<CollectionKey>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct ImportClassInput {
     #[serde(rename = "ref")]
     pub ref_: Option<String>,
@@ -126,7 +126,24 @@ pub struct ImportClassInput {
     pub collection_key: Option<CollectionKey>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+impl std::fmt::Debug for ImportClassInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImportClassInput")
+            .field("ref_", &self.ref_)
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .field(
+                "json_schema",
+                &self.json_schema.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("validate_schema", &self.validate_schema)
+            .field("collection_ref", &self.collection_ref)
+            .field("collection_key", &self.collection_key)
+            .finish()
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct ImportObjectInput {
     #[serde(rename = "ref")]
     pub ref_: Option<String>,
@@ -135,6 +152,19 @@ pub struct ImportObjectInput {
     pub data: serde_json::Value,
     pub class_ref: Option<String>,
     pub class_key: Option<ClassKey>,
+}
+
+impl std::fmt::Debug for ImportObjectInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImportObjectInput")
+            .field("ref_", &self.ref_)
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .field("data", &"[REDACTED]")
+            .field("class_ref", &self.class_ref)
+            .field("class_key", &self.class_key)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -168,7 +198,7 @@ pub struct ImportCollectionPermissionInput {
     pub replace_existing: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ImportGraph {
     #[serde(default)]
     pub collections: Vec<ImportCollectionInput>,
@@ -184,12 +214,39 @@ pub struct ImportGraph {
     pub collection_permissions: Vec<ImportCollectionPermissionInput>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+impl std::fmt::Debug for ImportGraph {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImportGraph")
+            .field("collection_count", &self.collections.len())
+            .field("class_count", &self.classes.len())
+            .field("object_count", &self.objects.len())
+            .field("class_relation_count", &self.class_relations.len())
+            .field("object_relation_count", &self.object_relations.len())
+            .field(
+                "collection_permission_count",
+                &self.collection_permissions.len(),
+            )
+            .finish()
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct ImportRequest {
     pub version: i32,
     pub dry_run: Option<bool>,
     pub mode: Option<ImportMode>,
     pub graph: ImportGraph,
+}
+
+impl std::fmt::Debug for ImportRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImportRequest")
+            .field("version", &self.version)
+            .field("dry_run", &self.dry_run)
+            .field("mode", &self.mode)
+            .field("graph", &self.graph)
+            .finish()
+    }
 }
 
 impl ImportRequest {
@@ -222,11 +279,20 @@ impl ImportRequest {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 #[non_exhaustive]
 pub struct ImportRunResult {
     pub task: TaskResponse,
     pub changes: Vec<ImportTaskResultResponse>,
+}
+
+impl std::fmt::Debug for ImportRunResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImportRunResult")
+            .field("task", &self.task)
+            .field("change_count", &self.changes.len())
+            .finish()
+    }
 }
 
 impl ImportRunResult {
@@ -280,5 +346,44 @@ mod tests {
                 "groupname": "operators"
             })
         );
+    }
+
+    #[test]
+    fn import_diagnostics_redact_schema_and_object_payloads() {
+        let class = ImportClassInput {
+            ref_: Some("class-ref".into()),
+            name: "server".into(),
+            description: "server schema".into(),
+            json_schema: Some(serde_json::json!({
+                "default": "schema-secret"
+            })),
+            validate_schema: Some(true),
+            collection_ref: Some("collection-ref".into()),
+            collection_key: None,
+        };
+        let object = ImportObjectInput {
+            ref_: Some("object-ref".into()),
+            name: "server-1".into(),
+            description: "server".into(),
+            data: serde_json::json!({"token": "object-secret"}),
+            class_ref: Some("class-ref".into()),
+            class_key: None,
+        };
+        let request = ImportRequest::new(ImportGraph {
+            classes: vec![class.clone()],
+            objects: vec![object.clone()],
+            ..Default::default()
+        });
+
+        let diagnostic = format!("{class:?} {object:?} {request:?}");
+        assert!(!diagnostic.contains("schema-secret"), "{diagnostic}");
+        assert!(!diagnostic.contains("object-secret"), "{diagnostic}");
+        assert!(diagnostic.contains("class_count: 1"), "{diagnostic}");
+        assert!(diagnostic.contains("object_count: 1"), "{diagnostic}");
+        assert_eq!(
+            class.json_schema.as_ref().unwrap()["default"],
+            "schema-secret"
+        );
+        assert_eq!(object.data["token"], "object-secret");
     }
 }

@@ -6,6 +6,38 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-23
+
+### Security
+
+- Configured custom transports now handle every client operation, including
+  authentication, public discovery and probes, export downloads, and unified
+  search streams, so credentials and network traffic cannot bypass the
+  caller's transport boundary through the built-in HTTP client.
+- Built-in async and blocking HTTP clients no longer follow redirects, keeping
+  authenticated requests at the endpoint validated and constructed by the
+  client.
+- Transport failures now redact request query values from `ApiError` display
+  and debug output, and detailed HTTP response errors omit server-provided
+  messages from default diagnostics. JSON, model-decoding, and exhausted-retry
+  details also require explicit inspection instead of appearing in default
+  error output or source chains. Unsuccessful high-level backup and export
+  runners avoid copying server-provided task summaries into their errors, and
+  event-delivery diagnostics redact internal claim tokens and sink error
+  details. Event sink configuration, subscription routing, and remote-call
+  failure diagnostics are redacted as well. Password request bodies, raw
+  transport responses and cursors, and rendered or JSON export payloads are
+  also omitted from default diagnostics. Import schemas and object data, task
+  summaries and links, task events, and import-result details are likewise
+  excluded. Explicit response, error, task, import, export, and delivery APIs
+  continue to expose the original details when callers intentionally inspect
+  them.
+
+### Changed
+
+- This release explicitly targets Hubuum server v0.0.3 and retains its pinned
+  OpenAPI contract and immutable tested server image.
+
 ## [0.6.0] - 2026-07-21
 
 ### Breaking

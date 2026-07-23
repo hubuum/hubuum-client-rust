@@ -4,7 +4,7 @@ resolver = "3"
 
 [package]
 name = "hubuum_client"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
@@ -38,7 +38,7 @@ integration-tests = []
 typed-schemas = ["dep:schemars"]
 
 [dependencies]
-hubuum_client_derive = { version = "0.6.0", path = "./hubuum_client_derive" }
+hubuum_client_derive = { version = "0.6.1", path = "./hubuum_client_derive" }
 reqwest = { version = "0.13", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

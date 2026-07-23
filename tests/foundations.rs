@@ -3,10 +3,12 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use futures_util::TryStreamExt;
+use httpmock::MockServer;
 use hubuum_client::{
-    ApiError, BaseUrl, ClassPatch, ExportContentType, ExportTemplateKind, MockTransport,
-    ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectPatch, RetryPolicy, TaskStatus, Token,
-    TransportResponse, TypedObject, blocking,
+    ApiError, BaseUrl, ClassPatch, Credentials, ExportContentType, ExportTemplateKind,
+    MockTransport, ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectPatch, RetryPolicy,
+    TaskStatus, Token, TransportResponse, TypedObject, UnifiedSearchEvent, blocking,
 };
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -27,6 +29,240 @@ fn blocking_mock_client(
         .build()
         .unwrap()
         .authenticate(Token::new("consumer-secret"))
+}
+
+fn streaming_transport_response(
+    content_type: &'static str,
+    body: &'static str,
+) -> TransportResponse {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::CONTENT_TYPE,
+        reqwest::header::HeaderValue::from_static(content_type),
+    );
+    TransportResponse {
+        status: StatusCode::OK,
+        headers,
+        body: body.as_bytes().to_vec(),
+    }
+}
+
+fn assert_stream_requests(transport: &MockTransport) {
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[0].method, Method::GET);
+    assert_eq!(requests[0].url.path(), "/api/v1/exports/7/output");
+    assert_eq!(requests[1].method, Method::GET);
+    assert_eq!(requests[1].url.path(), "/api/v1/search/stream");
+    assert_eq!(requests[1].url.query(), Some("q=server"));
+    for request in requests {
+        assert_eq!(
+            request.headers.get(reqwest::header::AUTHORIZATION).unwrap(),
+            "Bearer consumer-secret"
+        );
+    }
+}
+
+#[test]
+fn blocking_streaming_calls_use_custom_transport() {
+    use std::io::Read as _;
+
+    let transport = MockTransport::default();
+    transport.push_response(streaming_transport_response(
+        "text/csv",
+        "hostname\nnode-1\n",
+    ));
+    transport.push_response(streaming_transport_response(
+        "text/event-stream",
+        concat!(
+            "event: started\n",
+            "data: {\"query\":\"server\"}\n\n",
+            "event: done\n",
+            "data: {\"query\":\"server\"}\n\n",
+        ),
+    ));
+    let client = blocking_mock_client(transport.clone(), 1);
+
+    let mut output = client.exports().output_stream(7).unwrap();
+    assert_eq!(output.content_type, ExportContentType::TextCsv);
+    assert_eq!(output.content_length, Some(16));
+    let mut body = String::new();
+    output.read_to_string(&mut body).unwrap();
+    assert_eq!(body, "hostname\nnode-1\n");
+
+    let events = client
+        .search("server")
+        .stream()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
+    assert!(matches!(events[1], UnifiedSearchEvent::Done(_)));
+    assert_stream_requests(&transport);
+}
+
+#[tokio::test]
+async fn async_streaming_calls_use_custom_transport() {
+    let transport = MockTransport::default();
+    transport.push_response(streaming_transport_response(
+        "text/csv",
+        "hostname\nnode-1\n",
+    ));
+    transport.push_response(streaming_transport_response(
+        "text/event-stream",
+        concat!(
+            "event: started\n",
+            "data: {\"query\":\"server\"}\n\n",
+            "event: done\n",
+            "data: {\"query\":\"server\"}\n\n",
+        ),
+    ));
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .max_response_body_bytes(1)
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    let output = client.exports().output_stream(7).await.unwrap();
+    assert_eq!(output.content_type, ExportContentType::TextCsv);
+    assert_eq!(output.content_length, Some(16));
+    let chunks = output.try_collect::<Vec<_>>().await.unwrap();
+    assert_eq!(chunks.concat(), b"hostname\nnode-1\n");
+
+    let events = client
+        .search("server")
+        .stream()
+        .await
+        .unwrap()
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert!(matches!(events[0], UnifiedSearchEvent::Started(_)));
+    assert!(matches!(events[1], UnifiedSearchEvent::Done(_)));
+    assert_stream_requests(&transport);
+}
+
+fn enqueue_public_client_responses(transport: &MockTransport) {
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &json!({ "providers": ["local"] })).unwrap(),
+    );
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &json!({ "token": "minted-secret" })).unwrap(),
+    );
+    transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+    for status in ["healthy", "ready"] {
+        transport.push_response(
+            TransportResponse::json(StatusCode::OK, &json!({ "status": status })).unwrap(),
+        );
+    }
+}
+
+fn assert_public_client_requests(transport: &MockTransport) {
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 5);
+    assert_eq!(requests[0].method, Method::GET);
+    assert_eq!(requests[0].url.path(), "/api/v0/auth/providers");
+    assert!(
+        !requests[0]
+            .headers
+            .contains_key(reqwest::header::AUTHORIZATION)
+    );
+
+    assert_eq!(requests[1].method, Method::POST);
+    assert_eq!(requests[1].url.path(), "/api/v0/auth/login");
+    assert_eq!(
+        requests[1].headers.get(reqwest::header::CONTENT_TYPE),
+        Some(&reqwest::header::HeaderValue::from_static(
+            "application/json"
+        ))
+    );
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(requests[1].body()).unwrap(),
+        json!({ "name": "alice", "password": "login-secret" })
+    );
+    assert!(
+        !requests[1]
+            .headers
+            .contains_key(reqwest::header::AUTHORIZATION)
+    );
+
+    assert_eq!(requests[2].method, Method::GET);
+    assert_eq!(requests[2].url.path(), "/api/v0/auth/validate");
+    assert_eq!(
+        requests[2]
+            .headers
+            .get(reqwest::header::AUTHORIZATION)
+            .unwrap(),
+        "Bearer attached-secret"
+    );
+    assert_eq!(requests[3].url.path(), "/healthz");
+    assert_eq!(requests[4].url.path(), "/readyz");
+    assert!(
+        requests[3..]
+            .iter()
+            .all(|request| !request.headers.contains_key(reqwest::header::AUTHORIZATION))
+    );
+}
+
+#[test]
+fn blocking_public_and_auth_calls_use_custom_transport() {
+    let transport = MockTransport::default();
+    enqueue_public_client_responses(&transport);
+    let client = blocking::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap();
+
+    assert!(client.auth_providers().unwrap().contains("local"));
+    assert_eq!(
+        client
+            .login(Credentials::new("alice", "login-secret"))
+            .unwrap()
+            .token(),
+        "minted-secret"
+    );
+    assert_eq!(
+        client
+            .login_with_token(Token::new("attached-secret"))
+            .unwrap()
+            .token(),
+        "attached-secret"
+    );
+    assert_eq!(client.healthz().unwrap().status, "healthy");
+    assert_eq!(client.readyz().unwrap().status, "ready");
+    assert_public_client_requests(&transport);
+}
+
+#[tokio::test]
+async fn async_public_and_auth_calls_use_custom_transport() {
+    let transport = MockTransport::default();
+    enqueue_public_client_responses(&transport);
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap();
+
+    assert!(client.auth_providers().await.unwrap().contains("local"));
+    assert_eq!(
+        client
+            .login(Credentials::new("alice", "login-secret"))
+            .await
+            .unwrap()
+            .token(),
+        "minted-secret"
+    );
+    assert_eq!(
+        client
+            .login_with_token(Token::new("attached-secret"))
+            .await
+            .unwrap()
+            .token(),
+        "attached-secret"
+    );
+    assert_eq!(client.healthz().await.unwrap().status, "healthy");
+    assert_eq!(client.readyz().await.unwrap().status, "ready");
+    assert_public_client_requests(&transport);
 }
 
 fn exact_name_class_json(name: &str) -> serde_json::Value {
@@ -489,15 +725,112 @@ fn response_and_error_debug_output_redacts_sensitive_values() {
         method: Method::GET,
         url: "https://example.invalid/search?q=query-secret&cursor=cursor-secret".into(),
         status: StatusCode::BAD_REQUEST,
-        message: "invalid query".into(),
+        message: "server-message-secret".into(),
         body: "body-secret".into(),
     };
     let error_debug = format!("{error:?}");
+    let error_display = error.to_string();
     assert!(error_debug.contains("%5BREDACTED%5D"));
     assert!(!error_debug.contains("query-secret"));
     assert!(!error_debug.contains("cursor-secret"));
+    assert!(!error_debug.contains("server-message-secret"));
     assert!(!error_debug.contains("body-secret"));
-    assert!(!error.to_string().contains("query-secret"));
+    assert!(!error_display.contains("query-secret"));
+    assert!(!error_display.contains("server-message-secret"));
+    assert_eq!(error.api_message(), Some("server-message-secret"));
+    assert_eq!(error.response_body(), Some("body-secret"));
+}
+
+fn assert_secret_is_omitted_from_default_diagnostics(error: &ApiError, secret: &str) {
+    let display = error.to_string();
+    let debug = format!("{error:?}");
+    assert!(
+        !display.contains(secret),
+        "Display leaked {secret}: {display}"
+    );
+    assert!(!debug.contains(secret), "Debug leaked {secret}: {debug}");
+}
+
+fn assert_query_secret_is_redacted(error: &ApiError, secret: &str) {
+    assert_secret_is_omitted_from_default_diagnostics(error, secret);
+    let display = error.to_string();
+    let debug = format!("{error:?}");
+    assert!(display.contains("%5BREDACTED%5D"), "{display}");
+    assert!(debug.contains("%5BREDACTED%5D"), "{debug}");
+}
+
+#[test]
+fn blocking_reqwest_and_retry_errors_redact_query_values() {
+    let server = MockServer::start();
+    let _slow = server.mock(|when, then| {
+        when.method(httpmock::Method::GET).path("/slow");
+        then.status(200).delay(Duration::from_millis(250));
+    });
+
+    let direct_secret = "direct-query-secret";
+    let direct_error = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_millis(10))
+        .build()
+        .unwrap()
+        .get(format!("{}/slow?token={direct_secret}", server.base_url()))
+        .send()
+        .unwrap_err();
+    assert_query_secret_is_redacted(&ApiError::from(direct_error), direct_secret);
+
+    let retry_secret = "blocking-retry-secret";
+    let client = blocking::Client::builder(BaseUrl::new(server.base_url()).unwrap())
+        .timeout(Duration::from_millis(10))
+        .retry_policy(RetryPolicy::disabled())
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+    let error = client
+        .raw(Method::GET, "slow")
+        .query_param("token", retry_secret)
+        .send_text()
+        .unwrap_err();
+    assert!(matches!(
+        error,
+        ApiError::RetryExhausted { attempts: 1, .. }
+    ));
+    assert_secret_is_omitted_from_default_diagnostics(&error, retry_secret);
+    let detail = error.last_retry_error().unwrap();
+    assert!(
+        !detail.contains(retry_secret),
+        "detail leaked {retry_secret}"
+    );
+    assert!(detail.contains("%5BREDACTED%5D"), "{detail}");
+}
+
+#[tokio::test]
+async fn async_retry_errors_redact_query_values() {
+    let server = MockServer::start();
+    let _slow = server.mock(|when, then| {
+        when.method(httpmock::Method::GET).path("/slow");
+        then.status(200).delay(Duration::from_millis(250));
+    });
+
+    let secret = "async-retry-secret";
+    let client = hubuum_client::Client::builder(BaseUrl::new(server.base_url()).unwrap())
+        .timeout(Duration::from_millis(10))
+        .retry_policy(RetryPolicy::disabled())
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+    let error = client
+        .raw(Method::GET, "slow")
+        .query_param("token", secret)
+        .send_text()
+        .await
+        .unwrap_err();
+    assert!(matches!(
+        error,
+        ApiError::RetryExhausted { attempts: 1, .. }
+    ));
+    assert_secret_is_omitted_from_default_diagnostics(&error, secret);
+    let detail = error.last_retry_error().unwrap();
+    assert!(!detail.contains(secret), "detail leaked {secret}");
+    assert!(detail.contains("%5BREDACTED%5D"), "{detail}");
 }
 
 #[test]

@@ -18,11 +18,11 @@ pub use self::r#async::{
     ClassNameObjects, ClassNameScope, Client, CollectionScope, ExportOutputStream, ItemStream,
     ObjectNameScope, PageStream, PrincipalSettingsScope, TypedClass,
 };
-pub(crate) use self::shared::redacted_url_for_log;
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryNumericField, QueryTextField, QueryValueField,
     RetryPolicy,
 };
+pub(crate) use self::shared::{redact_reqwest_error, redacted_url_for_log};
 #[cfg(feature = "async")]
 pub use self::transport::AsyncTransport;
 #[cfg(feature = "blocking")]

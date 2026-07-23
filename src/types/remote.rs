@@ -416,7 +416,7 @@ impl std::fmt::Debug for RemoteCallResult {
             )
             .field("duration_ms", &self.duration_ms)
             .field("success", &self.success)
-            .field("error", &self.error)
+            .field("error", &redacted_if_present(&self.error))
             .field("created_at", &self.created_at)
             .finish()
     }
@@ -487,5 +487,35 @@ mod tests {
         ] {
             assert!(!debug.contains(secret));
         }
+    }
+
+    #[test]
+    fn remote_result_debug_redacts_response_and_error_details() {
+        let result: RemoteCallResult = serde_json::from_value(json!({
+            "id": 11,
+            "task_id": 12,
+            "target_id": 13,
+            "subject_type": "object",
+            "subject_id": 14,
+            "method": "GET",
+            "rendered_url": "https://example.invalid/resource/14?token=url-secret",
+            "response_status": 502,
+            "response_headers": {"authorization": "header-secret"},
+            "response_body_preview": "body-secret",
+            "duration_ms": 5,
+            "success": false,
+            "error": "upstream rejected bearer error-secret",
+            "created_at": "2026-07-11T10:00:00Z"
+        }))
+        .unwrap();
+
+        let debug = format!("{result:?}");
+        for secret in ["url-secret", "header-secret", "body-secret", "error-secret"] {
+            assert!(!debug.contains(secret));
+        }
+        assert_eq!(
+            result.error.as_deref(),
+            Some("upstream rejected bearer error-secret")
+        );
     }
 }

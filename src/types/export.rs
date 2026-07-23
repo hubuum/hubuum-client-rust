@@ -147,11 +147,23 @@ pub struct ExportWarning {
     pub path: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct ExportJsonResponse {
     pub items: Vec<serde_json::Value>,
     pub meta: ExportMeta,
     pub warnings: Vec<ExportWarning>,
+}
+
+impl std::fmt::Debug for ExportJsonResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExportJsonResponse")
+            .field("items", &"[REDACTED]")
+            .field("item_count", &self.items.len())
+            .field("meta", &self.meta)
+            .field("warnings", &"[REDACTED]")
+            .field("warning_count", &self.warnings.len())
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -172,13 +184,27 @@ pub struct ExportTemplateRunRequest {
     pub limits: Option<ExportLimits>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum ExportResult {
     Json(ExportJsonResponse),
     Rendered {
         content_type: ExportContentType,
         body: String,
     },
+}
+
+impl std::fmt::Debug for ExportResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Json(response) => f.debug_tuple("Json").field(response).finish(),
+            Self::Rendered { content_type, body } => f
+                .debug_struct("Rendered")
+                .field("content_type", content_type)
+                .field("body", &"[REDACTED]")
+                .field("body_len", &body.len())
+                .finish(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -233,5 +259,47 @@ mod tests {
         }))
         .unwrap();
         assert_eq!(w.path.as_deref(), Some("item.data.owner"));
+    }
+
+    #[test]
+    fn export_output_debug_redacts_payloads() {
+        let response = ExportJsonResponse {
+            items: vec![serde_json::json!({"secret": "json-export-secret"})],
+            meta: ExportMeta {
+                content_type: ExportContentType::ApplicationJson,
+                count: 1,
+                scope: ExportScope {
+                    class_id: None,
+                    kind: ExportScopeKind::Collections,
+                    object_id: None,
+                },
+                truncated: false,
+            },
+            warnings: vec![ExportWarning {
+                code: "warning".into(),
+                message: "warning-export-secret".into(),
+                path: None,
+            }],
+        };
+        let json_debug = format!("{response:?}");
+        let rendered_debug = format!(
+            "{:?}",
+            ExportResult::Rendered {
+                content_type: ExportContentType::TextPlain,
+                body: "rendered-export-secret".into(),
+            }
+        );
+
+        assert!(!json_debug.contains("json-export-secret"), "{json_debug}");
+        assert!(
+            !json_debug.contains("warning-export-secret"),
+            "{json_debug}"
+        );
+        assert!(json_debug.contains("item_count: 1"), "{json_debug}");
+        assert!(
+            !rendered_debug.contains("rendered-export-secret"),
+            "{rendered_debug}"
+        );
+        assert!(rendered_debug.contains("body_len: 22"), "{rendered_debug}");
     }
 }

@@ -238,7 +238,7 @@ impl AsyncHandle<User> {
     }
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(serde::Serialize)]
 struct SetPasswordBody {
     password: String,
 }

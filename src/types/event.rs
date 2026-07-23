@@ -47,7 +47,7 @@ pub enum EventSinkKind {
     Unknown,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 #[non_exhaustive]
 pub struct EventSink {
     pub id: EventSinkId,
@@ -61,7 +61,7 @@ pub struct EventSink {
     pub updated_at: HubuumDateTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct NewEventSink {
     pub name: String,
     pub kind: EventSinkKind,
@@ -73,7 +73,7 @@ pub struct NewEventSink {
     pub secret_ref: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UpdateEventSink {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -115,7 +115,7 @@ pub struct EventSubscriptionFilter {
     pub request_ids: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct EventSubscription {
     pub id: EventSubscriptionId,
@@ -133,7 +133,7 @@ pub struct EventSubscription {
     pub updated_at: HubuumDateTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct NewEventSubscription {
     pub sink_id: EventSinkId,
     pub name: String,
@@ -149,7 +149,7 @@ pub struct NewEventSubscription {
     pub filter: Option<EventSubscriptionFilter>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UpdateEventSubscription {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sink_id: Option<EventSinkId>,
@@ -169,6 +169,98 @@ pub struct UpdateEventSubscription {
     pub filter: Option<EventSubscriptionFilter>,
 }
 
+fn redacted_if_present<T>(value: &Option<T>) -> Option<&'static str> {
+    value.as_ref().map(|_| "[REDACTED]")
+}
+
+impl std::fmt::Debug for EventSink {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EventSink")
+            .field("id", &self.id)
+            .field("name", &self.name)
+            .field("kind", &self.kind)
+            .field("config", &"[REDACTED]")
+            .field("enabled", &self.enabled)
+            .field("secret_ref", &redacted_if_present(&self.secret_ref))
+            .field("created_at", &self.created_at)
+            .field("updated_at", &self.updated_at)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for NewEventSink {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NewEventSink")
+            .field("name", &self.name)
+            .field("kind", &self.kind)
+            .field("config", &redacted_if_present(&self.config))
+            .field("enabled", &self.enabled)
+            .field("secret_ref", &redacted_if_present(&self.secret_ref))
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for UpdateEventSink {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UpdateEventSink")
+            .field("name", &self.name)
+            .field("kind", &self.kind)
+            .field("config", &redacted_if_present(&self.config))
+            .field("enabled", &self.enabled)
+            .field("secret_ref", &redacted_if_present(&self.secret_ref))
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for EventSubscription {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EventSubscription")
+            .field("id", &self.id)
+            .field("collection_id", &self.collection_id)
+            .field("sink_id", &self.sink_id)
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .field("entity_types", &self.entity_types)
+            .field("actions", &self.actions)
+            .field("routing", &"[REDACTED]")
+            .field("enabled", &self.enabled)
+            .field("filter", &self.filter)
+            .field("created_at", &self.created_at)
+            .field("updated_at", &self.updated_at)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for NewEventSubscription {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NewEventSubscription")
+            .field("sink_id", &self.sink_id)
+            .field("name", &self.name)
+            .field("entity_types", &self.entity_types)
+            .field("actions", &self.actions)
+            .field("description", &self.description)
+            .field("routing", &redacted_if_present(&self.routing))
+            .field("enabled", &self.enabled)
+            .field("filter", &self.filter)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for UpdateEventSubscription {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UpdateEventSubscription")
+            .field("sink_id", &self.sink_id)
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .field("entity_types", &self.entity_types)
+            .field("actions", &self.actions)
+            .field("routing", &redacted_if_present(&self.routing))
+            .field("enabled", &self.enabled)
+            .field("filter", &self.filter)
+            .finish()
+    }
+}
+
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -182,7 +274,7 @@ pub enum EventDeliveryStatus {
     Unknown,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct EventDelivery {
     pub id: EventDeliveryId,
@@ -199,6 +291,30 @@ pub struct EventDelivery {
     pub locked_until: Option<HubuumDateTime>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+}
+
+impl std::fmt::Debug for EventDelivery {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EventDelivery")
+            .field("id", &self.id)
+            .field("event_id", &self.event_id)
+            .field("subscription_id", &self.subscription_id)
+            .field("status", &self.status)
+            .field("attempts", &self.attempts)
+            .field("next_attempt_at", &self.next_attempt_at)
+            .field(
+                "claim_token",
+                &self.claim_token.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field(
+                "last_error",
+                &self.last_error.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("locked_until", &self.locked_until)
+            .field("created_at", &self.created_at)
+            .field("updated_at", &self.updated_at)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -287,4 +403,127 @@ pub struct EventDeliveryHealthResponse {
     pub delivery: EventDeliveryQueueHealth,
     pub sinks: Vec<EventSinkDeliveryHealth>,
     pub subscriptions: Vec<EventSubscriptionDeliveryHealth>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        EventDelivery, EventSink, EventSinkKind, EventSubscription, NewEventSink,
+        NewEventSubscription, UpdateEventSink, UpdateEventSubscription,
+    };
+    use crate::EventSinkId;
+    use serde_json::json;
+
+    #[test]
+    fn delivery_debug_redacts_claim_and_error_details() {
+        let delivery: EventDelivery = serde_json::from_value(json!({
+            "id": 41,
+            "event_id": 42,
+            "subscription_id": 43,
+            "status": "failed",
+            "attempts": 2,
+            "next_attempt_at": "2026-07-23T08:00:00Z",
+            "claim_token": "delivery-claim-secret",
+            "last_error": "sink rejected bearer sink-secret",
+            "locked_until": "2026-07-23T08:01:00Z",
+            "created_at": "2026-07-23T07:59:00Z",
+            "updated_at": "2026-07-23T08:00:00Z"
+        }))
+        .expect("delivery fixture should deserialize");
+
+        let diagnostic = format!("{delivery:?}");
+        assert!(diagnostic.contains("claim_token: Some(\"[REDACTED]\")"));
+        assert!(diagnostic.contains("last_error: Some(\"[REDACTED]\")"));
+        assert!(!diagnostic.contains("delivery-claim-secret"));
+        assert!(!diagnostic.contains("sink-secret"));
+        assert_eq!(
+            delivery.claim_token.as_deref(),
+            Some("delivery-claim-secret")
+        );
+        assert_eq!(
+            delivery.last_error.as_deref(),
+            Some("sink rejected bearer sink-secret")
+        );
+    }
+
+    #[test]
+    fn event_configuration_debug_redacts_sink_and_routing_details() {
+        let sink: EventSink = serde_json::from_value(json!({
+            "id": 1,
+            "name": "sink",
+            "kind": "webhook",
+            "config": {"url": "https://example.invalid?token=response-secret"},
+            "enabled": true,
+            "secret_ref": "response-secret-ref",
+            "created_at": "2026-07-23T08:00:00Z",
+            "updated_at": "2026-07-23T08:00:00Z"
+        }))
+        .unwrap();
+        let create_sink = NewEventSink {
+            name: "sink".into(),
+            kind: EventSinkKind::Webhook,
+            config: Some(json!({"authorization": "create-secret"})),
+            enabled: Some(true),
+            secret_ref: Some("create-secret-ref".into()),
+        };
+        let update_sink = UpdateEventSink {
+            config: Some(json!({"password": "update-secret"})),
+            secret_ref: Some("update-secret-ref".into()),
+            ..Default::default()
+        };
+        let subscription: EventSubscription = serde_json::from_value(json!({
+            "id": 2,
+            "collection_id": 3,
+            "sink_id": 1,
+            "name": "subscription",
+            "description": "",
+            "entity_types": ["object"],
+            "actions": ["updated"],
+            "routing": {"url": "https://example.invalid?token=routing-secret"},
+            "enabled": true,
+            "filter": null,
+            "created_at": "2026-07-23T08:00:00Z",
+            "updated_at": "2026-07-23T08:00:00Z"
+        }))
+        .unwrap();
+        let create_subscription = NewEventSubscription {
+            sink_id: EventSinkId::new(1),
+            name: "subscription".into(),
+            entity_types: vec!["object".into()],
+            actions: vec!["updated".into()],
+            routing: Some(json!({"token": "create-routing-secret"})),
+            ..Default::default()
+        };
+        let update_subscription = UpdateEventSubscription {
+            routing: Some(json!({"token": "update-routing-secret"})),
+            ..Default::default()
+        };
+
+        let debug = format!(
+            "{sink:?} {create_sink:?} {update_sink:?} {subscription:?} \
+             {create_subscription:?} {update_subscription:?}"
+        );
+        for secret in [
+            "response-secret",
+            "response-secret-ref",
+            "create-secret",
+            "create-secret-ref",
+            "update-secret",
+            "update-secret-ref",
+            "routing-secret",
+            "create-routing-secret",
+            "update-routing-secret",
+        ] {
+            assert!(!debug.contains(secret));
+        }
+
+        assert_eq!(
+            create_sink.config.as_ref().unwrap()["authorization"],
+            "create-secret"
+        );
+        assert_eq!(
+            create_subscription.routing.as_ref().unwrap()["token"],
+            "create-routing-secret"
+        );
+    }
 }

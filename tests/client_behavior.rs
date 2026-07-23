@@ -15,7 +15,7 @@ use hubuum_client::types::{
 use hubuum_client::{
     ApiError, BaseUrl, ClassGet, ClassPatch, Client, ComputedFieldSelector, Credentials,
     ExportResult, ObjectAggregateDimension, ObjectAggregateSort, ObjectDataPatchDocument,
-    ObjectDataPatchOperation, ObjectPatch, blocking,
+    ObjectDataPatchOperation, ObjectPatch, Token, blocking,
 };
 use serde_json::json;
 
@@ -761,6 +761,76 @@ async fn async_client(server: &MockServer) -> Client<hubuum_client::Authenticate
         .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
         .await
         .expect("async login should succeed")
+}
+
+fn prefixed_base_url(server: &MockServer) -> BaseUrl {
+    BaseUrl::from_str(&format!("{}/tenant/hubuum/", server.base_url()))
+        .expect("mock base URL should be valid")
+}
+
+#[test]
+fn sync_default_client_does_not_follow_authenticated_redirects() {
+    let server = MockServer::start();
+    let redirect = server.mock(|when, then| {
+        when.method(GET)
+            .path("/tenant/hubuum/api/v1/classes")
+            .header("authorization", format!("Bearer {TOKEN}"));
+        then.status(302).header("location", "/outside");
+    });
+    let outside = server.mock(|when, then| {
+        when.method(GET)
+            .path("/outside")
+            .header("authorization", format!("Bearer {TOKEN}"));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([]));
+    });
+    let client = blocking::Client::builder(prefixed_base_url(&server))
+        .build()
+        .expect("sync client should build")
+        .authenticate(Token::new(TOKEN));
+
+    let error = client
+        .classes()
+        .list()
+        .expect_err("redirect response should be surfaced");
+
+    assert_eq!(error.status(), Some(reqwest::StatusCode::FOUND));
+    redirect.assert_calls(1);
+    outside.assert_calls(0);
+}
+
+#[tokio::test]
+async fn async_default_client_does_not_follow_authenticated_redirects() {
+    let server = MockServer::start();
+    let redirect = server.mock(|when, then| {
+        when.method(GET)
+            .path("/tenant/hubuum/api/v1/classes")
+            .header("authorization", format!("Bearer {TOKEN}"));
+        then.status(302).header("location", "/outside");
+    });
+    let outside = server.mock(|when, then| {
+        when.method(GET)
+            .path("/outside")
+            .header("authorization", format!("Bearer {TOKEN}"));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([]));
+    });
+    let client = Client::builder(prefixed_base_url(&server))
+        .build()
+        .expect("async client should build")
+        .authenticate(Token::new(TOKEN));
+
+    let error = client
+        .classes()
+        .list()
+        .await
+        .expect_err("redirect response should be surfaced");
+
+    assert_eq!(error.status(), Some(reqwest::StatusCode::FOUND));
+    redirect.assert_calls(1);
+    outside.assert_calls(0);
 }
 
 #[test]

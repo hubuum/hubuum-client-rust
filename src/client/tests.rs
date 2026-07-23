@@ -440,7 +440,7 @@ fn sync_export_run_failed_errors() {
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
-                "id": 11, "kind":"export", "status":"failed", "summary":"boom",
+                "id": 11, "kind":"export", "status":"failed", "summary":"task-summary-secret",
                 "created_at":"2026-03-06T12:00:00Z",
                 "progress":{"total_items":1,"processed_items":1,"success_items":0,"failed_items":1},
                 "links":{"task":"/api/v1/tasks/11","events":"/api/v1/tasks/11/events"}
@@ -453,7 +453,15 @@ fn sync_export_run_failed_errors() {
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
         .unwrap_err();
-    assert!(matches!(err, ApiError::Api(m) if m.contains("boom")));
+    assert!(matches!(
+        &err,
+        ApiError::TaskUnsuccessful {
+            task_id,
+            status: crate::types::TaskStatus::Failed,
+        } if *task_id == crate::types::TaskId::from(11)
+    ));
+    assert!(!err.to_string().contains("task-summary-secret"));
+    assert!(!format!("{err:?}").contains("task-summary-secret"));
 }
 
 #[tokio::test]
@@ -530,7 +538,7 @@ async fn async_export_run_failed_errors() {
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
-                "id": 11, "kind":"export", "status":"cancelled", "summary":"stopped",
+                "id": 11, "kind":"export", "status":"cancelled", "summary":"task-summary-secret",
                 "created_at":"2026-03-06T12:00:00Z",
                 "progress":{"total_items":1,"processed_items":0,"success_items":0,"failed_items":0},
                 "links":{"task":"/api/v1/tasks/11","events":"/api/v1/tasks/11/events"}
@@ -544,7 +552,15 @@ async fn async_export_run_failed_errors() {
         .send()
         .await
         .unwrap_err();
-    assert!(matches!(err, ApiError::Api(m) if m.contains("stopped")));
+    assert!(matches!(
+        &err,
+        ApiError::TaskUnsuccessful {
+            task_id,
+            status: crate::types::TaskStatus::Cancelled,
+        } if *task_id == crate::types::TaskId::from(11)
+    ));
+    assert!(!err.to_string().contains("task-summary-secret"));
+    assert!(!format!("{err:?}").contains("task-summary-secret"));
 }
 
 #[test]

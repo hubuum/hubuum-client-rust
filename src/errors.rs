@@ -14,10 +14,10 @@ pub struct ApiErrorResponse {
 #[derive(Error)]
 pub enum ApiError {
     #[error("HTTP error: {0}")]
-    Http(#[from] reqwest::Error),
+    Http(#[source] reqwest::Error),
 
-    #[error("JSON error: {0}")]
-    Json(#[from] serde_json::Error),
+    #[error("JSON error")]
+    Json(serde_json::Error),
 
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
@@ -55,7 +55,7 @@ pub enum ApiError {
     #[error("Missing location header for: {0}")]
     MissingLocationHeader(String),
 
-    #[error("HTTP {method} request failed with {status}: {message}")]
+    #[error("HTTP {method} request failed with {status}")]
     HttpWithBody {
         method: reqwest::Method,
         url: String,
@@ -64,7 +64,7 @@ pub enum ApiError {
         body: String,
     },
 
-    #[error("Deserialization error: {0}")]
+    #[error("Deserialization error")]
     DeserializationError(String),
 
     #[error("Response body exceeded the configured {limit} byte limit")]
@@ -85,7 +85,7 @@ pub enum ApiError {
         status: crate::types::TaskStatus,
     },
 
-    #[error("Request retries exhausted after {attempts} attempts: {last_error}")]
+    #[error("Request retries exhausted after {attempts} attempts")]
     RetryExhausted { attempts: usize, last_error: String },
 
     #[error("Unsupported HTTP operation: {0}")]
@@ -117,7 +117,11 @@ impl std::fmt::Debug for ApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Http(error) => f.debug_tuple("Http").field(error).finish(),
-            Self::Json(error) => f.debug_tuple("Json").field(error).finish(),
+            Self::Json(error) => f
+                .debug_struct("Json")
+                .field("error", &"[REDACTED]")
+                .field("category", &error.classify())
+                .finish(),
             Self::Io(error) => f.debug_tuple("Io").field(error).finish(),
             Self::Api(message) => f.debug_tuple("Api").field(message).finish(),
             Self::Transport(message) => f.debug_tuple("Transport").field(message).finish(),
@@ -148,13 +152,15 @@ impl std::fmt::Debug for ApiError {
                 .field("method", method)
                 .field("url", &crate::client::redacted_url_for_log(url))
                 .field("status", status)
-                .field("message", message)
+                .field("message", &"[REDACTED]")
+                .field("message_len", &message.len())
                 .field("body", &"[REDACTED]")
                 .field("body_len", &body.len())
                 .finish(),
             Self::DeserializationError(message) => f
-                .debug_tuple("DeserializationError")
-                .field(message)
+                .debug_struct("DeserializationError")
+                .field("message", &"[REDACTED]")
+                .field("message_len", &message.len())
                 .finish(),
             Self::ResponseTooLarge {
                 limit,
@@ -180,7 +186,8 @@ impl std::fmt::Debug for ApiError {
             } => f
                 .debug_struct("RetryExhausted")
                 .field("attempts", attempts)
-                .field("last_error", last_error)
+                .field("last_error", &"[REDACTED]")
+                .field("last_error_len", &last_error.len())
                 .finish(),
             Self::UnsupportedHttpOperation(method) => f
                 .debug_tuple("UnsupportedHttpOperation")
@@ -212,7 +219,27 @@ impl std::fmt::Debug for ApiError {
     }
 }
 
+impl From<reqwest::Error> for ApiError {
+    fn from(error: reqwest::Error) -> Self {
+        Self::Http(crate::client::redact_reqwest_error(error))
+    }
+}
+
+impl From<serde_json::Error> for ApiError {
+    fn from(error: serde_json::Error) -> Self {
+        Self::Json(error)
+    }
+}
+
 impl ApiError {
+    pub(crate) fn retry_exhausted(attempts: usize, error: reqwest::Error) -> Self {
+        let error = crate::client::redact_reqwest_error(error);
+        Self::RetryExhausted {
+            attempts,
+            last_error: error.to_string(),
+        }
+    }
+
     /// HTTP status for API response errors.
     pub fn status(&self) -> Option<StatusCode> {
         match self {
@@ -244,6 +271,9 @@ impl ApiError {
     }
 
     /// Request URL associated with a detailed API response error.
+    ///
+    /// This explicit accessor can expose sensitive query values. `Display` and
+    /// `Debug` diagnostics redact them.
     pub fn request_url(&self) -> Option<&str> {
         match self {
             Self::HttpWithBody { url, .. } => Some(url),
@@ -252,6 +282,9 @@ impl ApiError {
     }
 
     /// Raw response body associated with a detailed API response error.
+    ///
+    /// This explicit accessor can expose sensitive server data. `Display` and
+    /// `Debug` diagnostics omit it.
     pub fn response_body(&self) -> Option<&str> {
         match self {
             Self::HttpWithBody { body, .. } => Some(body),
@@ -260,10 +293,46 @@ impl ApiError {
     }
 
     /// Server-provided message for API and detailed HTTP errors.
+    ///
+    /// This explicit accessor can expose sensitive server data. Default
+    /// diagnostics omit detailed HTTP response messages.
     pub fn api_message(&self) -> Option<&str> {
         match self {
             Self::HttpWithBody { message, .. } => Some(message),
             Self::Api(message) => Some(message),
+            _ => None,
+        }
+    }
+
+    /// Underlying JSON codec error.
+    ///
+    /// This explicit accessor can expose values from an untrusted payload.
+    /// `Display`, `Debug`, and the standard error source chain omit it.
+    pub fn json_error(&self) -> Option<&serde_json::Error> {
+        match self {
+            Self::Json(error) => Some(error),
+            _ => None,
+        }
+    }
+
+    /// Detailed response or model decoding failure.
+    ///
+    /// This explicit accessor can expose values from an untrusted payload.
+    /// `Display` and `Debug` omit it.
+    pub fn deserialization_message(&self) -> Option<&str> {
+        match self {
+            Self::DeserializationError(message) => Some(message),
+            _ => None,
+        }
+    }
+
+    /// Final transport error retained after retries were exhausted.
+    ///
+    /// This explicit accessor can expose details supplied by a custom
+    /// transport. `Display` and `Debug` omit it.
+    pub fn last_retry_error(&self) -> Option<&str> {
+        match self {
+            Self::RetryExhausted { last_error, .. } => Some(last_error),
             _ => None,
         }
     }
@@ -299,5 +368,40 @@ mod tests {
                 message: "Authentication failure".to_string(),
             })
         );
+    }
+
+    #[test]
+    fn sensitive_decode_and_retry_details_require_explicit_access() {
+        let json_error = serde_json::from_str::<usize>(r#""json-secret""#).unwrap_err();
+        let json = ApiError::from(json_error);
+        let deserialization =
+            ApiError::DeserializationError("invalid value deserialization-secret".into());
+        let retry = ApiError::RetryExhausted {
+            attempts: 3,
+            last_error: "custom transport retry-secret".into(),
+        };
+
+        for (error, secret) in [
+            (&json, "json-secret"),
+            (&deserialization, "deserialization-secret"),
+            (&retry, "retry-secret"),
+        ] {
+            assert!(!error.to_string().contains(secret));
+            assert!(!format!("{error:?}").contains(secret));
+        }
+        assert!(
+            json.json_error()
+                .unwrap()
+                .to_string()
+                .contains("json-secret")
+        );
+        assert!(
+            deserialization
+                .deserialization_message()
+                .unwrap()
+                .contains("deserialization-secret")
+        );
+        assert!(retry.last_retry_error().unwrap().contains("retry-secret"));
+        assert!(std::error::Error::source(&json).is_none());
     }
 }

@@ -26,6 +26,16 @@ Normal responses and error previews have independent limits. Exceeding the
 normal limit returns `ApiError::ResponseTooLarge`; streaming export methods are
 the intended path for larger payloads.
 
+## Redirect Policy
+
+The built-in async and blocking HTTP clients do not follow redirects. A redirect
+response is surfaced as an `ApiError` with its 3xx status so an authenticated
+request cannot move away from the endpoint constructed by the client.
+
+Supplying a preconfigured reqwest client with `with_http_client` also supplies
+its redirect policy. Keep redirects disabled when the configured Hubuum URL
+shares an origin with other applications or uses a restricted path prefix.
+
 ## Administrative Configuration
 
 Authenticated administrators can inspect the server's effective, redacted
@@ -113,8 +123,10 @@ println!("{}", server.data.hostname);
 
 `MockTransport` records transport-neutral `RequestPlan` values and returns queued
 `TransportResponse` values. Recorded diagnostics redact authorization, query
-values, and bodies. Both mock and custom transports honor the normal retry and
-body-limit policies.
+values, and bodies. A configured transport handles every client operation,
+including login and token validation, public discovery and probes, raw and typed
+API calls, export downloads, and unified-search streams. Buffered calls honor
+the normal retry and body-limit policies.
 
 ```rust
 use std::sync::Arc;
@@ -133,8 +145,13 @@ let client = hubuum_client::Client::builder_from_url("https://mock.invalid")?
 ```
 
 Implement `AsyncTransport` or `BlockingTransport` to integrate a different HTTP
-stack. The lower-level `client.raw(method, relative_path)` escape hatch can call
-new server routes before the typed library catches up. It rejects absolute URLs,
-network-path references, decoded parent traversal, query or fragment injection,
-configured base-prefix escapes, and authorization overrides before attaching a
-bearer token.
+stack. Because the transport traits return buffered `TransportResponse` values,
+streaming bodies are exposed as one stream chunk or one blocking reader; the
+built-in HTTP transports remain incremental. Successful streaming payloads are
+not subject to the buffered-response size limit in either case, while retry and
+error-body limits still apply. The lower-level
+`client.raw(method, relative_path)` escape hatch can call new server routes
+before the typed library catches up. It rejects absolute URLs, network-path
+references, decoded parent traversal, query or fragment injection, configured
+base-prefix escapes, and authorization overrides before attaching a bearer
+token.
