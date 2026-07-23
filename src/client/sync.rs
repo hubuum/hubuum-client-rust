@@ -1843,7 +1843,7 @@ pub struct RawRequest {
     path_has_encoded_segments: bool,
     query: Vec<(String, String)>,
     headers: Vec<(String, String)>,
-    body: Option<serde_json::Value>,
+    body: Option<Vec<u8>>,
 }
 
 impl RawRequest {
@@ -1858,7 +1858,7 @@ impl RawRequest {
     }
 
     pub fn json<T: Serialize>(mut self, value: &T) -> Result<Self, ApiError> {
-        self.body = Some(serde_json::to_value(value)?);
+        self.body = Some(serde_json::to_vec(value)?);
         Ok(self)
     }
 
@@ -1872,6 +1872,14 @@ impl RawRequest {
                 "raw requests cannot override the Authorization header".into(),
             ));
         }
+        let has_content_type = self
+            .headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("content-type"));
+        let has_idempotency_key = self
+            .headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("idempotency-key"));
         let url = if self.path_has_encoded_segments {
             shared::build_encoded_relative_url(self.client.base_url(), &self.path, &self.query)?
         } else {
@@ -1901,12 +1909,8 @@ impl RawRequest {
                 plan.headers.entry(reqwest::header::CONTENT_TYPE).or_insert(
                     reqwest::header::HeaderValue::from_static("application/json"),
                 );
-                plan = plan.with_body(serde_json::to_vec(&body)?);
+                plan = plan.with_body(body);
             }
-            let has_idempotency_key = self
-                .headers
-                .iter()
-                .any(|(name, _)| name.eq_ignore_ascii_case("idempotency-key"));
             let response = self.client.execute_transport_with_retry(
                 &self.method,
                 has_idempotency_key,
@@ -1939,12 +1943,11 @@ impl RawRequest {
             request = request.header(name, value);
         }
         if let Some(body) = self.body {
-            request = request.json(&body);
+            if !has_content_type {
+                request = request.header(reqwest::header::CONTENT_TYPE, "application/json");
+            }
+            request = request.body(body);
         }
-        let has_idempotency_key = self
-            .headers
-            .iter()
-            .any(|(name, _)| name.eq_ignore_ascii_case("idempotency-key"));
         let response = self
             .client
             .send_with_retry(&self.method, has_idempotency_key, request)?;

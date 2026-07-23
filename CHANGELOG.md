@@ -17,6 +17,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   creating resource handles.
 - Query-filter encoding now streams directly into the form serializer instead
   of cloning owned keys and values through two intermediate vectors.
+- Raw JSON request bodies are serialized once when attached to the request
+  instead of being materialized as a JSON value and serialized again at send
+  time.
 
 ### Fixed
 

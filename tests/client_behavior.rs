@@ -842,6 +842,70 @@ async fn async_default_client_does_not_follow_authenticated_redirects() {
 }
 
 #[test]
+fn sync_raw_json_preserves_http_body_and_content_type() {
+    let server = MockServer::start();
+    let request = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/extensions/action")
+            .header("authorization", format!("Bearer {TOKEN}"))
+            .header("content-type", "application/merge-patch+json")
+            .json_body(json!({ "message": "hello" }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "accepted": true }));
+    });
+    let client = blocking::Client::builder(
+        BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid"),
+    )
+    .build()
+    .expect("sync client should build")
+    .authenticate(Token::new(TOKEN));
+
+    let response: serde_json::Value = client
+        .raw(reqwest::Method::POST, "api/v1/extensions/action")
+        .header("content-type", "application/merge-patch+json")
+        .json(&json!({ "message": "hello" }))
+        .expect("raw JSON body should serialize")
+        .send()
+        .expect("raw request should succeed");
+
+    assert_eq!(response, json!({ "accepted": true }));
+    request.assert();
+}
+
+#[tokio::test]
+async fn async_raw_json_preserves_http_body_and_content_type() {
+    let server = MockServer::start();
+    let request = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/extensions/action")
+            .header("authorization", format!("Bearer {TOKEN}"))
+            .header("content-type", "application/json")
+            .json_body(json!({ "message": "hello" }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({ "accepted": true }));
+    });
+    let client = Client::builder(
+        BaseUrl::from_str(&server.base_url()).expect("mock base URL should be valid"),
+    )
+    .build()
+    .expect("async client should build")
+    .authenticate(Token::new(TOKEN));
+
+    let response: serde_json::Value = client
+        .raw(reqwest::Method::POST, "api/v1/extensions/action")
+        .json(&json!({ "message": "hello" }))
+        .expect("raw JSON body should serialize")
+        .send()
+        .await
+        .expect("raw request should succeed");
+
+    assert_eq!(response, json!({ "accepted": true }));
+    request.assert();
+}
+
+#[test]
 fn sync_client_can_be_built_from_a_url_string_and_inspected() {
     let server = MockServer::start();
     mock_login(&server);
