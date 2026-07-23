@@ -189,6 +189,7 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::logout_all;
             let _ = $module::Client::<Authenticated>::meta_counts;
             let _ = $module::Client::<Authenticated>::meta_db;
+            let _ = $module::Client::<Authenticated>::meta_db_full;
             let _ = $module::Client::<Authenticated>::meta_tasks;
             let _ = $module::Client::<Authenticated>::admin_config;
             let _ = $module::Client::<Authenticated>::metrics;

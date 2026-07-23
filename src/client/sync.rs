@@ -32,14 +32,15 @@ use crate::types::{
     EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryUpdateResponse, EventResponse,
     EventSubscription, EventSubscriptionId, ExportContentType, ExportJsonResponse, ExportRequest,
     ExportResult, ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator,
-    FullCollectionHistory, FullImportRequest, HubuumDateTime, ImportRequest, ImportRequestPayload,
-    ImportRunResult, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
-    NewEventSubscription, ObjectHistory, PersonalComputedFieldDefinitionRequest, PrincipalId,
-    PrincipalSettings, ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory,
-    RestoreCapability, RestoreConfirmRequest, RestoreId, RestoreStageResponse, RunningConfig,
-    SortDirection, TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse,
-    TaskStatus, Token, TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
-    UnifiedSearchSseDecoder, UpdateEventSubscription,
+    FullCollectionHistory, FullDbStateResponse, FullImportRequest, HubuumDateTime, ImportRequest,
+    ImportRequestPayload, ImportRunResult, ImportTaskResultResponse, LoginRateLimitState,
+    LogoutTokenRequest, NewEventSubscription, ObjectHistory,
+    PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings, ProbeResponse,
+    ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability, RestoreConfirmRequest,
+    RestoreId, RestoreStageResponse, RunningConfig, SortDirection, TaskEventResponse, TaskId,
+    TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UnifiedSearchSseDecoder,
+    UpdateEventSubscription,
 };
 
 #[derive(Deserialize, Debug)]
@@ -867,6 +868,22 @@ impl Client<Authenticated> {
         .and_then(|opt| {
             opt.ok_or(ApiError::EmptyResult(
                 "META db state returned empty result".into(),
+            ))
+        })
+    }
+
+    /// Return complete database and connection-pool telemetry.
+    pub fn meta_db_full(&self) -> Result<FullDbStateResponse, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, FullDbStateResponse>(
+            reqwest::Method::GET,
+            &Endpoint::MetaDb,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .and_then(|opt| {
+            opt.ok_or(ApiError::EmptyResult(
+                "Full META db state returned empty result".into(),
             ))
         })
     }

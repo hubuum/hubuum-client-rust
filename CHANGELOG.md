@@ -8,6 +8,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Full database-state responses and async/blocking `meta_db_full()` accessors
+  expose all v0.0.3 connection-pool acquisition, wait, timeout, creation, and
+  closure metrics without breaking the original `DbStateResponse` model.
 - Full collection-history responses and accessors preserve the server's
   `parent_collection_id` without breaking the original `CollectionHistory`
   model or its existing methods.

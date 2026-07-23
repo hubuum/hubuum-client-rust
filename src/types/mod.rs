@@ -82,8 +82,8 @@ pub use import::{
     PrincipalKey, RestoreTimestamps,
 };
 pub use meta::{
-    ClearRateLimitResponse, CountsResponse, DbStateResponse, LoginRateLimitConfig,
-    LoginRateLimitEntry, LoginRateLimitState, ObjectsByClass, ProbeResponse,
+    ClearRateLimitResponse, CountsResponse, DbStateResponse, FullDbStateResponse,
+    LoginRateLimitConfig, LoginRateLimitEntry, LoginRateLimitState, ObjectsByClass, ProbeResponse,
     ReleaseRateLimitResponse,
 };
 pub use params::{ClassParams, CollectionPermissionsGrantParams, UserParams};

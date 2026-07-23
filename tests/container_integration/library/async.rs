@@ -65,6 +65,16 @@ fn async_meta_db_available_connections_non_negative() {
         .expect("async meta_db failed");
 
     assert!(db.available_connections >= 0);
+
+    let full_db = harness
+        .block_on(client.meta_db_full())
+        .expect("async meta_db_full failed");
+    assert!(full_db.max_connections >= full_db.total_connections);
+    assert!(full_db.total_connections >= full_db.idle_connections);
+    assert!(full_db.total_connections >= full_db.in_use_connections);
+    assert!(full_db.acquisitions_started >= full_db.acquisitions_direct);
+    assert!(full_db.acquisitions_started >= full_db.acquisitions_waited);
+    assert!(full_db.connections_created >= u64::from(full_db.total_connections));
 }
 
 #[test]
