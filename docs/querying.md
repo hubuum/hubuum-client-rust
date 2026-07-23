@@ -121,6 +121,12 @@ server repeats a cursor instead of looping forever. The configured page and item
 safety limits also apply to `pages()` and `items()`; use those methods for lazy
 consumption without collecting the full result set.
 
+Collection history has two source-compatible response surfaces. Existing
+`collection_history` and `collection_history_as_of` calls return
+`CollectionHistory`; use `collection_history_full`,
+`collection_history_as_of_full`, or a collection handle's `history_full` when
+the historical `parent_collection_id` is needed.
+
 Existing `QueryFilter` values can be passed as a batch:
 
 ```rust

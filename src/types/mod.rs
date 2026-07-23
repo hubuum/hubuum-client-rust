@@ -60,8 +60,8 @@ pub use export::{
 };
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
 pub use history::{
-    ClassHistory, CollectionHistory, ExportTemplateHistory, HistoryMetadata, ObjectHistory,
-    RemoteTargetHistory,
+    ClassHistory, CollectionHistory, ExportTemplateHistory, FullCollectionHistory, HistoryMetadata,
+    ObjectHistory, RemoteTargetHistory,
 };
 pub use id::{
     ComputedFieldDefinitionId, EventDeliveryId, EventSubscriptionId, HistoryId, ImportResultId,

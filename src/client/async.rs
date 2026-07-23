@@ -32,13 +32,13 @@ use crate::types::{
     EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryUpdateResponse, EventResponse,
     EventSubscription, EventSubscriptionId, ExportContentType, ExportJsonResponse, ExportRequest,
     ExportResult, ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator,
-    FullImportRequest, HubuumDateTime, ImportRequest, ImportRequestPayload, ImportRunResult,
-    ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
-    ObjectHistory, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings,
-    ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability,
-    RestoreConfirmRequest, RestoreId, RestoreStageResponse, RunningConfig, SortDirection,
-    TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
-    TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    FullCollectionHistory, FullImportRequest, HubuumDateTime, ImportRequest, ImportRequestPayload,
+    ImportRunResult, ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest,
+    NewEventSubscription, ObjectHistory, PersonalComputedFieldDefinitionRequest, PrincipalId,
+    PrincipalSettings, ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory,
+    RestoreCapability, RestoreConfirmRequest, RestoreId, RestoreStageResponse, RunningConfig,
+    SortDirection, TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse,
+    TaskStatus, Token, TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
     UnifiedSearchSseDecoder, UpdateEventSubscription,
 };
 
@@ -1563,6 +1563,21 @@ impl Client<Authenticated> {
         )
     }
 
+    pub fn collection_history_full(
+        &self,
+        collection_id: impl Into<CollectionId>,
+    ) -> HistoryRequest<FullCollectionHistory> {
+        let collection_id = collection_id.into();
+        HistoryRequest::new(
+            self.clone(),
+            Endpoint::CollectionHistory,
+            vec![(
+                Cow::Borrowed("collection_id"),
+                collection_id.to_string().into(),
+            )],
+        )
+    }
+
     pub async fn collection_history_as_of(
         &self,
         collection_id: impl Into<CollectionId>,
@@ -1577,6 +1592,24 @@ impl Client<Authenticated> {
             )],
             at,
             "Collection history as-of returned empty result",
+        )
+        .await
+    }
+
+    pub async fn collection_history_as_of_full(
+        &self,
+        collection_id: impl Into<CollectionId>,
+        at: HubuumDateTime,
+    ) -> Result<FullCollectionHistory, ApiError> {
+        let collection_id = collection_id.into();
+        self.history_as_of(
+            Endpoint::CollectionHistoryAsOf,
+            vec![(
+                Cow::Borrowed("collection_id"),
+                collection_id.to_string().into(),
+            )],
+            at,
+            "Full collection history as-of returned empty result",
         )
         .await
     }
@@ -2627,6 +2660,10 @@ impl CollectionScope {
 
     pub fn history(&self) -> HistoryRequest<CollectionHistory> {
         self.client.collection_history(self.collection_id)
+    }
+
+    pub fn history_full(&self) -> HistoryRequest<FullCollectionHistory> {
+        self.client.collection_history_full(self.collection_id)
     }
 
     pub fn event_subscriptions(&self) -> EventSubscriptions {

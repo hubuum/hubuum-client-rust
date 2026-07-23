@@ -844,6 +844,23 @@ fn class_history_json() -> serde_json::Value {
     })
 }
 
+fn collection_history_json() -> serde_json::Value {
+    json!({
+        "id": 7,
+        "name": "servers",
+        "description": "Collection",
+        "parent_collection_id": 2,
+        "created_at": ts(),
+        "updated_at": ts(),
+        "op": "update",
+        "valid_from": ts(),
+        "valid_to": null,
+        "history_id": 9002,
+        "actor_id": 3,
+        "actor_username": "tester"
+    })
+}
+
 fn event_sink_json() -> serde_json::Value {
     json!({
         "id": 5,
@@ -4366,6 +4383,91 @@ fn sync_full_import_submit_serializes_extended_graph() {
 
     assert_eq!(task.id, 15);
     import_submit.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_full_collection_history_preserves_parent_ids() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let history = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/history")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([collection_history_json()]));
+    });
+    let as_of = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/history/as-of")
+            .query_param("at", "2024-01-01T00:00:00+00:00")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(collection_history_json());
+    });
+
+    let client = async_client(&server).await;
+    let entries = client
+        .collection(7)
+        .history_full()
+        .limit(1)
+        .list()
+        .await
+        .expect("full collection history should succeed");
+    assert_eq!(entries[0].parent_collection_id, Some(2.into()));
+
+    let at: HubuumDateTime = serde_json::from_str(r#""2024-01-01T00:00:00Z""#).unwrap();
+    let entry = client
+        .collection_history_as_of_full(7, at)
+        .await
+        .expect("full collection history as-of should succeed");
+    assert_eq!(entry.parent_collection_id, Some(2.into()));
+
+    history.assert_calls(1);
+    as_of.assert_calls(1);
+}
+
+#[test]
+fn sync_full_collection_history_preserves_parent_ids() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let history = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/history")
+            .query_param("limit", "1")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([collection_history_json()]));
+    });
+    let as_of = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/history/as-of")
+            .query_param("at", "2024-01-01T00:00:00+00:00")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(collection_history_json());
+    });
+
+    let client = sync_client(&server);
+    let entries = client
+        .collection_history_full(7)
+        .limit(1)
+        .list()
+        .expect("full collection history should succeed");
+    assert_eq!(entries[0].parent_collection_id, Some(2.into()));
+
+    let at: HubuumDateTime = serde_json::from_str(r#""2024-01-01T00:00:00Z""#).unwrap();
+    let entry = client
+        .collection_history_as_of_full(7, at)
+        .expect("full collection history as-of should succeed");
+    assert_eq!(entry.parent_collection_id, Some(2.into()));
+
+    history.assert_calls(1);
+    as_of.assert_calls(1);
 }
 
 #[test]
