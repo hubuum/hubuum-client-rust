@@ -29,6 +29,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Invalid `ApiResource` derives now emit span-aware compiler diagnostics for
   unsupported names, item shapes, field layouts, and missing display fields
   instead of panicking inside the procedural macro.
+- Lazy `pages()` and `items()` traversal now honors the configured automatic
+  pagination page and item limits, matching eager `all()` collection.
 
 ## [0.6.1] - 2026-07-23
 

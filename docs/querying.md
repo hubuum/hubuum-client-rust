@@ -117,8 +117,9 @@ requests that do not use the count, call `include_total(false)`; the resulting
 
 Event, history, task, import-result, and related-resource request builders also
 support `all()`. Automatic pagination returns `ApiError::PaginationCycle` if a
-server repeats a cursor instead of looping forever. Use `pages()` or `items()`
-for lazy consumption without collecting the full result set.
+server repeats a cursor instead of looping forever. The configured page and item
+safety limits also apply to `pages()` and `items()`; use those methods for lazy
+consumption without collecting the full result set.
 
 Existing `QueryFilter` values can be passed as a batch:
 

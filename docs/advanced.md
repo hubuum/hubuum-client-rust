@@ -82,9 +82,10 @@ use the client's normal retry and response-body limit policies.
 ## Lazy Pagination and Search
 
 Async resource and cursor builders provide `pages()` and `items()` streams.
-Blocking builders return iterators with the same methods. Unified search
-`stream()` parses SSE frames as they arrive and preserves future event names as
-`UnifiedSearchEvent::Unknown`.
+Blocking builders return iterators with the same methods. Both lazy forms honor
+the client's configured automatic-pagination page and item limits. Unified
+search `stream()` parses SSE frames as they arrive and preserves future event
+names as `UnifiedSearchEvent::Unknown`.
 
 ```rust
 use futures_util::TryStreamExt;

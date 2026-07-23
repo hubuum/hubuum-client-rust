@@ -4465,18 +4465,11 @@ impl<T: ApiResource> QueryOp<T> {
     pub async fn all(self) -> Result<Vec<T::GetOutput>, ApiError> {
         let mut query = self;
         let mut items = Vec::new();
-        let mut pages = 0;
+        let mut pagination = shared::AutoPaginationGuard::new(&query.client.options);
         let mut seen_cursors = shared::pagination_cursors(&query.query_params);
 
         loop {
-            if pages >= query.client.options.max_auto_pages
-                || items.len() >= query.client.options.max_auto_items
-            {
-                return Err(ApiError::PaginationLimit {
-                    pages,
-                    items: items.len(),
-                });
-            }
+            pagination.before_request()?;
             let page = QueryOp::<T>::with_query_params(
                 query.client.clone(),
                 query.url_params.clone(),
@@ -4484,14 +4477,8 @@ impl<T: ApiResource> QueryOp<T> {
             )
             .page()
             .await?;
-            pages += 1;
+            pagination.record_page(page.items.len())?;
             items.extend(page.items);
-            if items.len() > query.client.options.max_auto_items {
-                return Err(ApiError::PaginationLimit {
-                    pages,
-                    items: items.len(),
-                });
-            }
 
             match page.next_cursor {
                 Some(cursor) => {
@@ -4536,8 +4523,10 @@ where
 {
     pub fn pages(mut self) -> PageStream<T::GetOutput> {
         Box::pin(async_stream::try_stream! {
+            let mut pagination = shared::AutoPaginationGuard::new(&self.client.options);
             let mut seen_cursors = shared::pagination_cursors(&self.query_params);
             loop {
+                pagination.before_request()?;
                 let page = QueryOp::<T>::with_query_params(
                     self.client.clone(),
                     self.url_params.clone(),
@@ -4545,6 +4534,7 @@ where
                 )
                 .page()
                 .await?;
+                pagination.record_page(page.items.len())?;
                 let next_cursor = page.next_cursor.clone();
                 yield page;
                 let Some(cursor) = next_cursor else {
@@ -4874,18 +4864,11 @@ where
     pub async fn all(self) -> Result<Vec<T>, ApiError> {
         let mut request = self;
         let mut items = Vec::new();
-        let mut pages = 0;
+        let mut pagination = shared::AutoPaginationGuard::new(&request.client.options);
         let mut seen_cursors = shared::pagination_cursors(&request.query_params);
 
         loop {
-            if pages >= request.client.options.max_auto_pages
-                || items.len() >= request.client.options.max_auto_items
-            {
-                return Err(ApiError::PaginationLimit {
-                    pages,
-                    items: items.len(),
-                });
-            }
+            pagination.before_request()?;
             let page = CursorRequest::<T> {
                 client: request.client.clone(),
                 endpoint: request.endpoint,
@@ -4896,14 +4879,8 @@ where
             }
             .page()
             .await?;
-            pages += 1;
+            pagination.record_page(page.items.len())?;
             items.extend(page.items);
-            if items.len() > request.client.options.max_auto_items {
-                return Err(ApiError::PaginationLimit {
-                    pages,
-                    items: items.len(),
-                });
-            }
 
             match page.next_cursor {
                 Some(cursor) => {
@@ -4921,8 +4898,10 @@ where
 {
     pub fn pages(mut self) -> PageStream<T> {
         Box::pin(async_stream::try_stream! {
+            let mut pagination = shared::AutoPaginationGuard::new(&self.client.options);
             let mut seen_cursors = shared::pagination_cursors(&self.query_params);
             loop {
+                pagination.before_request()?;
                 let page = (CursorRequest::<T> {
                     client: self.client.clone(),
                     endpoint: self.endpoint,
@@ -4933,6 +4912,7 @@ where
                 })
                 .page()
                 .await?;
+                pagination.record_page(page.items.len())?;
                 let next_cursor = page.next_cursor.clone();
                 yield page;
                 let Some(cursor) = next_cursor else {

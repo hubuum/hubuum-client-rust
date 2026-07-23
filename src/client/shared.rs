@@ -97,6 +97,48 @@ impl Default for ClientOptions {
     }
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct AutoPaginationGuard {
+    max_pages: usize,
+    max_items: usize,
+    pages: usize,
+    items: usize,
+}
+
+impl AutoPaginationGuard {
+    pub(crate) fn new(options: &ClientOptions) -> Self {
+        Self {
+            max_pages: options.max_auto_pages,
+            max_items: options.max_auto_items,
+            pages: 0,
+            items: 0,
+        }
+    }
+
+    pub(crate) fn before_request(&self) -> Result<(), ApiError> {
+        if self.pages >= self.max_pages || self.items >= self.max_items {
+            return Err(self.limit_error());
+        }
+        Ok(())
+    }
+
+    pub(crate) fn record_page(&mut self, items: usize) -> Result<(), ApiError> {
+        self.pages = self.pages.saturating_add(1);
+        self.items = self.items.saturating_add(items);
+        if self.items > self.max_items {
+            return Err(self.limit_error());
+        }
+        Ok(())
+    }
+
+    fn limit_error(&self) -> ApiError {
+        ApiError::PaginationLimit {
+            pages: self.pages,
+            items: self.items,
+        }
+    }
+}
+
 pub(crate) fn is_replay_safe(method: &Method, has_idempotency_key: bool) -> bool {
     matches!(*method, Method::GET | Method::HEAD | Method::OPTIONS) || has_idempotency_key
 }

@@ -4257,32 +4257,19 @@ impl<T: ApiResource> QueryOp<T> {
     pub fn all(self) -> Result<Vec<T::GetOutput>, ApiError> {
         let mut query = self;
         let mut items = Vec::new();
-        let mut pages = 0;
+        let mut pagination = shared::AutoPaginationGuard::new(&query.client.options);
         let mut seen_cursors = shared::pagination_cursors(&query.query_params);
 
         loop {
-            if pages >= query.client.options.max_auto_pages
-                || items.len() >= query.client.options.max_auto_items
-            {
-                return Err(ApiError::PaginationLimit {
-                    pages,
-                    items: items.len(),
-                });
-            }
+            pagination.before_request()?;
             let page = QueryOp::<T>::with_query_params(
                 query.client.clone(),
                 query.url_params.clone(),
                 query.query_params.clone(),
             )
             .page()?;
-            pages += 1;
+            pagination.record_page(page.items.len())?;
             items.extend(page.items);
-            if items.len() > query.client.options.max_auto_items {
-                return Err(ApiError::PaginationLimit {
-                    pages,
-                    items: items.len(),
-                });
-            }
 
             match page.next_cursor {
                 Some(cursor) => {
@@ -4321,6 +4308,7 @@ impl<T: ApiResource> QueryOp<T> {
 
 pub struct QueryPageIterator<T: ApiResource> {
     query: QueryOp<T>,
+    pagination: shared::AutoPaginationGuard,
     seen_cursors: std::collections::HashSet<String>,
     pending_error: Option<ApiError>,
     finished: bool,
@@ -4328,9 +4316,11 @@ pub struct QueryPageIterator<T: ApiResource> {
 
 impl<T: ApiResource> QueryPageIterator<T> {
     fn new(query: QueryOp<T>) -> Self {
+        let pagination = shared::AutoPaginationGuard::new(&query.client.options);
         let seen_cursors = shared::pagination_cursors(&query.query_params);
         Self {
             query,
+            pagination,
             seen_cursors,
             pending_error: None,
             finished: false,
@@ -4349,6 +4339,10 @@ impl<T: ApiResource> Iterator for QueryPageIterator<T> {
         if self.finished {
             return None;
         }
+        if let Err(error) = self.pagination.before_request() {
+            self.finished = true;
+            return Some(Err(error));
+        }
 
         let result = QueryOp::<T>::with_query_params(
             self.query.client.clone(),
@@ -4363,6 +4357,10 @@ impl<T: ApiResource> Iterator for QueryPageIterator<T> {
                 return Some(Err(error));
             }
         };
+        if let Err(error) = self.pagination.record_page(page.items.len()) {
+            self.finished = true;
+            return Some(Err(error));
+        }
 
         match page.next_cursor.clone() {
             Some(cursor) => {
@@ -4708,18 +4706,11 @@ where
     pub fn all(self) -> Result<Vec<T>, ApiError> {
         let mut request = self;
         let mut items = Vec::new();
-        let mut pages = 0;
+        let mut pagination = shared::AutoPaginationGuard::new(&request.client.options);
         let mut seen_cursors = shared::pagination_cursors(&request.query_params);
 
         loop {
-            if pages >= request.client.options.max_auto_pages
-                || items.len() >= request.client.options.max_auto_items
-            {
-                return Err(ApiError::PaginationLimit {
-                    pages,
-                    items: items.len(),
-                });
-            }
+            pagination.before_request()?;
             let page = CursorRequest::<T> {
                 client: request.client.clone(),
                 endpoint: request.endpoint,
@@ -4729,14 +4720,8 @@ where
                 _phantom: PhantomData,
             }
             .page()?;
-            pages += 1;
+            pagination.record_page(page.items.len())?;
             items.extend(page.items);
-            if items.len() > request.client.options.max_auto_items {
-                return Err(ApiError::PaginationLimit {
-                    pages,
-                    items: items.len(),
-                });
-            }
 
             match page.next_cursor {
                 Some(cursor) => {
@@ -4750,6 +4735,7 @@ where
 
 pub struct CursorPageIterator<T> {
     request: CursorRequest<T>,
+    pagination: shared::AutoPaginationGuard,
     seen_cursors: std::collections::HashSet<String>,
     pending_error: Option<ApiError>,
     finished: bool,
@@ -4757,9 +4743,11 @@ pub struct CursorPageIterator<T> {
 
 impl<T> CursorPageIterator<T> {
     fn new(request: CursorRequest<T>) -> Self {
+        let pagination = shared::AutoPaginationGuard::new(&request.client.options);
         let seen_cursors = shared::pagination_cursors(&request.query_params);
         Self {
             request,
+            pagination,
             seen_cursors,
             pending_error: None,
             finished: false,
@@ -4778,6 +4766,10 @@ impl<T: DeserializeOwned> Iterator for CursorPageIterator<T> {
         if self.finished {
             return None;
         }
+        if let Err(error) = self.pagination.before_request() {
+            self.finished = true;
+            return Some(Err(error));
+        }
 
         let result = CursorRequest::<T> {
             client: self.request.client.clone(),
@@ -4795,6 +4787,10 @@ impl<T: DeserializeOwned> Iterator for CursorPageIterator<T> {
                 return Some(Err(error));
             }
         };
+        if let Err(error) = self.pagination.record_page(page.items.len()) {
+            self.finished = true;
+            return Some(Err(error));
+        }
 
         match page.next_cursor.clone() {
             Some(cursor) => {
