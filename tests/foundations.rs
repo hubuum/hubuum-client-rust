@@ -1246,6 +1246,35 @@ fn raw_json_requests_set_content_type_for_custom_transports() {
     assert!(!format!("{request:?}").contains("consumer-secret"));
 }
 
+#[tokio::test]
+async fn async_raw_json_requests_set_content_type_for_custom_transports() {
+    let transport = MockTransport::default();
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &json!({ "accepted": true })).unwrap(),
+    );
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    let _: serde_json::Value = client
+        .raw(Method::POST, "api/v1/extensions/action")
+        .json(&json!({ "password": "consumer-secret" }))
+        .unwrap()
+        .send()
+        .await
+        .unwrap();
+
+    let request = transport.requests().pop().unwrap();
+    assert_eq!(
+        request.headers.get(reqwest::header::CONTENT_TYPE).unwrap(),
+        "application/json"
+    );
+    assert_eq!(request.body(), br#"{"password":"consumer-secret"}"#);
+    assert!(!format!("{request:?}").contains("consumer-secret"));
+}
+
 #[test]
 fn object_data_patch_preserves_its_media_type_for_custom_transports() {
     let transport = MockTransport::default();
