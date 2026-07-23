@@ -31,6 +31,10 @@ pub use self::transport::{MockTransport, RequestPlan, TransportResponse};
 
 use crate::resources::ApiResource;
 
+/// Dynamic endpoint placeholder values used by the low-level request methods.
+///
+/// Values are unescaped input and are encoded as individual opaque URL path
+/// segments when the request URL is built.
 pub type UrlParams = Vec<(Cow<'static, str>, Cow<'static, str>)>;
 
 pub trait GetID: ApiResource {

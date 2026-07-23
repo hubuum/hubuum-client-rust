@@ -7,8 +7,9 @@ use futures_util::TryStreamExt;
 use httpmock::MockServer;
 use hubuum_client::{
     ApiError, BaseUrl, ClassPatch, Credentials, ExportContentType, ExportTemplateKind,
-    MockTransport, ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectPatch, RetryPolicy,
-    TaskStatus, Token, TransportResponse, TypedObject, UnifiedSearchEvent, blocking,
+    ExportTemplateRunRequest, MockTransport, Object, ObjectDataPatchDocument,
+    ObjectDataPatchOperation, ObjectPatch, RetryPolicy, TaskStatus, Token, TransportResponse,
+    TypedObject, UnifiedSearchEvent, blocking,
 };
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,148 @@ fn blocking_mock_client(
         .build()
         .unwrap()
         .authenticate(Token::new("consumer-secret"))
+}
+
+fn queued_export_task_json() -> serde_json::Value {
+    json!({
+        "id": 12,
+        "kind": "export",
+        "status": "queued",
+        "submitted_by": 7,
+        "created_at": "2026-07-21T10:00:00Z",
+        "started_at": null,
+        "finished_at": null,
+        "progress": {
+            "total_items": 1,
+            "processed_items": 0,
+            "success_items": 0,
+            "failed_items": 0
+        },
+        "summary": null,
+        "request_redacted_at": null,
+        "links": {
+            "task": "/api/v1/tasks/12",
+            "events": "/api/v1/tasks/12/events",
+            "export": "/api/v1/exports/12",
+            "export_output": "/api/v1/exports/12/output"
+        }
+    })
+}
+
+fn assert_opaque_export_template_id_request(transport: &MockTransport) {
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].method, Method::POST);
+    assert_eq!(
+        requests[0].url.path(),
+        "/api/v1/export-templates/1%2F..%2F2%3Fscope%23frag%252F%5Ctail/exports"
+    );
+    assert!(requests[0].url.query().is_none());
+    assert!(requests[0].url.fragment().is_none());
+}
+
+#[test]
+fn blocking_export_template_run_ids_are_opaque_path_segments() {
+    let transport = MockTransport::default();
+    transport.push_response(
+        TransportResponse::json(StatusCode::ACCEPTED, &queued_export_task_json()).unwrap(),
+    );
+    let client = blocking_mock_client(transport.clone(), 4096);
+
+    client
+        .export_templates()
+        .submit_export(
+            r"1/../2?scope#frag%2F\tail",
+            ExportTemplateRunRequest::default(),
+        )
+        .send()
+        .unwrap();
+
+    assert_opaque_export_template_id_request(&transport);
+}
+
+#[tokio::test]
+async fn async_export_template_run_ids_are_opaque_path_segments() {
+    let transport = MockTransport::default();
+    transport.push_response(
+        TransportResponse::json(StatusCode::ACCEPTED, &queued_export_task_json()).unwrap(),
+    );
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    client
+        .export_templates()
+        .submit_export(
+            r"1/../2?scope#frag%2F\tail",
+            ExportTemplateRunRequest::default(),
+        )
+        .send()
+        .await
+        .unwrap();
+
+    assert_opaque_export_template_id_request(&transport);
+}
+
+fn assert_opaque_low_level_url_param_request(transport: &MockTransport) {
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].method, Method::GET);
+    assert_eq!(
+        requests[0].url.path(),
+        "/api/v1/classes/1%2F..%2F2%3Fscope%23frag%252F%5Ctail/"
+    );
+    assert!(requests[0].url.query().is_none());
+    assert!(requests[0].url.fragment().is_none());
+}
+
+#[test]
+fn blocking_low_level_url_params_are_opaque_path_segments() {
+    let transport = MockTransport::default();
+    transport.push_response(TransportResponse::json(StatusCode::OK, &json!([])).unwrap());
+    let client = blocking_mock_client(transport.clone(), 4096);
+
+    let objects: Vec<Object> = client
+        .get(
+            Object::default(),
+            vec![(
+                "class_id".into(),
+                r"1/../2?scope#frag%2F\tail".to_string().into(),
+            )],
+            (),
+        )
+        .unwrap();
+
+    assert!(objects.is_empty());
+    assert_opaque_low_level_url_param_request(&transport);
+}
+
+#[tokio::test]
+async fn async_low_level_url_params_are_opaque_path_segments() {
+    let transport = MockTransport::default();
+    transport.push_response(TransportResponse::json(StatusCode::OK, &json!([])).unwrap());
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    let objects: Vec<Object> = client
+        .get(
+            Object::default(),
+            vec![(
+                "class_id".into(),
+                r"1/../2?scope#frag%2F\tail".to_string().into(),
+            )],
+            (),
+        )
+        .await
+        .unwrap();
+
+    assert!(objects.is_empty());
+    assert_opaque_low_level_url_param_request(&transport);
 }
 
 fn streaming_transport_response(

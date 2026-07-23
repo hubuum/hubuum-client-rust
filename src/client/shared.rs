@@ -139,7 +139,7 @@ pub(crate) fn build_relative_url(
 }
 
 /// Join a relative path assembled internally from fixed endpoint text and
-/// dynamic segments escaped with [`encode_path_segment`].
+/// dynamic segments escaped by [`build_url`].
 ///
 /// Percent-encoded slashes in those opaque segments must not be decoded for
 /// traversal validation: a name such as `a/../b` is one encoded segment, not
@@ -577,7 +577,7 @@ pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: Url
     );
 
     for (key, value) in url_params {
-        url = url.replace(&format!("{{{}}}", key), value.as_ref());
+        url = url.replace(&format!("{{{key}}}"), &encode_path_segment(value.as_ref()));
     }
     url
 }
@@ -627,6 +627,7 @@ fn ensure_no_unresolved_url_params(url: &str) -> Result<(), ApiError> {
 }
 
 fn append_identifier(url: String, id: &str) -> String {
+    let id = encode_path_segment(id);
     if url.ends_with('/') {
         format!("{url}{id}")
     } else {
@@ -1291,6 +1292,24 @@ mod test {
     }
 
     #[test]
+    fn build_url_treats_placeholder_values_as_opaque_segments() {
+        let base_url = BaseUrl::from_str("https://api.example.com").unwrap();
+        let url = build_url(
+            &base_url,
+            &Endpoint::GroupMembers,
+            vec![(
+                Cow::Borrowed("group_id"),
+                Cow::Borrowed(r"1/../2?scope#frag%2F\tail"),
+            )],
+        );
+
+        assert_eq!(
+            url,
+            "https://api.example.com/api/v1/iam/groups/1%2F..%2F2%3Fscope%23frag%252F%5Ctail/members"
+        );
+    }
+
+    #[test]
     fn build_request_url_for_get_appends_query_string() {
         let url = build_request_url(
             &reqwest::Method::GET,
@@ -1363,6 +1382,25 @@ mod test {
         .expect("PATCH URL should build");
 
         assert_eq!(url, "https://api.example.com/api/v1/export-templates/12");
+    }
+
+    #[test]
+    fn build_request_url_treats_appended_identifiers_as_opaque_segments() {
+        let url = build_request_url(
+            &reqwest::Method::PATCH,
+            "https://api.example.com/api/v1/export-templates".to_string(),
+            &vec![(
+                Cow::Borrowed("patch_id"),
+                Cow::Borrowed(r"1/../2?scope#frag%2F\tail"),
+            )],
+            vec![],
+        )
+        .expect("PATCH URL should build");
+
+        assert_eq!(
+            url,
+            "https://api.example.com/api/v1/export-templates/1%2F..%2F2%3Fscope%23frag%252F%5Ctail"
+        );
     }
 
     #[test]
