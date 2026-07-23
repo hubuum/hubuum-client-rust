@@ -40,6 +40,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Absolute `Retry-After` dates that have already elapsed now request an
+  immediate retry instead of falling back to a randomized exponential delay.
 - The authenticated caller's group and token list helpers now follow cursor
   pagination instead of returning only the server's first page.
 - Resource-handle list helpers now follow cursor pagination through every page
