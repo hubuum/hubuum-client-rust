@@ -283,8 +283,19 @@ impl NewTokenRequest {
         self
     }
 
+    /// Restrict the token to a non-empty set of permissions.
+    ///
+    /// Omit this call to mint an unscoped token. An empty set is rejected when
+    /// the request is submitted rather than being interpreted as unscoped.
     pub fn scopes(mut self, scopes: Vec<crate::types::Permissions>) -> Self {
         self.scopes = Some(scopes);
         self
+    }
+
+    pub(crate) fn validate(&self) -> Result<(), crate::ApiError> {
+        if self.scopes.as_ref().is_some_and(Vec::is_empty) {
+            return Err(crate::ApiError::InvalidTokenScopes);
+        }
+        Ok(())
     }
 }
