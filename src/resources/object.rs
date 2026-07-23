@@ -106,12 +106,26 @@ pub enum ObjectDataPatchOperation {
 pub struct ObjectDataPatchDocument(pub Vec<ObjectDataPatchOperation>);
 
 impl ObjectDataPatchDocument {
+    /// Maximum number of operations accepted by the target Hubuum server.
+    pub const MAX_OPERATIONS: usize = 1_000;
+
     pub fn new(operations: impl IntoIterator<Item = ObjectDataPatchOperation>) -> Self {
         Self(operations.into_iter().collect())
     }
 
     pub fn push(&mut self, operation: ObjectDataPatchOperation) {
         self.0.push(operation);
+    }
+
+    /// Validate constraints that can be checked without the current object data.
+    pub fn validate(&self) -> Result<(), ApiError> {
+        if self.len() > Self::MAX_OPERATIONS {
+            return Err(ApiError::ObjectDataPatchLimit {
+                operations: self.len(),
+                limit: Self::MAX_OPERATIONS,
+            });
+        }
+        Ok(())
     }
 }
 
@@ -677,6 +691,26 @@ mod v003_tests {
                 {"op": "test", "path": "/e", "value": 2}
             ])
         );
+    }
+
+    #[test]
+    fn json_patch_document_enforces_the_server_operation_limit() {
+        let operation = ObjectDataPatchOperation::Remove { path: "/x".into() };
+        let mut document = ObjectDataPatchDocument::new(std::iter::repeat_n(
+            operation.clone(),
+            ObjectDataPatchDocument::MAX_OPERATIONS,
+        ));
+
+        assert!(document.validate().is_ok());
+
+        document.push(operation);
+        assert!(matches!(
+            document.validate(),
+            Err(ApiError::ObjectDataPatchLimit {
+                operations: 1_001,
+                limit: 1_000,
+            })
+        ));
     }
 
     #[test]

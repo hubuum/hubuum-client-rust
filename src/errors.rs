@@ -112,6 +112,9 @@ pub enum ApiError {
     #[error("Token scopes must be omitted or contain at least one permission")]
     InvalidTokenScopes,
 
+    #[error("Object data patch contains {operations} operations; the maximum is {limit}")]
+    ObjectDataPatchLimit { operations: usize, limit: usize },
+
     #[error("Unknown permission `{0}`")]
     UnknownPermission(#[from] strum::ParseError),
 }
@@ -216,6 +219,11 @@ impl std::fmt::Debug for ApiError {
                 .field("items", items)
                 .finish(),
             Self::InvalidTokenScopes => f.write_str("InvalidTokenScopes"),
+            Self::ObjectDataPatchLimit { operations, limit } => f
+                .debug_struct("ObjectDataPatchLimit")
+                .field("operations", operations)
+                .field("limit", limit)
+                .finish(),
             Self::UnknownPermission(error) => {
                 f.debug_tuple("UnknownPermission").field(error).finish()
             }

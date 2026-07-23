@@ -1563,6 +1563,7 @@ impl Client<Authenticated> {
         object_id: impl Into<ObjectId>,
         patch: &ObjectDataPatchDocument,
     ) -> Result<Object, ApiError> {
+        patch.validate()?;
         let path = Endpoint::ObjectData
             .path()
             .replace("{class_id}", &class_id.into().to_string())
@@ -2417,6 +2418,7 @@ impl ObjectNameScope {
     }
 
     pub fn patch_data(&self, patch: &ObjectDataPatchDocument) -> Result<Object, ApiError> {
+        patch.validate()?;
         if self.requires_fallback() {
             let (class_id, object_id) = self.client.resolve_object_name_ids(
                 &self.class_name,
