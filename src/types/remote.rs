@@ -4,6 +4,7 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
 use super::{RemoteCallResultId, TaskId};
+use crate::ApiError;
 use crate::resources::{
     ClassId, ClassRelationId, CollectionId, ObjectId, ObjectRelationId, RemoteTargetId,
 };
@@ -285,6 +286,18 @@ impl RemoteTargetInvokeRequest {
         self.body_override = Some(body_override);
         self
     }
+
+    pub(crate) fn validate(&self) -> Result<(), ApiError> {
+        for (field, value) in [
+            ("parameters", self.parameters.as_ref()),
+            ("body_override", self.body_override.as_ref()),
+        ] {
+            if value.is_some_and(|value| !value.is_object()) {
+                return Err(ApiError::InvalidRemoteInvocationObject { field });
+            }
+        }
+        Ok(())
+    }
 }
 
 /// The recorded outcome of a single remote invocation.
@@ -517,5 +530,41 @@ mod tests {
             result.error.as_deref(),
             Some("upstream rejected bearer error-secret")
         );
+    }
+
+    #[test]
+    fn remote_invocation_values_must_be_json_objects() {
+        let subject = RemoteInvocationSubject::Collection {
+            collection_id: CollectionId::new(1),
+        };
+
+        assert!(
+            RemoteTargetInvokeRequest::new(subject.clone())
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            RemoteTargetInvokeRequest::new(subject.clone())
+                .parameters(serde_json::json!({ "region": "eu" }))
+                .body_override(serde_json::json!({ "enabled": true }))
+                .validate()
+                .is_ok()
+        );
+        assert!(matches!(
+            RemoteTargetInvokeRequest::new(subject.clone())
+                .parameters(serde_json::json!(["invalid"]))
+                .validate(),
+            Err(ApiError::InvalidRemoteInvocationObject {
+                field: "parameters"
+            })
+        ));
+        assert!(matches!(
+            RemoteTargetInvokeRequest::new(subject)
+                .body_override(serde_json::Value::Null)
+                .validate(),
+            Err(ApiError::InvalidRemoteInvocationObject {
+                field: "body_override"
+            })
+        ));
     }
 }

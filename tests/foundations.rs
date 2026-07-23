@@ -8,8 +8,8 @@ use httpmock::MockServer;
 use hubuum_client::{
     ApiError, BackupRequest, BaseUrl, ClassPatch, Credentials, ExportContentType,
     ExportTemplateKind, ExportTemplateRunRequest, MockTransport, Object, ObjectDataPatchDocument,
-    ObjectDataPatchOperation, ObjectPatch, RetryPolicy, TaskStatus, Token, TransportResponse,
-    TypedObject, UnifiedSearchEvent, blocking,
+    ObjectDataPatchOperation, ObjectPatch, RemoteInvocationSubject, RemoteTargetInvokeRequest,
+    RetryPolicy, TaskStatus, Token, TransportResponse, TypedObject, UnifiedSearchEvent, blocking,
 };
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -621,6 +621,26 @@ fn exact_name_object_json(name: &str) -> serde_json::Value {
         "hubuum_class_id": 42,
         "description": "Object",
         "data": {"owner": "network"},
+        "created_at": "2026-07-21T10:00:00Z",
+        "updated_at": "2026-07-21T10:00:00Z"
+    })
+}
+
+fn remote_target_json() -> serde_json::Value {
+    json!({
+        "id": 3,
+        "collection_id": 7,
+        "name": "webhook",
+        "description": "",
+        "method": "post",
+        "url_template": "https://example.invalid/{name}",
+        "headers_template": {},
+        "auth_config": { "type": "none" },
+        "allowed_subject_types": ["collection"],
+        "timeout_ms": 5000,
+        "enabled": true,
+        "body_template": null,
+        "class_id": null,
         "created_at": "2026-07-21T10:00:00Z",
         "updated_at": "2026-07-21T10:00:00Z"
     })
@@ -1367,6 +1387,71 @@ fn principal_settings_reject_non_object_documents_before_transport() {
         Err(ApiError::InvalidPrincipalSettings)
     ));
     assert!(transport.requests().is_empty());
+}
+
+#[test]
+fn blocking_remote_invocations_reject_non_object_values_before_submission() {
+    let transport = MockTransport::default();
+    transport
+        .push_response(TransportResponse::json(StatusCode::OK, &remote_target_json()).unwrap());
+    let client = blocking_mock_client(transport.clone(), 1024);
+    let target = client.remote_targets().get(3).unwrap();
+    let subject = RemoteInvocationSubject::Collection {
+        collection_id: 7.into(),
+    };
+
+    assert!(matches!(
+        target
+            .invoke(RemoteTargetInvokeRequest::new(subject.clone()).parameters(json!(["invalid"]))),
+        Err(ApiError::InvalidRemoteInvocationObject {
+            field: "parameters"
+        })
+    ));
+    assert!(matches!(
+        target.invoke(RemoteTargetInvokeRequest::new(subject).body_override(json!(null))),
+        Err(ApiError::InvalidRemoteInvocationObject {
+            field: "body_override"
+        })
+    ));
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].method, Method::GET);
+}
+
+#[tokio::test]
+async fn async_remote_invocations_reject_non_object_values_before_submission() {
+    let transport = MockTransport::default();
+    transport
+        .push_response(TransportResponse::json(StatusCode::OK, &remote_target_json()).unwrap());
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+    let target = client.remote_targets().get(3).await.unwrap();
+    let subject = RemoteInvocationSubject::Collection {
+        collection_id: 7.into(),
+    };
+
+    assert!(matches!(
+        target
+            .invoke(RemoteTargetInvokeRequest::new(subject.clone()).parameters(json!("invalid")))
+            .await,
+        Err(ApiError::InvalidRemoteInvocationObject {
+            field: "parameters"
+        })
+    ));
+    assert!(matches!(
+        target
+            .invoke(RemoteTargetInvokeRequest::new(subject).body_override(json!([])))
+            .await,
+        Err(ApiError::InvalidRemoteInvocationObject {
+            field: "body_override"
+        })
+    ));
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].method, Method::GET);
 }
 
 #[tokio::test]
