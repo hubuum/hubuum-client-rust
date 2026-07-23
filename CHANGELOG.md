@@ -38,6 +38,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - This release explicitly targets Hubuum server v0.0.3 and retains its pinned
   OpenAPI contract and immutable tested server image.
 
+### Fixed
+
+- Blocking export readers and unified-search streams retain their existing
+  `Send + Sync` contract.
+
 ## [0.6.0] - 2026-07-21
 
 ### Breaking

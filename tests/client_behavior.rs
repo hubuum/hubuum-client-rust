@@ -27,6 +27,14 @@ const PROMETHEUS_METRICS: &str = concat!(
     "hubuum_http_requests_total{method=\"GET\",route=\"/metrics\",status_code=\"200\",status_family=\"2xx\"} 1\n",
 );
 
+#[test]
+fn blocking_stream_types_remain_send_and_sync() {
+    fn assert_send_sync<T: Send + Sync>() {}
+
+    assert_send_sync::<blocking::ExportOutputReader>();
+    assert_send_sync::<blocking::BlockingUnifiedSearchStream>();
+}
+
 fn ts() -> &'static str {
     "2024-01-01T00:00:00"
 }
