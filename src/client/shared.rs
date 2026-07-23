@@ -647,6 +647,7 @@ pub(crate) fn build_request_url(
     reject_url_dot_segments(&url)?;
 
     if *method == reqwest::Method::GET {
+        validate_page_limits(&query_params)?;
         let query = query_params.into_query_string()?;
         if query.is_empty() {
             Ok(url)
@@ -666,6 +667,28 @@ pub(crate) fn build_request_url(
     } else {
         Err(ApiError::UnsupportedHttpOperation(method.to_string()))
     }
+}
+
+const MIN_PAGE_LIMIT: usize = 1;
+const MAX_PAGE_LIMIT: usize = 250;
+
+fn validate_page_limits(query_params: &[QueryFilter]) -> Result<(), ApiError> {
+    for parameter in query_params.iter().filter(|parameter| {
+        matches!(parameter.operator, FilterOperator::Raw)
+            && matches!(parameter.key.as_str(), "limit" | "limit_per_kind")
+    }) {
+        let Ok(value) = parameter.value.parse::<usize>() else {
+            continue;
+        };
+        if !(MIN_PAGE_LIMIT..=MAX_PAGE_LIMIT).contains(&value) {
+            return Err(ApiError::InvalidPageLimit {
+                value,
+                min: MIN_PAGE_LIMIT,
+                max: MAX_PAGE_LIMIT,
+            });
+        }
+    }
+    Ok(())
 }
 
 fn ensure_no_unresolved_url_params(url: &str) -> Result<(), ApiError> {
@@ -1389,6 +1412,62 @@ mod test {
             url,
             "https://api.example.com/api/v1/classes?name__equals=alpha"
         );
+    }
+
+    #[test]
+    fn build_request_url_accepts_page_limit_boundaries() {
+        for key in ["limit", "limit_per_kind"] {
+            for limit in [MIN_PAGE_LIMIT, MAX_PAGE_LIMIT] {
+                let url = build_request_url(
+                    &reqwest::Method::GET,
+                    "https://api.example.com/api/v1/search".to_string(),
+                    &vec![],
+                    vec![QueryFilter::raw(key, limit.to_string())],
+                )
+                .expect("page limit boundary should build");
+
+                assert!(url.ends_with(&format!("{key}={limit}")));
+            }
+        }
+    }
+
+    #[test]
+    fn build_request_url_rejects_out_of_range_page_limits() {
+        for (key, value) in [("limit", 0), ("limit_per_kind", MAX_PAGE_LIMIT + 1)] {
+            let error = build_request_url(
+                &reqwest::Method::GET,
+                "https://api.example.com/api/v1/search".to_string(),
+                &vec![],
+                vec![QueryFilter::raw(key, value.to_string())],
+            )
+            .expect_err("out-of-range page limit should fail");
+
+            assert!(matches!(
+                error,
+                ApiError::InvalidPageLimit {
+                    value: rejected,
+                    min: MIN_PAGE_LIMIT,
+                    max: MAX_PAGE_LIMIT,
+                } if rejected == value
+            ));
+        }
+    }
+
+    #[test]
+    fn build_request_url_does_not_treat_field_filters_as_page_limits() {
+        let url = build_request_url(
+            &reqwest::Method::GET,
+            "https://api.example.com/api/v1/classes".to_string(),
+            &vec![],
+            vec![QueryFilter::filter(
+                "limit",
+                FilterOperator::Equals { is_negated: false },
+                "0",
+            )],
+        )
+        .expect("a filter on a field named limit should build");
+
+        assert!(url.ends_with("limit__equals=0"));
     }
 
     #[test]

@@ -115,6 +115,13 @@ pub enum ApiError {
     #[error("Object data patch contains {operations} operations; the maximum is {limit}")]
     ObjectDataPatchLimit { operations: usize, limit: usize },
 
+    #[error("Page limit {value} is outside the supported range {min}..={max}")]
+    InvalidPageLimit {
+        value: usize,
+        min: usize,
+        max: usize,
+    },
+
     #[error("Unknown permission `{0}`")]
     UnknownPermission(#[from] strum::ParseError),
 }
@@ -223,6 +230,12 @@ impl std::fmt::Debug for ApiError {
                 .debug_struct("ObjectDataPatchLimit")
                 .field("operations", operations)
                 .field("limit", limit)
+                .finish(),
+            Self::InvalidPageLimit { value, min, max } => f
+                .debug_struct("InvalidPageLimit")
+                .field("value", value)
+                .field("min", min)
+                .field("max", max)
                 .finish(),
             Self::UnknownPermission(error) => {
                 f.debug_tuple("UnknownPermission").field(error).finish()
