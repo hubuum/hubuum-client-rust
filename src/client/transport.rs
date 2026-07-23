@@ -11,7 +11,7 @@ pub struct RequestPlan {
     pub method: Method,
     pub url: url::Url,
     pub headers: HeaderMap,
-    body: Vec<u8>,
+    body: Option<Arc<[u8]>>,
 }
 
 impl RequestPlan {
@@ -20,16 +20,16 @@ impl RequestPlan {
             method,
             url,
             headers: HeaderMap::new(),
-            body: Vec::new(),
+            body: None,
         }
     }
 
     pub fn body(&self) -> &[u8] {
-        &self.body
+        self.body.as_deref().unwrap_or_default()
     }
 
     pub fn with_body(mut self, body: impl Into<Vec<u8>>) -> Self {
-        self.body = body.into();
+        self.body = Some(Arc::from(body.into()));
         self
     }
 }
@@ -44,7 +44,7 @@ impl std::fmt::Debug for RequestPlan {
             )
             .field("header_names", &self.headers.keys().collect::<Vec<_>>())
             .field("body", &"[REDACTED]")
-            .field("body_len", &self.body.len())
+            .field("body_len", &self.body().len())
             .finish()
     }
 }
@@ -162,5 +162,24 @@ impl AsyncTransport for MockTransport {
 impl BlockingTransport for MockTransport {
     fn execute(&self, request: RequestPlan) -> Result<TransportResponse, ApiError> {
         self.execute_inner(request)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RequestPlan;
+
+    #[test]
+    fn request_plan_clones_share_the_immutable_body() {
+        let plan = RequestPlan::new(
+            reqwest::Method::POST,
+            url::Url::parse("https://example.invalid/api/v1/imports").unwrap(),
+        )
+        .with_body(vec![42; 1024]);
+
+        let cloned = plan.clone();
+
+        assert_eq!(cloned.body(), plan.body());
+        assert!(std::ptr::eq(cloned.body(), plan.body()));
     }
 }

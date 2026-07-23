@@ -6,6 +6,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- Custom-transport retry plans now share their immutable serialized request
+  body across clones instead of copying the full payload for every attempt.
+
 ### Fixed
 
 - Dynamic endpoint parameters are encoded centrally as opaque URL path

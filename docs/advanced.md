@@ -145,11 +145,13 @@ let client = hubuum_client::Client::builder_from_url("https://mock.invalid")?
 ```
 
 Implement `AsyncTransport` or `BlockingTransport` to integrate a different HTTP
-stack. Because the transport traits return buffered `TransportResponse` values,
-streaming bodies are exposed as one stream chunk or one blocking reader; the
-built-in HTTP transports remain incremental. Successful streaming payloads are
-not subject to the buffered-response size limit in either case, while retry and
-error-body limits still apply. The lower-level
+stack. `RequestPlan` clones share their immutable serialized body, so custom
+transports can retain or retry a plan without copying a potentially large
+payload. Because the transport traits return buffered `TransportResponse`
+values, streaming bodies are exposed as one stream chunk or one blocking
+reader; the built-in HTTP transports remain incremental. Successful streaming
+payloads are not subject to the buffered-response size limit in either case,
+while retry and error-body limits still apply. The lower-level
 `client.raw(method, relative_path)` escape hatch can call new server routes
 before the typed library catches up. It rejects absolute URLs, network-path
 references, decoded parent traversal, query or fragment injection, configured
