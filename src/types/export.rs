@@ -25,14 +25,19 @@ pub enum ExportContentType {
 
 impl ExportContentType {
     pub fn from_header(value: &str) -> Option<Self> {
-        Some(
-            value
-                .split(';')
-                .next()?
-                .trim()
-                .parse()
-                .unwrap_or(Self::Unknown),
-        )
+        let media_type = value.split(';').next()?.trim();
+
+        Some(if media_type.eq_ignore_ascii_case("application/json") {
+            Self::ApplicationJson
+        } else if media_type.eq_ignore_ascii_case("text/plain") {
+            Self::TextPlain
+        } else if media_type.eq_ignore_ascii_case("text/html") {
+            Self::TextHtml
+        } else if media_type.eq_ignore_ascii_case("text/csv") {
+            Self::TextCsv
+        } else {
+            Self::Unknown
+        })
     }
 }
 
@@ -210,6 +215,29 @@ impl std::fmt::Debug for ExportResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn content_type_headers_are_case_insensitive_and_ignore_parameters() {
+        for (header, expected) in [
+            (
+                "Application/JSON; Charset=UTF-8",
+                ExportContentType::ApplicationJson,
+            ),
+            ("TEXT/PLAIN", ExportContentType::TextPlain),
+            ("Text/Html; charset=utf-8", ExportContentType::TextHtml),
+            ("text/CSV; header=present", ExportContentType::TextCsv),
+        ] {
+            assert_eq!(ExportContentType::from_header(header), Some(expected));
+        }
+    }
+
+    #[test]
+    fn unknown_content_type_headers_remain_forward_compatible() {
+        assert_eq!(
+            ExportContentType::from_header("Application/Vnd.Hubuum.Future+Json"),
+            Some(ExportContentType::Unknown)
+        );
+    }
 
     #[test]
     fn export_request_serializes_include_and_relation_context() {
