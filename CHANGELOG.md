@@ -51,6 +51,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- Reject object-data patch documents with more than the server's 1,000-operation
+  limit before performing exact-name resolution or sending a request.
 - Reject empty principal-token scope sets before sending a request, preserving
   the explicit distinction between unscoped tokens and invalid scoped-token
   requests for user and service-account handles.
