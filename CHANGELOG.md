@@ -36,6 +36,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   instead of panicking inside the procedural macro.
 - Lazy `pages()` and `items()` traversal now honors the configured automatic
   pagination page and item limits, matching eager `all()` collection.
+- Computed-field definitions with operation or result-type variants introduced
+  by a newer server now decode as `Unknown` instead of failing the entire
+  response.
 
 ## [0.6.1] - 2026-07-23
 

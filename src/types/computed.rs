@@ -17,22 +17,44 @@ pub enum ComputedResultType {
     Boolean,
     Object,
     Array,
+    #[serde(other)]
+    Unknown,
 }
 
-/// Closed operation catalog implemented by Hubuum server v0.0.2.
+/// Computed-field operation catalog understood by this client version.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ComputedFieldOperation {
-    FirstNonNull { paths: Vec<String> },
-    Sum { paths: Vec<String> },
-    Average { paths: Vec<String> },
-    Min { paths: Vec<String> },
-    Max { paths: Vec<String> },
-    AllPresent { paths: Vec<String> },
-    AnyPresent { paths: Vec<String> },
-    CountPresent { paths: Vec<String> },
-    AllPresentAndEqual { paths: Vec<String> },
+    FirstNonNull {
+        paths: Vec<String>,
+    },
+    Sum {
+        paths: Vec<String>,
+    },
+    Average {
+        paths: Vec<String>,
+    },
+    Min {
+        paths: Vec<String>,
+    },
+    Max {
+        paths: Vec<String>,
+    },
+    AllPresent {
+        paths: Vec<String>,
+    },
+    AnyPresent {
+        paths: Vec<String>,
+    },
+    CountPresent {
+        paths: Vec<String>,
+    },
+    AllPresentAndEqual {
+        paths: Vec<String>,
+    },
+    #[serde(other)]
+    Unknown,
 }
 
 impl ComputedFieldOperation {
@@ -47,6 +69,7 @@ impl ComputedFieldOperation {
             | Self::AnyPresent { paths }
             | Self::CountPresent { paths }
             | Self::AllPresentAndEqual { paths } => paths,
+            Self::Unknown => &[],
         }
     }
 }
@@ -393,6 +416,23 @@ impl ComputedObject {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unknown_operation_and_result_type_remain_decodable() {
+        let operation = serde_json::from_value::<ComputedFieldOperation>(serde_json::json!({
+            "type": "future_operation",
+            "paths": ["data.temperature"],
+            "window": 5
+        }))
+        .expect("unknown operation should decode");
+        let result_type =
+            serde_json::from_value::<ComputedResultType>(serde_json::json!("decimal"))
+                .expect("unknown result type should decode");
+
+        assert_eq!(operation, ComputedFieldOperation::Unknown);
+        assert!(operation.paths().is_empty());
+        assert_eq!(result_type, ComputedResultType::Unknown);
+    }
 
     #[test]
     fn typed_operation_matches_server_wire_contract() {
