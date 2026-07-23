@@ -114,7 +114,7 @@ jobs:
 
   server-contract:
     # Keep this check name stable because the main-branch ruleset requires it.
-    name: OpenAPI Contract
+    name: OpenAPI Drift
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
