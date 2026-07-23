@@ -4780,6 +4780,87 @@ fn sync_me_returns_identity_and_token() {
     me.assert_calls(1);
 }
 
+fn mock_paginated_me_lists(server: &MockServer) {
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/me/groups")
+            .query_param_missing("cursor")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "groups-2")
+            .json_body(json!([group_json(10, "admins")]));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/me/groups")
+            .query_param("cursor", "groups-2")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([group_json(12, "operators")]));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/me/tokens")
+            .query_param_missing("cursor")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", "tokens-2")
+            .json_body(json!([{
+                "id": 1,
+                "principal_id": 11,
+                "scoped": false,
+                "issued": "2024-01-01T00:00:00Z"
+            }]));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/me/tokens")
+            .query_param("cursor", "tokens-2")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([{
+                "id": 2,
+                "principal_id": 11,
+                "scoped": true,
+                "issued": "2024-01-02T00:00:00Z"
+            }]));
+    });
+}
+
+#[test]
+fn sync_me_list_helpers_fetch_every_cursor_page() {
+    let server = MockServer::start();
+    mock_login(&server);
+    mock_paginated_me_lists(&server);
+
+    let client = sync_client(&server);
+    let groups = client.me_groups().expect("me_groups should succeed");
+    assert_eq!(groups.len(), 2);
+    assert_eq!(groups[1].resource().id, 12);
+    let tokens = client.me_tokens().expect("me_tokens should succeed");
+    assert_eq!(tokens.len(), 2);
+    assert_eq!(tokens[1].id, 2);
+}
+
+#[tokio::test]
+async fn async_me_list_helpers_fetch_every_cursor_page() {
+    let server = MockServer::start();
+    mock_login(&server);
+    mock_paginated_me_lists(&server);
+
+    let client = async_client(&server).await;
+    let groups = client.me_groups().await.expect("me_groups should succeed");
+    assert_eq!(groups.len(), 2);
+    assert_eq!(groups[1].resource().id, 12);
+    let tokens = client.me_tokens().await.expect("me_tokens should succeed");
+    assert_eq!(tokens.len(), 2);
+    assert_eq!(tokens[1].id, 2);
+}
+
 #[test]
 fn sync_healthz_probe_succeeds_without_auth() {
     let server = MockServer::start();

@@ -28,6 +28,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Fixed
 
+- The authenticated caller's group and token list helpers now follow cursor
+  pagination instead of returning only the server's first page.
 - Resource-handle list helpers now follow cursor pagination through every page
   instead of silently returning only the server's first page.
 - Unified-search streams now apply `max_response_body_bytes` to each buffered
