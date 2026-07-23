@@ -31,15 +31,15 @@ use crate::types::{
     ComputedObject, CountsResponse, Credentials, DbStateResponse, EventDelivery,
     EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryUpdateResponse, EventResponse,
     EventSubscription, EventSubscriptionId, ExportContentType, ExportJsonResponse, ExportRequest,
-    ExportResult, ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator, HubuumDateTime,
-    ImportRequest, ImportRunResult, ImportTaskResultResponse, LoginRateLimitState,
-    LogoutTokenRequest, NewEventSubscription, ObjectHistory,
-    PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings, ProbeResponse,
-    ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability, RestoreConfirmRequest,
-    RestoreId, RestoreStageResponse, RunningConfig, SortDirection, TaskEventResponse, TaskId,
-    TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UnifiedSearchSseDecoder,
-    UpdateEventSubscription,
+    ExportResult, ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator,
+    FullImportRequest, HubuumDateTime, ImportRequest, ImportRequestPayload, ImportRunResult,
+    ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
+    ObjectHistory, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings,
+    ProbeResponse, ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability,
+    RestoreConfirmRequest, RestoreId, RestoreStageResponse, RunningConfig, SortDirection,
+    TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token,
+    TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    UnifiedSearchSseDecoder, UpdateEventSubscription,
 };
 
 #[derive(Deserialize, Debug)]
@@ -3857,10 +3857,26 @@ impl Imports {
     }
 
     pub fn submit(&self, request: ImportRequest) -> ImportSubmitOp {
-        ImportSubmitOp::new(self.client.clone(), request)
+        self.submit_payload(request.into())
+    }
+
+    pub fn submit_full(&self, request: FullImportRequest) -> ImportSubmitOp {
+        self.submit_payload(request.into())
     }
 
     pub fn run(&self, request: ImportRequest) -> ImportRunOp {
+        self.run_payload(request.into())
+    }
+
+    pub fn run_full(&self, request: FullImportRequest) -> ImportRunOp {
+        self.run_payload(request.into())
+    }
+
+    fn submit_payload(&self, request: ImportRequestPayload) -> ImportSubmitOp {
+        ImportSubmitOp::new(self.client.clone(), request)
+    }
+
+    fn run_payload(&self, request: ImportRequestPayload) -> ImportRunOp {
         ImportRunOp::new(self.client.clone(), request)
     }
 
@@ -3890,12 +3906,12 @@ impl Imports {
 
 pub struct ImportSubmitOp {
     client: Client<Authenticated>,
-    request: ImportRequest,
+    request: ImportRequestPayload,
     idempotency_key: Option<String>,
 }
 
 impl ImportSubmitOp {
-    fn new(client: Client<Authenticated>, request: ImportRequest) -> Self {
+    fn new(client: Client<Authenticated>, request: ImportRequestPayload) -> Self {
         Self {
             client,
             request,
@@ -3934,14 +3950,14 @@ impl ImportSubmitOp {
 
 pub struct ImportRunOp {
     client: Client<Authenticated>,
-    request: ImportRequest,
+    request: ImportRequestPayload,
     idempotency_key: Option<String>,
     poll_interval: std::time::Duration,
     timeout: Option<std::time::Duration>,
 }
 
 impl ImportRunOp {
-    fn new(client: Client<Authenticated>, request: ImportRequest) -> Self {
+    fn new(client: Client<Authenticated>, request: ImportRequestPayload) -> Self {
         Self {
             client,
             request,
@@ -3968,7 +3984,7 @@ impl ImportRunOp {
 
     pub async fn send(self) -> Result<ImportRunResult, ApiError> {
         let imports = Imports::new(self.client.clone());
-        let mut submit = imports.submit(self.request);
+        let mut submit = imports.submit_payload(self.request);
         if let Some(key) = self.idempotency_key {
             submit = submit.idempotency_key(key);
         }

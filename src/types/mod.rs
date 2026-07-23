@@ -69,11 +69,17 @@ pub use id::{
 };
 pub(crate) use identity::default_local_identity_value;
 pub use identity::{LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND};
+pub(crate) use import::ImportRequestPayload;
 pub use import::{
-    CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, GroupKey, ImportAtomicity, ImportClassInput,
-    ImportClassRelationInput, ImportCollectionInput, ImportCollectionPermissionInput,
-    ImportCollisionPolicy, ImportGraph, ImportMode, ImportObjectInput, ImportObjectRelationInput,
-    ImportPermissionPolicy, ImportRequest, ImportRunResult, ObjectKey,
+    CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, EventSinkKey, FullImportClassRelationInput,
+    FullImportGraph, FullImportRequest, GroupKey, IdentityScopeKey, ImportAtomicity,
+    ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
+    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportEventSinkInput,
+    ImportEventSubscriptionInput, ImportExportTemplateInput, ImportGraph, ImportGroupInput,
+    ImportGroupMembershipInput, ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode,
+    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
+    ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportRunResult, ObjectKey,
+    PrincipalKey, RestoreTimestamps,
 };
 pub use meta::{
     ClearRateLimitResponse, CountsResponse, DbStateResponse, LoginRateLimitConfig,

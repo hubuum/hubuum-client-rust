@@ -8,8 +8,9 @@ use hubuum_client::types::{
     BackupRequest, ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest,
     ComputedFieldOperation, ComputedFieldPreviewRequest, ComputedResultType, EventSinkKind,
     ExportContentType, ExportRequest, ExportScope, ExportScopeKind, ExportTemplateRunRequest,
-    FilterOperator, HubuumDateTime, ImportGraph, ImportRequest, NewEventSink, NewEventSubscription,
-    Permissions, PersonalComputedFieldDefinitionRequest, RestoreCapability, RestoreConfirmRequest,
+    FilterOperator, FullImportGraph, FullImportRequest, HubuumDateTime, ImportGraph,
+    ImportIdentityScopeInput, ImportRequest, NewEventSink, NewEventSubscription, Permissions,
+    PersonalComputedFieldDefinitionRequest, RestoreCapability, RestoreConfirmRequest,
     SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
 };
 use hubuum_client::{
@@ -594,6 +595,17 @@ fn import_request() -> ImportRequest {
         mode: None,
         graph: ImportGraph::default(),
     }
+}
+
+fn full_import_request() -> FullImportRequest {
+    let mut graph = FullImportGraph::default();
+    graph.identity_scopes.push(ImportIdentityScopeInput {
+        ref_: Some("scope".into()),
+        name: "directory".into(),
+        provider_kind: "ldap".into(),
+        timestamps: None,
+    });
+    FullImportRequest::new(graph).dry_run(true)
 }
 
 fn task_response_json(task_id: i32, status: &str) -> serde_json::Value {
@@ -4250,6 +4262,109 @@ fn sync_import_submit_without_idempotency_key_succeeds() {
         .expect("import submit without idempotency key should succeed");
     assert_eq!(task.id, 13);
 
+    import_submit.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_full_import_submit_serializes_extended_graph() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let import_submit = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/imports")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .json_body(json!({
+                "version": 1,
+                "dry_run": true,
+                "mode": null,
+                "graph": {
+                    "identity_scopes": [{
+                        "ref": "scope",
+                        "name": "directory",
+                        "provider_kind": "ldap",
+                        "timestamps": null
+                    }],
+                    "groups": [],
+                    "principals": [],
+                    "group_memberships": [],
+                    "collections": [],
+                    "classes": [],
+                    "objects": [],
+                    "class_relations": [],
+                    "object_relations": [],
+                    "collection_permissions": [],
+                    "export_templates": [],
+                    "remote_targets": [],
+                    "event_sinks": [],
+                    "event_subscriptions": []
+                }
+            }));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(task_response_json(14, "queued"));
+    });
+
+    let client = async_client(&server).await;
+    let task = client
+        .imports()
+        .submit_full(full_import_request())
+        .send()
+        .await
+        .expect("full import submit should succeed");
+
+    assert_eq!(task.id, 14);
+    import_submit.assert_calls(1);
+}
+
+#[test]
+fn sync_full_import_submit_serializes_extended_graph() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let import_submit = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/imports")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .json_body(json!({
+                "version": 1,
+                "dry_run": true,
+                "mode": null,
+                "graph": {
+                    "identity_scopes": [{
+                        "ref": "scope",
+                        "name": "directory",
+                        "provider_kind": "ldap",
+                        "timestamps": null
+                    }],
+                    "groups": [],
+                    "principals": [],
+                    "group_memberships": [],
+                    "collections": [],
+                    "classes": [],
+                    "objects": [],
+                    "class_relations": [],
+                    "object_relations": [],
+                    "collection_permissions": [],
+                    "export_templates": [],
+                    "remote_targets": [],
+                    "event_sinks": [],
+                    "event_subscriptions": []
+                }
+            }));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(task_response_json(15, "queued"));
+    });
+
+    let client = sync_client(&server);
+    let task = client
+        .imports()
+        .submit_full(full_import_request())
+        .send()
+        .expect("full import submit should succeed");
+
+    assert_eq!(task.id, 15);
     import_submit.assert_calls(1);
 }
 

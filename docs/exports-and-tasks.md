@@ -107,6 +107,35 @@ println!("{} succeeded, {} failed", imported.succeeded(), imported.failed());
 
 Failed and cancelled tasks return `ApiError::TaskUnsuccessful` without fetching result rows. Use distinct idempotency keys for dry-run and mutating imports.
 
+`ImportGraph` and `ImportRequest` remain the source-compatible core graph
+surface. Use `FullImportGraph`, `FullImportRequest`, and `run_full()` when an
+import also contains identity scopes, groups, principals, memberships, export
+templates, remote targets, event sinks, event subscriptions, or class-relation
+template aliases:
+
+```rust
+let mut graph = hubuum_client::FullImportGraph::default();
+graph
+    .identity_scopes
+    .push(hubuum_client::ImportIdentityScopeInput {
+        ref_: Some("scope:directory".into()),
+        name: "directory".into(),
+        provider_kind: "ldap".into(),
+        timestamps: None,
+    });
+
+let imported = client
+    .imports()
+    .run_full(hubuum_client::FullImportRequest::new(graph).dry_run(true))
+    .idempotency_key("full-inventory-preview-2026-07-23")
+    .send()?;
+```
+
+`FullImportGraph` is non-exhaustive so additional server sections can be added
+without breaking downstream struct literals. Start with `default()` and append
+typed items to its section vectors. Existing `ImportRequest` values can be
+upgraded with `FullImportRequest::from(request)`.
+
 The lower-level helpers remain available when polling must be controlled directly:
 
 ```rust
