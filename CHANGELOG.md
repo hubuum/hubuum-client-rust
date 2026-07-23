@@ -20,6 +20,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Raw JSON request bodies are serialized once when attached to the request
   instead of being materialized as a JSON value and serialized again at send
   time.
+- Endpoint URL construction now borrows the normalized base URL instead of
+  allocating an intermediate copy for every request.
 
 ### Fixed
 
