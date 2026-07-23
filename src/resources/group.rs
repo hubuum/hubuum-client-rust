@@ -95,21 +95,7 @@ impl SyncHandle<Group> {
     }
 
     pub fn members(&self) -> Result<Vec<PrincipalMember>, ApiError> {
-        let url_params = vec![(
-            Cow::Borrowed("group_id"),
-            self.resource().id.to_string().into(),
-        )];
-        let res = self
-            .client()
-            .request_with_endpoint::<SyncEmptyPostParams, Vec<PrincipalMember>>(
-                reqwest::Method::GET,
-                &Endpoint::GroupMembers,
-                url_params,
-                vec![],
-                SyncEmptyPostParams {},
-            )?;
-
-        Ok(res.unwrap_or_default())
+        self.members_request().all()
     }
 
     pub fn members_request(&self) -> SyncCursorRequest<PrincipalMember> {
@@ -160,22 +146,7 @@ impl AsyncHandle<Group> {
     }
 
     pub async fn members(&self) -> Result<Vec<PrincipalMember>, ApiError> {
-        let url_params = vec![(
-            Cow::Borrowed("group_id"),
-            self.resource().id.to_string().into(),
-        )];
-        let res = self
-            .client()
-            .request_with_endpoint::<AsyncEmptyPostParams, Vec<PrincipalMember>>(
-                reqwest::Method::GET,
-                &Endpoint::GroupMembers,
-                url_params,
-                vec![],
-                AsyncEmptyPostParams {},
-            )
-            .await?;
-
-        Ok(res.unwrap_or_default())
+        self.members_request().all().await
     }
 
     pub fn members_request(&self) -> AsyncCursorRequest<PrincipalMember> {

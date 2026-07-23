@@ -147,6 +147,129 @@ fn group_permission_json(collection_id: i32, group_id: i32, groupname: &str) -> 
     })
 }
 
+fn mock_paginated_json_route(
+    server: &MockServer,
+    path: &str,
+    next_cursor: &str,
+    first_page: serde_json::Value,
+    second_page: serde_json::Value,
+) {
+    server.mock(|when, then| {
+        when.method(GET)
+            .path(path)
+            .query_param_missing("cursor")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .header("x-next-cursor", next_cursor)
+            .json_body(first_page);
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path(path)
+            .query_param("cursor", next_cursor)
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(second_page);
+    });
+}
+
+fn mock_paginated_handle_lists(server: &MockServer) {
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/users/11")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(user_json(11, "alice"));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/groups/10")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(group_json(10, "admins"));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("class-42"));
+    });
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(collection_json(7, "collection-1"));
+    });
+
+    mock_paginated_json_route(
+        server,
+        "/api/v1/iam/principals/11/groups",
+        "groups-2",
+        json!([group_json(10, "admins")]),
+        json!([group_json(12, "operators")]),
+    );
+    mock_paginated_json_route(
+        server,
+        "/api/v1/iam/principals/11/tokens",
+        "tokens-2",
+        json!([{
+            "id": 1,
+            "principal_id": 11,
+            "scoped": false,
+            "issued": "2024-01-01T00:00:00Z"
+        }]),
+        json!([{
+            "id": 2,
+            "principal_id": 11,
+            "scoped": true,
+            "issued": "2024-01-02T00:00:00Z"
+        }]),
+    );
+    mock_paginated_json_route(
+        server,
+        "/api/v1/iam/groups/10/members",
+        "members-2",
+        json!([principal_member_json(11, "alice")]),
+        json!([principal_member_json(12, "automation")]),
+    );
+    mock_paginated_json_route(
+        server,
+        "/api/v1/classes/42/",
+        "objects-2",
+        json!([object_json(9, 42, "first-object")]),
+        json!([object_json(10, 42, "second-object")]),
+    );
+    mock_paginated_json_route(
+        server,
+        "/api/v1/classes/42/permissions",
+        "class-permissions-2",
+        json!([group_permission_json(7, 10, "admins")]),
+        json!([group_permission_json(7, 12, "operators")]),
+    );
+    mock_paginated_json_route(
+        server,
+        "/api/v1/collections/7/permissions",
+        "collection-permissions-2",
+        json!([group_permission_json(7, 10, "admins")]),
+        json!([group_permission_json(7, 12, "operators")]),
+    );
+    mock_paginated_json_route(
+        server,
+        "/api/v1/collections/7/permissions/principal/11",
+        "principal-permissions-2",
+        json!([group_permission_json(7, 10, "admins")]),
+        json!([group_permission_json(7, 12, "operators")]),
+    );
+}
+
 fn running_config_json() -> serde_json::Value {
     json!({
         "server": {
@@ -1526,6 +1649,120 @@ fn sync_resource_all_auto_paginates_and_page_iterates() {
         .map(|class| class.name)
         .collect::<Vec<_>>();
     assert_eq!(iterated, vec!["iterated"]);
+}
+
+#[test]
+fn sync_handle_list_helpers_fetch_every_cursor_page() {
+    let server = MockServer::start();
+    mock_login(&server);
+    mock_paginated_handle_lists(&server);
+
+    let client = sync_client(&server);
+    let user = client.users().get(11).expect("user lookup should succeed");
+    let groups = user.groups().expect("user groups should succeed");
+    assert_eq!(groups.len(), 2);
+    assert_eq!(groups[1].resource().id, 12);
+    let tokens = user.tokens().expect("user tokens should succeed");
+    assert_eq!(tokens.len(), 2);
+    assert_eq!(tokens[1].id, 2);
+
+    let group = client
+        .groups()
+        .get(10)
+        .expect("group lookup should succeed");
+    let members = group.members().expect("group members should succeed");
+    assert_eq!(members.len(), 2);
+    assert_eq!(members[1].principal_id, 12);
+
+    let class = client
+        .classes()
+        .get(42)
+        .expect("class lookup should succeed");
+    let objects = class.objects().expect("class objects should succeed");
+    assert_eq!(objects.len(), 2);
+    assert_eq!(objects[1].resource().id, 10);
+    let class_permissions = class
+        .permissions()
+        .expect("class permissions should succeed");
+    assert_eq!(class_permissions.len(), 2);
+    assert_eq!(class_permissions[1].permission.group_id, 12);
+
+    let collection = client
+        .collections()
+        .get(7)
+        .expect("collection lookup should succeed");
+    let permissions = collection
+        .permissions()
+        .expect("collection permissions should succeed");
+    assert_eq!(permissions.len(), 2);
+    assert_eq!(permissions[1].permission.group_id, 12);
+    let principal_permissions = collection
+        .principal_permissions(11)
+        .expect("principal permissions should succeed");
+    assert_eq!(principal_permissions.len(), 2);
+    assert_eq!(principal_permissions[1].permission.group_id, 12);
+}
+
+#[tokio::test]
+async fn async_handle_list_helpers_fetch_every_cursor_page() {
+    let server = MockServer::start();
+    mock_login(&server);
+    mock_paginated_handle_lists(&server);
+
+    let client = async_client(&server).await;
+    let user = client
+        .users()
+        .get(11)
+        .await
+        .expect("user lookup should succeed");
+    let groups = user.groups().await.expect("user groups should succeed");
+    assert_eq!(groups.len(), 2);
+    assert_eq!(groups[1].resource().id, 12);
+    let tokens = user.tokens().await.expect("user tokens should succeed");
+    assert_eq!(tokens.len(), 2);
+    assert_eq!(tokens[1].id, 2);
+
+    let group = client
+        .groups()
+        .get(10)
+        .await
+        .expect("group lookup should succeed");
+    let members = group.members().await.expect("group members should succeed");
+    assert_eq!(members.len(), 2);
+    assert_eq!(members[1].principal_id, 12);
+
+    let class = client
+        .classes()
+        .get(42)
+        .await
+        .expect("class lookup should succeed");
+    let objects = class.objects().await.expect("class objects should succeed");
+    assert_eq!(objects.len(), 2);
+    assert_eq!(objects[1].resource().id, 10);
+    let class_permissions = class
+        .permissions()
+        .await
+        .expect("class permissions should succeed");
+    assert_eq!(class_permissions.len(), 2);
+    assert_eq!(class_permissions[1].permission.group_id, 12);
+
+    let collection = client
+        .collections()
+        .get(7)
+        .await
+        .expect("collection lookup should succeed");
+    let permissions = collection
+        .permissions()
+        .await
+        .expect("collection permissions should succeed");
+    assert_eq!(permissions.len(), 2);
+    assert_eq!(permissions[1].permission.group_id, 12);
+    let principal_permissions = collection
+        .principal_permissions(11)
+        .await
+        .expect("principal permissions should succeed");
+    assert_eq!(principal_permissions.len(), 2);
+    assert_eq!(principal_permissions[1].permission.group_id, 12);
 }
 
 #[test]
