@@ -1,9 +1,9 @@
 use std::{thread, time::Duration};
 
 use hubuum_client::{
-    ClassPatch, EventDeliveryStatus, EventSinkKind, ExportContentType, ExportTemplateKind,
-    ExportTemplatePost, GroupPatch, NewEventSink, NewEventSubscription, ObjectPatch,
-    UpdateEventSubscription, UserPatch,
+    ClassPatch, CollectionPost, EventDeliveryStatus, EventSinkKind, ExportContentType,
+    ExportTemplateKind, ExportTemplatePost, GroupPatch, NewEventSink, NewEventSubscription,
+    ObjectPatch, UpdateEventSubscription, UserPatch,
 };
 use serde_json::json;
 
@@ -285,6 +285,40 @@ fn e2e_events_and_history_cover_core_and_templates() {
         )
         .expect("collection history as-of should fetch");
     assert_eq!(collection_as_of.id, collection_id);
+
+    let child_collection = harness
+        .client
+        .collections()
+        .create_raw(CollectionPost {
+            name: format!("{prefix}-child-collection"),
+            description: "e2e child collection history".to_string(),
+            group_id: admin_group_id,
+            parent_collection_id: Some(collection_id),
+        })
+        .expect("child collection should be created");
+    let full_collection_history = harness
+        .client
+        .collection_history_full(child_collection.id)
+        .limit(20)
+        .list()
+        .expect("full collection history should list");
+    assert!(
+        full_collection_history.iter().any(|entry| {
+            entry.id == child_collection.id && entry.parent_collection_id == Some(collection_id)
+        }),
+        "full collection history should preserve the parent collection"
+    );
+    let full_collection_as_of = harness
+        .client
+        .collection_history_as_of_full(
+            child_collection.id,
+            full_collection_history[0].history.valid_from.clone(),
+        )
+        .expect("full collection history as-of should fetch");
+    assert_eq!(
+        full_collection_as_of.parent_collection_id,
+        full_collection_history[0].parent_collection_id
+    );
 
     let class_history = harness
         .client

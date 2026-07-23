@@ -306,6 +306,11 @@ mod parity_contract {
             let _ = |client: &$module::Client<Authenticated>| {
                 let _ = client.class_by_name(String::new());
                 let _ = client.object_aggregates(1);
+                let _ = client.collection_history_full(1);
+                std::mem::drop(client.collection_history_as_of_full(
+                    1,
+                    crate::types::HubuumDateTime::default(),
+                ));
                 let patch = crate::resources::ObjectDataPatchDocument::default();
                 std::mem::drop(client.patch_object_data(1, 1, &patch));
             };
@@ -321,6 +326,7 @@ mod parity_contract {
             let _ = $module::ClassNameScope::related_graph;
             let _ = $module::Imports::submit_full;
             let _ = $module::Imports::run_full;
+            let _ = $module::CollectionScope::history_full;
 
             let _ = $module::ClassNameObjects::query;
             let _ = $module::ClassNameObjects::create_raw;

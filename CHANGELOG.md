@@ -8,6 +8,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Full collection-history responses and accessors preserve the server's
+  `parent_collection_id` without breaking the original `CollectionHistory`
+  model or its existing methods.
 - Additive `FullImportGraph` and `FullImportRequest` models cover every Hubuum
   0.0.3 import section, including identity and integration state plus
   class-relation template aliases. Async and blocking clients expose matching

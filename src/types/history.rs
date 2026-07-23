@@ -30,6 +30,37 @@ pub struct CollectionHistory {
     pub history: HistoryMetadata,
 }
 
+/// Complete collection history record returned by Hubuum.
+///
+/// This additive type preserves `parent_collection_id`, which the original
+/// `CollectionHistory` model predates.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
+pub struct FullCollectionHistory {
+    pub id: CollectionId,
+    pub name: String,
+    pub description: String,
+    #[serde(default)]
+    pub parent_collection_id: Option<CollectionId>,
+    pub created_at: HubuumDateTime,
+    pub updated_at: HubuumDateTime,
+    #[serde(flatten)]
+    pub history: HistoryMetadata,
+}
+
+impl From<FullCollectionHistory> for CollectionHistory {
+    fn from(value: FullCollectionHistory) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            description: value.description,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+            history: value.history,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ClassHistory {
     pub id: ClassId,
@@ -138,5 +169,33 @@ impl std::fmt::Debug for RemoteTargetHistory {
             .field("updated_at", &self.updated_at)
             .field("history", &self.history)
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FullCollectionHistory;
+
+    #[test]
+    fn full_collection_history_preserves_parent_id() {
+        let history: FullCollectionHistory = serde_json::from_value(serde_json::json!({
+            "id": 7,
+            "name": "child",
+            "description": "Child collection",
+            "parent_collection_id": 3,
+            "created_at": "2026-07-23T08:00:00Z",
+            "updated_at": "2026-07-23T08:01:00Z",
+            "op": "INSERT",
+            "valid_from": "2026-07-23T08:00:00Z",
+            "valid_to": null,
+            "history_id": 11,
+            "actor_id": 2
+        }))
+        .unwrap();
+
+        assert_eq!(history.parent_collection_id, Some(3.into()));
+        let legacy = super::CollectionHistory::from(history);
+        assert_eq!(legacy.id, 7);
+        assert_eq!(legacy.history.history_id, 11);
     }
 }
