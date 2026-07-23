@@ -1398,17 +1398,10 @@ impl Client<Authenticated> {
 
     /// The authenticated caller's own groups.
     pub async fn me_groups(&self) -> Result<Vec<Handle<Group>>, ApiError> {
-        let res = self
-            .request_with_endpoint::<EmptyPostParams, Vec<Group>>(
-                reqwest::Method::GET,
-                &Endpoint::MeGroups,
-                UrlParams::default(),
-                vec![],
-                EmptyPostParams,
-            )
-            .await?;
-        Ok(res
-            .unwrap_or_default()
+        Ok(self
+            .me_groups_request()
+            .all()
+            .await?
             .into_iter()
             .map(|group| Handle::new(self.clone(), group))
             .collect())
@@ -1420,16 +1413,7 @@ impl Client<Authenticated> {
 
     /// The authenticated caller's own active tokens.
     pub async fn me_tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
-        let res = self
-            .request_with_endpoint::<EmptyPostParams, Vec<PrincipalTokenMetadata>>(
-                reqwest::Method::GET,
-                &Endpoint::MeTokens,
-                UrlParams::default(),
-                vec![],
-                EmptyPostParams,
-            )
-            .await?;
-        Ok(res.unwrap_or_default())
+        self.me_tokens_request().all().await
     }
 
     pub fn me_tokens_request(&self) -> CursorRequest<PrincipalTokenMetadata> {
