@@ -13,7 +13,7 @@ use crate::client::sync::{
     Handle as SyncHandle, PrincipalSettingsScope as SyncPrincipalSettingsScope,
 };
 use crate::{
-    ApiError, Group, NewTokenRequest, PrincipalTokenMetadata,
+    ApiError, Group, NewTokenRequest, PrincipalCollectionPermissions, PrincipalTokenMetadata,
     endpoints::Endpoint,
     types::{HubuumDateTime, PrincipalId, TokenId},
 };
@@ -65,6 +65,12 @@ impl User {
 impl SyncHandle<User> {
     pub fn settings(&self) -> SyncPrincipalSettingsScope {
         self.client().principal_settings(self.id())
+    }
+
+    /// Effective permissions for this user, grouped by collection and granting
+    /// group.
+    pub fn permissions(&self) -> Result<Vec<PrincipalCollectionPermissions>, ApiError> {
+        self.client().principal_permissions(self.id())
     }
 
     pub fn groups_request(&self) -> SyncCursorRequest<Group> {
@@ -136,6 +142,12 @@ impl SyncHandle<User> {
 impl AsyncHandle<User> {
     pub fn settings(&self) -> AsyncPrincipalSettingsScope {
         self.client().principal_settings(self.id())
+    }
+
+    /// Effective permissions for this user, grouped by collection and granting
+    /// group.
+    pub async fn permissions(&self) -> Result<Vec<PrincipalCollectionPermissions>, ApiError> {
+        self.client().principal_permissions(self.id()).await
     }
 
     pub fn groups_request(&self) -> AsyncCursorRequest<Group> {

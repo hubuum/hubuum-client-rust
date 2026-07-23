@@ -233,6 +233,13 @@ let settings = client
     .await?;
 ```
 
+Administrators can inspect effective permissions for either principal kind
+without first resolving it as a user or service account:
+
+```rust
+let permissions = client.principal_permissions(principal_id).await?;
+```
+
 Operational clients can scrape Prometheus text before authentication. For a
 non-default path, use the value exposed by the read-only administrative config:
 

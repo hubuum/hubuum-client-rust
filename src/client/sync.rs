@@ -1358,6 +1358,30 @@ impl Client<Authenticated> {
         )
     }
 
+    /// Effective permissions for an explicit principal, grouped by collection
+    /// and granting group.
+    pub fn principal_permissions<I>(
+        &self,
+        principal_id: I,
+    ) -> Result<Vec<PrincipalCollectionPermissions>, ApiError>
+    where
+        I: Into<PrincipalId>,
+    {
+        let principal_id = principal_id.into();
+        let response = self
+            .request_with_endpoint::<EmptyPostParams, Vec<PrincipalCollectionPermissions>>(
+                reqwest::Method::GET,
+                &Endpoint::PrincipalPermissions,
+                vec![(
+                    Cow::Borrowed("principal_id"),
+                    principal_id.to_string().into(),
+                )],
+                vec![],
+                EmptyPostParams,
+            )?;
+        Ok(response.unwrap_or_default())
+    }
+
     pub fn classes(&self) -> Resource<Class> {
         Resource::new(self.clone(), UrlParams::default())
     }
