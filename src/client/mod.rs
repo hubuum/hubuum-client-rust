@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 
 use crate::QueryFilter;
 use crate::endpoints::Endpoint;
@@ -72,7 +72,7 @@ pub struct Unauthenticated;
 
 #[derive(Clone)]
 pub struct Authenticated {
-    token: SecretString,
+    token: Arc<SecretString>,
 }
 
 impl std::fmt::Debug for Authenticated {
@@ -86,12 +86,30 @@ impl std::fmt::Debug for Authenticated {
 impl Authenticated {
     fn new(token: crate::types::Token) -> Self {
         Self {
-            token: token.into_secret(),
+            token: Arc::new(token.into_secret()),
         }
     }
 
     fn token(&self) -> &str {
         self.token.expose_secret()
+    }
+}
+
+#[cfg(test)]
+mod authenticated_state_tests {
+    use std::sync::Arc;
+
+    use super::Authenticated;
+    use crate::types::Token;
+
+    #[test]
+    fn clones_share_redacted_token_storage() {
+        let state = Authenticated::new(Token::new("shared-secret"));
+        let cloned = state.clone();
+
+        assert!(Arc::ptr_eq(&state.token, &cloned.token));
+        assert_eq!(cloned.token(), "shared-secret");
+        assert!(!format!("{cloned:?}").contains("shared-secret"));
     }
 }
 
