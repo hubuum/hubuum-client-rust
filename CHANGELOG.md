@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Fixed
+
+- Bearer tokens, restore capabilities, and caller-provided raw header values are
+  now marked sensitive for built-in and custom transports, keeping them out of
+  `Debug` output and HTTP/2 dynamic compression tables.
+
 ## [0.7.0] - 2026-07-25
 
 ### Added
