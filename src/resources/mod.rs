@@ -25,11 +25,12 @@ pub use self::export_template::{
 };
 pub use self::group::{Group, GroupGet, GroupId, GroupPatch, GroupPost};
 pub use self::object::{
-    Object, ObjectAggregateDimension, ObjectAggregateDimensionValue, ObjectAggregateRow,
-    ObjectAggregateSort, ObjectAggregateValueState, ObjectDataPatchDocument,
-    ObjectDataPatchOperation, ObjectGet, ObjectId, ObjectPatch, ObjectPost, ObjectRelation,
-    ObjectRelationGet, ObjectRelationId, ObjectRelationPatch, ObjectRelationPost, ObjectWithPath,
-    RelatedObjectGraph,
+    Object, ObjectAggregateDimension, ObjectAggregateDimensionValue, ObjectAggregateMeasure,
+    ObjectAggregateMeasureField, ObjectAggregateMeasureOperation, ObjectAggregateMeasureState,
+    ObjectAggregateMeasureValue, ObjectAggregateRow, ObjectAggregateSort,
+    ObjectAggregateValueState, ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectGet,
+    ObjectId, ObjectPatch, ObjectPost, ObjectRelation, ObjectRelationGet, ObjectRelationId,
+    ObjectRelationPatch, ObjectRelationPost, ObjectWithPath, RelatedObjectGraph,
 };
 pub use self::remote_target::RemoteTargetId;
 pub use self::service_account::{
@@ -90,6 +91,14 @@ pub trait ApiResource: sealed::Sealed + Default {
     fn endpoint(&self) -> Endpoint;
     fn build_params(filters: Vec<(String, FilterOperator, String)>) -> Vec<QueryFilter>;
     fn filters_from_get(params: Self::GetParams) -> Vec<QueryFilter>;
+
+    fn validate_post(_params: &Self::PostParams) -> Result<(), crate::ApiError> {
+        Ok(())
+    }
+
+    fn validate_patch(_params: &Self::PatchParams) -> Result<(), crate::ApiError> {
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -159,7 +168,7 @@ pub struct PermissionResult {
 }
 
 /// Public, hash-free projection of a principal token (used for listing).
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Clone, PartialEq)]
 pub struct PrincipalTokenMetadata {
     pub id: crate::types::TokenId,
     pub principal_id: crate::types::PrincipalId,
@@ -167,7 +176,15 @@ pub struct PrincipalTokenMetadata {
     pub name: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
+    /// Exact permission and resource boundaries. `None` means unscoped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<crate::types::TokenScopeDetails>,
+    /// Compatibility projection for pre-v0.0.4 responses.
+    #[serde(skip_serializing)]
     pub scoped: bool,
+    /// Compatibility projection of `scope.permissions`.
+    #[serde(skip_serializing)]
+    pub scopes: Option<Vec<crate::types::Permissions>>,
     pub issued: HubuumDateTime,
     #[serde(default)]
     pub expires_at: Option<HubuumDateTime>,
@@ -175,6 +192,64 @@ pub struct PrincipalTokenMetadata {
     pub last_used_at: Option<HubuumDateTime>,
     #[serde(default)]
     pub revoked_at: Option<HubuumDateTime>,
+}
+
+impl<'de> Deserialize<'de> for PrincipalTokenMetadata {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Wire {
+            id: crate::types::TokenId,
+            principal_id: crate::types::PrincipalId,
+            #[serde(default)]
+            name: Option<String>,
+            #[serde(default)]
+            description: Option<String>,
+            #[serde(default)]
+            scope: Option<crate::types::TokenScopeDetails>,
+            #[serde(default)]
+            scoped: Option<bool>,
+            #[serde(default)]
+            scopes: Option<Vec<crate::types::Permissions>>,
+            issued: HubuumDateTime,
+            #[serde(default)]
+            expires_at: Option<HubuumDateTime>,
+            #[serde(default)]
+            last_used_at: Option<HubuumDateTime>,
+            #[serde(default)]
+            revoked_at: Option<HubuumDateTime>,
+        }
+
+        let wire = Wire::deserialize(deserializer)?;
+        let scope = wire.scope.or_else(|| {
+            wire.scopes.clone().map(|permissions| {
+                crate::types::TokenScopeDetails::from_parts_unchecked(Some(permissions), None)
+            })
+        });
+        let scopes = wire.scopes.or_else(|| {
+            scope
+                .as_ref()
+                .and_then(crate::types::TokenScopeDetails::permissions)
+                .map(<[_]>::to_vec)
+        });
+        let scoped = wire.scoped.unwrap_or(scope.is_some());
+
+        Ok(Self {
+            id: wire.id,
+            principal_id: wire.principal_id,
+            name: wire.name,
+            description: wire.description,
+            scope,
+            scoped,
+            scopes,
+            issued: wire.issued,
+            expires_at: wire.expires_at,
+            last_used_at: wire.last_used_at,
+            revoked_at: wire.revoked_at,
+        })
+    }
 }
 
 /// A group member, which is a principal of either kind (`human` or
@@ -221,21 +296,80 @@ pub struct EffectiveGroupPermission {
 
 /// Metadata for the token presented on the current request (the caller's own
 /// token), including its scopes when scoped.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Clone, PartialEq)]
 pub struct CurrentTokenMetadata {
     pub id: crate::types::TokenId,
     #[serde(default)]
     pub name: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
+    /// Exact permission and resource boundaries. `None` means unscoped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<crate::types::TokenScopeDetails>,
+    /// Compatibility projection for pre-v0.0.4 responses.
+    #[serde(skip_serializing)]
     pub scoped: bool,
-    #[serde(default)]
+    /// Compatibility projection of `scope.permissions`.
+    #[serde(skip_serializing)]
     pub scopes: Option<Vec<crate::types::Permissions>>,
     pub issued: HubuumDateTime,
     #[serde(default)]
     pub expires_at: Option<HubuumDateTime>,
     #[serde(default)]
     pub last_used_at: Option<HubuumDateTime>,
+}
+
+impl<'de> Deserialize<'de> for CurrentTokenMetadata {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Wire {
+            id: crate::types::TokenId,
+            #[serde(default)]
+            name: Option<String>,
+            #[serde(default)]
+            description: Option<String>,
+            #[serde(default)]
+            scope: Option<crate::types::TokenScopeDetails>,
+            #[serde(default)]
+            scoped: Option<bool>,
+            #[serde(default)]
+            scopes: Option<Vec<crate::types::Permissions>>,
+            issued: HubuumDateTime,
+            #[serde(default)]
+            expires_at: Option<HubuumDateTime>,
+            #[serde(default)]
+            last_used_at: Option<HubuumDateTime>,
+        }
+
+        let wire = Wire::deserialize(deserializer)?;
+        let scope = wire.scope.or_else(|| {
+            wire.scopes.clone().map(|permissions| {
+                crate::types::TokenScopeDetails::from_parts_unchecked(Some(permissions), None)
+            })
+        });
+        let scopes = wire.scopes.or_else(|| {
+            scope
+                .as_ref()
+                .and_then(crate::types::TokenScopeDetails::permissions)
+                .map(<[_]>::to_vec)
+        });
+        let scoped = wire.scoped.unwrap_or(scope.is_some());
+
+        Ok(Self {
+            id: wire.id,
+            name: wire.name,
+            description: wire.description,
+            scope,
+            scoped,
+            scopes,
+            issued: wire.issued,
+            expires_at: wire.expires_at,
+            last_used_at: wire.last_used_at,
+        })
+    }
 }
 
 /// The authenticated caller's own identity and current-token metadata, returned
@@ -248,9 +382,9 @@ pub struct MeResponse {
 
 /// Request body for minting a new principal token.
 ///
-/// Omit `scopes` for an unscoped token. An **empty** `scopes` array is rejected
-/// by the server (almost certainly a client bug, not "grant nothing").
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+/// Omit `scope` for an unscoped token. A present scope must narrow at least one
+/// dimension.
+#[derive(Debug, Deserialize, Clone, PartialEq, Default)]
 pub struct NewTokenRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -258,8 +392,42 @@ pub struct NewTokenRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<HubuumDateTime>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub scope: Option<crate::types::TokenScopeDetails>,
+    /// Compatibility input for callers using the pre-v0.0.4 field. It is
+    /// serialized as `scope.permissions`, never as the rejected flat field.
+    #[serde(skip)]
     pub scopes: Option<Vec<crate::types::Permissions>>,
+}
+
+impl Serialize for NewTokenRequest {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(Serialize)]
+        struct Wire<'a> {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            name: Option<&'a String>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            description: Option<&'a String>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            expires_at: Option<&'a HubuumDateTime>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            scope: Option<&'a crate::types::TokenScopeDetails>,
+        }
+
+        let compatibility_scope = self.scopes.as_ref().map(|permissions| {
+            crate::types::TokenScopeDetails::from_parts_unchecked(Some(permissions.clone()), None)
+        });
+        Wire {
+            name: self.name.as_ref(),
+            description: self.description.as_ref(),
+            expires_at: self.expires_at.as_ref(),
+            scope: self.scope.as_ref().or(compatibility_scope.as_ref()),
+        }
+        .serialize(serializer)
+    }
 }
 
 impl NewTokenRequest {
@@ -283,18 +451,31 @@ impl NewTokenRequest {
         self
     }
 
+    /// Set permission and/or resource boundaries for this token.
+    pub fn scope(mut self, scope: crate::types::TokenScopeDetails) -> Self {
+        self.scope = Some(scope);
+        self
+    }
+
     /// Restrict the token to a non-empty set of permissions.
     ///
-    /// Omit this call to mint an unscoped token. An empty set is rejected when
-    /// the request is submitted rather than being interpreted as unscoped.
+    /// This compatibility builder emits the v0.0.4
+    /// `scope.permissions` wire shape.
     pub fn scopes(mut self, scopes: Vec<crate::types::Permissions>) -> Self {
         self.scopes = Some(scopes);
         self
     }
 
     pub(crate) fn validate(&self) -> Result<(), crate::ApiError> {
-        if self.scopes.as_ref().is_some_and(Vec::is_empty) {
+        if self.scope.is_some() && self.scopes.is_some() {
             return Err(crate::ApiError::InvalidTokenScopes);
+        }
+        if let Some(scope) = &self.scope {
+            scope.validate()?;
+        }
+        if let Some(permissions) = &self.scopes {
+            crate::types::TokenScopeDetails::from_parts_unchecked(Some(permissions.clone()), None)
+                .validate()?;
         }
         Ok(())
     }

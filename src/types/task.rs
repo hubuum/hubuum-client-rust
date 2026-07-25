@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
-use super::{HubuumDateTime, ImportResultId, PrincipalId, TaskEventId, TaskId};
+use super::{HubuumDateTime, ImportResultId, PrincipalId, Provenance, TaskEventId, TaskId};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
@@ -207,6 +207,9 @@ pub struct TaskEventResponse {
     pub message: String,
     pub data: Option<serde_json::Value>,
     pub created_at: HubuumDateTime,
+    /// Durable root-task attribution. Present on Hubuum v0.0.4 and newer.
+    #[serde(default)]
+    pub provenance: Option<Provenance>,
 }
 
 impl std::fmt::Debug for TaskEventResponse {
@@ -218,6 +221,7 @@ impl std::fmt::Debug for TaskEventResponse {
             .field("message", &"[REDACTED]")
             .field("data", &redacted_if_present(&self.data))
             .field("created_at", &self.created_at)
+            .field("provenance", &self.provenance)
             .finish()
     }
 }

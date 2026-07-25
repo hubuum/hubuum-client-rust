@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::resources::{CollectionId, EventSinkId, UserId};
 
-use super::{EventDeliveryId, EventSubscriptionId, HubuumDateTime};
+use super::{EventDeliveryId, EventSubscriptionId, HubuumDateTime, PrincipalId, Provenance};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
@@ -21,6 +21,9 @@ pub struct EventResponse {
     pub actor_kind: String,
     #[serde(default)]
     pub actor_user_id: Option<UserId>,
+    /// Durable root-task attribution. Present on Hubuum v0.0.4 and newer.
+    #[serde(default)]
+    pub provenance: Option<Provenance>,
     #[serde(default)]
     pub correlation_id: Option<String>,
     #[serde(default)]
@@ -101,6 +104,8 @@ pub struct EventSubscriptionFilter {
     pub actor_kinds: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actor_user_ids: Option<Vec<UserId>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initiator_user_ids: Option<Vec<PrincipalId>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub correlation_ids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]

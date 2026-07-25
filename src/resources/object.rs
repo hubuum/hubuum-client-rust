@@ -208,6 +208,93 @@ impl std::fmt::Display for ObjectAggregateSort {
     }
 }
 
+/// Numeric operation applied by an object aggregate measure.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ObjectAggregateMeasureOperation {
+    Sum,
+    Average,
+    Min,
+    Max,
+}
+
+impl std::fmt::Display for ObjectAggregateMeasureOperation {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(match self {
+            Self::Sum => "sum",
+            Self::Average => "average",
+            Self::Min => "min",
+            Self::Max => "max",
+        })
+    }
+}
+
+/// Numeric field selected by an object aggregate measure.
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ObjectAggregateMeasureField {
+    JsonData(Vec<String>),
+    Computed(ComputedFieldSelector),
+}
+
+impl ObjectAggregateMeasureField {
+    pub fn json_data<I, S>(path: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        Self::JsonData(path.into_iter().map(Into::into).collect())
+    }
+
+    pub fn shared_computed(key: impl Into<String>) -> Self {
+        Self::Computed(ComputedFieldSelector::shared(key))
+    }
+
+    pub fn personal_computed(key: impl Into<String>) -> Self {
+        Self::Computed(ComputedFieldSelector::personal(key))
+    }
+}
+
+impl std::fmt::Display for ObjectAggregateMeasureField {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::JsonData(path) => write!(formatter, "json_data.{}", path.join(",")),
+            Self::Computed(selector) => selector.fmt(formatter),
+        }
+    }
+}
+
+/// One ordered numeric measure in an object aggregate query.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ObjectAggregateMeasure {
+    operation: ObjectAggregateMeasureOperation,
+    field: ObjectAggregateMeasureField,
+}
+
+impl ObjectAggregateMeasure {
+    pub fn new(
+        operation: ObjectAggregateMeasureOperation,
+        field: ObjectAggregateMeasureField,
+    ) -> Self {
+        Self { operation, field }
+    }
+
+    pub fn operation(&self) -> ObjectAggregateMeasureOperation {
+        self.operation
+    }
+
+    pub fn field(&self) -> &ObjectAggregateMeasureField {
+        &self.field
+    }
+}
+
+impl std::fmt::Display for ObjectAggregateMeasure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{}:{}", self.operation, self.field)
+    }
+}
+
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -228,9 +315,32 @@ pub struct ObjectAggregateDimensionValue {
     pub value: Option<serde_json::Value>,
 }
 
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ObjectAggregateMeasureState {
+    Value,
+    Empty,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct ObjectAggregateMeasureValue {
+    pub field: String,
+    pub operation: ObjectAggregateMeasureOperation,
+    pub state: ObjectAggregateMeasureState,
+    pub value_count: i64,
+    pub skipped_count: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<serde_json::Value>,
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct ObjectAggregateRow {
     pub dimensions: Vec<ObjectAggregateDimensionValue>,
+    #[serde(default)]
+    pub measures: Vec<ObjectAggregateMeasureValue>,
     pub object_count: i64,
 }
 
@@ -728,12 +838,33 @@ mod v003_tests {
             ObjectAggregateSort::ObjectCountDesc.to_string(),
             "object_count.desc"
         );
+        assert_eq!(
+            ObjectAggregateMeasure::new(
+                ObjectAggregateMeasureOperation::Average,
+                ObjectAggregateMeasureField::json_data(["metrics", "latency_ms"]),
+            )
+            .to_string(),
+            "average:json_data.metrics,latency_ms"
+        );
 
         let row: ObjectAggregateRow = serde_json::from_value(json!({
             "dimensions": [{"field": "name", "state": "future_state"}],
+            "measures": [{
+                "field": "computed.shared.risk",
+                "operation": "max",
+                "state": "value",
+                "value": 9.5,
+                "value_count": 2,
+                "skipped_count": 1
+            }],
             "object_count": 3
         }))
         .unwrap();
         assert_eq!(row.dimensions[0].state, ObjectAggregateValueState::Unknown);
+        assert_eq!(
+            row.measures[0].operation,
+            ObjectAggregateMeasureOperation::Max
+        );
+        assert_eq!(row.measures[0].value_count, 2);
     }
 }

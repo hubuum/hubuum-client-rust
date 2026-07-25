@@ -155,6 +155,14 @@ impl crate::resources::ApiResource for RemoteTarget {
         }
         queries
     }
+
+    fn validate_post(params: &Self::PostParams) -> Result<(), ApiError> {
+        params.validate()
+    }
+
+    fn validate_patch(params: &Self::PatchParams) -> Result<(), ApiError> {
+        params.validate()
+    }
 }
 
 #[cfg(feature = "blocking")]

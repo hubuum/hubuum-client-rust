@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
-use crate::{ClassId, ClassRelationId, ObjectId};
+use crate::{ApiError, ClassId, ClassRelationId, ObjectId};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
@@ -42,7 +42,7 @@ impl ExportContentType {
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum ExportScopeKind {
@@ -131,6 +131,100 @@ pub struct ExportScope {
     pub object_id: Option<ObjectId>,
 }
 
+/// An export scope whose required and forbidden identifiers have been checked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ValidatedExportScope {
+    Collections,
+    Classes,
+    ObjectsInClass(ClassId),
+    ClassRelations,
+    ObjectRelations,
+    RelatedObjects {
+        class_id: ClassId,
+        object_id: ObjectId,
+    },
+}
+
+impl ExportScope {
+    pub fn validate(&self) -> Result<ValidatedExportScope, ApiError> {
+        match self.kind {
+            ExportScopeKind::Collections => {
+                self.reject_ids()?;
+                Ok(ValidatedExportScope::Collections)
+            }
+            ExportScopeKind::Classes => {
+                self.reject_ids()?;
+                Ok(ValidatedExportScope::Classes)
+            }
+            ExportScopeKind::ObjectsInClass => {
+                let class_id = self.class_id.ok_or(ApiError::InvalidExportScope {
+                    reason: "objects_in_class requires class_id",
+                })?;
+                validate_export_scope_id("class_id", class_id.get())?;
+                if self.object_id.is_some() {
+                    return Err(ApiError::InvalidExportScope {
+                        reason: "objects_in_class does not accept object_id",
+                    });
+                }
+                Ok(ValidatedExportScope::ObjectsInClass(class_id))
+            }
+            ExportScopeKind::ClassRelations => {
+                self.reject_ids()?;
+                Ok(ValidatedExportScope::ClassRelations)
+            }
+            ExportScopeKind::ObjectRelations => {
+                self.reject_ids()?;
+                Ok(ValidatedExportScope::ObjectRelations)
+            }
+            ExportScopeKind::RelatedObjects => {
+                let (Some(class_id), Some(object_id)) = (self.class_id, self.object_id) else {
+                    return Err(ApiError::InvalidExportScope {
+                        reason: "related_objects requires class_id and object_id",
+                    });
+                };
+                validate_export_scope_id("class_id", class_id.get())?;
+                validate_export_scope_id("object_id", object_id.get())?;
+                Ok(ValidatedExportScope::RelatedObjects {
+                    class_id,
+                    object_id,
+                })
+            }
+            ExportScopeKind::Unknown => Err(ApiError::InvalidExportScope {
+                reason: "unknown export scope kind",
+            }),
+        }
+    }
+
+    fn reject_ids(&self) -> Result<(), ApiError> {
+        if self.class_id.is_some() || self.object_id.is_some() {
+            return Err(ApiError::InvalidExportScope {
+                reason: "this scope kind does not accept class_id or object_id",
+            });
+        }
+        Ok(())
+    }
+}
+
+impl ValidatedExportScope {
+    pub fn kind(self) -> ExportScopeKind {
+        match self {
+            Self::Collections => ExportScopeKind::Collections,
+            Self::Classes => ExportScopeKind::Classes,
+            Self::ObjectsInClass(_) => ExportScopeKind::ObjectsInClass,
+            Self::ClassRelations => ExportScopeKind::ClassRelations,
+            Self::ObjectRelations => ExportScopeKind::ObjectRelations,
+            Self::RelatedObjects { .. } => ExportScopeKind::RelatedObjects,
+        }
+    }
+}
+
+fn validate_export_scope_id(field: &'static str, value: i32) -> Result<(), ApiError> {
+    if value <= 0 {
+        return Err(ApiError::InvalidExportScopeId { field, value });
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExportLimits {
     pub max_items: Option<u64>,
@@ -179,6 +273,12 @@ pub struct ExportRequest {
     pub scope: ExportScope,
     pub include: Option<ExportInclude>,
     pub relation_context: Option<ExportRelationContext>,
+}
+
+impl ExportRequest {
+    pub(crate) fn validate(&self) -> Result<(), ApiError> {
+        self.scope.validate().map(|_| ())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -237,6 +337,70 @@ mod tests {
             ExportContentType::from_header("Application/Vnd.Hubuum.Future+Json"),
             Some(ExportContentType::Unknown)
         );
+    }
+
+    #[test]
+    fn export_scope_ids_must_be_positive() {
+        for (scope, field, value) in [
+            (
+                ExportScope {
+                    class_id: Some(0.into()),
+                    kind: ExportScopeKind::ObjectsInClass,
+                    object_id: None,
+                },
+                "class_id",
+                0,
+            ),
+            (
+                ExportScope {
+                    class_id: Some(1.into()),
+                    kind: ExportScopeKind::RelatedObjects,
+                    object_id: Some((-2).into()),
+                },
+                "object_id",
+                -2,
+            ),
+        ] {
+            assert!(matches!(
+                scope.validate(),
+                Err(ApiError::InvalidExportScopeId {
+                    field: actual_field,
+                    value: actual_value
+                }) if actual_field == field && actual_value == value
+            ));
+        }
+    }
+
+    #[test]
+    fn export_scope_validation_matches_kind_specific_id_rules() {
+        assert_eq!(
+            ExportScope {
+                class_id: Some(7.into()),
+                kind: ExportScopeKind::ObjectsInClass,
+                object_id: None,
+            }
+            .validate()
+            .unwrap(),
+            ValidatedExportScope::ObjectsInClass(7.into())
+        );
+        assert!(matches!(
+            ExportScope {
+                class_id: None,
+                kind: ExportScopeKind::RelatedObjects,
+                object_id: Some(2.into()),
+            }
+            .validate(),
+            Err(ApiError::InvalidExportScope { .. })
+        ));
+        assert!(matches!(
+            ExportScope {
+                class_id: Some(1.into()),
+                kind: ExportScopeKind::Collections,
+                object_id: None,
+            }
+            .validate(),
+            Err(ApiError::InvalidExportScope { .. })
+        ));
     }
 
     #[test]

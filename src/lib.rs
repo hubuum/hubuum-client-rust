@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.6.1 targets Hubuum server v0.0.3. See the repository's
+//! Version 0.7.0 targets Hubuum server v0.0.4. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -45,7 +45,7 @@ pub mod types;
 mod endpoints;
 
 /// Hubuum server release targeted by this client release.
-pub const TARGET_SERVER_VERSION: &str = "0.0.3";
+pub const TARGET_SERVER_VERSION: &str = "0.0.4";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
@@ -98,16 +98,17 @@ pub use types::{
     LoginRateLimitEntry, LoginRateLimitState, LogoutTokenRequest, NetworkConfig, NewEventSink,
     NewEventSubscription, ObjectHistory, ObjectKey, PaginationConfig, PermissionConfig,
     PermissionId, Permissions, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalKey,
-    PrincipalSettings, ProbeResponse, RESTORE_CONFIRMATION_PHRASE, ReleaseRateLimitResponse,
-    RemoteCallConfig, RemoteCallResultId, RemoteTargetHistory, RestoreCapability, RestoreConfig,
-    RestoreConfirmRequest, RestoreId, RestoreJobStatus, RestoreStageResponse, RestoreTimestamps,
-    RestoreValidationSummary, RunningConfig, RunningLoginRateLimitConfig, SecretStatus,
-    ServerConfig, SharedComputedScope, TaskConfig, TaskDetails, TaskEventId, TaskEventResponse,
-    TaskId, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus,
-    TlsConfig, Token, TokenId, TypedObject, UnifiedSearchBatchResponse, UnifiedSearchDoneEvent,
-    UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext,
-    UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink,
-    UpdateEventSubscription, UserParams,
+    PrincipalSettings, ProbeResponse, Provenance, ProvenanceActor, ProvenancePrincipal,
+    RESTORE_CONFIRMATION_PHRASE, ReleaseRateLimitResponse, RemoteCallConfig, RemoteCallResultId,
+    RemoteTargetHistory, RestoreCapability, RestoreConfig, RestoreConfirmRequest, RestoreId,
+    RestoreJobStatus, RestoreStageResponse, RestoreTimestamps, RestoreValidationSummary,
+    RunningConfig, RunningLoginRateLimitConfig, SecretStatus, ServerConfig, SharedComputedScope,
+    TaskConfig, TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks,
+    TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, TlsConfig, Token, TokenId,
+    TokenResourceScope, TokenScopeDetails, TypedObject, UnifiedSearchBatchResponse,
+    UnifiedSearchDoneEvent, UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind,
+    UnifiedSearchNext, UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent,
+    UpdateEventSink, UpdateEventSubscription, UserParams, ValidatedExportScope,
 };
 
 #[cfg(feature = "blocking")]
