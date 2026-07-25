@@ -6,8 +6,15 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-07-25
+
 ### Changed
 
+- This release explicitly targets Hubuum server v0.0.4 and retains its pinned
+  196-operation OpenAPI contract plus immutable multi-platform server image
+  `sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583`.
+- Compatible Rust dependencies are refreshed, including `syn` 3.0.3, `cc`
+  1.4.0, `glob` 0.3.4, `libc` 0.2.189, and `rustls-pki-types` 1.15.1.
 - Endpoint URL rendering now borrows dynamic path parameters instead of cloning
   their owned keys and values before every async and blocking request.
 
