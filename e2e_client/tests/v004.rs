@@ -4,9 +4,9 @@ use e2e_client::harness::{AsyncE2EHarness, E2EHarness, admin_context, async_admi
 use e2e_client::naming::unique_case_prefix;
 use hubuum_client::{
     ApiError, ExportRequest, ExportScope, ExportScopeKind, HubuumDateTime, NewTokenRequest,
-    ObjectAggregateMeasure, ObjectAggregateMeasureField, ObjectAggregateMeasureOperation,
-    ObjectPatch, Permissions, ServiceAccountPost, TARGET_SERVER_VERSION, Token, TokenResourceScope,
-    TokenScopeDetails,
+    ObjectAggregateJsonPath, ObjectAggregateMeasure, ObjectAggregateMeasureField,
+    ObjectAggregateMeasureOperation, ObjectPatch, Permissions, ServiceAccountPost,
+    TARGET_SERVER_VERSION, Token, TokenResourceScope, TokenScopeDetails,
 };
 use serde_json::json;
 use tokio::time::{Instant, sleep};
@@ -400,7 +400,10 @@ fn e2e_v004_numeric_aggregates_and_provenance() {
         .object_aggregates(class_id)
         .aggregate(ObjectAggregateMeasure::new(
             ObjectAggregateMeasureOperation::Sum,
-            ObjectAggregateMeasureField::json_data(["metrics", "cost"]),
+            ObjectAggregateMeasureField::json_data(
+                ObjectAggregateJsonPath::new(["metrics", "cost"])
+                    .expect("aggregate JSON path should be valid"),
+            ),
         ))
         .list()
         .expect("numeric aggregate should succeed");

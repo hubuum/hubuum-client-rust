@@ -123,6 +123,9 @@ pub enum ApiError {
     )]
     InvalidTokenScopes,
 
+    #[error("Invalid object aggregate JSON path: {reason}")]
+    InvalidObjectAggregateJsonPath { reason: &'static str },
+
     #[error("Export scope {field} must be positive, got {value}")]
     InvalidExportScopeId { field: &'static str, value: i32 },
 
@@ -255,6 +258,10 @@ impl std::fmt::Debug for ApiError {
                 .field("items", items)
                 .finish(),
             Self::InvalidTokenScopes => f.write_str("InvalidTokenScopes"),
+            Self::InvalidObjectAggregateJsonPath { reason } => f
+                .debug_struct("InvalidObjectAggregateJsonPath")
+                .field("reason", reason)
+                .finish(),
             Self::InvalidExportScopeId { field, value } => f
                 .debug_struct("InvalidExportScopeId")
                 .field("field", field)

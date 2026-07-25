@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use std::fmt::Debug;
+use std::{borrow::Cow, fmt::Debug};
 
 mod class;
 mod collection;
@@ -26,12 +26,13 @@ pub use self::export_template::{
 };
 pub use self::group::{Group, GroupGet, GroupId, GroupPatch, GroupPost};
 pub use self::object::{
-    Object, ObjectAggregateDimension, ObjectAggregateDimensionValue, ObjectAggregateMeasure,
-    ObjectAggregateMeasureField, ObjectAggregateMeasureOperation, ObjectAggregateMeasureState,
-    ObjectAggregateMeasureValue, ObjectAggregateRow, ObjectAggregateSort,
-    ObjectAggregateValueState, ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectGet,
-    ObjectId, ObjectPatch, ObjectPost, ObjectRelation, ObjectRelationGet, ObjectRelationId,
-    ObjectRelationPatch, ObjectRelationPost, ObjectWithPath, RelatedObjectGraph,
+    Object, ObjectAggregateDimension, ObjectAggregateDimensionValue, ObjectAggregateJsonPath,
+    ObjectAggregateMeasure, ObjectAggregateMeasureField, ObjectAggregateMeasureOperation,
+    ObjectAggregateMeasureState, ObjectAggregateMeasureValue, ObjectAggregateRow,
+    ObjectAggregateSort, ObjectAggregateValueState, ObjectDataPatchDocument,
+    ObjectDataPatchOperation, ObjectGet, ObjectId, ObjectPatch, ObjectPost, ObjectRelation,
+    ObjectRelationGet, ObjectRelationId, ObjectRelationPatch, ObjectRelationPost, ObjectWithPath,
+    RelatedObjectGraph,
 };
 pub use self::remote_target::RemoteTargetId;
 pub use self::service_account::{
@@ -195,6 +196,53 @@ pub struct PrincipalTokenMetadata {
     pub revoked_at: Option<HubuumDateTime>,
 }
 
+#[derive(Deserialize)]
+struct TokenScopeProjectionWire {
+    #[serde(default)]
+    scope: Option<crate::types::TokenScopeDetails>,
+    #[serde(default)]
+    scoped: Option<bool>,
+    #[serde(default)]
+    scopes: Option<Vec<crate::types::Permissions>>,
+}
+
+struct TokenScopeProjection {
+    scope: Option<crate::types::TokenScopeDetails>,
+    scoped: bool,
+    scopes: Option<Vec<crate::types::Permissions>>,
+}
+
+impl TokenScopeProjectionWire {
+    fn normalize(self) -> Result<TokenScopeProjection, crate::ApiError> {
+        let scope = match self.scope {
+            Some(scope) => Some(scope),
+            None => self
+                .scopes
+                .as_ref()
+                .map(|permissions| {
+                    crate::types::TokenScopeDetails::permission_boundary(permissions.clone())
+                })
+                .transpose()?,
+        };
+        let scopes = scope
+            .as_ref()
+            .and_then(crate::types::TokenScopeDetails::permissions)
+            .map(<[_]>::to_vec);
+        let scoped = match (scope.is_some(), self.scoped) {
+            (true, Some(false)) => return Err(crate::ApiError::InvalidTokenScopes),
+            (true, _) => true,
+            (false, Some(scoped)) => scoped,
+            (false, None) => false,
+        };
+
+        Ok(TokenScopeProjection {
+            scoped,
+            scope,
+            scopes,
+        })
+    }
+}
+
 impl<'de> Deserialize<'de> for PrincipalTokenMetadata {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -208,12 +256,8 @@ impl<'de> Deserialize<'de> for PrincipalTokenMetadata {
             name: Option<String>,
             #[serde(default)]
             description: Option<String>,
-            #[serde(default)]
-            scope: Option<crate::types::TokenScopeDetails>,
-            #[serde(default)]
-            scoped: Option<bool>,
-            #[serde(default)]
-            scopes: Option<Vec<crate::types::Permissions>>,
+            #[serde(flatten)]
+            scope_projection: TokenScopeProjectionWire,
             issued: HubuumDateTime,
             #[serde(default)]
             expires_at: Option<HubuumDateTime>,
@@ -224,27 +268,19 @@ impl<'de> Deserialize<'de> for PrincipalTokenMetadata {
         }
 
         let wire = Wire::deserialize(deserializer)?;
-        let scope = wire.scope.or_else(|| {
-            wire.scopes.clone().map(|permissions| {
-                crate::types::TokenScopeDetails::from_parts_unchecked(Some(permissions), None)
-            })
-        });
-        let scopes = wire.scopes.or_else(|| {
-            scope
-                .as_ref()
-                .and_then(crate::types::TokenScopeDetails::permissions)
-                .map(<[_]>::to_vec)
-        });
-        let scoped = wire.scoped.unwrap_or(scope.is_some());
+        let scope_projection = wire
+            .scope_projection
+            .normalize()
+            .map_err(serde::de::Error::custom)?;
 
         Ok(Self {
             id: wire.id,
             principal_id: wire.principal_id,
             name: wire.name,
             description: wire.description,
-            scope,
-            scoped,
-            scopes,
+            scope: scope_projection.scope,
+            scoped: scope_projection.scoped,
+            scopes: scope_projection.scopes,
             issued: wire.issued,
             expires_at: wire.expires_at,
             last_used_at: wire.last_used_at,
@@ -332,12 +368,8 @@ impl<'de> Deserialize<'de> for CurrentTokenMetadata {
             name: Option<String>,
             #[serde(default)]
             description: Option<String>,
-            #[serde(default)]
-            scope: Option<crate::types::TokenScopeDetails>,
-            #[serde(default)]
-            scoped: Option<bool>,
-            #[serde(default)]
-            scopes: Option<Vec<crate::types::Permissions>>,
+            #[serde(flatten)]
+            scope_projection: TokenScopeProjectionWire,
             issued: HubuumDateTime,
             #[serde(default)]
             expires_at: Option<HubuumDateTime>,
@@ -346,26 +378,18 @@ impl<'de> Deserialize<'de> for CurrentTokenMetadata {
         }
 
         let wire = Wire::deserialize(deserializer)?;
-        let scope = wire.scope.or_else(|| {
-            wire.scopes.clone().map(|permissions| {
-                crate::types::TokenScopeDetails::from_parts_unchecked(Some(permissions), None)
-            })
-        });
-        let scopes = wire.scopes.or_else(|| {
-            scope
-                .as_ref()
-                .and_then(crate::types::TokenScopeDetails::permissions)
-                .map(<[_]>::to_vec)
-        });
-        let scoped = wire.scoped.unwrap_or(scope.is_some());
+        let scope_projection = wire
+            .scope_projection
+            .normalize()
+            .map_err(serde::de::Error::custom)?;
 
         Ok(Self {
             id: wire.id,
             name: wire.name,
             description: wire.description,
-            scope,
-            scoped,
-            scopes,
+            scope: scope_projection.scope,
+            scoped: scope_projection.scoped,
+            scopes: scope_projection.scopes,
             issued: wire.issued,
             expires_at: wire.expires_at,
             last_used_at: wire.last_used_at,
@@ -418,9 +442,7 @@ impl Serialize for NewTokenRequest {
             scope: Option<&'a crate::types::TokenScopeDetails>,
         }
 
-        let compatibility_scope = self.scopes.as_ref().map(|permissions| {
-            crate::types::TokenScopeDetails::from_parts_unchecked(Some(permissions.clone()), None)
-        });
+        let scope = self.effective_scope().map_err(serde::ser::Error::custom)?;
         Wire {
             name: self.name.as_ref(),
             description: self.description.as_ref(),
@@ -428,7 +450,7 @@ impl Serialize for NewTokenRequest {
                 .expires_at
                 .as_ref()
                 .map(|expires_at| expires_at.0.naive_utc()),
-            scope: self.scope.as_ref().or(compatibility_scope.as_ref()),
+            scope: scope.as_deref(),
         }
         .serialize(serializer)
     }
@@ -471,16 +493,22 @@ impl NewTokenRequest {
     }
 
     pub(crate) fn validate(&self) -> Result<(), crate::ApiError> {
-        if self.scope.is_some() && self.scopes.is_some() {
-            return Err(crate::ApiError::InvalidTokenScopes);
+        self.effective_scope().map(|_| ())
+    }
+
+    fn effective_scope(
+        &self,
+    ) -> Result<Option<Cow<'_, crate::types::TokenScopeDetails>>, crate::ApiError> {
+        match (&self.scope, &self.scopes) {
+            (Some(_), Some(_)) => Err(crate::ApiError::InvalidTokenScopes),
+            (Some(scope), None) => {
+                scope.validate()?;
+                Ok(Some(Cow::Borrowed(scope)))
+            }
+            (None, Some(permissions)) => Ok(Some(Cow::Owned(
+                crate::types::TokenScopeDetails::permission_boundary(permissions.clone())?,
+            ))),
+            (None, None) => Ok(None),
         }
-        if let Some(scope) = &self.scope {
-            scope.validate()?;
-        }
-        if let Some(permissions) = &self.scopes {
-            crate::types::TokenScopeDetails::from_parts_unchecked(Some(permissions.clone()), None)
-                .validate()?;
-        }
-        Ok(())
     }
 }

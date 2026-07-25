@@ -15,9 +15,9 @@ use hubuum_client::types::{
 };
 use hubuum_client::{
     ApiError, BaseUrl, ClassGet, ClassPatch, Client, ComputedFieldSelector, Credentials,
-    ExportResult, ObjectAggregateDimension, ObjectAggregateMeasure, ObjectAggregateMeasureField,
-    ObjectAggregateMeasureOperation, ObjectAggregateSort, ObjectDataPatchDocument,
-    ObjectDataPatchOperation, ObjectPatch, Token, blocking,
+    ExportResult, ObjectAggregateDimension, ObjectAggregateJsonPath, ObjectAggregateMeasure,
+    ObjectAggregateMeasureField, ObjectAggregateMeasureOperation, ObjectAggregateSort,
+    ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectPatch, Token, blocking,
 };
 use serde_json::json;
 
@@ -5141,6 +5141,27 @@ fn legacy_token_scope_builder_emits_the_v004_nested_wire_shape() {
 }
 
 #[test]
+fn invalid_token_scope_requests_fail_during_serialization() {
+    use hubuum_client::{NewTokenRequest, Permissions};
+
+    let scope = hubuum_client::TokenScopeDetails::permission_boundary(vec![Permissions::ReadClass])
+        .unwrap();
+    assert!(
+        serde_json::to_value(NewTokenRequest::new().scopes(vec![])).is_err(),
+        "invalid compatibility scopes must not serialize"
+    );
+    assert!(
+        serde_json::to_value(NewTokenRequest {
+            scope: Some(scope),
+            scopes: Some(vec![Permissions::ReadClass]),
+            ..NewTokenRequest::new()
+        })
+        .is_err(),
+        "singular and legacy token scope inputs must remain mutually exclusive"
+    );
+}
+
+#[test]
 fn token_expiry_serializes_as_the_server_naive_utc_request_shape() {
     use hubuum_client::{HubuumDateTime, NewTokenRequest};
 
@@ -5314,6 +5335,8 @@ fn sync_me_returns_identity_and_token() {
                             {"kind": "collection", "id": 7}
                         ]
                     },
+                    "scoped": true,
+                    "scopes": ["ReadClass"],
                     "issued": ts(),
                     "expires_at": null,
                     "last_used_at": null
@@ -6096,7 +6119,8 @@ async fn async_v003_natural_key_routes_cover_crud_relations_and_permissions() {
     let document = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
         path: "/owner".into(),
         value: json!("network"),
-    }]);
+    }])
+    .unwrap();
     object.patch_data(&document).await.unwrap();
 
     assert_eq!(class.permissions().list().await.unwrap().len(), 1);
@@ -6191,11 +6215,15 @@ async fn async_object_aggregates_support_id_name_and_numeric_measures() {
         .object_aggregates(42)
         .group_by_all([
             ObjectAggregateDimension::Name,
-            ObjectAggregateDimension::json_data(["region", "zone"]),
+            ObjectAggregateDimension::json_data(
+                ObjectAggregateJsonPath::new(["region", "zone"]).unwrap(),
+            ),
         ])
         .aggregate(ObjectAggregateMeasure::new(
             ObjectAggregateMeasureOperation::Sum,
-            ObjectAggregateMeasureField::json_data(["metrics", "cost"]),
+            ObjectAggregateMeasureField::json_data(
+                ObjectAggregateJsonPath::new(["metrics", "cost"]).unwrap(),
+            ),
         ))
         .aggregate_sort(ObjectAggregateSort::ObjectCountDesc)
         .include_total(true)
@@ -6224,7 +6252,8 @@ async fn async_object_aggregates_support_id_name_and_numeric_measures() {
     let patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Test {
         path: "/owner".into(),
         value: json!("infra"),
-    }]);
+    }])
+    .unwrap();
     client.patch_object_data(42, 9, &patch).await.unwrap();
 
     by_id.assert_calls(1);

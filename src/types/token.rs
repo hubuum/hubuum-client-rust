@@ -20,21 +20,11 @@ pub enum TokenResourceScope {
     Object(ObjectId),
 }
 
-impl TokenResourceScope {
-    pub fn id(self) -> i32 {
-        match self {
-            Self::Collection(id) => id.get(),
-            Self::Class(id) => id.get(),
-            Self::Object(id) => id.get(),
-        }
-    }
-}
-
 /// A token's independent permission and resource boundaries.
 ///
 /// An absent outer `scope` means that the token is unscoped. Within a present
 /// scope, an absent dimension is unrestricted.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct TokenScopeDetails {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     permissions: Option<Vec<Permissions>>,
@@ -75,16 +65,6 @@ impl TokenScopeDetails {
         self.resources.as_deref()
     }
 
-    pub(crate) fn from_parts_unchecked(
-        permissions: Option<Vec<Permissions>>,
-        resources: Option<Vec<TokenResourceScope>>,
-    ) -> Self {
-        Self {
-            permissions,
-            resources,
-        }
-    }
-
     pub(crate) fn validate(&self) -> Result<(), ApiError> {
         if self.permissions.is_none() && self.resources.is_none() {
             return Err(ApiError::InvalidTokenScopes);
@@ -115,6 +95,24 @@ impl TokenScopeDetails {
             return Err(ApiError::InvalidTokenScopes);
         }
         Ok(())
+    }
+}
+
+impl<'de> Deserialize<'de> for TokenScopeDetails {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Wire {
+            #[serde(default)]
+            permissions: Option<Vec<Permissions>>,
+            #[serde(default)]
+            resources: Option<Vec<TokenResourceScope>>,
+        }
+
+        let wire = Wire::deserialize(deserializer)?;
+        Self::new(wire.permissions, wire.resources).map_err(serde::de::Error::custom)
     }
 }
 
@@ -171,5 +169,17 @@ mod tests {
             ]),
             Err(ApiError::InvalidTokenScopes)
         ));
+    }
+
+    #[test]
+    fn response_scopes_cannot_bypass_validation() {
+        for invalid in [
+            serde_json::json!({}),
+            serde_json::json!({"permissions": []}),
+            serde_json::json!({"permissions": ["ReadObject", "ReadObject"]}),
+            serde_json::json!({"resources": []}),
+        ] {
+            assert!(serde_json::from_value::<TokenScopeDetails>(invalid).is_err());
+        }
     }
 }

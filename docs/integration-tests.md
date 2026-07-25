@@ -46,7 +46,9 @@ An external stack must expose the same `planet-express` provider and fixture use
 
 ## Optional Environment Variables
 
-- `HUBUUM_INTEGRATION_SERVER_IMAGE` overrides the server image.
+- `HUBUUM_INTEGRATION_SERVER_IMAGE` overrides the server image. By default the
+  wrapper reads the immutable `[package.metadata.hubuum].server-image` value
+  from `Cargo.toml`.
 - `HUBUUM_INTEGRATION_DB_IMAGE` overrides the database image.
 - `HUBUUM_INTEGRATION_LDAP_IMAGE` overrides the LDAP fixture image.
 - `HUBUUM_INTEGRATION_AUTH_CONFIG` overrides the server auth-provider configuration file.

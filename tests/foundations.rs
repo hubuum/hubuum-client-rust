@@ -737,14 +737,7 @@ fn object_data_patch() -> ObjectDataPatchDocument {
         path: "/owner".into(),
         value: json!("network"),
     }])
-}
-
-fn oversized_object_data_patch() -> ObjectDataPatchDocument {
-    let operation = ObjectDataPatchOperation::Remove { path: "/x".into() };
-    ObjectDataPatchDocument::new(std::iter::repeat_n(
-        operation,
-        ObjectDataPatchDocument::MAX_OPERATIONS + 1,
-    ))
+    .unwrap()
 }
 
 #[test]
@@ -1679,7 +1672,8 @@ fn object_data_patch_preserves_its_media_type_for_custom_transports() {
     let patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
         path: "/owner".into(),
         value: json!("network"),
-    }]);
+    }])
+    .unwrap();
 
     client.patch_object_data(42, 9, &patch).unwrap();
 
@@ -1692,52 +1686,6 @@ fn object_data_patch_preserves_its_media_type_for_custom_transports() {
         request.body(),
         br#"[{"op":"replace","path":"/owner","value":"network"}]"#
     );
-}
-
-#[test]
-fn blocking_object_data_patch_rejects_excess_operations_before_transport() {
-    let transport = MockTransport::default();
-    let client = blocking_mock_client(transport.clone(), 1024);
-
-    let error = client
-        .patch_object_data(42, 9, &oversized_object_data_patch())
-        .expect_err("an oversized patch should be rejected");
-
-    assert!(matches!(
-        error,
-        ApiError::ObjectDataPatchLimit {
-            operations: 1_001,
-            limit: 1_000,
-        }
-    ));
-    assert!(transport.requests().is_empty());
-}
-
-#[tokio::test]
-async fn async_exact_name_patch_rejects_excess_operations_before_resolution() {
-    let transport = MockTransport::default();
-    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
-        .with_transport(Arc::new(transport.clone()))
-        .build()
-        .unwrap()
-        .authenticate(Token::new("consumer-secret"));
-
-    let error = client
-        .class_by_name(".")
-        .objects()
-        .by_name("..")
-        .patch_data(&oversized_object_data_patch())
-        .await
-        .expect_err("an oversized patch should be rejected");
-
-    assert!(matches!(
-        error,
-        ApiError::ObjectDataPatchLimit {
-            operations: 1_001,
-            limit: 1_000,
-        }
-    ));
-    assert!(transport.requests().is_empty());
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

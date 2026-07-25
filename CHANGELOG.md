@@ -74,6 +74,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   formatting avoid intermediate `String` allocations on their common
   successful paths while preserving the existing wire and query
   representations.
+- The integration-test wrapper now defaults to the immutable target server
+  image declared in `Cargo.toml`; the floating `main` image remains an explicit
+  forward-compatibility override.
 
 ### Fixed
 
@@ -90,11 +93,14 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Reject transport-controlled remote-target template and API-key headers such
   as `Host`, `Content-Length`, `Connection`, `Proxy-Authorization`, and
   `Transfer-Encoding` before create or update requests are sent.
-- Reject object-data patch documents with more than the server's 1,000-operation
-  limit before performing exact-name resolution or sending a request.
+- Model object-data patch documents as a bounded newtype that rejects more than
+  the server's 1,000-operation limit during construction, deserialization, or
+  mutation.
 - Reject empty principal-token scope sets before sending a request, preserving
   the explicit distinction between unscoped tokens and invalid scoped-token
   requests for user and service-account handles.
+- Validate object-aggregate JSON paths through a dedicated newtype, rejecting
+  empty paths and invalid segments before either client transport is reached.
 - Typed response decoding now rejects trailing non-whitespace data after a valid
   JSON value instead of silently accepting and ignoring it.
 - Export responses recognize known HTTP media types case-insensitively, so
