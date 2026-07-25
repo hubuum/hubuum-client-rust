@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.7.1 | 0.0.4 | `ghcr.io/hubuum/hubuum-server@sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583` | Declared target; pinned OpenAPI and full integration suites, including sensitive secret-header metadata plus blocking user and async service-account scoped/unscoped token lifecycles, expiry enforcement, revocation, and post-revocation rejection |
 | 0.7.0 | 0.0.4 | `ghcr.io/hubuum/hubuum-server@sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583` | Declared target; pinned OpenAPI and full integration suites, including blocking user and async service-account scoped/unscoped token lifecycles, expiry enforcement, revocation, and post-revocation rejection |
 | 0.6.1 | 0.0.3 | `ghcr.io/hubuum/hubuum-server@sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186` | Declared target; pinned OpenAPI and full integration suites, including async and blocking diagnostic redaction, custom-transport isolation, and redirect-confinement regressions |
 | 0.6.0 | 0.0.3 | `ghcr.io/hubuum/hubuum-server@sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186` | Declared target; pinned OpenAPI and full integration suites, including exact-name routing, aggregates, object-data patching, and public pagination configuration |
