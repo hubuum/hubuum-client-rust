@@ -6,6 +6,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- Endpoint URL rendering now borrows dynamic path parameters instead of cloning
+  their owned keys and values before every async and blocking request.
+
 ### Fixed
 
 - Bearer tokens, restore capabilities, and caller-provided raw header values are

@@ -42,7 +42,7 @@ pub trait GetID: ApiResource {
 }
 
 trait ClientCore {
-    fn build_url(&self, endpoint: &Endpoint, url_params: UrlParams) -> String;
+    fn build_url(&self, endpoint: &Endpoint, url_params: &UrlParams) -> String;
 }
 
 pub trait IntoQueryFilters<T: ApiResource> {
