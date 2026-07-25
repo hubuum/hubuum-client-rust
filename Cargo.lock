@@ -321,6 +321,7 @@ version = "0.0.0"
 dependencies = [
  "hubuum_client",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]

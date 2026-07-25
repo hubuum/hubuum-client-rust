@@ -1,13 +1,18 @@
 use std::time::Duration;
 
-use e2e_client::harness::{E2EHarness, admin_context};
+use e2e_client::harness::{AsyncE2EHarness, E2EHarness, admin_context, async_admin_context};
 use e2e_client::naming::unique_case_prefix;
 use hubuum_client::{
-    ApiError, ExportRequest, ExportScope, ExportScopeKind, NewTokenRequest, ObjectAggregateMeasure,
-    ObjectAggregateMeasureField, ObjectAggregateMeasureOperation, ObjectPatch, Permissions,
-    TARGET_SERVER_VERSION, Token, TokenResourceScope, TokenScopeDetails,
+    ApiError, ExportRequest, ExportScope, ExportScopeKind, HubuumDateTime, NewTokenRequest,
+    ObjectAggregateMeasure, ObjectAggregateMeasureField, ObjectAggregateMeasureOperation,
+    ObjectPatch, Permissions, ServiceAccountPost, TARGET_SERVER_VERSION, Token, TokenResourceScope,
+    TokenScopeDetails,
 };
 use serde_json::json;
+use tokio::time::{Instant, sleep};
+
+const SHORT_TOKEN_LIFETIME: Duration = Duration::from_secs(5);
+const EXPIRY_WAIT_LIMIT: Duration = Duration::from_secs(12);
 
 fn assert_token_rejected(error: ApiError) {
     match error {
@@ -154,6 +159,208 @@ fn e2e_v004_token_lifecycle_with_and_without_scopes() {
         .client
         .collections()
         .delete(collection_id)
+        .expect("collection cleanup should succeed");
+}
+
+#[tokio::test]
+#[ignore = "requires Docker and Hubuum server v0.0.4 image"]
+async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
+    if TARGET_SERVER_VERSION != "0.0.4" {
+        eprintln!("skipping v0.0.4 scenario while the declared target is {TARGET_SERVER_VERSION}");
+        return;
+    }
+
+    let harness = AsyncE2EHarness::from_env()
+        .await
+        .expect("failed to start async e2e harness");
+    let (_, admin_group_id) = async_admin_context(&harness.client)
+        .await
+        .expect("failed to resolve async admin context");
+    let (collection_id, class_id, object_id) = harness
+        .create_collection_class_object("v004-async-service-token", admin_group_id)
+        .await
+        .expect("failed to create async token lifecycle resources");
+    let prefix = unique_case_prefix("v004-async-service-token");
+
+    let service_account = harness
+        .client
+        .service_accounts()
+        .create_raw(ServiceAccountPost {
+            identity_scope: None,
+            name: format!("{prefix}-account"),
+            description: Some("async token lifecycle service account".to_string()),
+            owner_group_id: admin_group_id,
+        })
+        .await
+        .expect("service account should create");
+    harness
+        .client
+        .groups()
+        .get(admin_group_id)
+        .await
+        .expect("admin group should be selectable")
+        .add_member(service_account.id)
+        .await
+        .expect("service account should join the admin group");
+    let service_account = harness
+        .client
+        .service_accounts()
+        .get(service_account.id)
+        .await
+        .expect("service account should be selectable");
+
+    let unscoped_name = format!("{prefix}-unscoped");
+    let unscoped_raw = service_account
+        .tokens_create(NewTokenRequest::new().name(unscoped_name.clone()))
+        .await
+        .expect("unscoped service-account token should mint");
+    let tokens = service_account
+        .tokens()
+        .await
+        .expect("service-account tokens should list");
+    let unscoped_metadata = tokens
+        .iter()
+        .find(|token| token.name.as_deref() == Some(unscoped_name.as_str()))
+        .expect("unscoped service-account token metadata should list");
+    assert!(unscoped_metadata.scope.is_none());
+    assert!(unscoped_metadata.expires_at.is_none());
+
+    let expires_at = HubuumDateTime(unscoped_metadata.issued.0 + SHORT_TOKEN_LIFETIME);
+    let expected_scope = TokenScopeDetails::new(
+        Some(vec![Permissions::ReadObject]),
+        Some(vec![TokenResourceScope::Collection(collection_id)]),
+    )
+    .expect("service-account token scope should be valid");
+    let scoped_name = format!("{prefix}-scoped-expiring");
+    let scoped_raw = service_account
+        .tokens_create(
+            NewTokenRequest::new()
+                .name(scoped_name.clone())
+                .expires_at(expires_at.clone())
+                .scope(expected_scope.clone()),
+        )
+        .await
+        .expect("expiring scoped service-account token should mint");
+
+    let tokens = service_account
+        .tokens()
+        .await
+        .expect("service-account tokens should relist");
+    let scoped_metadata = tokens
+        .iter()
+        .find(|token| token.name.as_deref() == Some(scoped_name.as_str()))
+        .expect("scoped service-account token metadata should list");
+    assert_eq!(scoped_metadata.scope.as_ref(), Some(&expected_scope));
+    assert_eq!(scoped_metadata.expires_at.as_ref(), Some(&expires_at));
+
+    let scoped_client = hubuum_client::Client::try_new(harness.base_url.clone())
+        .expect("async scoped token client should build")
+        .login_with_token(Token::new(scoped_raw))
+        .await
+        .expect("async scoped service-account token should authenticate");
+    let scoped_me = scoped_client
+        .me()
+        .await
+        .expect("scoped service-account token should read current identity");
+    assert_eq!(scoped_me.principal.kind, "service_account");
+    assert_eq!(scoped_me.token.scope.as_ref(), Some(&expected_scope));
+    assert_eq!(scoped_me.token.expires_at.as_ref(), Some(&expires_at));
+    assert_eq!(
+        scoped_client
+            .objects(class_id)
+            .get(object_id)
+            .await
+            .expect("scoped service-account token should read its object")
+            .id,
+        object_id
+    );
+    let scope_error = match scoped_client.collections().get(collection_id).await {
+        Ok(_) => panic!("ReadObject scope must not grant ReadCollection"),
+        Err(error) => error,
+    };
+    assert_scope_denied(scope_error);
+
+    let unscoped_client = hubuum_client::Client::try_new(harness.base_url.clone())
+        .expect("async unscoped token client should build")
+        .login_with_token(Token::new(unscoped_raw))
+        .await
+        .expect("async unscoped service-account token should authenticate");
+    let unscoped_me = unscoped_client
+        .me()
+        .await
+        .expect("unscoped service-account token should read current identity");
+    assert_eq!(unscoped_me.principal.kind, "service_account");
+    assert!(unscoped_me.token.scope.is_none());
+    assert!(unscoped_me.token.expires_at.is_none());
+    assert_eq!(
+        unscoped_client
+            .collections()
+            .get(collection_id)
+            .await
+            .expect("unscoped service-account token should retain collection access")
+            .id,
+        collection_id
+    );
+
+    let expiry_deadline = Instant::now() + EXPIRY_WAIT_LIMIT;
+    loop {
+        match scoped_client.me().await {
+            Err(error) => {
+                assert_token_rejected(error);
+                break;
+            }
+            Ok(_) if Instant::now() < expiry_deadline => {
+                sleep(Duration::from_millis(200)).await;
+            }
+            Ok(_) => panic!("scoped service-account token remained valid past its expiry"),
+        }
+    }
+
+    service_account
+        .token_revoke(scoped_metadata.id)
+        .await
+        .expect("expired scoped service-account token should revoke");
+    service_account
+        .token_revoke(unscoped_metadata.id)
+        .await
+        .expect("unscoped service-account token should revoke");
+    assert_token_rejected(
+        unscoped_client
+            .me()
+            .await
+            .expect_err("revoked unscoped service-account token must stop authenticating"),
+    );
+
+    harness
+        .client
+        .groups()
+        .get(admin_group_id)
+        .await
+        .expect("admin group should remain selectable")
+        .remove_member(service_account.id())
+        .await
+        .expect("service account group membership should clean up");
+    service_account
+        .disable()
+        .await
+        .expect("service account should disable");
+    harness
+        .client
+        .objects(class_id)
+        .delete(object_id)
+        .await
+        .expect("object cleanup should succeed");
+    harness
+        .client
+        .classes()
+        .delete(class_id)
+        .await
+        .expect("class cleanup should succeed");
+    harness
+        .client
+        .collections()
+        .delete(collection_id)
+        .await
         .expect("collection cleanup should succeed");
 }
 

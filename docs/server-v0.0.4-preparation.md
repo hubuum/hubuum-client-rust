@@ -53,9 +53,10 @@ The canonical specification hash produced by
   IDs. Task idempotency keys enforce the 255-byte limit.
 - Remote-target create/update requests reject the v0.0.4 transport-controlled
   header denylist in both templates and API-key authentication.
-- `e2e_client/tests/v004.rs` covers scoped and unscoped token lifecycles,
-  numeric aggregation, direct-actor provenance, task provenance, and initiator
-  event filtering against the declared v0.0.4 target.
+- `e2e_client/tests/v004.rs` covers blocking user and async service-account
+  scoped and unscoped token lifecycles, short-lived token expiry, numeric
+  aggregation, direct-actor provenance, task provenance, and initiator event
+  filtering against the declared v0.0.4 target.
 
 ## Changelog-only compatibility effects
 
@@ -77,12 +78,13 @@ affect callers:
 - `python3 scripts/openapi-contract.py check` succeeds against the
   authoritative tag specification.
 - The canonical combined Docker-backed command passed against that exact
-  digest: 89 library integration tests and 22 independent `e2e_client` tests.
-- Token lifecycle coverage creates scoped and scope-omitted tokens, verifies
-  their exact listed and current-token metadata, authenticates with both,
-  permits an in-scope operation, rejects an operation outside the permission
-  scope, confirms unscoped access, revokes both, and verifies both secrets are
-  rejected afterward.
+  digest: 89 library integration tests and 23 independent `e2e_client` tests.
+- Token lifecycle coverage creates blocking user and async service-account
+  scoped and scope-omitted tokens, verifies their exact listed and current-token
+  metadata, permits an in-scope operation, rejects an operation outside the
+  permission scope, and confirms unscoped access. The async scenario also
+  verifies a five-second absolute expiry is preserved and enforced. Explicitly
+  revoked tokens are rejected afterward.
 
 The root manifest, `TARGET_SERVER_VERSION`, required CI image, compatibility
 table, pinned OpenAPI source and snapshot, README, and integration-test

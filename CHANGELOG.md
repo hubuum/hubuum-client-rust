@@ -80,6 +80,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Principal-token creation now decodes Hubuum v0.0.4's JSON login response
   before returning the one-time bearer secret. Previously, the serialized JSON
   document itself was returned and could not be used for authentication.
+- Principal-token expiry now serializes in the naive UTC request shape accepted
+  by the server, allowing `NewTokenRequest::expires_at(...)` tokens to be
+  created and expire as configured.
 - Reject task idempotency keys longer than the v0.0.4 server limit of 255 bytes
   before transport in both client modes.
 - Validate export-scope identifier requirements and reject nonpositive class or

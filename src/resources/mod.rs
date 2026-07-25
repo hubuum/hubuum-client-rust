@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::fmt::Debug;
 
@@ -412,7 +413,7 @@ impl Serialize for NewTokenRequest {
             #[serde(skip_serializing_if = "Option::is_none")]
             description: Option<&'a String>,
             #[serde(skip_serializing_if = "Option::is_none")]
-            expires_at: Option<&'a HubuumDateTime>,
+            expires_at: Option<NaiveDateTime>,
             #[serde(skip_serializing_if = "Option::is_none")]
             scope: Option<&'a crate::types::TokenScopeDetails>,
         }
@@ -423,7 +424,10 @@ impl Serialize for NewTokenRequest {
         Wire {
             name: self.name.as_ref(),
             description: self.description.as_ref(),
-            expires_at: self.expires_at.as_ref(),
+            expires_at: self
+                .expires_at
+                .as_ref()
+                .map(|expires_at| expires_at.0.naive_utc()),
             scope: self.scope.as_ref().or(compatibility_scope.as_ref()),
         }
         .serialize(serializer)

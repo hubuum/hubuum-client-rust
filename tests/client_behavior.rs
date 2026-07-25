@@ -5141,6 +5141,18 @@ fn legacy_token_scope_builder_emits_the_v004_nested_wire_shape() {
 }
 
 #[test]
+fn token_expiry_serializes_as_the_server_naive_utc_request_shape() {
+    use hubuum_client::{HubuumDateTime, NewTokenRequest};
+
+    let expires_at: HubuumDateTime =
+        serde_json::from_str(r#""2026-07-25T21:00:05+02:00""#).unwrap();
+    assert_eq!(
+        serde_json::to_value(NewTokenRequest::new().expires_at(expires_at)).unwrap(),
+        json!({"expires_at": "2026-07-25T19:00:05"})
+    );
+}
+
+#[test]
 fn sync_user_token_create_rejects_empty_scopes_before_request() {
     use hubuum_client::NewTokenRequest;
 
