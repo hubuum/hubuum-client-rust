@@ -14,6 +14,7 @@ use crate::client::sync::{
 };
 use crate::{
     ApiError, Group, NewTokenRequest, PrincipalCollectionPermissions, PrincipalTokenMetadata,
+    Token,
     endpoints::Endpoint,
     types::{HubuumDateTime, PrincipalId, TokenId},
 };
@@ -262,12 +263,16 @@ pub(crate) fn principal_token_create_sync(
         Cow::Borrowed("principal_id"),
         principal_id.to_string().into(),
     )];
-    client.request_raw_text(
-        reqwest::Method::POST,
-        &Endpoint::PrincipalTokens,
-        url_params,
-        request,
-    )
+    client
+        .request_with_endpoint::<NewTokenRequest, Token>(
+            reqwest::Method::POST,
+            &Endpoint::PrincipalTokens,
+            url_params,
+            vec![],
+            request,
+        )?
+        .map(Token::into_inner)
+        .ok_or_else(|| ApiError::EmptyResult("Token creation returned no token".into()))
 }
 
 #[cfg(feature = "blocking")]
@@ -334,13 +339,16 @@ pub(crate) async fn principal_token_create_async(
         principal_id.to_string().into(),
     )];
     client
-        .request_raw_text(
+        .request_with_endpoint::<NewTokenRequest, Token>(
             reqwest::Method::POST,
             &Endpoint::PrincipalTokens,
             url_params,
+            vec![],
             request,
         )
-        .await
+        .await?
+        .map(Token::into_inner)
+        .ok_or_else(|| ApiError::EmptyResult("Token creation returned no token".into()))
 }
 
 #[cfg(feature = "async")]

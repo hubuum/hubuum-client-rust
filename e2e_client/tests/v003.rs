@@ -108,7 +108,8 @@ fn e2e_v003_natural_keys_aggregates_patching_and_public_config() {
     let name_patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
         path: "/owner".to_string(),
         value: json!("network"),
-    }]);
+    }])
+    .expect("object data patch should be valid");
     let patched = object_scope
         .patch_data(&name_patch)
         .expect("object exact-name JSON patch should succeed");
@@ -117,7 +118,8 @@ fn e2e_v003_natural_keys_aggregates_patching_and_public_config() {
     let id_patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Add {
         path: "/verified".to_string(),
         value: json!(true),
-    }]);
+    }])
+    .expect("object data patch should be valid");
     let patched = harness
         .client
         .patch_object_data(class.id, object.id, &id_patch)

@@ -85,6 +85,13 @@ impl RemoteAuthConfig {
             secret: SecretString::from(secret.into()),
         }
     }
+
+    fn validate_outbound_header(&self) -> Result<(), ApiError> {
+        if let Self::ApiKeySecret { header, .. } = self {
+            validate_outbound_header_name(header)?;
+        }
+        Ok(())
+    }
 }
 
 impl PartialEq for RemoteAuthConfig {
@@ -247,6 +254,70 @@ pub struct UpdateRemoteTarget {
     pub enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout_ms: Option<i32>,
+}
+
+impl NewRemoteTarget {
+    pub(crate) fn validate(&self) -> Result<(), ApiError> {
+        if let Some(headers) = &self.headers_template {
+            validate_outbound_header_templates(headers)?;
+        }
+        if let Some(auth_config) = &self.auth_config {
+            auth_config.validate_outbound_header()?;
+        }
+        Ok(())
+    }
+}
+
+impl UpdateRemoteTarget {
+    pub(crate) fn validate(&self) -> Result<(), ApiError> {
+        if let Some(headers) = &self.headers_template {
+            validate_outbound_header_templates(headers)?;
+        }
+        if let Some(auth_config) = &self.auth_config {
+            auth_config.validate_outbound_header()?;
+        }
+        Ok(())
+    }
+}
+
+fn validate_outbound_header_templates(value: &serde_json::Value) -> Result<(), ApiError> {
+    let headers = value
+        .as_object()
+        .ok_or(ApiError::InvalidRemoteTargetHeaders)?;
+    for (name, value) in headers {
+        validate_outbound_header_name(name)?;
+        if !value.is_string() {
+            return Err(ApiError::InvalidRemoteTargetHeaders);
+        }
+    }
+    Ok(())
+}
+
+fn validate_outbound_header_name(name: &str) -> Result<(), ApiError> {
+    let header = reqwest::header::HeaderName::from_bytes(name.as_bytes()).map_err(|_| {
+        ApiError::InvalidRemoteTargetHeader {
+            name: name.to_string(),
+        }
+    })?;
+    if matches!(
+        header.as_str(),
+        "connection"
+            | "content-length"
+            | "host"
+            | "http2-settings"
+            | "keep-alive"
+            | "proxy-authorization"
+            | "proxy-connection"
+            | "te"
+            | "trailer"
+            | "transfer-encoding"
+            | "upgrade"
+    ) {
+        return Err(ApiError::InvalidRemoteTargetHeader {
+            name: header.to_string(),
+        });
+    }
+    Ok(())
 }
 
 /// Query parameters for listing remote targets.
@@ -565,6 +636,29 @@ mod tests {
             Err(ApiError::InvalidRemoteInvocationObject {
                 field: "body_override"
             })
+        ));
+    }
+
+    #[test]
+    fn transport_controlled_remote_headers_are_rejected() {
+        for header in [
+            "Host",
+            "Content-Length",
+            "Connection",
+            "Proxy-Authorization",
+            "Transfer-Encoding",
+        ] {
+            assert!(matches!(
+                validate_outbound_header_name(header),
+                Err(ApiError::InvalidRemoteTargetHeader { .. })
+            ));
+        }
+        assert!(validate_outbound_header_name("X-Hubuum-Request").is_ok());
+        assert!(matches!(
+            validate_outbound_header_templates(&serde_json::json!({
+                "X-Valid": ["not", "a", "template"]
+            })),
+            Err(ApiError::InvalidRemoteTargetHeaders)
         ));
     }
 }

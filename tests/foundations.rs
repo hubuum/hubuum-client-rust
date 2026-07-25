@@ -6,10 +6,12 @@ use std::time::Duration;
 use futures_util::{StreamExt, TryStreamExt};
 use httpmock::MockServer;
 use hubuum_client::{
-    ApiError, BackupRequest, BaseUrl, ClassPatch, Credentials, ExportContentType,
-    ExportTemplateKind, ExportTemplateRunRequest, MockTransport, Object, ObjectDataPatchDocument,
-    ObjectDataPatchOperation, ObjectPatch, RemoteInvocationSubject, RemoteTargetInvokeRequest,
-    RetryPolicy, TaskStatus, Token, TransportResponse, TypedObject, UnifiedSearchEvent, blocking,
+    ApiError, BackupRequest, BaseUrl, ClassPatch, Credentials, ExportContentType, ExportRequest,
+    ExportScope, ExportScopeKind, ExportTemplateKind, ExportTemplateRunRequest, MockTransport,
+    NewRemoteTarget, Object, ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectPatch,
+    RemoteAuthConfig, RemoteHttpMethod, RemoteInvocationSubject, RemoteTargetInvokeRequest,
+    RemoteTargetSubjectType, RetryPolicy, TaskStatus, Token, TransportResponse, TypedObject,
+    UnifiedSearchEvent, blocking,
 };
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -646,6 +648,23 @@ fn remote_target_json() -> serde_json::Value {
     })
 }
 
+fn new_remote_target() -> NewRemoteTarget {
+    NewRemoteTarget {
+        collection_id: 7.into(),
+        name: "webhook".to_string(),
+        description: String::new(),
+        method: RemoteHttpMethod::Post,
+        url_template: "https://example.invalid/hook".to_string(),
+        allowed_subject_types: vec![RemoteTargetSubjectType::Collection],
+        auth_config: None,
+        body_template: None,
+        class_id: None,
+        enabled: None,
+        headers_template: None,
+        timeout_ms: None,
+    }
+}
+
 fn enqueue_exact_name_responses(transport: &MockTransport, class_name: &str, object_name: &str) {
     for body in [
         exact_name_class_json(class_name),
@@ -718,14 +737,7 @@ fn object_data_patch() -> ObjectDataPatchDocument {
         path: "/owner".into(),
         value: json!("network"),
     }])
-}
-
-fn oversized_object_data_patch() -> ObjectDataPatchDocument {
-    let operation = ObjectDataPatchOperation::Remove { path: "/x".into() };
-    ObjectDataPatchDocument::new(std::iter::repeat_n(
-        operation,
-        ObjectDataPatchDocument::MAX_OPERATIONS + 1,
-    ))
+    .unwrap()
 }
 
 #[test]
@@ -1109,6 +1121,44 @@ fn blocking_requests_reject_blank_idempotency_keys_before_transport() {
             .send_text(),
         Err(ApiError::InvalidIdempotencyKey)
     ));
+    assert!(matches!(
+        client
+            .backups()
+            .submit(BackupRequest::default())
+            .idempotency_key("x".repeat(256))
+            .send(),
+        Err(ApiError::InvalidIdempotencyKey)
+    ));
+    assert!(transport.requests().is_empty());
+}
+
+fn invalid_export_request() -> ExportRequest {
+    ExportRequest {
+        limits: None,
+        missing_data_policy: None,
+        query: None,
+        scope: ExportScope {
+            class_id: Some(0.into()),
+            kind: ExportScopeKind::ObjectsInClass,
+            object_id: None,
+        },
+        include: None,
+        relation_context: None,
+    }
+}
+
+#[test]
+fn blocking_exports_reject_nonpositive_scope_ids_before_transport() {
+    let transport = MockTransport::default();
+    let client = blocking_mock_client(transport.clone(), 4096);
+
+    assert!(matches!(
+        client.exports().submit(invalid_export_request()).send(),
+        Err(ApiError::InvalidExportScopeId {
+            field: "class_id",
+            value: 0
+        })
+    ));
     assert!(transport.requests().is_empty());
 }
 
@@ -1168,6 +1218,38 @@ async fn async_requests_reject_blank_idempotency_keys_before_transport() {
             .send_text()
             .await,
         Err(ApiError::InvalidIdempotencyKey)
+    ));
+    assert!(matches!(
+        client
+            .backups()
+            .submit(BackupRequest::default())
+            .idempotency_key("ø".repeat(128))
+            .send()
+            .await,
+        Err(ApiError::InvalidIdempotencyKey)
+    ));
+    assert!(transport.requests().is_empty());
+}
+
+#[tokio::test]
+async fn async_exports_reject_nonpositive_scope_ids_before_transport() {
+    let transport = MockTransport::default();
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    assert!(matches!(
+        client
+            .exports()
+            .submit(invalid_export_request())
+            .send()
+            .await,
+        Err(ApiError::InvalidExportScopeId {
+            field: "class_id",
+            value: 0
+        })
     ));
     assert!(transport.requests().is_empty());
 }
@@ -1418,6 +1500,20 @@ fn blocking_remote_invocations_reject_non_object_values_before_submission() {
     assert_eq!(requests[0].method, Method::GET);
 }
 
+#[test]
+fn blocking_remote_targets_reject_transport_controlled_headers_before_submission() {
+    let transport = MockTransport::default();
+    let client = blocking_mock_client(transport.clone(), 1024);
+    let mut request = new_remote_target();
+    request.headers_template = Some(json!({"Host": "upstream.invalid"}));
+
+    assert!(matches!(
+        client.remote_targets().create_raw(request),
+        Err(ApiError::InvalidRemoteTargetHeader { name }) if name == "host"
+    ));
+    assert!(transport.requests().is_empty());
+}
+
 #[tokio::test]
 async fn async_remote_invocations_reject_non_object_values_before_submission() {
     let transport = MockTransport::default();
@@ -1452,6 +1548,27 @@ async fn async_remote_invocations_reject_non_object_values_before_submission() {
     let requests = transport.requests();
     assert_eq!(requests.len(), 1);
     assert_eq!(requests[0].method, Method::GET);
+}
+
+#[tokio::test]
+async fn async_remote_targets_reject_transport_controlled_api_key_headers_before_submission() {
+    let transport = MockTransport::default();
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+    let mut request = new_remote_target();
+    request.auth_config = Some(RemoteAuthConfig::api_key(
+        "Proxy-Authorization",
+        "secret_ref",
+    ));
+
+    assert!(matches!(
+        client.remote_targets().create_raw(request).await,
+        Err(ApiError::InvalidRemoteTargetHeader { name }) if name == "proxy-authorization"
+    ));
+    assert!(transport.requests().is_empty());
 }
 
 #[tokio::test]
@@ -1555,7 +1672,8 @@ fn object_data_patch_preserves_its_media_type_for_custom_transports() {
     let patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
         path: "/owner".into(),
         value: json!("network"),
-    }]);
+    }])
+    .unwrap();
 
     client.patch_object_data(42, 9, &patch).unwrap();
 
@@ -1568,52 +1686,6 @@ fn object_data_patch_preserves_its_media_type_for_custom_transports() {
         request.body(),
         br#"[{"op":"replace","path":"/owner","value":"network"}]"#
     );
-}
-
-#[test]
-fn blocking_object_data_patch_rejects_excess_operations_before_transport() {
-    let transport = MockTransport::default();
-    let client = blocking_mock_client(transport.clone(), 1024);
-
-    let error = client
-        .patch_object_data(42, 9, &oversized_object_data_patch())
-        .expect_err("an oversized patch should be rejected");
-
-    assert!(matches!(
-        error,
-        ApiError::ObjectDataPatchLimit {
-            operations: 1_001,
-            limit: 1_000,
-        }
-    ));
-    assert!(transport.requests().is_empty());
-}
-
-#[tokio::test]
-async fn async_exact_name_patch_rejects_excess_operations_before_resolution() {
-    let transport = MockTransport::default();
-    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
-        .with_transport(Arc::new(transport.clone()))
-        .build()
-        .unwrap()
-        .authenticate(Token::new("consumer-secret"));
-
-    let error = client
-        .class_by_name(".")
-        .objects()
-        .by_name("..")
-        .patch_data(&oversized_object_data_patch())
-        .await
-        .expect_err("an oversized patch should be rejected");
-
-    assert!(matches!(
-        error,
-        ApiError::ObjectDataPatchLimit {
-            operations: 1_001,
-            limit: 1_000,
-        }
-    ));
-    assert!(transport.requests().is_empty());
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

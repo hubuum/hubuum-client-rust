@@ -7,16 +7,17 @@ use httpmock::prelude::*;
 use hubuum_client::types::{
     BackupRequest, ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest,
     ComputedFieldOperation, ComputedFieldPreviewRequest, ComputedResultType, EventSinkKind,
-    ExportContentType, ExportRequest, ExportScope, ExportScopeKind, ExportTemplateRunRequest,
-    FilterOperator, FullImportGraph, FullImportRequest, HubuumDateTime, ImportGraph,
-    ImportIdentityScopeInput, ImportRequest, NewEventSink, NewEventSubscription, Permissions,
-    PersonalComputedFieldDefinitionRequest, RestoreCapability, RestoreConfirmRequest,
+    EventSubscriptionFilter, ExportContentType, ExportRequest, ExportScope, ExportScopeKind,
+    ExportTemplateRunRequest, FilterOperator, FullImportGraph, FullImportRequest, HubuumDateTime,
+    ImportGraph, ImportIdentityScopeInput, ImportRequest, NewEventSink, NewEventSubscription,
+    Permissions, PersonalComputedFieldDefinitionRequest, RestoreCapability, RestoreConfirmRequest,
     SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
 };
 use hubuum_client::{
     ApiError, BaseUrl, ClassGet, ClassPatch, Client, ComputedFieldSelector, Credentials,
-    ExportResult, ObjectAggregateDimension, ObjectAggregateSort, ObjectDataPatchDocument,
-    ObjectDataPatchOperation, ObjectPatch, Token, blocking,
+    ExportResult, ObjectAggregateDimension, ObjectAggregateJsonPath, ObjectAggregateMeasure,
+    ObjectAggregateMeasureField, ObjectAggregateMeasureOperation, ObjectAggregateSort,
+    ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectPatch, Token, blocking,
 };
 use serde_json::json;
 
@@ -696,7 +697,8 @@ fn task_event_json(event_id: i32) -> serde_json::Value {
         "event_type": "queued",
         "message": "Task queued",
         "data": null,
-        "created_at": ts()
+        "created_at": ts(),
+        "provenance": provenance_json()
     })
 }
 
@@ -827,6 +829,20 @@ fn unified_search_response_json() -> serde_json::Value {
     })
 }
 
+fn provenance_json() -> serde_json::Value {
+    json!({
+        "actor": {
+            "kind": "worker",
+            "principal": null
+        },
+        "initiator": {
+            "principal_id": 3,
+            "name": "tester"
+        },
+        "task_id": 12
+    })
+}
+
 fn audit_event_json(event_id: i64, entity_type: &str, action: &str) -> serde_json::Value {
     json!({
         "id": event_id,
@@ -839,6 +855,7 @@ fn audit_event_json(event_id: i64, entity_type: &str, action: &str) -> serde_jso
         "action": action,
         "actor_kind": "human",
         "actor_user_id": 3,
+        "provenance": provenance_json(),
         "correlation_id": "corr-1",
         "request_id": "22222222-2222-4222-8222-222222222222",
         "summary": "updated servers",
@@ -864,7 +881,11 @@ fn class_history_json() -> serde_json::Value {
         "valid_to": null,
         "history_id": 9001,
         "actor_id": 3,
-        "actor_username": "tester"
+        "actor_username": "tester",
+        "actor_kind": "worker",
+        "initiator_user_id": 3,
+        "task_id": 12,
+        "provenance": provenance_json()
     })
 }
 
@@ -881,7 +902,11 @@ fn collection_history_json() -> serde_json::Value {
         "valid_to": null,
         "history_id": 9002,
         "actor_id": 3,
-        "actor_username": "tester"
+        "actor_username": "tester",
+        "actor_kind": "worker",
+        "initiator_user_id": 3,
+        "task_id": 12,
+        "provenance": provenance_json()
     })
 }
 
@@ -909,7 +934,10 @@ fn event_subscription_json() -> serde_json::Value {
         "actions": ["updated"],
         "routing": {"topic": "classes"},
         "enabled": true,
-        "filter": {"actor_kinds": ["human"]},
+        "filter": {
+            "actor_kinds": ["human"],
+            "initiator_user_ids": [3]
+        },
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -4288,6 +4316,14 @@ async fn async_imports_and_tasks_support_submission_and_cursor_results() {
         .expect("task events page should succeed");
     assert_eq!(event_page.items.len(), 1);
     assert_eq!(event_page.next_cursor.as_deref(), Some("event-cursor"));
+    assert_eq!(
+        event_page.items[0]
+            .provenance
+            .as_ref()
+            .and_then(|provenance| provenance.initiator.as_ref())
+            .and_then(|initiator| initiator.name.as_deref()),
+        Some("tester")
+    );
 
     import_submit.assert_calls(1);
     import_get.assert_calls(1);
@@ -4521,6 +4557,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
             .query_param("entity_id", "42")
             .query_param("action", "updated")
             .query_param("actor_kind", "human")
+            .query_param("initiator_user_id", "3")
             .query_param("collection_id", "7")
             .query_param("limit", "1")
             .query_param("sort", "occurred_at.desc")
@@ -4595,7 +4632,10 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
                 "name": "class-updates",
                 "entity_types": ["class"],
                 "actions": ["updated"],
-                "enabled": true
+                "enabled": true,
+                "filter": {
+                    "initiator_user_ids": [3]
+                }
             }))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201)
@@ -4629,12 +4669,21 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
         .entity_id(42)
         .action("updated")
         .actor_kind("human")
+        .initiator_user_id(3)
         .collection_id(7)
         .limit(1)
         .sort("occurred_at", SortDirection::Desc)
         .page()
         .expect("events page should succeed");
     assert_eq!(event_page.items[0].entity_type, "class");
+    assert_eq!(
+        event_page.items[0]
+            .provenance
+            .as_ref()
+            .and_then(|provenance| provenance.initiator.as_ref())
+            .map(|initiator| initiator.principal_id),
+        Some(3.into())
+    );
     assert_eq!(event_page.next_cursor.as_deref(), Some("events-next"));
 
     let user_event_list = client
@@ -4659,6 +4708,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
         .list()
         .expect("class history should succeed");
     assert_eq!(history[0].history.history_id, 9001);
+    assert_eq!(history[0].history.task_id, Some(12.into()));
 
     let at: HubuumDateTime = serde_json::from_str(r#""2024-01-01T00:00:00Z""#).unwrap();
     let version = client
@@ -4685,10 +4735,21 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
             entity_types: vec!["class".to_string()],
             actions: vec!["updated".to_string()],
             enabled: Some(true),
+            filter: Some(EventSubscriptionFilter {
+                initiator_user_ids: Some(vec![3.into()]),
+                ..Default::default()
+            }),
             ..Default::default()
         })
         .expect("event subscription create should succeed");
     assert_eq!(subscription.id, 8);
+    assert_eq!(
+        subscription
+            .filter
+            .as_ref()
+            .and_then(|filter| filter.initiator_user_ids.as_deref()),
+        Some([3.into()].as_slice())
+    );
 
     let updated = client
         .event_subscriptions(7)
@@ -4966,7 +5027,7 @@ fn sync_service_account_create_and_disable() {
 
 #[test]
 fn sync_user_token_create_with_scopes_returns_raw_token() {
-    use hubuum_client::{NewTokenRequest, Permissions};
+    use hubuum_client::{NewTokenRequest, Permissions, TokenResourceScope, TokenScopeDetails};
 
     let server = MockServer::start();
     mock_login(&server);
@@ -4985,27 +5046,131 @@ fn sync_user_token_create_with_scopes_returns_raw_token() {
             .path("/api/v1/iam/principals/11/tokens")
             .json_body(json!({
                 "name": "ci",
-                "scopes": ["ReadClass"]
+                "scope": {
+                    "permissions": ["ReadClass"],
+                    "resources": [
+                        {"kind": "collection", "id": 7}
+                    ]
+                }
             }))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201)
-            .header("content-type", "text/plain")
-            .body("raw-secret-token");
+            .header("content-type", "application/json")
+            .json_body(json!({"token": "raw-secret-token"}));
     });
 
     let client = sync_client(&server);
     let user = client.users().get(11).expect("user select should succeed");
     let raw = user
         .tokens_create(
-            NewTokenRequest::new()
-                .name("ci")
-                .scopes(vec![Permissions::ReadClass]),
+            NewTokenRequest::new().name("ci").scope(
+                TokenScopeDetails::new(
+                    Some(vec![Permissions::ReadClass]),
+                    Some(vec![TokenResourceScope::Collection(7.into())]),
+                )
+                .unwrap(),
+            ),
         )
         .expect("token create should succeed");
     assert_eq!(raw, "raw-secret-token");
 
     user_by_id.assert_calls(1);
     token_create.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_service_account_unscoped_token_create_returns_raw_token() {
+    use hubuum_client::NewTokenRequest;
+
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let service_account_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/iam/service-accounts/5")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(service_account_json(5, "dns-sync", 10));
+    });
+
+    let token_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/iam/principals/5/tokens")
+            .json_body(json!({"name": "unscoped"}))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(json!({"token": "raw-unscoped-token"}));
+    });
+
+    let client = async_client(&server).await;
+    let service_account = client
+        .service_accounts()
+        .get(5)
+        .await
+        .expect("service account select should succeed");
+    let raw = service_account
+        .tokens_create(NewTokenRequest::new().name("unscoped"))
+        .await
+        .expect("unscoped token create should succeed");
+    assert_eq!(raw, "raw-unscoped-token");
+
+    service_account_by_id.assert_calls(1);
+    token_create.assert_calls(1);
+}
+
+#[test]
+fn legacy_token_scope_builder_emits_the_v004_nested_wire_shape() {
+    use hubuum_client::{NewTokenRequest, Permissions};
+
+    assert_eq!(
+        serde_json::to_value(
+            NewTokenRequest::new()
+                .name("compatibility")
+                .scopes(vec![Permissions::ReadClass])
+        )
+        .unwrap(),
+        json!({
+            "name": "compatibility",
+            "scope": {
+                "permissions": ["ReadClass"]
+            }
+        })
+    );
+}
+
+#[test]
+fn invalid_token_scope_requests_fail_during_serialization() {
+    use hubuum_client::{NewTokenRequest, Permissions};
+
+    let scope = hubuum_client::TokenScopeDetails::permission_boundary(vec![Permissions::ReadClass])
+        .unwrap();
+    assert!(
+        serde_json::to_value(NewTokenRequest::new().scopes(vec![])).is_err(),
+        "invalid compatibility scopes must not serialize"
+    );
+    assert!(
+        serde_json::to_value(NewTokenRequest {
+            scope: Some(scope),
+            scopes: Some(vec![Permissions::ReadClass]),
+            ..NewTokenRequest::new()
+        })
+        .is_err(),
+        "singular and legacy token scope inputs must remain mutually exclusive"
+    );
+}
+
+#[test]
+fn token_expiry_serializes_as_the_server_naive_utc_request_shape() {
+    use hubuum_client::{HubuumDateTime, NewTokenRequest};
+
+    let expires_at: HubuumDateTime =
+        serde_json::from_str(r#""2026-07-25T21:00:05+02:00""#).unwrap();
+    assert_eq!(
+        serde_json::to_value(NewTokenRequest::new().expires_at(expires_at)).unwrap(),
+        json!({"expires_at": "2026-07-25T19:00:05"})
+    );
 }
 
 #[test]
@@ -5164,8 +5329,14 @@ fn sync_me_returns_identity_and_token() {
                     "id": 1,
                     "name": null,
                     "description": null,
-                    "scoped": false,
-                    "scopes": null,
+                    "scope": {
+                        "permissions": ["ReadClass"],
+                        "resources": [
+                            {"kind": "collection", "id": 7}
+                        ]
+                    },
+                    "scoped": true,
+                    "scopes": ["ReadClass"],
                     "issued": ts(),
                     "expires_at": null,
                     "last_used_at": null
@@ -5177,7 +5348,21 @@ fn sync_me_returns_identity_and_token() {
     let me_response = client.me().expect("me should succeed");
     assert_eq!(me_response.principal.principal_id, 11);
     assert_eq!(me_response.principal.kind, "human");
-    assert!(!me_response.token.scoped);
+    assert!(me_response.token.scoped);
+    assert_eq!(
+        me_response
+            .token
+            .scope
+            .as_ref()
+            .and_then(hubuum_client::TokenScopeDetails::resources)
+            .and_then(|resources| resources.first())
+            .copied(),
+        Some(hubuum_client::TokenResourceScope::Collection(7.into()))
+    );
+    assert_eq!(
+        me_response.token.scopes.as_deref(),
+        Some([Permissions::ReadClass].as_slice())
+    );
 
     me.assert_calls(1);
 }
@@ -5934,7 +6119,8 @@ async fn async_v003_natural_key_routes_cover_crud_relations_and_permissions() {
     let document = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Replace {
         path: "/owner".into(),
         value: json!("network"),
-    }]);
+    }])
+    .unwrap();
     object.patch_data(&document).await.unwrap();
 
     assert_eq!(class.permissions().list().await.unwrap().len(), 1);
@@ -5974,7 +6160,7 @@ async fn async_v003_natural_key_routes_cover_crud_relations_and_permissions() {
 }
 
 #[tokio::test]
-async fn async_v003_object_aggregates_support_id_and_name_scopes() {
+async fn async_object_aggregates_support_id_name_and_numeric_measures() {
     let server = MockServer::start();
     mock_login(&server);
     let aggregate_body = json!([{
@@ -5982,6 +6168,14 @@ async fn async_v003_object_aggregates_support_id_and_name_scopes() {
             {"field": "name", "state": "value", "value": "router"},
             {"field": "json_data.region,zone", "state": "missing"}
         ],
+        "measures": [{
+            "field": "json_data.metrics,cost",
+            "operation": "sum",
+            "state": "value",
+            "value": 42,
+            "value_count": 2,
+            "skipped_count": 0
+        }],
         "object_count": 2
     }]);
     let by_id = server.mock(|when, then| {
@@ -5989,6 +6183,7 @@ async fn async_v003_object_aggregates_support_id_and_name_scopes() {
             .path("/api/v1/classes/42/object-aggregates")
             .query_param("group_by", "name")
             .query_param("group_by", "json_data.region,zone")
+            .query_param("aggregate", "sum:json_data.metrics,cost")
             .query_param("sort", "object_count.desc")
             .query_param("include_total", "true");
         then.status(200)
@@ -6020,14 +6215,23 @@ async fn async_v003_object_aggregates_support_id_and_name_scopes() {
         .object_aggregates(42)
         .group_by_all([
             ObjectAggregateDimension::Name,
-            ObjectAggregateDimension::json_data(["region", "zone"]),
+            ObjectAggregateDimension::json_data(
+                ObjectAggregateJsonPath::new(["region", "zone"]).unwrap(),
+            ),
         ])
+        .aggregate(ObjectAggregateMeasure::new(
+            ObjectAggregateMeasureOperation::Sum,
+            ObjectAggregateMeasureField::json_data(
+                ObjectAggregateJsonPath::new(["metrics", "cost"]).unwrap(),
+            ),
+        ))
         .aggregate_sort(ObjectAggregateSort::ObjectCountDesc)
         .include_total(true)
         .page()
         .await
         .unwrap();
     assert_eq!(page.items[0].object_count, 2);
+    assert_eq!(page.items[0].measures[0].value, Some(json!(42)));
     assert_eq!(page.total_count, Some(1));
     assert_eq!(page.page_limit, Some(100));
 
@@ -6048,10 +6252,50 @@ async fn async_v003_object_aggregates_support_id_and_name_scopes() {
     let patch = ObjectDataPatchDocument::new([ObjectDataPatchOperation::Test {
         path: "/owner".into(),
         value: json!("infra"),
-    }]);
+    }])
+    .unwrap();
     client.patch_object_data(42, 9, &patch).await.unwrap();
 
     by_id.assert_calls(1);
     by_name.assert_calls(1);
     numeric_patch.assert_calls(1);
+}
+
+#[test]
+fn sync_v004_object_aggregates_support_global_numeric_measures() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let aggregate = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42/object-aggregates")
+            .query_param("aggregate", "average:computed.shared.latency");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([{
+                "dimensions": [],
+                "measures": [{
+                    "field": "computed.shared.latency",
+                    "operation": "average",
+                    "state": "value",
+                    "value": 12.5,
+                    "value_count": 4,
+                    "skipped_count": 1
+                }],
+                "object_count": 5
+            }]));
+    });
+
+    let client = sync_client(&server);
+    let rows = client
+        .object_aggregates(42)
+        .aggregate(ObjectAggregateMeasure::new(
+            ObjectAggregateMeasureOperation::Average,
+            ObjectAggregateMeasureField::shared_computed("latency"),
+        ))
+        .list()
+        .unwrap();
+
+    assert!(rows[0].dimensions.is_empty());
+    assert_eq!(rows[0].measures[0].value_count, 4);
+    aggregate.assert_calls(1);
 }

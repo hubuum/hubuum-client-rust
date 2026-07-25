@@ -13,10 +13,12 @@ mod identity;
 mod import;
 mod meta;
 mod params;
+mod provenance;
 mod remote;
 mod search;
 mod settings;
 mod task;
+mod token;
 mod typed_object;
 
 use serde::{Deserialize, Serialize};
@@ -57,6 +59,7 @@ pub use export::{
     ExportIncludeRelatedSort, ExportJsonResponse, ExportLimits, ExportMeta,
     ExportMissingDataPolicy, ExportRelationContext, ExportRequest, ExportResult, ExportScope,
     ExportScopeKind, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning,
+    ValidatedExportScope,
 };
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
 pub use history::{
@@ -87,6 +90,7 @@ pub use meta::{
     ReleaseRateLimitResponse,
 };
 pub use params::{ClassParams, CollectionPermissionsGrantParams, UserParams};
+pub use provenance::{Provenance, ProvenanceActor, ProvenancePrincipal};
 pub use remote::{
     NewRemoteTarget, RemoteAuthConfig, RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject,
     RemoteTarget, RemoteTargetGet, RemoteTargetInvokeRequest, RemoteTargetSubjectType,
@@ -105,6 +109,7 @@ pub use task::{
     TaskEventResponse, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse,
     TaskStatus,
 };
+pub use token::{MAX_TOKEN_RESOURCE_SCOPES, TokenResourceScope, TokenScopeDetails};
 pub use typed_object::TypedObject;
 #[cfg(feature = "typed-schemas")]
 pub use typed_object::schema_for;
