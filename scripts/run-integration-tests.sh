@@ -5,11 +5,37 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
+read_target_server_image() {
+    awk -F'=' '
+        /^\[package\.metadata\.hubuum\]$/ {
+            in_metadata = 1
+            next
+        }
+        /^\[/ {
+            if (in_metadata) {
+                exit
+            }
+        }
+        in_metadata {
+            key = $1
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+            if (key == "server-image") {
+                value = substr($0, index($0, "=") + 1)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+                gsub(/^"/, "", value)
+                gsub(/"$/, "", value)
+                print value
+                exit
+            }
+        }
+    ' Cargo.toml
+}
+
 DB_USER="${HUBUUM_INTEGRATION_DB_USER:-hubuum}"
 DB_PASSWORD="${HUBUUM_INTEGRATION_DB_PASSWORD:-hubuum_password}"
 DB_NAME="${HUBUUM_INTEGRATION_DB_NAME:-hubuum}"
 DB_IMAGE="${HUBUUM_INTEGRATION_DB_IMAGE:-postgres:18}"
-SERVER_IMAGE="${HUBUUM_INTEGRATION_SERVER_IMAGE:-ghcr.io/hubuum/hubuum-server:main}"
+SERVER_IMAGE="${HUBUUM_INTEGRATION_SERVER_IMAGE:-$(read_target_server_image)}"
 LDAP_IMAGE="${HUBUUM_INTEGRATION_LDAP_IMAGE:-ghcr.io/rroemhild/docker-test-openldap@sha256:3470e15c60119a1c0392cc162cdce71edfb42b55affdc69da574012f956317cd}"
 AUTH_CONFIG="${HUBUUM_INTEGRATION_AUTH_CONFIG:-tests/container_integration/fixtures/auth-providers.toml}"
 LDAP_CERTIFICATE_SCRIPT="tests/container_integration/fixtures/generate-ldap-certificates.sh"
@@ -17,6 +43,11 @@ CLIENT_ALLOWLIST="${HUBUUM_CLIENT_ALLOWLIST:-*}"
 STACK_TIMEOUT_SECS="${HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS:-300}"
 KEEP_CONTAINERS="${HUBUUM_INTEGRATION_KEEP_CONTAINERS:-0}"
 CONTAINER_RUNTIME="${HUBUUM_INTEGRATION_CONTAINER_RUNTIME:-}"
+
+if [[ -z "${SERVER_IMAGE}" ]]; then
+    echo "Cargo.toml is missing [package.metadata.hubuum].server-image" >&2
+    exit 1
+fi
 
 DEFAULT_SEED_SQL="tests/container_integration/seed/init.sql"
 SEED_SQL="${HUBUUM_INTEGRATION_SEED_SQL:-${DEFAULT_SEED_SQL}}"

@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     ExportContentType, ExportMissingDataPolicy, ExportScopeKind, ExportTemplateKind, HistoryId,
-    HubuumDateTime, PrincipalId, RemoteAuthConfig, RemoteHttpMethod, RemoteTargetSubjectType,
+    HubuumDateTime, PrincipalId, Provenance, RemoteAuthConfig, RemoteHttpMethod,
+    RemoteTargetSubjectType, TaskId,
 };
 use crate::{ClassId, CollectionId, ExportTemplateId, ObjectId, RemoteTargetId};
 
@@ -17,6 +18,16 @@ pub struct HistoryMetadata {
     pub actor_id: Option<PrincipalId>,
     #[serde(default)]
     pub actor_username: Option<String>,
+    #[serde(default)]
+    pub actor_kind: Option<String>,
+    #[serde(default)]
+    pub initiator_user_id: Option<PrincipalId>,
+    #[serde(default)]
+    pub task_id: Option<TaskId>,
+    /// Resolved actor and root-task initiator metadata on Hubuum v0.0.4 and
+    /// newer.
+    #[serde(default)]
+    pub provenance: Option<Provenance>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

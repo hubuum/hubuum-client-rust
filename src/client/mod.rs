@@ -355,6 +355,10 @@ mod parity_contract {
             let _ = |request: $module::CursorRequest<crate::resources::ObjectAggregateRow>| {
                 request.group_by_all(Vec::<crate::resources::ObjectAggregateDimension>::new())
             };
+            let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::aggregate;
+            let _ = |request: $module::CursorRequest<crate::resources::ObjectAggregateRow>| {
+                request.aggregate_all(Vec::<crate::resources::ObjectAggregateMeasure>::new())
+            };
             let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::aggregate_sort;
             let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::computed_filter::<
                 i32,

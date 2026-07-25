@@ -55,6 +55,12 @@ pub enum ApiError {
     #[error("Remote target invocation {field} must be a JSON object")]
     InvalidRemoteInvocationObject { field: &'static str },
 
+    #[error("Remote target headers must be a JSON object with string template values")]
+    InvalidRemoteTargetHeaders,
+
+    #[error("Remote target header is invalid or transport-controlled: {name}")]
+    InvalidRemoteTargetHeader { name: String },
+
     #[error("Missing location header for: {0}")]
     MissingLocationHeader(String),
 
@@ -112,8 +118,19 @@ pub enum ApiError {
     #[error("Automatic pagination exceeded its safety limit ({pages} pages, {items} items)")]
     PaginationLimit { pages: usize, items: usize },
 
-    #[error("Token scopes must be omitted or contain at least one permission")]
+    #[error(
+        "Token scope dimensions must be non-empty, unique, within their limits, and narrow at least one dimension"
+    )]
     InvalidTokenScopes,
+
+    #[error("Invalid object aggregate JSON path: {reason}")]
+    InvalidObjectAggregateJsonPath { reason: &'static str },
+
+    #[error("Export scope {field} must be positive, got {value}")]
+    InvalidExportScopeId { field: &'static str, value: i32 },
+
+    #[error("Invalid export scope: {reason}")]
+    InvalidExportScope { reason: &'static str },
 
     #[error("Object data patch contains {operations} operations; the maximum is {limit}")]
     ObjectDataPatchLimit { operations: usize, limit: usize },
@@ -125,7 +142,7 @@ pub enum ApiError {
         max: usize,
     },
 
-    #[error("Idempotency-Key must not be empty or whitespace")]
+    #[error("Idempotency-Key must contain between 1 and 255 bytes")]
     InvalidIdempotencyKey,
 
     #[error("Unknown permission `{0}`")]
@@ -159,6 +176,11 @@ impl std::fmt::Debug for ApiError {
             Self::InvalidRemoteInvocationObject { field } => f
                 .debug_struct("InvalidRemoteInvocationObject")
                 .field("field", field)
+                .finish(),
+            Self::InvalidRemoteTargetHeaders => f.write_str("InvalidRemoteTargetHeaders"),
+            Self::InvalidRemoteTargetHeader { name } => f
+                .debug_struct("InvalidRemoteTargetHeader")
+                .field("name", name)
                 .finish(),
             Self::MissingLocationHeader(message) => f
                 .debug_tuple("MissingLocationHeader")
@@ -236,6 +258,19 @@ impl std::fmt::Debug for ApiError {
                 .field("items", items)
                 .finish(),
             Self::InvalidTokenScopes => f.write_str("InvalidTokenScopes"),
+            Self::InvalidObjectAggregateJsonPath { reason } => f
+                .debug_struct("InvalidObjectAggregateJsonPath")
+                .field("reason", reason)
+                .finish(),
+            Self::InvalidExportScopeId { field, value } => f
+                .debug_struct("InvalidExportScopeId")
+                .field("field", field)
+                .field("value", value)
+                .finish(),
+            Self::InvalidExportScope { reason } => f
+                .debug_struct("InvalidExportScope")
+                .field("reason", reason)
+                .finish(),
             Self::ObjectDataPatchLimit { operations, limit } => f
                 .debug_struct("ObjectDataPatchLimit")
                 .field("operations", operations)

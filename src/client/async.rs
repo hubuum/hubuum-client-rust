@@ -14,9 +14,10 @@ use crate::errors::ApiError;
 use crate::resources::{
     ApiResource, Class, ClassId, ClassPatch, ClassRelation, ClassWithPath, Collection,
     CollectionId, EventSink, ExportTemplate, ExportTemplateId, Group, GroupId,
-    GroupPermissionsResult, Object, ObjectAggregateDimension, ObjectAggregateRow,
-    ObjectAggregateSort, ObjectDataPatchDocument, ObjectId, ObjectPatch, ObjectPost,
-    ObjectRelation, ObjectWithPath, RelatedClassGraph, RelatedObjectGraph, User, UserId,
+    GroupPermissionsResult, Object, ObjectAggregateDimension, ObjectAggregateMeasure,
+    ObjectAggregateRow, ObjectAggregateSort, ObjectDataPatchDocument, ObjectId, ObjectPatch,
+    ObjectPost, ObjectRelation, ObjectWithPath, RelatedClassGraph, RelatedObjectGraph, User,
+    UserId,
 };
 use crate::resources::{
     MeResponse, PrincipalCollectionPermissions, PrincipalTokenMetadata, RemoteTarget,
@@ -440,7 +441,7 @@ impl<S> Client<S> {
                 .runtime
                 .http_client
                 .get(&request_url)
-                .header(headers[0].0, &headers[0].1);
+                .header(headers[0].0, shared::sensitive_header_value(&headers[0].1)?);
             let response = self
                 .send_with_retry(&reqwest::Method::GET, false, request)
                 .await?;
@@ -749,10 +750,7 @@ impl Client<Unauthenticated> {
                 self.options().max_error_body_bytes,
             )?;
         } else {
-            let request = self
-                .http_client()
-                .get(&url)
-                .header("Authorization", format!("Bearer {}", token.as_str()));
+            let request = self.http_client().get(&url).bearer_auth(token.as_str());
             let response = self
                 .send_with_retry(&reqwest::Method::GET, false, request)
                 .await?;
@@ -1085,7 +1083,7 @@ impl Client<Authenticated> {
             .runtime
             .http_client
             .get(&request_url)
-            .header("Authorization", format!("Bearer {}", self.state.token()));
+            .bearer_auth(self.state.token());
         let response = self
             .send_with_retry(&reqwest::Method::GET, false, request)
             .await?;
@@ -1171,10 +1169,10 @@ impl Client<Authenticated> {
         } else {
             return Err(ApiError::UnsupportedHttpOperation(method.to_string()));
         };
-        let request = headers.iter().fold(
-            request.header("Authorization", format!("Bearer {}", self.state.token())),
-            |request, (name, value)| request.header(*name, value),
-        );
+        let mut request = request.bearer_auth(self.state.token());
+        for (name, value) in headers {
+            request = request.header(*name, shared::sensitive_header_value(value)?);
+        }
 
         let now = std::time::Instant::now();
         let response = self
@@ -1217,21 +1215,6 @@ impl Client<Authenticated> {
             )
             .await?;
         shared::parse_response(&method, raw.status, raw.body)
-    }
-
-    /// Issue a request whose successful response body is an opaque text payload
-    /// (e.g. a freshly-minted token), rather than a JSON resource.
-    pub(crate) async fn request_raw_text<T: Serialize>(
-        &self,
-        method: reqwest::Method,
-        endpoint: &Endpoint,
-        url_params: UrlParams,
-        post_params: T,
-    ) -> Result<String, ApiError> {
-        let raw = self
-            .request_with_endpoint_raw(method, endpoint, url_params, vec![], post_params)
-            .await?;
-        Ok(shared::decode_raw_text(raw.body))
     }
 
     pub async fn request<R: ApiResource, T: Serialize, U: DeserializeOwned>(
@@ -2068,18 +2051,13 @@ impl RawRequest {
             let mut plan = super::transport::RequestPlan::new(self.method.clone(), url);
             plan.headers.insert(
                 reqwest::header::AUTHORIZATION,
-                reqwest::header::HeaderValue::from_str(&format!(
-                    "Bearer {}",
-                    self.client.state.token()
-                ))
-                .map_err(|error| ApiError::Transport(error.to_string()))?,
+                shared::bearer_header_value(self.client.state.token())?,
             );
             for (name, value) in &self.headers {
                 plan.headers.insert(
                     reqwest::header::HeaderName::from_bytes(name.as_bytes())
                         .map_err(|error| ApiError::Transport(error.to_string()))?,
-                    reqwest::header::HeaderValue::from_str(value)
-                        .map_err(|error| ApiError::Transport(error.to_string()))?,
+                    shared::sensitive_header_value(value)?,
                 );
             }
             if let Some(body) = self.body {
@@ -2115,12 +2093,9 @@ impl RawRequest {
             .runtime
             .http_client
             .request(self.method.clone(), &request_url)
-            .header(
-                reqwest::header::AUTHORIZATION,
-                format!("Bearer {}", self.client.state.token()),
-            );
+            .bearer_auth(self.client.state.token());
         for (name, value) in &self.headers {
-            request = request.header(name, value);
+            request = request.header(name, shared::sensitive_header_value(value)?);
         }
         if let Some(body) = self.body {
             if !has_content_type {
@@ -2821,6 +2796,13 @@ impl EventListRequest {
         self.inner = self
             .inner
             .set_query_param("actor_user_id", actor_user_id.into());
+        self
+    }
+
+    pub fn initiator_user_id(mut self, initiator_user_id: impl Into<PrincipalId>) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("initiator_user_id", initiator_user_id.into());
         self
     }
 
@@ -3701,6 +3683,7 @@ impl ExportSubmitOp {
     }
 
     pub async fn send(self) -> Result<TaskResponse, ApiError> {
+        self.request.validate()?;
         let mut headers = Vec::new();
         if let Some(key) = self.idempotency_key {
             headers.push(("Idempotency-Key", key));
@@ -4431,6 +4414,7 @@ impl<T: ApiResource> CreateOp<T> {
     }
 
     pub async fn send(self) -> Result<T::PostOutput, ApiError> {
+        T::validate_post(&self.params)?;
         self.client
             .post::<T>(T::default(), self.url_params, self.params)
             .await
@@ -4470,6 +4454,7 @@ impl<T: ApiResource> UpdateOp<T> {
     }
 
     pub async fn send(self) -> Result<T::PatchOutput, ApiError> {
+        T::validate_patch(&self.params)?;
         self.client
             .patch::<T, _>(T::default(), self.id, self.url_params, self.params)
             .await
@@ -4938,6 +4923,21 @@ impl CursorRequest<ObjectAggregateRow> {
     ) -> Self {
         for dimension in dimensions {
             self = self.group_by(dimension);
+        }
+        self
+    }
+
+    /// Append one ordered numeric measure. The server accepts up to four.
+    pub fn aggregate(self, measure: ObjectAggregateMeasure) -> Self {
+        self.query_param("aggregate", measure)
+    }
+
+    pub fn aggregate_all(
+        mut self,
+        measures: impl IntoIterator<Item = ObjectAggregateMeasure>,
+    ) -> Self {
+        for measure in measures {
+            self = self.aggregate(measure);
         }
         self
     }

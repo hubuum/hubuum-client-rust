@@ -6,8 +6,26 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- Endpoint URL rendering now borrows dynamic path parameters instead of cloning
+  their owned keys and values before every async and blocking request.
+
+### Fixed
+
+- Bearer tokens, restore capabilities, and caller-provided raw header values are
+  now marked sensitive for built-in and custom transports, keeping them out of
+  `Debug` output and HTTP/2 dynamic compression tables.
+
+## [0.7.0] - 2026-07-25
+
 ### Added
 
+- Typed coverage for the Hubuum v0.0.4 contract: nested
+  permission/resource token scopes, hierarchical collection/class/object token
+  boundaries, root-task provenance on audit/history/task-event models and
+  subscription filters, initiator event queries, and up to four numeric object
+  aggregate measures.
 - Full database-state responses and async/blocking `meta_db_full()` accessors
   expose all v0.0.3 connection-pool acquisition, wait, timeout, creation, and
   closure metrics without breaking the original `DbStateResponse` model.
@@ -25,6 +43,25 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Changed
 
+- This release explicitly targets Hubuum server v0.0.4 and pins its
+  196-operation OpenAPI contract plus immutable multi-platform server image
+  `sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583`.
+- Principal-token mint requests now emit the v0.0.4 singular `scope` object.
+  Existing `NewTokenRequest::scopes(...)` calls remain source-compatible and
+  serialize as `scope.permissions`; use `NewTokenRequest::scope(...)` with
+  `TokenScopeDetails` to combine permission and resource boundaries. Omit
+  `scope` entirely to mint an unscoped token.
+- Token, event, history, task-event, subscription-filter, and aggregate response
+  structs have additive v0.0.4 fields. This is a source-breaking change only
+  for callers constructing those response models with struct literals; add the
+  new fields or deserialize server responses instead.
+- Hubuum v0.0.4 history lists can omit stored versions the caller cannot read,
+  and deleted-resource history requires an unscoped configured-backend
+  administrator token. JSON filter and aggregate paths must use non-empty
+  segments containing only ASCII letters, digits, `_`, or `$`.
+- Hubuum v0.0.4 limits integer list/range filters to 1,024 unique expanded
+  values. Callers must split larger requests rather than relying on server-side
+  expansion.
 - Custom-transport retry plans now share their immutable serialized request
   body across clones instead of copying the full payload for every attempt.
 - Authenticated client and handle clones now share immutable bearer-token
@@ -48,16 +85,33 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   formatting avoid intermediate `String` allocations on their common
   successful paths while preserving the existing wire and query
   representations.
-- Endpoint URL rendering now borrows dynamic path parameters instead of cloning
-  their owned keys and values before every async and blocking request.
+- The integration-test wrapper now defaults to the immutable target server
+  image declared in `Cargo.toml`; the floating `main` image remains an explicit
+  forward-compatibility override.
 
 ### Fixed
 
-- Reject object-data patch documents with more than the server's 1,000-operation
-  limit before performing exact-name resolution or sending a request.
+- Principal-token creation now decodes Hubuum v0.0.4's JSON login response
+  before returning the one-time bearer secret. Previously, the serialized JSON
+  document itself was returned and could not be used for authentication.
+- Principal-token expiry now serializes in the naive UTC request shape accepted
+  by the server, allowing `NewTokenRequest::expires_at(...)` tokens to be
+  created and expire as configured.
+- Reject task idempotency keys longer than the v0.0.4 server limit of 255 bytes
+  before transport in both client modes.
+- Validate export-scope identifier requirements and reject nonpositive class or
+  object IDs before submission.
+- Reject transport-controlled remote-target template and API-key headers such
+  as `Host`, `Content-Length`, `Connection`, `Proxy-Authorization`, and
+  `Transfer-Encoding` before create or update requests are sent.
+- Model object-data patch documents as a bounded newtype that rejects more than
+  the server's 1,000-operation limit during construction, deserialization, or
+  mutation.
 - Reject empty principal-token scope sets before sending a request, preserving
   the explicit distinction between unscoped tokens and invalid scoped-token
   requests for user and service-account handles.
+- Validate object-aggregate JSON paths through a dedicated newtype, rejecting
+  empty paths and invalid segments before either client transport is reached.
 - Typed response decoding now rejects trailing non-whitespace data after a valid
   JSON value instead of silently accepting and ignoring it.
 - Export responses recognize known HTTP media types case-insensitively, so
