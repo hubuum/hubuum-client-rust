@@ -14,9 +14,10 @@ use crate::errors::ApiError;
 use crate::resources::{
     ApiResource, Class, ClassId, ClassPatch, ClassRelation, ClassWithPath, Collection,
     CollectionId, EventSink, ExportTemplate, ExportTemplateId, Group, GroupId,
-    GroupPermissionsResult, Object, ObjectAggregateDimension, ObjectAggregateRow,
-    ObjectAggregateSort, ObjectDataPatchDocument, ObjectId, ObjectPatch, ObjectPost,
-    ObjectRelation, ObjectWithPath, RelatedClassGraph, RelatedObjectGraph, User, UserId,
+    GroupPermissionsResult, Object, ObjectAggregateDimension, ObjectAggregateMeasure,
+    ObjectAggregateRow, ObjectAggregateSort, ObjectDataPatchDocument, ObjectId, ObjectPatch,
+    ObjectPost, ObjectRelation, ObjectWithPath, RelatedClassGraph, RelatedObjectGraph, User,
+    UserId,
 };
 use crate::resources::{
     MeResponse, PrincipalCollectionPermissions, PrincipalTokenMetadata, RemoteTarget,
@@ -1214,21 +1215,6 @@ impl Client<Authenticated> {
             )
             .await?;
         shared::parse_response(&method, raw.status, raw.body)
-    }
-
-    /// Issue a request whose successful response body is an opaque text payload
-    /// (e.g. a freshly-minted token), rather than a JSON resource.
-    pub(crate) async fn request_raw_text<T: Serialize>(
-        &self,
-        method: reqwest::Method,
-        endpoint: &Endpoint,
-        url_params: UrlParams,
-        post_params: T,
-    ) -> Result<String, ApiError> {
-        let raw = self
-            .request_with_endpoint_raw(method, endpoint, url_params, vec![], post_params)
-            .await?;
-        Ok(shared::decode_raw_text(raw.body))
     }
 
     pub async fn request<R: ApiResource, T: Serialize, U: DeserializeOwned>(
@@ -2813,6 +2799,13 @@ impl EventListRequest {
         self
     }
 
+    pub fn initiator_user_id(mut self, initiator_user_id: impl Into<PrincipalId>) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("initiator_user_id", initiator_user_id.into());
+        self
+    }
+
     pub fn entity_type(mut self, entity_type: impl Into<String>) -> Self {
         self.inner = self
             .inner
@@ -3690,6 +3683,7 @@ impl ExportSubmitOp {
     }
 
     pub async fn send(self) -> Result<TaskResponse, ApiError> {
+        self.request.validate()?;
         let mut headers = Vec::new();
         if let Some(key) = self.idempotency_key {
             headers.push(("Idempotency-Key", key));
@@ -4420,6 +4414,7 @@ impl<T: ApiResource> CreateOp<T> {
     }
 
     pub async fn send(self) -> Result<T::PostOutput, ApiError> {
+        T::validate_post(&self.params)?;
         self.client
             .post::<T>(T::default(), self.url_params, self.params)
             .await
@@ -4459,6 +4454,7 @@ impl<T: ApiResource> UpdateOp<T> {
     }
 
     pub async fn send(self) -> Result<T::PatchOutput, ApiError> {
+        T::validate_patch(&self.params)?;
         self.client
             .patch::<T, _>(T::default(), self.id, self.url_params, self.params)
             .await
@@ -4927,6 +4923,21 @@ impl CursorRequest<ObjectAggregateRow> {
     ) -> Self {
         for dimension in dimensions {
             self = self.group_by(dimension);
+        }
+        self
+    }
+
+    /// Append one ordered numeric measure. The server accepts up to four.
+    pub fn aggregate(self, measure: ObjectAggregateMeasure) -> Self {
+        self.query_param("aggregate", measure)
+    }
+
+    pub fn aggregate_all(
+        mut self,
+        measures: impl IntoIterator<Item = ObjectAggregateMeasure>,
+    ) -> Self {
+        for measure in measures {
+            self = self.aggregate(measure);
         }
         self
     }

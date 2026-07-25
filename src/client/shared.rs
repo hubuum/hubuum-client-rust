@@ -146,10 +146,12 @@ pub(crate) fn is_replay_safe(method: &Method, has_idempotency_key: bool) -> bool
 pub(crate) fn has_valid_idempotency_key<'a>(
     headers: impl IntoIterator<Item = (&'a str, &'a str)>,
 ) -> Result<bool, ApiError> {
+    const MAX_IDEMPOTENCY_KEY_BYTES: usize = 255;
+
     let mut present = false;
     for (name, value) in headers {
         if name.eq_ignore_ascii_case("idempotency-key") {
-            if value.trim().is_empty() {
+            if value.trim().is_empty() || value.len() > MAX_IDEMPOTENCY_KEY_BYTES {
                 return Err(ApiError::InvalidIdempotencyKey);
             }
             present = true;
@@ -877,17 +879,6 @@ pub(crate) fn advance_cursor(
     Ok(())
 }
 
-/// Decode a raw-text response body (e.g. a freshly-minted token shown once).
-///
-/// The server may return the value as plain text or as a JSON string literal;
-/// accept both and strip surrounding whitespace.
-pub(crate) fn decode_raw_text(body: String) -> String {
-    match serde_json::from_str::<String>(body.trim()) {
-        Ok(s) => s,
-        Err(_) => body.trim().to_string(),
-    }
-}
-
 pub(crate) fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
     let name = type_name::<T>();
     let name = name.rsplit("::").next().unwrap_or(name);
@@ -1416,7 +1407,7 @@ mod test {
     }
 
     #[test]
-    fn idempotency_key_validation_is_case_insensitive_and_rejects_blanks() {
+    fn idempotency_key_validation_enforces_the_v004_contract() {
         assert!(
             has_valid_idempotency_key([("IDEMPOTENCY-KEY", "task-1")])
                 .expect("nonblank key should be accepted")
@@ -1431,6 +1422,21 @@ mod test {
                 Err(ApiError::InvalidIdempotencyKey)
             ));
         }
+        let maximum = "x".repeat(255);
+        assert!(
+            has_valid_idempotency_key([("Idempotency-Key", maximum.as_str())])
+                .expect("255-byte key should be accepted")
+        );
+        let oversized = "x".repeat(256);
+        assert!(matches!(
+            has_valid_idempotency_key([("Idempotency-Key", oversized.as_str())]),
+            Err(ApiError::InvalidIdempotencyKey)
+        ));
+        let oversized_unicode = "ø".repeat(128);
+        assert!(matches!(
+            has_valid_idempotency_key([("Idempotency-Key", oversized_unicode.as_str())]),
+            Err(ApiError::InvalidIdempotencyKey)
+        ));
     }
 
     #[test]

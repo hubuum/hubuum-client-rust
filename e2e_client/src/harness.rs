@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use hubuum_client::{
-    ApiError, Authenticated, BaseUrl, ClassId, ClassPost, CollectionId, CollectionPost,
+    ApiError, Authenticated, BaseUrl, ClassId, ClassPost, Client, CollectionId, CollectionPost,
     Credentials, GroupId, GroupPost, ObjectId, ObjectPost, UserId, UserPost, blocking,
 };
 
@@ -15,6 +15,11 @@ pub struct E2EHarness {
     pub base_url: BaseUrl,
     pub admin_password: String,
     pub client: blocking::Client<Authenticated>,
+}
+
+pub struct AsyncE2EHarness {
+    pub base_url: BaseUrl,
+    pub client: Client<Authenticated>,
 }
 
 pub struct E2EUser {
@@ -34,13 +39,7 @@ impl E2EUser {
 
 impl E2EHarness {
     pub fn from_env() -> Result<Self, String> {
-        let base_url = std::env::var(EXTERNAL_BASE_URL_ENV)
-            .map_err(|_| format!("{EXTERNAL_BASE_URL_ENV} must be set"))?;
-        let admin_password = std::env::var(EXTERNAL_ADMIN_PASSWORD_ENV)
-            .map_err(|_| format!("{EXTERNAL_ADMIN_PASSWORD_ENV} must be set"))?;
-
-        let parsed_base_url =
-            BaseUrl::from_str(&base_url).map_err(|err| format!("invalid base url: {err}"))?;
+        let (parsed_base_url, admin_password) = integration_connection()?;
 
         let client = blocking::Client::try_new(parsed_base_url.clone())
             .map_err(|err| format!("client initialization failed: {err}"))?
@@ -122,6 +121,75 @@ impl E2EHarness {
     }
 }
 
+impl AsyncE2EHarness {
+    pub async fn from_env() -> Result<Self, String> {
+        let (base_url, admin_password) = integration_connection()?;
+        let client = Client::try_new(base_url.clone())
+            .map_err(|err| format!("client initialization failed: {err}"))?
+            .login(Credentials::new(ADMIN_USERNAME.to_string(), admin_password))
+            .await
+            .map_err(|err| format!("admin login failed: {err}"))?;
+
+        Ok(Self { base_url, client })
+    }
+
+    pub async fn create_collection_class_object(
+        &self,
+        case: &str,
+        admin_group_id: GroupId,
+    ) -> Result<(CollectionId, ClassId, ObjectId), ApiError> {
+        let prefix = unique_case_prefix(case);
+
+        let collection = self
+            .client
+            .collections()
+            .create_raw(CollectionPost {
+                name: format!("{prefix}-collection"),
+                description: "e2e collection".to_string(),
+                group_id: admin_group_id,
+                parent_collection_id: None,
+            })
+            .await?;
+
+        let class = self
+            .client
+            .classes()
+            .create_raw(ClassPost {
+                name: format!("{prefix}-class"),
+                collection_id: collection.id,
+                description: "e2e class".to_string(),
+                json_schema: None,
+                validate_schema: None,
+            })
+            .await?;
+
+        let object = self
+            .client
+            .objects(class.id)
+            .create_raw(ObjectPost {
+                name: format!("{prefix}-object"),
+                collection_id: Some(collection.id),
+                hubuum_class_id: Some(class.id),
+                description: "e2e object".to_string(),
+                data: Some(serde_json::json!({ "source": "e2e-client" })),
+            })
+            .await?;
+
+        Ok((collection.id, class.id, object.id))
+    }
+}
+
+fn integration_connection() -> Result<(BaseUrl, String), String> {
+    let base_url = std::env::var(EXTERNAL_BASE_URL_ENV)
+        .map_err(|_| format!("{EXTERNAL_BASE_URL_ENV} must be set"))?;
+    let admin_password = std::env::var(EXTERNAL_ADMIN_PASSWORD_ENV)
+        .map_err(|_| format!("{EXTERNAL_ADMIN_PASSWORD_ENV} must be set"))?;
+    let parsed_base_url =
+        BaseUrl::from_str(&base_url).map_err(|err| format!("invalid base url: {err}"))?;
+
+    Ok((parsed_base_url, admin_password))
+}
+
 pub fn admin_context(
     client: &blocking::Client<Authenticated>,
 ) -> Result<(UserId, GroupId), ApiError> {
@@ -138,6 +206,29 @@ pub fn admin_context(
         }
         Err(ApiError::HttpWithBody { status, .. }) if status.as_u16() == 404 => {
             client.groups().get_by_name(ADMIN_USERNAME)?.id()
+        }
+        Err(err) => return Err(err),
+    };
+
+    Ok((admin_id, admin_group_id))
+}
+
+pub async fn async_admin_context(
+    client: &Client<Authenticated>,
+) -> Result<(UserId, GroupId), ApiError> {
+    let admin = client.users().get_by_name(ADMIN_USERNAME).await?;
+    let admin_id = admin.id();
+
+    let admin_group_id = match admin.groups().await {
+        Ok(admin_groups) => {
+            if let Some(group) = admin_groups.first() {
+                group.id()
+            } else {
+                client.groups().get_by_name(ADMIN_USERNAME).await?.id()
+            }
+        }
+        Err(ApiError::HttpWithBody { status, .. }) if status.as_u16() == 404 => {
+            client.groups().get_by_name(ADMIN_USERNAME).await?.id()
         }
         Err(err) => return Err(err),
     };
