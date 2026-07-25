@@ -1,7 +1,7 @@
 use percent_encoding::{AsciiSet, CONTROLS, percent_decode_str, utf8_percent_encode};
 use reqwest::{
     Method, StatusCode,
-    header::{CONTENT_TYPE, HeaderMap, RETRY_AFTER},
+    header::{CONTENT_TYPE, HeaderMap, HeaderValue, RETRY_AFTER},
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -181,10 +181,12 @@ pub(crate) fn is_replay_safe(method: &Method, has_idempotency_key: bool) -> bool
 pub(crate) fn has_valid_idempotency_key<'a>(
     headers: impl IntoIterator<Item = (&'a str, &'a str)>,
 ) -> Result<bool, ApiError> {
+    const MAX_IDEMPOTENCY_KEY_BYTES: usize = 255;
+
     let mut present = false;
     for (name, value) in headers {
         if name.eq_ignore_ascii_case("idempotency-key") {
-            if value.trim().is_empty() {
+            if value.trim().is_empty() || value.len() > MAX_IDEMPOTENCY_KEY_BYTES {
                 return Err(ApiError::InvalidIdempotencyKey);
             }
             present = true;
@@ -324,17 +326,13 @@ pub(crate) fn build_request_plan<T: Serialize>(
 ) -> Result<super::transport::RequestPlan, ApiError> {
     let url = url::Url::parse(request_url)?;
     let mut plan = super::transport::RequestPlan::new(method.clone(), url);
-    let authorization = reqwest::header::HeaderValue::from_str(&format!("Bearer {bearer_token}"))
-        .map_err(|error| {
-        ApiError::Transport(format!("invalid authorization header: {error}"))
-    })?;
+    let authorization = bearer_header_value(bearer_token)?;
     plan.headers
         .insert(reqwest::header::AUTHORIZATION, authorization);
     for (name, value) in headers {
         let name = reqwest::header::HeaderName::from_bytes(name.as_bytes())
             .map_err(|error| ApiError::Transport(format!("invalid header name: {error}")))?;
-        let value = reqwest::header::HeaderValue::from_str(value)
-            .map_err(|error| ApiError::Transport(format!("invalid header value: {error}")))?;
+        let value = sensitive_header_value(value)?;
         plan.headers.insert(name, value);
     }
     if matches!(*method, Method::POST | Method::PUT | Method::PATCH) {
@@ -356,11 +354,21 @@ pub(crate) fn build_unauthenticated_request_plan(
     for (name, value) in headers {
         let name = reqwest::header::HeaderName::from_bytes(name.as_bytes())
             .map_err(|error| ApiError::Transport(format!("invalid header name: {error}")))?;
-        let value = reqwest::header::HeaderValue::from_str(value)
-            .map_err(|error| ApiError::Transport(format!("invalid header value: {error}")))?;
+        let value = sensitive_header_value(value)?;
         plan.headers.insert(name, value);
     }
     Ok(plan)
+}
+
+pub(crate) fn sensitive_header_value(value: &str) -> Result<HeaderValue, ApiError> {
+    let mut value = HeaderValue::from_str(value)
+        .map_err(|error| ApiError::Transport(format!("invalid header value: {error}")))?;
+    value.set_sensitive(true);
+    Ok(value)
+}
+
+pub(crate) fn bearer_header_value(token: &str) -> Result<HeaderValue, ApiError> {
+    sensitive_header_value(&format!("Bearer {token}"))
 }
 
 pub(crate) fn build_unauthenticated_json_request_plan<T: Serialize>(
@@ -678,7 +686,7 @@ impl std::fmt::Debug for RawResponse {
     }
 }
 
-pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: UrlParams) -> String {
+pub(crate) fn build_url(base_url: &BaseUrl, endpoint: &Endpoint, url_params: &UrlParams) -> String {
     let mut url = format!("{}{}", base_url.as_str(), endpoint.trim_start_matches('/'));
 
     for (key, value) in url_params {
@@ -904,17 +912,6 @@ pub(crate) fn advance_cursor(
 
     set_raw_query_param(query_params, "cursor", cursor);
     Ok(())
-}
-
-/// Decode a raw-text response body (e.g. a freshly-minted token shown once).
-///
-/// The server may return the value as plain text or as a JSON string literal;
-/// accept both and strip surrounding whitespace.
-pub(crate) fn decode_raw_text(body: String) -> String {
-    match serde_json::from_str::<String>(body.trim()) {
-        Ok(s) => s,
-        Err(_) => body.trim().to_string(),
-    }
 }
 
 pub(crate) fn one_or_err<T>(mut v: Vec<T>) -> Result<T, ApiError> {
@@ -1438,34 +1435,33 @@ mod test {
     #[test]
     fn build_url_replaces_placeholders() {
         let base_url = BaseUrl::from_str("https://api.example.com").unwrap();
-        let url = build_url(
-            &base_url,
-            &Endpoint::GroupMembers,
-            vec![(Cow::Borrowed("group_id"), Cow::Borrowed("10"))],
-        );
+        let url_params = vec![(
+            Cow::Owned("group_id".to_string()),
+            Cow::Owned("10".to_string()),
+        )];
+        let url = build_url(&base_url, &Endpoint::GroupMembers, &url_params);
         assert_eq!(url, "https://api.example.com/api/v1/iam/groups/10/members");
+        assert_eq!(url_params[0].1, "10");
     }
 
     #[test]
     fn build_url_treats_placeholder_values_as_opaque_segments() {
         let base_url = BaseUrl::from_str("https://api.example.com").unwrap();
-        let url = build_url(
-            &base_url,
-            &Endpoint::GroupMembers,
-            vec![(
-                Cow::Borrowed("group_id"),
-                Cow::Borrowed(r"1/../2?scope#frag%2F\tail"),
-            )],
-        );
+        let url_params = vec![(
+            Cow::Owned("group_id".to_string()),
+            Cow::Owned(r"1/../2?scope#frag%2F\tail".to_string()),
+        )];
+        let url = build_url(&base_url, &Endpoint::GroupMembers, &url_params);
 
         assert_eq!(
             url,
             "https://api.example.com/api/v1/iam/groups/1%2F..%2F2%3Fscope%23frag%252F%5Ctail/members"
         );
+        assert_eq!(url_params[0].1, r"1/../2?scope#frag%2F\tail");
     }
 
     #[test]
-    fn idempotency_key_validation_is_case_insensitive_and_rejects_blanks() {
+    fn idempotency_key_validation_enforces_the_v004_contract() {
         assert!(
             has_valid_idempotency_key([("IDEMPOTENCY-KEY", "task-1")])
                 .expect("nonblank key should be accepted")
@@ -1480,6 +1476,60 @@ mod test {
                 Err(ApiError::InvalidIdempotencyKey)
             ));
         }
+        let maximum = "x".repeat(255);
+        assert!(
+            has_valid_idempotency_key([("Idempotency-Key", maximum.as_str())])
+                .expect("255-byte key should be accepted")
+        );
+        let oversized = "x".repeat(256);
+        assert!(matches!(
+            has_valid_idempotency_key([("Idempotency-Key", oversized.as_str())]),
+            Err(ApiError::InvalidIdempotencyKey)
+        ));
+        let oversized_unicode = "ø".repeat(128);
+        assert!(matches!(
+            has_valid_idempotency_key([("Idempotency-Key", oversized_unicode.as_str())]),
+            Err(ApiError::InvalidIdempotencyKey)
+        ));
+    }
+
+    #[test]
+    fn request_plans_mark_secret_headers_sensitive() {
+        let authenticated = build_request_plan(
+            &Method::GET,
+            "https://api.example.com/api/v1/classes",
+            &(),
+            "bearer-secret",
+            &[("X-Api-Key", "header-secret".to_string())],
+        )
+        .expect("authenticated request plan should build");
+        let authorization = authenticated
+            .headers
+            .get(reqwest::header::AUTHORIZATION)
+            .expect("authorization header should be present");
+        let api_key = authenticated
+            .headers
+            .get("X-Api-Key")
+            .expect("caller header should be present");
+
+        assert!(authorization.is_sensitive());
+        assert!(api_key.is_sensitive());
+        assert!(!format!("{authorization:?}").contains("bearer-secret"));
+        assert!(!format!("{api_key:?}").contains("header-secret"));
+
+        let capability = build_unauthenticated_request_plan(
+            &Method::GET,
+            "https://api.example.com/api/v1/restores/7/status",
+            &[("X-Hubuum-Restore-Capability", "restore-secret".to_string())],
+        )
+        .expect("capability request plan should build");
+        let capability = capability
+            .headers
+            .get("X-Hubuum-Restore-Capability")
+            .expect("restore capability header should be present");
+
+        assert!(capability.is_sensitive());
+        assert!(!format!("{capability:?}").contains("restore-secret"));
     }
 
     #[test]

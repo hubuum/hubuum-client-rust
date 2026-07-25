@@ -224,6 +224,13 @@ Treat the test setup as a layered contract:
 
 - This repository publishes `hubuum_client_derive` before `hubuum_client`; the
   client depends on the derive crate at the same release version.
+- Do not release while any pull request in this repository remains open. Merge
+  or close every open pull request before starting the release step.
+- Before the release step, update every direct and transitive dependency to its
+  latest version compatible with the declared MSRV and repository policies.
+  Update manifest constraints where needed, regenerate `Cargo.lock`, and run
+  the required dependency, supply-chain, and workspace checks. A blocked or
+  deferred dependency update blocks the release.
 - Every release must update [`COMPATIBILITY.md`](COMPATIBILITY.md). Add a row
   containing the client version, declared Hubuum server target, immutable
   tested server image digest, and concise test evidence. A release is not ready

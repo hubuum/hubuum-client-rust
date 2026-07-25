@@ -42,7 +42,7 @@ pub trait GetID: ApiResource {
 }
 
 trait ClientCore {
-    fn build_url(&self, endpoint: &Endpoint, url_params: UrlParams) -> String;
+    fn build_url(&self, endpoint: &Endpoint, url_params: &UrlParams) -> String;
 }
 
 pub trait IntoQueryFilters<T: ApiResource> {
@@ -354,6 +354,10 @@ mod parity_contract {
             let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::group_by;
             let _ = |request: $module::CursorRequest<crate::resources::ObjectAggregateRow>| {
                 request.group_by_all(Vec::<crate::resources::ObjectAggregateDimension>::new())
+            };
+            let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::aggregate;
+            let _ = |request: $module::CursorRequest<crate::resources::ObjectAggregateRow>| {
+                request.aggregate_all(Vec::<crate::resources::ObjectAggregateMeasure>::new())
             };
             let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::aggregate_sort;
             let _ = $module::CursorRequest::<crate::resources::ObjectAggregateRow>::computed_filter::<

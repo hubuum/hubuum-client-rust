@@ -60,7 +60,7 @@ fn sync_build_url_matches_endpoint(server: &str, endpoint: Endpoint) {
         .unwrap();
 
     assert_eq!(
-        client.build_url(&endpoint, UrlParams::default()),
+        client.build_url(&endpoint, &UrlParams::default()),
         format!(
             "{}{}",
             base_url.with_trailing_slash(),
@@ -85,7 +85,7 @@ fn async_build_url_matches_endpoint(server: &str, endpoint: Endpoint) {
         .unwrap();
 
     assert_eq!(
-        client.build_url(&endpoint, UrlParams::default()),
+        client.build_url(&endpoint, &UrlParams::default()),
         format!(
             "{}{}",
             base_url.with_trailing_slash(),

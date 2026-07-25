@@ -1,5 +1,5 @@
 {
-  "api_version": "0.0.3",
+  "api_version": "0.0.4",
   "openapi": "3.1.0",
   "operation_count": 196,
   "operations": [
@@ -579,6 +579,7 @@
       "operation_id": "getApiV1ClassesByNameByClassNameObjectAggregates",
       "parameters": [
         "path:class_name",
+        "query:aggregate",
         "query:group_by",
         "query:sort"
       ],
@@ -1342,6 +1343,7 @@
         "query:collection_id",
         "query:cursor",
         "query:include_total",
+        "query:initiator_user_id",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -1435,6 +1437,7 @@
       "operation_id": "getApiV1ClassesByClassIdObjectAggregates",
       "parameters": [
         "path:class_id",
+        "query:aggregate",
         "query:group_by",
         "query:sort"
       ],
@@ -1969,6 +1972,7 @@
         "query:collection_id",
         "query:cursor",
         "query:include_total",
+        "query:initiator_user_id",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -2417,6 +2421,7 @@
         "query:actor_user_id",
         "query:cursor",
         "query:include_total",
+        "query:initiator_user_id",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -3183,6 +3188,7 @@
         "query:entity_id",
         "query:entity_type",
         "query:include_total",
+        "query:initiator_user_id",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -3367,6 +3373,7 @@
         "query:collection_id",
         "query:cursor",
         "query:include_total",
+        "query:initiator_user_id",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -3738,6 +3745,7 @@
         "query:collection_id",
         "query:cursor",
         "query:include_total",
+        "query:initiator_user_id",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -4737,6 +4745,7 @@
         "query:collection_id",
         "query:cursor",
         "query:include_total",
+        "query:initiator_user_id",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -5287,6 +5296,7 @@
         "query:collection_id",
         "query:cursor",
         "query:include_total",
+        "query:initiator_user_id",
         "query:limit",
         "query:occurred_after",
         "query:occurred_before",
@@ -5626,7 +5636,7 @@
     }
   ],
   "path_count": 137,
-  "schema_count": 234,
+  "schema_count": 244,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -5784,6 +5794,9 @@
     "NewTokenRequest",
     "NewUser",
     "ObjectAggregateDimensionValue",
+    "ObjectAggregateMeasureOperation",
+    "ObjectAggregateMeasureState",
+    "ObjectAggregateMeasureValue",
     "ObjectAggregateRow",
     "ObjectAggregateValueState",
     "ObjectDataPatchDocument",
@@ -5796,12 +5809,16 @@
     "Permissions",
     "PersonalComputedFieldDefinitionRequest",
     "PrincipalCollectionPermissions",
+    "PrincipalID",
     "PrincipalKey",
     "PrincipalMemberResponse",
     "PrincipalSettings",
     "PrincipalToken",
     "PrincipalTokenMetadata",
     "ProbeResponse",
+    "Provenance",
+    "ProvenanceActor",
+    "ProvenancePrincipal",
     "RelatedClassGraph",
     "RelatedObjectGraph",
     "ReleaseRateLimitResponse",
@@ -5841,6 +5858,9 @@
     "TaskStatus",
     "TestOperation",
     "TlsConfig",
+    "TokenID",
+    "TokenResourceScope",
+    "TokenScopeDetails",
     "UnifiedSearchBatchResponse",
     "UnifiedSearchDoneEvent",
     "UnifiedSearchErrorEvent",
@@ -5863,5 +5883,5 @@
     "UpdateUser",
     "UserResponse"
   ],
-  "spec_sha256": "445790c5a43b6f6414c1e507e9e50a109dfb8b7b6287a047efca2db21e384fb4"
+  "spec_sha256": "675d458cf7f140040571c05704780fff5b16a2e38d1ebd53c980f52a107657f2"
 }
