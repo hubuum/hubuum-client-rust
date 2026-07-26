@@ -6,6 +6,28 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-07-26
+
+### Added
+
+- Public client configuration now exposes Hubuum v0.0.5's effective default
+  token lifetime through
+  `ClientConfig::authentication.default_token_lifetime_hours`.
+- Login and principal-token issuance preserve the server's authoritative
+  expiry through `Client::token_expires_at()`, `Token::expires_at()`, and the
+  additive user and service-account `tokens_create_token()` methods. Existing
+  `tokens_create()` methods continue returning the one-time raw token string.
+- Administrative configuration exposes the token-retention purge switch,
+  retention period, interval, and bounded batch size.
+
+### Changed
+
+- This release explicitly targets Hubuum server v0.0.5 and pins its
+  196-operation OpenAPI contract plus immutable multi-platform server image
+  `sha256:6f3e0f0debd418acd5cbc2b1399db9859a85ca1fa397525a5ef0e2f493a77c9b`.
+- Tokens minted without an explicit expiry now surface the server's
+  materialized default expiry in issuance and token-metadata responses.
+
 ## [0.7.1] - 2026-07-25
 
 ### Changed

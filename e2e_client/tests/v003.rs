@@ -50,6 +50,7 @@ fn e2e_v003_natural_keys_aggregates_patching_and_public_config() {
         .expect("public client config should decode");
     assert!(config.pagination.default_page_limit > 0);
     assert!(config.pagination.max_page_limit >= config.pagination.default_page_limit);
+    assert!(config.authentication.default_token_lifetime_hours > 0);
 
     let direct = harness
         .client

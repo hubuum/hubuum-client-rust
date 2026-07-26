@@ -107,12 +107,15 @@ impl std::fmt::Debug for Credentials {
 pub struct Token {
     #[serde(serialize_with = "serialize_secret")]
     token: SecretString,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    expires_at: Option<crate::types::HubuumDateTime>,
 }
 
 impl Token {
     pub fn new(token: impl Into<String>) -> Self {
         Self {
             token: SecretString::from(token.into()),
+            expires_at: None,
         }
     }
 
@@ -121,13 +124,16 @@ impl Token {
         self.token.expose_secret()
     }
 
+    /// Authoritative server-assigned expiry for an issued token.
+    ///
+    /// This is `None` for a token constructed locally with [`Token::new`].
+    pub fn expires_at(&self) -> Option<&crate::types::HubuumDateTime> {
+        self.expires_at.as_ref()
+    }
+
     /// Consume the wrapper and return the raw bearer token.
     pub fn into_inner(self) -> String {
         self.token.expose_secret().to_owned()
-    }
-
-    pub(crate) fn into_secret(self) -> SecretString {
-        self.token
     }
 }
 
@@ -222,6 +228,22 @@ mod tests {
                 "password": "secret"
             })
         );
+    }
+
+    #[test]
+    fn issued_token_preserves_expiry_and_redacts_secret() {
+        let token: Token = serde_json::from_value(serde_json::json!({
+            "token": "issued-secret",
+            "expires_at": "2026-07-27T05:17:17Z"
+        }))
+        .unwrap();
+
+        assert_eq!(token.as_str(), "issued-secret");
+        assert_eq!(
+            token.expires_at().map(ToString::to_string).as_deref(),
+            Some("2026-07-27T05:17:17+00:00")
+        );
+        assert!(!format!("{token:?}").contains("issued-secret"));
     }
 
     #[test]

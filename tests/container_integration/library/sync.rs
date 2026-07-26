@@ -99,6 +99,8 @@ fn sync_v002_admin_config_backup_and_restore_staging_roundtrip() {
     assert!(config.backups.max_output_bytes > 0);
     assert!(config.restores.max_upload_bytes > 0);
     assert!(!config.permissions.backend.is_empty());
+    assert!(config.authentication.token_retention_purge_enabled);
+    assert!(config.authentication.token_retention_purge_batch_size >= 10);
 
     let document = harness
         .client
@@ -531,6 +533,10 @@ fn sync_auth_login_with_token_accepts_valid_token() {
 
     let logged_in =
         login_sync(base_url.clone(), &stack.admin_password).expect("failed to login for token");
+    assert!(
+        logged_in.token_expires_at().is_some(),
+        "v0.0.5 login should preserve the authoritative default expiry"
+    );
     let token = logged_in.token().to_string();
 
     let validated = blocking::Client::try_new(base_url)

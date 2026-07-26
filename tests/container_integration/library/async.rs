@@ -114,6 +114,7 @@ fn async_v003_exact_names_aggregates_patching_and_public_config() {
         .expect("public client config should decode");
     assert!(config.pagination.default_page_limit > 0);
     assert!(config.pagination.max_page_limit >= config.pagination.default_page_limit);
+    assert!(config.authentication.default_token_lifetime_hours > 0);
 
     let direct = harness
         .block_on(client.classes().get_by_name(&numeric_name))
@@ -701,6 +702,10 @@ fn async_auth_login_with_token_accepts_valid_token() {
     let logged_in = runtime
         .block_on(login_async(base_url.clone(), &stack.admin_password))
         .expect("failed to login for token");
+    assert!(
+        logged_in.token_expires_at().is_some(),
+        "v0.0.5 login should preserve the authoritative default expiry"
+    );
     let token = logged_in.token().to_string();
 
     let validated = runtime

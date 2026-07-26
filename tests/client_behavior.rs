@@ -370,6 +370,10 @@ fn running_config_json() -> serde_json::Value {
         },
         "authentication": {
             "token_lifetime_hours": 24,
+            "token_retention_purge_enabled": true,
+            "token_retention_days": 30,
+            "token_retention_purge_interval_seconds": 3600,
+            "token_retention_purge_batch_size": 1000,
             "stable_token_hash_key_configured": true,
             "admin_groupname": "admin",
             "admin_identity_scope": "local",
@@ -966,7 +970,10 @@ fn mock_login(server: &MockServer) {
             .json_body(json!({ "name": USERNAME, "password": PASSWORD }));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!({ "token": TOKEN }));
+            .json_body(json!({
+                "token": TOKEN,
+                "expires_at": "2026-07-27T05:17:17Z"
+            }));
     });
 }
 
@@ -2281,6 +2288,13 @@ fn sync_supports_meta_endpoints() {
     assert_eq!(config.server.bind_port, 8080);
     assert!(config.database.url.configured);
     assert_eq!(config.backups.output_retention_hours, 24);
+    assert!(config.authentication.token_retention_purge_enabled);
+    assert_eq!(config.authentication.token_retention_days, 30);
+    assert_eq!(
+        config.authentication.token_retention_purge_interval_seconds,
+        3600
+    );
+    assert_eq!(config.authentication.token_retention_purge_batch_size, 1000);
     assert_eq!(config.permissions.backend, "database");
     assert_eq!(config.pagination.max_page_limit, 1000);
 
@@ -2373,6 +2387,8 @@ async fn async_supports_meta_endpoints() {
         .expect("admin_config request should succeed");
     assert_eq!(config.server.bind_port, 8080);
     assert!(config.authentication.stable_token_hash_key_configured);
+    assert!(config.authentication.token_retention_purge_enabled);
+    assert_eq!(config.authentication.token_retention_days, 30);
     assert_eq!(config.tasks.computed_reindex_batch_size, 100);
     assert_eq!(config.restores.stage_retention_minutes, 30);
     assert_eq!(config.network.client_allowlist.network_count, 0);
@@ -5026,7 +5042,7 @@ fn sync_service_account_create_and_disable() {
 }
 
 #[test]
-fn sync_user_token_create_with_scopes_returns_raw_token() {
+fn sync_user_token_create_with_scopes_preserves_authoritative_expiry() {
     use hubuum_client::{NewTokenRequest, Permissions, TokenResourceScope, TokenScopeDetails};
 
     let server = MockServer::start();
@@ -5056,13 +5072,16 @@ fn sync_user_token_create_with_scopes_returns_raw_token() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201)
             .header("content-type", "application/json")
-            .json_body(json!({"token": "raw-secret-token"}));
+            .json_body(json!({
+                "token": "raw-secret-token",
+                "expires_at": "2026-07-27T05:17:17Z"
+            }));
     });
 
     let client = sync_client(&server);
     let user = client.users().get(11).expect("user select should succeed");
-    let raw = user
-        .tokens_create(
+    let issued = user
+        .tokens_create_token(
             NewTokenRequest::new().name("ci").scope(
                 TokenScopeDetails::new(
                     Some(vec![Permissions::ReadClass]),
@@ -5072,7 +5091,11 @@ fn sync_user_token_create_with_scopes_returns_raw_token() {
             ),
         )
         .expect("token create should succeed");
-    assert_eq!(raw, "raw-secret-token");
+    assert_eq!(issued.as_str(), "raw-secret-token");
+    assert_eq!(
+        issued.expires_at().map(ToString::to_string).as_deref(),
+        Some("2026-07-27T05:17:17+00:00")
+    );
 
     user_by_id.assert_calls(1);
     token_create.assert_calls(1);
@@ -5101,7 +5124,10 @@ async fn async_service_account_unscoped_token_create_returns_raw_token() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201)
             .header("content-type", "application/json")
-            .json_body(json!({"token": "raw-unscoped-token"}));
+            .json_body(json!({
+                "token": "raw-unscoped-token",
+                "expires_at": "2026-07-27T05:17:17Z"
+            }));
     });
 
     let client = async_client(&server).await;
@@ -5900,6 +5926,9 @@ async fn async_v003_public_config_is_unauthenticated() {
                 "pagination": {
                     "default_page_limit": 75,
                     "max_page_limit": 500
+                },
+                "authentication": {
+                    "default_token_lifetime_hours": 24
                 }
             }));
     });
@@ -5911,6 +5940,7 @@ async fn async_v003_public_config_is_unauthenticated() {
         .unwrap();
     assert_eq!(async_config.pagination.default_page_limit, 75);
     assert_eq!(async_config.pagination.max_page_limit, 500);
+    assert_eq!(async_config.authentication.default_token_lifetime_hours, 24);
     request.assert_calls(1);
 }
 
@@ -5927,6 +5957,9 @@ fn sync_v003_public_config_is_unauthenticated() {
                 "pagination": {
                     "default_page_limit": 75,
                     "max_page_limit": 500
+                },
+                "authentication": {
+                    "default_token_lifetime_hours": 24
                 }
             }));
     });
@@ -5936,7 +5969,23 @@ fn sync_v003_public_config_is_unauthenticated() {
         .unwrap();
     assert_eq!(config.pagination.default_page_limit, 75);
     assert_eq!(config.pagination.max_page_limit, 500);
+    assert_eq!(config.authentication.default_token_lifetime_hours, 24);
     request.assert_calls(1);
+}
+
+#[test]
+fn sync_login_preserves_authoritative_token_expiry() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let client = sync_client(&server);
+
+    assert_eq!(
+        client
+            .token_expires_at()
+            .map(ToString::to_string)
+            .as_deref(),
+        Some("2026-07-27T05:17:17+00:00")
+    );
 }
 
 #[tokio::test]

@@ -2,8 +2,6 @@ use std::{borrow::Cow, sync::Arc};
 
 use crate::QueryFilter;
 use crate::endpoints::Endpoint;
-use secrecy::{ExposeSecret, SecretString};
-
 #[cfg(feature = "async")]
 pub mod r#async;
 mod shared;
@@ -72,7 +70,7 @@ pub struct Unauthenticated;
 
 #[derive(Clone)]
 pub struct Authenticated {
-    token: Arc<SecretString>,
+    token: Arc<crate::types::Token>,
 }
 
 impl std::fmt::Debug for Authenticated {
@@ -86,12 +84,16 @@ impl std::fmt::Debug for Authenticated {
 impl Authenticated {
     fn new(token: crate::types::Token) -> Self {
         Self {
-            token: Arc::new(token.into_secret()),
+            token: Arc::new(token),
         }
     }
 
     fn token(&self) -> &str {
-        self.token.expose_secret()
+        self.token.as_str()
+    }
+
+    fn token_expires_at(&self) -> Option<&crate::types::HubuumDateTime> {
+        self.token.expires_at()
     }
 }
 
@@ -183,6 +185,7 @@ mod parity_contract {
     macro_rules! assert_authenticated_client_auth_surface {
         ($module:ident) => {
             let _ = $module::Client::<Authenticated>::token;
+            let _ = $module::Client::<Authenticated>::token_expires_at;
             let _ = $module::Client::<Authenticated>::logout;
             let _ = $module::Client::<Authenticated>::logout_token;
             let _ = $module::Client::<Authenticated>::logout_user::<i32>;
@@ -394,12 +397,14 @@ mod parity_contract {
             let _ = $module::Handle::<User>::tokens;
             let _ = $module::Handle::<User>::tokens_request;
             let _ = $module::Handle::<User>::tokens_create;
+            let _ = $module::Handle::<User>::tokens_create_token;
             let _ = $module::Handle::<User>::settings;
             let _ = $module::Handle::<User>::permissions;
 
             let _ = $module::Handle::<ServiceAccount>::disable;
             let _ = $module::Handle::<ServiceAccount>::tokens;
             let _ = $module::Handle::<ServiceAccount>::tokens_create;
+            let _ = $module::Handle::<ServiceAccount>::tokens_create_token;
             let _ = $module::Handle::<ServiceAccount>::settings;
             let _ = $module::Handle::<ServiceAccount>::permissions;
 

@@ -794,6 +794,14 @@ impl Client<Authenticated> {
         self.state.token()
     }
 
+    /// Authoritative expiry returned when this client logged in.
+    ///
+    /// This is `None` when the client was authenticated from a caller-supplied
+    /// [`Token`] that does not carry issuance metadata.
+    pub fn token_expires_at(&self) -> Option<&HubuumDateTime> {
+        self.state.token_expires_at()
+    }
+
     pub fn raw(&self, method: reqwest::Method, path: impl Into<String>) -> RawRequest {
         RawRequest {
             client: self.clone(),
