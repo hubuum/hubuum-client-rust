@@ -8,6 +8,7 @@ pub const DEFAULT_METRICS_PATH: &str = "/metrics";
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClientConfig {
     pub pagination: ClientPaginationConfig,
+    pub authentication: ClientAuthenticationConfig,
 }
 
 /// Effective pagination defaults and limits advertised by the server.
@@ -16,6 +17,14 @@ pub struct ClientConfig {
 pub struct ClientPaginationConfig {
     pub default_page_limit: u64,
     pub max_page_limit: u64,
+}
+
+/// Effective authentication defaults advertised to unauthenticated clients.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ClientAuthenticationConfig {
+    /// Lifetime applied when login or token minting omits an explicit expiry.
+    pub default_token_lifetime_hours: i64,
 }
 
 /// Redacted effective process configuration returned by the administrative
@@ -154,6 +163,10 @@ pub struct RemoteCallConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuthenticationConfig {
     pub token_lifetime_hours: i64,
+    pub token_retention_purge_enabled: bool,
+    pub token_retention_days: i64,
+    pub token_retention_purge_interval_seconds: u64,
+    pub token_retention_purge_batch_size: u64,
     pub stable_token_hash_key_configured: bool,
     pub admin_groupname: String,
     pub admin_identity_scope: Option<String>,

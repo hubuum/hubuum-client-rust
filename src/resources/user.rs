@@ -104,6 +104,11 @@ impl SyncHandle<User> {
         principal_token_create_sync(self.client(), self.id(), request)
     }
 
+    /// Mint a new token and preserve its authoritative server-assigned expiry.
+    pub fn tokens_create_token(&self, request: NewTokenRequest) -> Result<Token, ApiError> {
+        principal_token_create_token_sync(self.client(), self.id(), request)
+    }
+
     /// Revoke (soft-delete) one of this user's tokens.
     pub fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
         principal_token_revoke_sync(self.client(), self.id(), token_id)
@@ -182,6 +187,11 @@ impl AsyncHandle<User> {
         principal_token_create_async(self.client(), self.id(), request).await
     }
 
+    /// Mint a new token and preserve its authoritative server-assigned expiry.
+    pub async fn tokens_create_token(&self, request: NewTokenRequest) -> Result<Token, ApiError> {
+        principal_token_create_token_async(self.client(), self.id(), request).await
+    }
+
     /// Revoke (soft-delete) one of this user's tokens.
     pub async fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
         principal_token_revoke_async(self.client(), self.id(), token_id).await
@@ -257,6 +267,15 @@ pub(crate) fn principal_token_create_sync(
     principal_id: impl Into<PrincipalId>,
     request: NewTokenRequest,
 ) -> Result<String, ApiError> {
+    principal_token_create_token_sync(client, principal_id, request).map(Token::into_inner)
+}
+
+#[cfg(feature = "blocking")]
+pub(crate) fn principal_token_create_token_sync(
+    client: &crate::client::sync::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+    request: NewTokenRequest,
+) -> Result<Token, ApiError> {
     request.validate()?;
     let principal_id = principal_id.into();
     let url_params = vec![(
@@ -271,7 +290,6 @@ pub(crate) fn principal_token_create_sync(
             vec![],
             request,
         )?
-        .map(Token::into_inner)
         .ok_or_else(|| ApiError::EmptyResult("Token creation returned no token".into()))
 }
 
@@ -332,6 +350,17 @@ pub(crate) async fn principal_token_create_async(
     principal_id: impl Into<PrincipalId>,
     request: NewTokenRequest,
 ) -> Result<String, ApiError> {
+    principal_token_create_token_async(client, principal_id, request)
+        .await
+        .map(Token::into_inner)
+}
+
+#[cfg(feature = "async")]
+pub(crate) async fn principal_token_create_token_async(
+    client: &crate::client::r#async::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+    request: NewTokenRequest,
+) -> Result<Token, ApiError> {
     request.validate()?;
     let principal_id = principal_id.into();
     let url_params = vec![(
@@ -347,7 +376,6 @@ pub(crate) async fn principal_token_create_async(
             request,
         )
         .await?
-        .map(Token::into_inner)
         .ok_or_else(|| ApiError::EmptyResult("Token creation returned no token".into()))
 }
 

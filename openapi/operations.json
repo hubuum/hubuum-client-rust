@@ -1,5 +1,5 @@
 {
-  "api_version": "0.0.4",
+  "api_version": "0.0.5",
   "openapi": "3.1.0",
   "operation_count": 196,
   "operations": [
@@ -5636,7 +5636,7 @@
     }
   ],
   "path_count": 137,
-  "schema_count": 244,
+  "schema_count": 245,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -5653,6 +5653,7 @@
     "ClassKey",
     "ClearRateLimitResponse",
     "ClientAllowlistStatus",
+    "ClientAuthenticationConfig",
     "ClientConfig",
     "ClientPaginationConfig",
     "Collection",
@@ -5883,5 +5884,5 @@
     "UpdateUser",
     "UserResponse"
   ],
-  "spec_sha256": "675d458cf7f140040571c05704780fff5b16a2e38d1ebd53c980f52a107657f2"
+  "spec_sha256": "9083e2a32100ffe693be2b6f955b6c255f956117b736841c27ade442dadfee7f"
 }

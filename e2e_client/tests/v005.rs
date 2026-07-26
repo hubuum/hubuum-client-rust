@@ -30,10 +30,10 @@ fn assert_scope_denied(error: ApiError) {
 }
 
 #[test]
-#[ignore = "requires Docker and Hubuum server v0.0.4 image"]
-fn e2e_v004_token_lifecycle_with_and_without_scopes() {
-    if TARGET_SERVER_VERSION != "0.0.4" {
-        eprintln!("skipping v0.0.4 scenario while the declared target is {TARGET_SERVER_VERSION}");
+#[ignore = "requires Docker and Hubuum server v0.0.5 image"]
+fn e2e_v005_token_lifecycle_with_and_without_scopes() {
+    if TARGET_SERVER_VERSION != "0.0.5" {
+        eprintln!("skipping v0.0.5 scenario while the declared target is {TARGET_SERVER_VERSION}");
         return;
     }
 
@@ -41,9 +41,9 @@ fn e2e_v004_token_lifecycle_with_and_without_scopes() {
     let (admin_id, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
     let (collection_id, class_id, object_id) = harness
-        .create_collection_class_object("v004-token-lifecycle", admin_group_id)
+        .create_collection_class_object("v005-token-lifecycle", admin_group_id)
         .expect("failed to create token lifecycle resources");
-    let prefix = unique_case_prefix("v004-token-lifecycle");
+    let prefix = unique_case_prefix("v005-token-lifecycle");
     let admin = harness
         .client
         .users()
@@ -57,18 +57,24 @@ fn e2e_v004_token_lifecycle_with_and_without_scopes() {
     )
     .expect("token scope should be valid");
 
-    let scoped_raw = admin
-        .tokens_create(
+    let public_config = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
+        .expect("public client should build")
+        .config()
+        .expect("public client config should decode");
+    assert!(public_config.authentication.default_token_lifetime_hours > 0);
+
+    let scoped_token = admin
+        .tokens_create_token(
             NewTokenRequest::new()
                 .name(scoped_name.clone())
                 .scope(expected_scope.clone()),
         )
         .expect("scoped token should mint");
-    let unscoped_raw = admin
-        .tokens_create(NewTokenRequest::new().name(unscoped_name.clone()))
+    let unscoped_token = admin
+        .tokens_create_token(NewTokenRequest::new().name(unscoped_name.clone()))
         .expect("omitting scope should mint an unscoped token");
-    assert!(!scoped_raw.is_empty());
-    assert!(!unscoped_raw.is_empty());
+    assert!(scoped_token.expires_at().is_some());
+    assert!(unscoped_token.expires_at().is_some());
 
     let listed_tokens = admin.tokens().expect("admin tokens should list");
     let scoped_metadata = listed_tokens
@@ -84,10 +90,28 @@ fn e2e_v004_token_lifecycle_with_and_without_scopes() {
         unscoped_metadata.scope.is_none(),
         "omitting scope must create an unscoped token"
     );
+    assert_eq!(
+        scoped_metadata.expires_at.as_ref(),
+        scoped_token.expires_at()
+    );
+    assert_eq!(
+        unscoped_metadata.expires_at.as_ref(),
+        unscoped_token.expires_at()
+    );
+    assert_eq!(
+        (unscoped_metadata
+            .expires_at
+            .as_ref()
+            .expect("default expiry should materialize")
+            .0
+            - unscoped_metadata.issued.0)
+            .num_seconds(),
+        public_config.authentication.default_token_lifetime_hours * 60 * 60
+    );
 
     let scoped_client = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
         .expect("scoped token client should build")
-        .login_with_token(Token::new(scoped_raw))
+        .login_with_token(Token::new(scoped_token.into_inner()))
         .expect("scoped token should authenticate");
     let scoped_me = scoped_client
         .me()
@@ -109,7 +133,7 @@ fn e2e_v004_token_lifecycle_with_and_without_scopes() {
 
     let unscoped_client = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
         .expect("unscoped token client should build")
-        .login_with_token(Token::new(unscoped_raw))
+        .login_with_token(Token::new(unscoped_token.into_inner()))
         .expect("unscoped token should authenticate");
     let unscoped_me = unscoped_client
         .me()
@@ -163,10 +187,10 @@ fn e2e_v004_token_lifecycle_with_and_without_scopes() {
 }
 
 #[tokio::test]
-#[ignore = "requires Docker and Hubuum server v0.0.4 image"]
-async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
-    if TARGET_SERVER_VERSION != "0.0.4" {
-        eprintln!("skipping v0.0.4 scenario while the declared target is {TARGET_SERVER_VERSION}");
+#[ignore = "requires Docker and Hubuum server v0.0.5 image"]
+async fn e2e_v005_async_service_account_token_lifecycle_with_expiry() {
+    if TARGET_SERVER_VERSION != "0.0.5" {
+        eprintln!("skipping v0.0.5 scenario while the declared target is {TARGET_SERVER_VERSION}");
         return;
     }
 
@@ -177,10 +201,10 @@ async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
         .await
         .expect("failed to resolve async admin context");
     let (collection_id, class_id, object_id) = harness
-        .create_collection_class_object("v004-async-service-token", admin_group_id)
+        .create_collection_class_object("v005-async-service-token", admin_group_id)
         .await
         .expect("failed to create async token lifecycle resources");
-    let prefix = unique_case_prefix("v004-async-service-token");
+    let prefix = unique_case_prefix("v005-async-service-token");
 
     let service_account = harness
         .client
@@ -210,8 +234,8 @@ async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
         .expect("service account should be selectable");
 
     let unscoped_name = format!("{prefix}-unscoped");
-    let unscoped_raw = service_account
-        .tokens_create(NewTokenRequest::new().name(unscoped_name.clone()))
+    let unscoped_token = service_account
+        .tokens_create_token(NewTokenRequest::new().name(unscoped_name.clone()))
         .await
         .expect("unscoped service-account token should mint");
     let tokens = service_account
@@ -223,7 +247,10 @@ async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
         .find(|token| token.name.as_deref() == Some(unscoped_name.as_str()))
         .expect("unscoped service-account token metadata should list");
     assert!(unscoped_metadata.scope.is_none());
-    assert!(unscoped_metadata.expires_at.is_none());
+    assert_eq!(
+        unscoped_metadata.expires_at.as_ref(),
+        unscoped_token.expires_at()
+    );
 
     let expires_at = HubuumDateTime(unscoped_metadata.issued.0 + SHORT_TOKEN_LIFETIME);
     let expected_scope = TokenScopeDetails::new(
@@ -232,8 +259,8 @@ async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
     )
     .expect("service-account token scope should be valid");
     let scoped_name = format!("{prefix}-scoped-expiring");
-    let scoped_raw = service_account
-        .tokens_create(
+    let scoped_token = service_account
+        .tokens_create_token(
             NewTokenRequest::new()
                 .name(scoped_name.clone())
                 .expires_at(expires_at.clone())
@@ -252,10 +279,11 @@ async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
         .expect("scoped service-account token metadata should list");
     assert_eq!(scoped_metadata.scope.as_ref(), Some(&expected_scope));
     assert_eq!(scoped_metadata.expires_at.as_ref(), Some(&expires_at));
+    assert_eq!(scoped_token.expires_at(), Some(&expires_at));
 
     let scoped_client = hubuum_client::Client::try_new(harness.base_url.clone())
         .expect("async scoped token client should build")
-        .login_with_token(Token::new(scoped_raw))
+        .login_with_token(Token::new(scoped_token.into_inner()))
         .await
         .expect("async scoped service-account token should authenticate");
     let scoped_me = scoped_client
@@ -282,7 +310,7 @@ async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
 
     let unscoped_client = hubuum_client::Client::try_new(harness.base_url.clone())
         .expect("async unscoped token client should build")
-        .login_with_token(Token::new(unscoped_raw))
+        .login_with_token(Token::new(unscoped_token.into_inner()))
         .await
         .expect("async unscoped service-account token should authenticate");
     let unscoped_me = unscoped_client
@@ -291,7 +319,10 @@ async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
         .expect("unscoped service-account token should read current identity");
     assert_eq!(unscoped_me.principal.kind, "service_account");
     assert!(unscoped_me.token.scope.is_none());
-    assert!(unscoped_me.token.expires_at.is_none());
+    assert_eq!(
+        unscoped_me.token.expires_at.as_ref(),
+        unscoped_metadata.expires_at.as_ref()
+    );
     assert_eq!(
         unscoped_client
             .collections()
@@ -365,10 +396,10 @@ async fn e2e_v004_async_service_account_token_lifecycle_with_expiry() {
 }
 
 #[test]
-#[ignore = "requires Docker and Hubuum server v0.0.4 image"]
-fn e2e_v004_numeric_aggregates_and_provenance() {
-    if TARGET_SERVER_VERSION != "0.0.4" {
-        eprintln!("skipping v0.0.4 scenario while the declared target is {TARGET_SERVER_VERSION}");
+#[ignore = "requires Docker and Hubuum server v0.0.5 image"]
+fn e2e_v005_numeric_aggregates_and_provenance() {
+    if TARGET_SERVER_VERSION != "0.0.5" {
+        eprintln!("skipping v0.0.5 scenario while the declared target is {TARGET_SERVER_VERSION}");
         return;
     }
 
@@ -376,9 +407,9 @@ fn e2e_v004_numeric_aggregates_and_provenance() {
     let (admin_id, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
     let (collection_id, class_id, object_id) = harness
-        .create_collection_class_object("v004", admin_group_id)
+        .create_collection_class_object("v005", admin_group_id)
         .expect("failed to create collection/class/object");
-    let prefix = unique_case_prefix("v004-aggregate-provenance");
+    let prefix = unique_case_prefix("v005-aggregate-provenance");
 
     harness
         .client
@@ -389,7 +420,7 @@ fn e2e_v004_numeric_aggregates_and_provenance() {
                 name: None,
                 collection_id: Some(collection_id),
                 hubuum_class_id: Some(class_id),
-                description: Some("v0.0.4 numeric aggregate fixture".to_string()),
+                description: Some("v0.0.5 numeric aggregate fixture".to_string()),
                 data: Some(json!({"metrics": {"cost": 12.5}})),
             },
         )
@@ -428,7 +459,7 @@ fn e2e_v004_numeric_aggregates_and_provenance() {
     let provenance = update_event
         .provenance
         .as_ref()
-        .expect("v0.0.4 events should include provenance");
+        .expect("v0.0.5 events should include provenance");
     assert_eq!(
         provenance
             .actor

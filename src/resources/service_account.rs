@@ -14,14 +14,17 @@ use crate::client::sync::{
 };
 #[cfg(feature = "async")]
 use crate::resources::user::{
-    principal_token_create_async, principal_token_revoke_async, principal_tokens_async,
+    principal_token_create_async, principal_token_create_token_async, principal_token_revoke_async,
+    principal_tokens_async,
 };
 #[cfg(feature = "blocking")]
 use crate::resources::user::{
-    principal_token_create_sync, principal_token_revoke_sync, principal_tokens_sync,
+    principal_token_create_sync, principal_token_create_token_sync, principal_token_revoke_sync,
+    principal_tokens_sync,
 };
 use crate::{
     ApiError, GroupId, NewTokenRequest, PrincipalCollectionPermissions, PrincipalTokenMetadata,
+    Token,
     endpoints::Endpoint,
     types::{HubuumDateTime, PrincipalId, TokenId},
 };
@@ -97,6 +100,11 @@ impl SyncHandle<ServiceAccount> {
         principal_token_create_sync(self.client(), self.id(), request)
     }
 
+    /// Mint a new token and preserve its authoritative server-assigned expiry.
+    pub fn tokens_create_token(&self, request: NewTokenRequest) -> Result<Token, ApiError> {
+        principal_token_create_token_sync(self.client(), self.id(), request)
+    }
+
     pub fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
         principal_token_revoke_sync(self.client(), self.id(), token_id)
     }
@@ -141,6 +149,11 @@ impl AsyncHandle<ServiceAccount> {
     /// Mint a new token for this service account. Returns the raw token, shown once.
     pub async fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
         principal_token_create_async(self.client(), self.id(), request).await
+    }
+
+    /// Mint a new token and preserve its authoritative server-assigned expiry.
+    pub async fn tokens_create_token(&self, request: NewTokenRequest) -> Result<Token, ApiError> {
+        principal_token_create_token_async(self.client(), self.id(), request).await
     }
 
     pub async fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {

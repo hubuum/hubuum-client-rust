@@ -2,7 +2,7 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.7.1 targets Hubuum server v0.0.4. The exact tested image and
+`hubuum_client` 0.7.2 targets Hubuum server v0.0.5. The exact tested image and
 the history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
@@ -21,7 +21,7 @@ the history for earlier client releases are recorded in
 - **Computed fields**: manage shared class definitions and personal definitions, preview expressions, request rebuilds, and read enriched objects.
 - **Natural-key routing**: address classes and objects by exact names, including numeric-looking names, across CRUD, permissions, relations, and graph operations.
 - **Object aggregates and patching**: group permission-visible objects by typed dimensions, filter or sort by computed fields, and atomically patch object data with RFC 6902 documents.
-- **Effective pagination metadata**: discover public pagination limits and inspect the server-applied page limit alongside cursors and optional totals.
+- **Effective public configuration**: discover pagination limits and the default token lifetime, and inspect the server-applied page limit alongside cursors and optional totals.
 - **Principal-centric identity**: users and service accounts are principals, with group membership, scoped tokens, and effective permission helpers.
 - **Scoped identity providers**: discover available providers before login,
   authenticate against named scopes, filter principals by scope, inspect provider
@@ -36,14 +36,14 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.7.1"
+hubuum_client = "0.7.2"
 ```
 
 Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.7.1", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.7.2", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
@@ -152,8 +152,11 @@ let page = class
 println!("server applied page limit {:?}", page.page_limit);
 ```
 
-Pagination defaults are public and can be discovered before login with
-`Client::config()`.
+Pagination defaults and the lifetime applied when token issuance omits an
+explicit expiry are public and can be discovered before login with
+`Client::config()`. Issued tokens preserve the server's authoritative expiry
+through `Token::expires_at()`, while authenticated clients expose the login
+expiry through `Client::token_expires_at()`.
 
 Exports and imports are task-backed. High-level helpers submit work, poll the task to completion, and return the final output:
 
