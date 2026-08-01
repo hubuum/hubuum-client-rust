@@ -23,28 +23,143 @@ const SPECS: &[&str] = &[
     "service_account",
     "user",
 ];
+type DynError = Box<dyn std::error::Error>;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Mode {
     Check,
     Update,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mode = match env::args().nth(1).as_deref() {
-        Some("check") => Mode::Check,
-        Some("update") => Mode::Update,
-        Some(other) => {
-            return Err(format!("unknown mode `{other}`; use `check` or `update`").into());
+#[derive(Clone, Copy, Debug, Default)]
+struct FieldOptions {
+    read_only: bool,
+    post_only: bool,
+    optional: bool,
+    post_optional: bool,
+    as_id: bool,
+    skip_patch: bool,
+    skip_query: bool,
+    default: bool,
+    default_local: bool,
+}
+
+impl FieldOptions {
+    fn parse(field: &syn::Field) -> syn::Result<Self> {
+        let mut options = Self::default();
+        for attr in &field.attrs {
+            if !attr.path().is_ident("api") {
+                continue;
+            }
+            let Meta::List(list) = &attr.meta else {
+                return Err(syn::Error::new_spanned(
+                    attr,
+                    "expected `#[api(option, ...)]`",
+                ));
+            };
+            let nested =
+                list.parse_args_with(Punctuated::<Meta, syn::Token![,]>::parse_terminated)?;
+            for meta in nested {
+                let Meta::Path(path) = &meta else {
+                    return Err(syn::Error::new_spanned(
+                        meta,
+                        "API field options must be identifiers",
+                    ));
+                };
+                let Some(option) = path.get_ident() else {
+                    return Err(syn::Error::new_spanned(
+                        path,
+                        "API field options must be unqualified identifiers",
+                    ));
+                };
+                let option_name = option.to_string();
+                let slot = match option_name.as_str() {
+                    "read_only" => &mut options.read_only,
+                    "post_only" => &mut options.post_only,
+                    "optional" => &mut options.optional,
+                    "post_optional" => &mut options.post_optional,
+                    "as_id" => &mut options.as_id,
+                    "skip_patch" => &mut options.skip_patch,
+                    "skip_query" => &mut options.skip_query,
+                    "default" => &mut options.default,
+                    "default_local" => &mut options.default_local,
+                    _ => {
+                        return Err(syn::Error::new_spanned(
+                            option,
+                            format!("unknown API field option `{option_name}`"),
+                        ));
+                    }
+                };
+                if *slot {
+                    return Err(syn::Error::new_spanned(
+                        option,
+                        format!("duplicate API field option `{option_name}`"),
+                    ));
+                }
+                *slot = true;
+            }
         }
-        None => return Err("missing mode; use `check` or `update`".into()),
-    };
-    if env::args().nth(2).is_some() {
-        return Err("expected exactly one mode: `check` or `update`".into());
+
+        if options.read_only && options.post_only {
+            return Err(syn::Error::new_spanned(
+                field,
+                "a field cannot be both `read_only` and `post_only`",
+            ));
+        }
+        if options.post_only && (options.optional || options.post_optional) {
+            return Err(syn::Error::new_spanned(
+                field,
+                "a `post_only` field cannot be optional",
+            ));
+        }
+        if options.default && options.default_local {
+            return Err(syn::Error::new_spanned(
+                field,
+                "a field cannot use both `default` and `default_local`",
+            ));
+        }
+        Ok(options)
+    }
+}
+
+struct ResourceField<'a> {
+    syntax: &'a syn::Field,
+    options: FieldOptions,
+}
+
+impl<'a> ResourceField<'a> {
+    fn parse(field: &'a syn::Field) -> syn::Result<Self> {
+        Ok(Self {
+            syntax: field,
+            options: FieldOptions::parse(field)?,
+        })
     }
 
+    fn ident(&self) -> &syn::Ident {
+        self.syntax
+            .ident
+            .as_ref()
+            .expect("ApiResource only supports named fields")
+    }
+
+    fn ty(&self) -> &Type {
+        &self.syntax.ty
+    }
+}
+
+#[derive(Default)]
+struct GeneratedFields {
+    resource: TokenStream,
+    get: TokenStream,
+    post: TokenStream,
+    patch: TokenStream,
+}
+
+fn main() -> Result<(), DynError> {
+    let mode = parse_mode(env::args().skip(1))?;
     let root = repository_root()?;
     let mut stale = Vec::new();
+    let mut updated = 0;
     for name in SPECS {
         let spec_path = root
             .join("hubuum_reconcile/specs")
@@ -53,26 +168,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .join("src/resources/generated")
             .join(format!("{name}.rs"));
         let generated = generate_file(&spec_path)?;
+        let current = read_existing_output(&output_path)?;
         match mode {
             Mode::Check => {
-                if fs::read_to_string(&output_path).ok().as_deref() != Some(&generated) {
+                if current.as_deref() != Some(&generated) {
                     stale.push(output_path);
                 }
             }
             Mode::Update => {
+                if current.as_deref() == Some(&generated) {
+                    continue;
+                }
                 let parent = output_path
                     .parent()
                     .ok_or("generated output has no parent")?;
                 fs::create_dir_all(parent)?;
                 fs::write(&output_path, generated)?;
                 println!("updated {}", display_path(&root, &output_path));
+                updated += 1;
             }
         }
     }
 
     if stale.is_empty() {
-        if matches!(mode, Mode::Check) {
-            println!("generated resource code is current");
+        match mode {
+            Mode::Check => println!("generated resource code is current"),
+            Mode::Update if updated == 0 => println!("generated resource code is already current"),
+            Mode::Update => {}
         }
         Ok(())
     } else {
@@ -86,7 +208,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn repository_root() -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn parse_mode(args: impl IntoIterator<Item = String>) -> Result<Mode, DynError> {
+    let mut args = args.into_iter();
+    let mode = match args.next().as_deref() {
+        Some("check") => Mode::Check,
+        Some("update") => Mode::Update,
+        Some(other) => {
+            return Err(format!("unknown mode `{other}`; use `check` or `update`").into());
+        }
+        None => return Err("missing mode; use `check` or `update`".into()),
+    };
+    if args.next().is_some() {
+        return Err("expected exactly one mode: `check` or `update`".into());
+    }
+    Ok(mode)
+}
+
+fn read_existing_output(path: &Path) -> io::Result<Option<String>> {
+    match fs::read_to_string(path) {
+        Ok(contents) => Ok(Some(contents)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+
+fn repository_root() -> Result<PathBuf, DynError> {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .map(Path::to_path_buf)
@@ -100,7 +246,7 @@ fn display_path(root: &Path, path: &Path) -> String {
         .to_string()
 }
 
-fn generate_file(path: &Path) -> Result<String, Box<dyn std::error::Error>> {
+fn generate_file(path: &Path) -> Result<String, DynError> {
     let source = fs::read_to_string(path)?;
     let file = syn::parse_file(&source)?;
     let mut generated = TokenStream::new();
@@ -110,7 +256,7 @@ fn generate_file(path: &Path) -> Result<String, Box<dyn std::error::Error>> {
     format_generated(generated)
 }
 
-fn format_generated(tokens: TokenStream) -> Result<String, Box<dyn std::error::Error>> {
+fn format_generated(tokens: TokenStream) -> Result<String, DynError> {
     let input = format!("{GENERATED_HEADER}\n{tokens}\n");
     let mut child = Command::new("rustfmt")
         .args(["--edition", "2024", "--emit", "stdout"])
@@ -199,7 +345,16 @@ fn expand_api_resource(input: ItemStruct) -> syn::Result<TokenStream> {
             ));
         }
     };
-    let (main_fields, get_fields, post_fields, patch_fields) = process_fields(fields, &id_name);
+    let fields = fields
+        .iter()
+        .map(ResourceField::parse)
+        .collect::<syn::Result<Vec<_>>>()?;
+    let GeneratedFields {
+        resource: main_fields,
+        get: get_fields,
+        post: post_fields,
+        patch: patch_fields,
+    } = process_fields(&fields, &id_name);
 
     let mut get_param_filters = TokenStream::new();
     let mut create_methods = TokenStream::new();
@@ -211,42 +366,29 @@ fn expand_api_resource(input: ItemStruct) -> syn::Result<TokenStream> {
     let required_create_fields = fields
         .iter()
         .filter(|field| {
-            let is_read_only = has_attribute(field, "read_only");
-            let is_post_only = has_attribute(field, "post_only");
-            let is_optional = has_attribute(field, "optional");
-            let is_post_optional = has_attribute(field, "post_optional");
-            (is_post_only || !is_read_only) && !is_optional && !is_post_optional
+            let options = field.options;
+            (options.post_only || !options.read_only) && !options.optional && !options.post_optional
         })
         .collect::<Vec<_>>();
     let required_state_names = required_create_fields
         .iter()
-        .map(|field| {
-            format_ident!(
-                "{}_SET",
-                field
-                    .ident
-                    .as_ref()
-                    .expect("named field")
-                    .to_string()
-                    .to_uppercase()
-            )
-        })
+        .map(|field| format_ident!("{}_SET", field.ident().to_string().to_uppercase()))
         .collect::<Vec<_>>();
 
-    for field in fields {
-        let field_ident = field
-            .ident
-            .as_ref()
-            .expect("ApiResource only supports named fields");
+    for field in &fields {
+        let field_ident = field.ident();
         let field_name = field_ident.to_string();
-        let field_ty = &field.ty;
-        let is_read_only = has_attribute(field, "read_only");
-        let is_post_only = has_attribute(field, "post_only");
-        let is_optional = has_attribute(field, "optional");
-        let is_post_optional = has_attribute(field, "post_optional");
-        let is_as_id = has_attribute(field, "as_id");
-        let skip_patch = has_attribute(field, "skip_patch");
-        let skip_query = has_attribute(field, "skip_query");
+        let field_ty = field.ty();
+        let FieldOptions {
+            read_only: is_read_only,
+            post_only: is_post_only,
+            optional: is_optional,
+            post_optional: is_post_optional,
+            as_id: is_as_id,
+            skip_patch,
+            skip_query,
+            ..
+        } = field.options;
         let post_patch_field_ident = if is_as_id {
             format_ident!("{}_id", field_name)
         } else {
@@ -305,7 +447,7 @@ fn expand_api_resource(input: ItemStruct) -> syn::Result<TokenStream> {
                 .iter()
                 .zip(required_state_names.iter())
                 .map(|(required, state)| {
-                    if required.ident == field.ident {
+                    if required.ident() == field.ident() {
                         quote!(true)
                     } else {
                         quote!(#state)
@@ -382,7 +524,7 @@ fn expand_api_resource(input: ItemStruct) -> syn::Result<TokenStream> {
     ];
     let display_field = display_field_options
         .iter()
-        .find(|field| fields.iter().any(|item| item.ident.as_ref() == Some(field)))
+        .find(|field| fields.iter().any(|item| item.ident() == *field))
         .ok_or_else(|| {
             syn::Error::new_spanned(
                 &input.ident,
@@ -570,24 +712,6 @@ fn expand_api_resource(input: ItemStruct) -> syn::Result<TokenStream> {
     })
 }
 
-fn has_attribute(field: &syn::Field, attr_name: &str) -> bool {
-    field.attrs.iter().any(|attr| {
-        if !attr.path().is_ident("api") {
-            return false;
-        }
-        let Meta::List(list) = &attr.meta else {
-            return false;
-        };
-        let Ok(nested) = list.parse_args_with(Punctuated::<Meta, syn::Token![,]>::parse_terminated)
-        else {
-            return false;
-        };
-        nested
-            .iter()
-            .any(|meta| matches!(meta, Meta::Path(path) if path.is_ident(attr_name)))
-    })
-}
-
 fn option_inner_type(ty: &Type) -> Option<&Type> {
     let Type::Path(type_path) = ty else {
         return None;
@@ -727,29 +851,27 @@ fn fluent_arg_and_assign(field_ty: &TokenStream) -> (TokenStream, TokenStream) {
     }
 }
 
-fn process_fields(
-    fields: &Punctuated<syn::Field, syn::Token![,]>,
-    id_name: &syn::Ident,
-) -> (TokenStream, TokenStream, TokenStream, TokenStream) {
-    let mut main_fields = TokenStream::new();
-    let mut get_fields = TokenStream::new();
-    let mut post_fields = TokenStream::new();
-    let mut patch_fields = TokenStream::new();
+fn process_fields(fields: &[ResourceField<'_>], id_name: &syn::Ident) -> GeneratedFields {
+    let mut generated = GeneratedFields::default();
 
     for field in fields {
-        let name = &field.ident;
-        let field_name = name.as_ref().expect("named field").to_string();
-        let ty = &field.ty;
-        let is_read_only = has_attribute(field, "read_only");
-        let is_post_only = has_attribute(field, "post_only");
-        let is_optional = has_attribute(field, "optional");
-        let is_post_optional = has_attribute(field, "post_optional");
-        let is_as_id = has_attribute(field, "as_id");
-        let skip_patch = has_attribute(field, "skip_patch");
-        let skip_query = has_attribute(field, "skip_query");
-        let serde_default = if has_attribute(field, "default_local") {
+        let name = field.ident();
+        let field_name = name.to_string();
+        let ty = field.ty();
+        let FieldOptions {
+            read_only: is_read_only,
+            post_only: is_post_only,
+            optional: is_optional,
+            post_optional: is_post_optional,
+            as_id: is_as_id,
+            skip_patch,
+            skip_query,
+            default,
+            default_local,
+        } = field.options;
+        let serde_default = if default_local {
             quote!(#[serde(default = "crate::types::default_local_identity_value")])
-        } else if has_attribute(field, "default") {
+        } else if default {
             quote!(#[serde(default)])
         } else {
             quote!()
@@ -769,7 +891,7 @@ fn process_fields(
             } else {
                 quote!(#ty)
             };
-            main_fields.extend(quote! {
+            generated.resource.extend(quote! {
                 #serde_default
                 pub #name: #main_field_ty,
             });
@@ -779,12 +901,14 @@ fn process_fields(
                 } else {
                     quote!(Option<#ty>)
                 };
-                get_fields.extend(quote!(pub #id_field_ident: #get_type,));
+                generated
+                    .get
+                    .extend(quote!(pub #id_field_ident: #get_type,));
             }
         }
 
         if is_post_only {
-            post_fields.extend(quote!(pub #id_field_ident: #ty,));
+            generated.post.extend(quote!(pub #id_field_ident: #ty,));
         } else if !is_read_only {
             if is_as_id {
                 let id_type = if is_optional || is_post_optional {
@@ -793,19 +917,25 @@ fn process_fields(
                     quote!(<#ty as crate::resources::ApiResource>::Id)
                 };
                 if !skip_patch {
-                    patch_fields.extend(quote!(pub #id_field_ident: #id_type,));
+                    generated
+                        .patch
+                        .extend(quote!(pub #id_field_ident: #id_type,));
                 }
                 if is_post_optional {
-                    post_fields.extend(quote! {
+                    generated.post.extend(quote! {
                         #[serde(skip_serializing_if = "Option::is_none")]
                         pub #id_field_ident: #id_type,
                     });
                 } else {
-                    post_fields.extend(quote!(pub #id_field_ident: #id_type,));
+                    generated
+                        .post
+                        .extend(quote!(pub #id_field_ident: #id_type,));
                 }
             } else {
                 if !skip_patch {
-                    patch_fields.extend(quote!(pub #id_field_ident: Option<#ty>,));
+                    generated
+                        .patch
+                        .extend(quote!(pub #id_field_ident: Option<#ty>,));
                 }
                 let post_type = if is_optional || is_post_optional {
                     quote!(Option<#ty>)
@@ -813,23 +943,40 @@ fn process_fields(
                     quote!(#ty)
                 };
                 if is_post_optional {
-                    post_fields.extend(quote! {
+                    generated.post.extend(quote! {
                         #[serde(skip_serializing_if = "Option::is_none")]
                         pub #id_field_ident: #post_type,
                     });
                 } else {
-                    post_fields.extend(quote!(pub #id_field_ident: #post_type,));
+                    generated
+                        .post
+                        .extend(quote!(pub #id_field_ident: #post_type,));
                 }
             }
         }
     }
-    (main_fields, get_fields, post_fields, patch_fields)
+    generated
 }
 
 #[cfg(test)]
 mod tests {
-    use super::expand_item;
+    use super::{Mode, expand_item, parse_mode};
     use syn::parse_quote;
+
+    #[test]
+    fn parses_exactly_one_supported_mode() {
+        assert_eq!(parse_mode(["check".to_owned()]).unwrap(), Mode::Check);
+        assert_eq!(parse_mode(["update".to_owned()]).unwrap(), Mode::Update);
+
+        let missing = parse_mode([]).unwrap_err();
+        assert!(missing.to_string().contains("missing mode"));
+
+        let unknown = parse_mode(["generate".to_owned()]).unwrap_err();
+        assert!(unknown.to_string().contains("unknown mode `generate`"));
+
+        let extra = parse_mode(["check".to_owned(), "extra".to_owned()]).unwrap_err();
+        assert!(extra.to_string().contains("exactly one mode"));
+    }
 
     #[test]
     fn rejects_resource_without_suffix() {
@@ -882,5 +1029,76 @@ mod tests {
         ))
         .unwrap_err();
         assert!(error.to_string().contains("field for Display"));
+    }
+
+    #[test]
+    fn rejects_unknown_field_option() {
+        let error = expand_item(parse_quote!(
+            struct WidgetResource {
+                id: i32,
+                #[api(unknown)]
+                name: String,
+            }
+        ))
+        .unwrap_err();
+        assert!(error.to_string().contains("unknown API field option"));
+    }
+
+    #[test]
+    fn rejects_duplicate_field_option() {
+        let error = expand_item(parse_quote!(
+            struct WidgetResource {
+                id: i32,
+                #[api(optional, optional)]
+                name: String,
+            }
+        ))
+        .unwrap_err();
+        assert!(error.to_string().contains("duplicate API field option"));
+    }
+
+    #[test]
+    fn rejects_incompatible_field_options() {
+        let read_and_post = expand_item(parse_quote!(
+            struct WidgetResource {
+                id: i32,
+                #[api(read_only, post_only)]
+                name: String,
+            }
+        ))
+        .unwrap_err();
+        assert!(
+            read_and_post
+                .to_string()
+                .contains("both `read_only` and `post_only`")
+        );
+
+        let post_and_optional = expand_item(parse_quote!(
+            struct WidgetResource {
+                id: i32,
+                #[api(post_only, optional)]
+                name: String,
+            }
+        ))
+        .unwrap_err();
+        assert!(
+            post_and_optional
+                .to_string()
+                .contains("`post_only` field cannot be optional")
+        );
+
+        let conflicting_defaults = expand_item(parse_quote!(
+            struct WidgetResource {
+                id: i32,
+                #[api(default, default_local)]
+                name: String,
+            }
+        ))
+        .unwrap_err();
+        assert!(
+            conflicting_defaults
+                .to_string()
+                .contains("both `default` and `default_local`")
+        );
     }
 }

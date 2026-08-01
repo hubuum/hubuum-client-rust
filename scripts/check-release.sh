@@ -81,12 +81,9 @@ require_manifest_field() {
 release_ref="${1:-${GITHUB_REF_NAME:-}}"
 [ -n "$release_ref" ] || fail "pass a tag like v0.0.1 or set GITHUB_REF_NAME"
 
-case "$release_ref" in
-  v[0-9]*.[0-9]*.[0-9]*) ;;
-  *)
-    fail "release tag must look like vX.Y.Z"
-    ;;
-esac
+if [[ ! "$release_ref" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  fail "release tag must look like vX.Y.Z"
+fi
 
 release_version="${release_ref#v}"
 root_manifest="Cargo.toml"
