@@ -18,6 +18,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   `hubuum_client_derive` is no longer a client dependency or separately
   published crate; this internal change leaves the `hubuum_client` public API
   unchanged.
+- Direct and transitive dependencies are refreshed to their latest releases
+  compatible with Rust 1.88, including the test-only `event-listener` 5.4.2
+  update that resolves `RUSTSEC-2026-0221`.
 
 ## [0.7.2] - 2026-07-26
 
