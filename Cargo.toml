@@ -1,24 +1,30 @@
 [workspace]
-members = ["hubuum_client_derive", "e2e_client"]
+members = ["hubuum_reconcile", "e2e_client"]
 resolver = "3"
 
 [package]
 name = "hubuum_client"
-version = "0.7.2"
+version = "0.7.3"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
-description = "Rust client library targeting Hubuum server v0.0.5 with synchronous and asynchronous interfaces."
+description = "Rust client library targeting Hubuum server v0.0.8 with synchronous and asynchronous interfaces."
 repository = "https://github.com/hubuum/hubuum-client-rust"
 documentation = "https://docs.rs/hubuum_client"
 readme = "README.md"
 keywords = ["hubuum", "api", "client", "async"]
 categories = ["api-bindings"]
-exclude = [".github/", "openapi/", "scripts/", "tests/"]
+exclude = [
+    ".github/",
+    "hubuum_reconcile/",
+    "openapi/",
+    "scripts/",
+    "tests/",
+]
 
 [package.metadata.hubuum]
-server-version = "0.0.5"
-server-image = "ghcr.io/hubuum/hubuum-server@sha256:6f3e0f0debd418acd5cbc2b1399db9859a85ca1fa397525a5ef0e2f493a77c9b"
+server-version = "0.0.8"
+server-image = "ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6"
 
 [features]
 default = ["async"]
@@ -37,7 +43,6 @@ integration-tests = []
 typed-schemas = ["dep:schemars"]
 
 [dependencies]
-hubuum_client_derive = { version = "0.7.2", path = "./hubuum_client_derive" }
 reqwest = { version = "0.13", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

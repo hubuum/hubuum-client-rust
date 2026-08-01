@@ -383,6 +383,7 @@ mod parity_contract {
             let _ = $module::Handle::<Class>::related_graph;
             let _ = $module::Handle::<Class>::relation::<ClassRelationId>;
             let _ = $module::Handle::<Class>::create_relation::<ClassId>;
+            let _ = $module::Handle::<Class>::create_relation_with_aliases::<ClassId>;
             let _ = $module::Handle::<Class>::delete_relation::<ClassRelationId>;
 
             let _ = $module::Handle::<Object>::related_objects;

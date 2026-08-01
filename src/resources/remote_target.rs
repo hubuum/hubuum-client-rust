@@ -14,9 +14,9 @@ use crate::{
     },
 };
 
-// `RemoteTarget` is hand-wired rather than derived because its fields carry
-// nested tagged-enum config (`auth_config`) and free-form JSON (`headers_template`)
-// that the `ApiResource` derive macro cannot express.
+// `RemoteTarget` is hand-wired rather than generated because its fields carry
+// nested tagged-enum config (`auth_config`), free-form JSON (`headers_template`),
+// and request validation that require bespoke wire models.
 
 #[derive(
     Default, Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq, Hash,

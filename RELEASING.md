@@ -1,18 +1,14 @@
 # Releasing
 
-This repository publishes two crates:
-
-- `hubuum_client_derive`
-- `hubuum_client`
-
-`hubuum_client` depends on `hubuum_client_derive`, so releases publish the derive
-crate first.
+This repository publishes one crate: `hubuum_client`. The workspace also contains
+the unpublished `hubuum_reconcile` code generator and the unpublished
+`e2e_client` integration consumer.
 
 ## First release bootstrap
 
-Trusted publishing on crates.io only works after each crate has been published
-once manually. Run this bootstrap whenever a new workspace crate is introduced,
-before creating the release tag that should publish it.
+Trusted publishing on crates.io only works after a crate has been published once
+manually. Run this bootstrap only when introducing a new published crate, before
+creating the release tag that should publish it.
 
 1. Run the local release checks:
 
@@ -20,7 +16,7 @@ before creating the release tag that should publish it.
    ./scripts/check-release.sh vX.Y.Z
    ```
 
-2. Publish the crates manually from a clean checkout:
+2. Publish the new crate manually from a clean checkout:
 
    ```bash
    cargo publish -p <new-crate> --locked
@@ -44,8 +40,14 @@ before creating the release tag that should publish it.
    constraints where needed, regenerate `Cargo.lock`, and run `cargo audit`,
    `cargo deny check bans licenses sources`, and the required workspace checks.
    Do not defer a blocked dependency update until after the release.
-3. Update the client and derive manifest versions to the next release number.
-4. Keep `hubuum_client_derive`'s dependency version in the root `Cargo.toml` in sync.
+3. Update the client manifest version to the next release number.
+4. Reconcile generated resource code and commit any reviewed changes:
+
+   ```bash
+   cargo run -p hubuum_reconcile --locked -- update
+   cargo run -p hubuum_reconcile --locked -- check
+   ```
+
 5. Set `[package.metadata.hubuum].server-version` and `server-image` to the
    targeted server release and its immutable image digest.
 6. Update the required CI image and pinned OpenAPI source to the same server
@@ -62,7 +64,8 @@ before creating the release tag that should publish it.
 
 11. Push a tag like `vX.Y.Z`.
 
-The `Release` GitHub Actions workflow validates the release metadata, checks the
-workspace, lists all packaged files, and publishes both crates to crates.io
-through trusted publishing. Each publish job first checks the registry, so the
-workflow can be rerun safely after a partial release or manual bootstrap.
+The `Release` GitHub Actions workflow validates the release metadata and
+generated resource code, checks the workspace, lists the packaged files, and
+publishes `hubuum_client` to crates.io through trusted publishing. The publish
+job first checks the registry, so the workflow can be rerun safely after a
+partial release or manual bootstrap.

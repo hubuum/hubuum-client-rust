@@ -6,9 +6,9 @@ also make sense for this client library.
 
 ## Repository Scope And Sources Of Truth
 
-- This workspace contains the public `hubuum_client` crate, the
-  `hubuum_client_derive` procedural-macro crate, and the unpublished
-  `e2e_client` consumer used for integration coverage.
+- This workspace contains the public `hubuum_client` crate, the unpublished
+  `hubuum_reconcile` resource-code generator, and the unpublished `e2e_client`
+  consumer used for integration coverage.
 - Treat the root `Cargo.toml` as the source of truth for the client version,
   minimum supported Rust version (MSRV), feature definitions, target Hubuum
   server version, and immutable target server image.
@@ -28,6 +28,7 @@ Before considering a Rust change complete, run the checks that match CI:
 
 ```bash
 cargo fmt --all -- --check
+cargo run -p hubuum_reconcile --locked -- check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 cargo test --workspace --all-features --locked
@@ -105,9 +106,11 @@ cargo check -p hubuum_client --locked --no-default-features --features blocking,
   bypass base-URL, origin, traversal, or authorization-header safeguards.
 - Put API resource definitions and resource-specific handle behavior in
   `src/resources/*`. Put reusable wire/domain models in `src/types/*`.
-- Keep procedural-macro behavior isolated in `hubuum_client_derive`. Generated
-  request types and builders are public API and require compile-pass and, where
-  appropriate, compile-fail coverage.
+- Keep resource specifications in `hubuum_reconcile/specs` and regenerate the
+  checked-in `src/resources/generated` files with
+  `cargo run -p hubuum_reconcile --locked -- update`. Do not edit generated
+  files by hand. Generated request types and builders are public API and require
+  compile-pass and, where appropriate, compile-fail coverage.
 - Prefer the typed client surface over `raw()`. Keep `raw()` available as a
   constrained extension point for authenticated relative routes that do not yet
   have dedicated helpers.
@@ -165,7 +168,7 @@ cargo check -p hubuum_client --locked --no-default-features --features blocking,
 Treat the test setup as a layered contract:
 
 1. Unit tests cover shared parsing, builders, endpoint mappings, models, and
-   procedural-macro behavior.
+   resource-code generation behavior.
 2. Behavior and foundation tests cover public async/blocking requests,
    transports, URL safety, redaction, pagination, and error handling.
 3. Trybuild tests cover public compile-time guarantees for typed IDs, query
@@ -222,8 +225,8 @@ Treat the test setup as a layered contract:
 
 ## Releases
 
-- This repository publishes `hubuum_client_derive` before `hubuum_client`; the
-  client depends on the derive crate at the same release version.
+- This repository publishes only `hubuum_client`. `hubuum_reconcile` and
+  `e2e_client` remain unpublished workspace tools.
 - Do not release while any pull request in this repository remains open. Merge
   or close every open pull request before starting the release step.
 - Before the release step, update every direct and transitive dependency to its
@@ -235,9 +238,9 @@ Treat the test setup as a layered contract:
   containing the client version, declared Hubuum server target, immutable
   tested server image digest, and concise test evidence. A release is not ready
   while that record is missing or disagrees with `Cargo.toml`.
-- In the same release change, synchronize both crate versions, the derive
-  dependency, root package metadata, `TARGET_SERVER_VERSION`, pinned OpenAPI
-  source and snapshot, required CI image, `README.md`, and `CHANGELOG.md`.
+- In the same release change, synchronize the client version, root package
+  metadata, `TARGET_SERVER_VERSION`, pinned OpenAPI source and snapshot,
+  required CI image, `README.md`, and `CHANGELOG.md`.
 - Record breaking changes and migration actions in the dated release section.
 - Run `./scripts/check-release.sh vX.Y.Z` from a clean checkout before tagging.
 - Tags matching `vX.Y.Z` drive the trusted-publishing workflow. Do not manually

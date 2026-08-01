@@ -1,0 +1,13 @@
+[package]
+name = "hubuum_reconcile"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.88"
+publish = false
+license = "MIT"
+description = "Repository-local generator for hubuum_client resource code."
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "3", features = ["full"] }

@@ -30,10 +30,10 @@ fn assert_scope_denied(error: ApiError) {
 }
 
 #[test]
-#[ignore = "requires Docker and Hubuum server v0.0.5 image"]
-fn e2e_v005_token_lifecycle_with_and_without_scopes() {
-    if TARGET_SERVER_VERSION != "0.0.5" {
-        eprintln!("skipping v0.0.5 scenario while the declared target is {TARGET_SERVER_VERSION}");
+#[ignore = "requires Docker and Hubuum server v0.0.8 image"]
+fn e2e_v008_token_lifecycle_with_and_without_scopes() {
+    if TARGET_SERVER_VERSION != "0.0.8" {
+        eprintln!("skipping v0.0.8 scenario while the declared target is {TARGET_SERVER_VERSION}");
         return;
     }
 
@@ -41,9 +41,9 @@ fn e2e_v005_token_lifecycle_with_and_without_scopes() {
     let (admin_id, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
     let (collection_id, class_id, object_id) = harness
-        .create_collection_class_object("v005-token-lifecycle", admin_group_id)
+        .create_collection_class_object("v008-token-lifecycle", admin_group_id)
         .expect("failed to create token lifecycle resources");
-    let prefix = unique_case_prefix("v005-token-lifecycle");
+    let prefix = unique_case_prefix("v008-token-lifecycle");
     let admin = harness
         .client
         .users()
@@ -187,10 +187,10 @@ fn e2e_v005_token_lifecycle_with_and_without_scopes() {
 }
 
 #[tokio::test]
-#[ignore = "requires Docker and Hubuum server v0.0.5 image"]
-async fn e2e_v005_async_service_account_token_lifecycle_with_expiry() {
-    if TARGET_SERVER_VERSION != "0.0.5" {
-        eprintln!("skipping v0.0.5 scenario while the declared target is {TARGET_SERVER_VERSION}");
+#[ignore = "requires Docker and Hubuum server v0.0.8 image"]
+async fn e2e_v008_async_service_account_token_lifecycle_with_expiry() {
+    if TARGET_SERVER_VERSION != "0.0.8" {
+        eprintln!("skipping v0.0.8 scenario while the declared target is {TARGET_SERVER_VERSION}");
         return;
     }
 
@@ -201,10 +201,10 @@ async fn e2e_v005_async_service_account_token_lifecycle_with_expiry() {
         .await
         .expect("failed to resolve async admin context");
     let (collection_id, class_id, object_id) = harness
-        .create_collection_class_object("v005-async-service-token", admin_group_id)
+        .create_collection_class_object("v008-async-service-token", admin_group_id)
         .await
         .expect("failed to create async token lifecycle resources");
-    let prefix = unique_case_prefix("v005-async-service-token");
+    let prefix = unique_case_prefix("v008-async-service-token");
 
     let service_account = harness
         .client
@@ -396,10 +396,10 @@ async fn e2e_v005_async_service_account_token_lifecycle_with_expiry() {
 }
 
 #[test]
-#[ignore = "requires Docker and Hubuum server v0.0.5 image"]
-fn e2e_v005_numeric_aggregates_and_provenance() {
-    if TARGET_SERVER_VERSION != "0.0.5" {
-        eprintln!("skipping v0.0.5 scenario while the declared target is {TARGET_SERVER_VERSION}");
+#[ignore = "requires Docker and Hubuum server v0.0.8 image"]
+fn e2e_v008_numeric_aggregates_and_provenance() {
+    if TARGET_SERVER_VERSION != "0.0.8" {
+        eprintln!("skipping v0.0.8 scenario while the declared target is {TARGET_SERVER_VERSION}");
         return;
     }
 
@@ -407,9 +407,9 @@ fn e2e_v005_numeric_aggregates_and_provenance() {
     let (admin_id, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
     let (collection_id, class_id, object_id) = harness
-        .create_collection_class_object("v005", admin_group_id)
+        .create_collection_class_object("v008", admin_group_id)
         .expect("failed to create collection/class/object");
-    let prefix = unique_case_prefix("v005-aggregate-provenance");
+    let prefix = unique_case_prefix("v008-aggregate-provenance");
 
     harness
         .client
@@ -420,7 +420,7 @@ fn e2e_v005_numeric_aggregates_and_provenance() {
                 name: None,
                 collection_id: Some(collection_id),
                 hubuum_class_id: Some(class_id),
-                description: Some("v0.0.5 numeric aggregate fixture".to_string()),
+                description: Some("v0.0.8 numeric aggregate fixture".to_string()),
                 data: Some(json!({"metrics": {"cost": 12.5}})),
             },
         )
@@ -459,7 +459,7 @@ fn e2e_v005_numeric_aggregates_and_provenance() {
     let provenance = update_event
         .provenance
         .as_ref()
-        .expect("v0.0.5 events should include provenance");
+        .expect("v0.0.8 events should include provenance");
     assert_eq!(
         provenance
             .actor
