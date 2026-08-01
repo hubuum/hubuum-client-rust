@@ -113,7 +113,7 @@ grep -Fq "HUBUUM_TARGET_SERVER_VERSION: \"$server_version\"" .github/workflows/c
 grep -Fq "HUBUUM_TARGET_SERVER_IMAGE: $server_image" .github/workflows/ci.yml || fail "CI target server image must match $server_image"
 grep -Fq "/v$server_version/docs/openapi.json" scripts/openapi-contract.py || fail "pinned OpenAPI source must target Hubuum server v$server_version"
 
-if grep -Fq 'not yet available from `crates.io`' README.md; then
+if grep -Fq "not yet available from \`crates.io\`" README.md; then
   fail "README.md still says the crate is not available from crates.io"
 fi
 

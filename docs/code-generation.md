@@ -9,7 +9,10 @@ do not run a procedural macro or a build script.
 
 - `hubuum_reconcile/specs/*.rs` is the source of truth for generated resource
   fields and their `#[api(...)]` behavior.
-- `hubuum_reconcile/src/main.rs` contains the generation rules.
+- `hubuum_reconcile/src/main.rs` owns command-line and filesystem
+  reconciliation behavior.
+- `hubuum_reconcile/src/generate.rs` contains the specification model,
+  validation, and rendering rules.
 - `src/resources/generated/*.rs` is generated, reviewed, and committed.
 - The handwritten files under `src/resources` include the generated output and
   continue to own resource-specific behavior.
