@@ -1,5 +1,3 @@
-use hubuum_client_derive::ApiResource;
-
 use std::borrow::Cow;
 
 #[cfg(feature = "async")]
@@ -19,38 +17,7 @@ use crate::{
     types::{HubuumDateTime, PrincipalId, TokenId},
 };
 
-#[allow(dead_code)]
-#[derive(ApiResource)]
-pub struct UserResource {
-    #[api(read_only)]
-    pub id: i32,
-    #[api(post_optional, skip_patch, default_local)]
-    pub identity_scope: String,
-    #[api(read_only, skip_query, default_local)]
-    pub provider_kind: String,
-    #[api(read_only, skip_query, default)]
-    pub provider_managed: bool,
-    // The principal name. Required on create, but renaming lives on the principal
-    // and is not exposed via the user update body, so it is excluded from PATCH.
-    #[api(skip_patch)]
-    pub name: String,
-    // Write-only: plaintext on create, never returned. Use `set_password` to change
-    // it after creation.
-    #[api(post_only)]
-    pub password: String,
-    #[api(optional)]
-    pub email: String,
-    #[api(optional)]
-    pub proper_name: String,
-    #[api(read_only)]
-    pub created_at: HubuumDateTime,
-    #[api(read_only)]
-    pub updated_at: HubuumDateTime,
-    #[api(read_only, optional, skip_query)]
-    pub last_sync_attempted_at: HubuumDateTime,
-    #[api(read_only, optional, skip_query)]
-    pub last_sync_success_at: HubuumDateTime,
-}
+include!("generated/user.rs");
 
 impl User {
     pub fn is_local(&self) -> bool {

@@ -1,5 +1,5 @@
 {
-  "api_version": "0.0.5",
+  "api_version": "0.0.8",
   "openapi": "3.1.0",
   "operation_count": 196,
   "operations": [
@@ -5636,7 +5636,7 @@
     }
   ],
   "path_count": 137,
-  "schema_count": 245,
+  "schema_count": 246,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -5802,6 +5802,7 @@
     "ObjectAggregateValueState",
     "ObjectDataPatchDocument",
     "ObjectKey",
+    "ObjectRelationLimit",
     "ObjectsByClass",
     "PaginationConfig",
     "PatchOperation",
@@ -5884,5 +5885,5 @@
     "UpdateUser",
     "UserResponse"
   ],
-  "spec_sha256": "9083e2a32100ffe693be2b6f955b6c255f956117b736841c27ade442dadfee7f"
+  "spec_sha256": "5fa0bac7ae943d338980653ea63c2645cd8a55e04dfab8c3adda0ff61ed9791c"
 }

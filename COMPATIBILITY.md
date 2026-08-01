@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.7.3 | 0.0.8 | `ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6` | Declared target; pinned OpenAPI and complete Docker-backed library plus downstream-consumer integration suites |
 | 0.7.2 | 0.0.5 | `ghcr.io/hubuum/hubuum-server@sha256:6f3e0f0debd418acd5cbc2b1399db9859a85ca1fa397525a5ef0e2f493a77c9b` | Declared target; pinned OpenAPI and full integration suites, including public default-token-lifetime discovery, authoritative login and token-mint expiry metadata, token retention configuration, scoped/unscoped token lifecycles, expiry enforcement, revocation, imports, exports, and downstream-consumer coverage |
 | 0.7.1 | 0.0.4 | `ghcr.io/hubuum/hubuum-server@sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583` | Declared target; pinned OpenAPI and full integration suites, including sensitive secret-header metadata plus blocking user and async service-account scoped/unscoped token lifecycles, expiry enforcement, revocation, and post-revocation rejection |
 | 0.7.0 | 0.0.4 | `ghcr.io/hubuum/hubuum-server@sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583` | Declared target; pinned OpenAPI and full integration suites, including blocking user and async service-account scoped/unscoped token lifecycles, expiry enforcement, revocation, and post-revocation rejection |

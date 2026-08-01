@@ -1,7 +1,5 @@
 use std::borrow::Cow;
 
-use hubuum_client_derive::ApiResource;
-
 #[cfg(feature = "async")]
 use crate::client::r#async::{
     EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle,
@@ -29,30 +27,7 @@ use crate::{
     types::{HubuumDateTime, PrincipalId, TokenId},
 };
 
-#[allow(dead_code)]
-#[derive(ApiResource)]
-pub struct ServiceAccountResource {
-    #[api(read_only)]
-    pub id: i32,
-    #[api(post_optional, skip_patch, default_local)]
-    pub identity_scope: String,
-    // The principal name. Required on create; renaming lives on the principal, so it
-    // is excluded from PATCH.
-    #[api(skip_patch)]
-    pub name: String,
-    // Optional on create, mutable on update; always present in responses.
-    #[api(post_optional)]
-    pub description: String,
-    pub owner_group_id: GroupId,
-    #[api(read_only, optional)]
-    pub created_by: PrincipalId,
-    #[api(read_only, optional)]
-    pub disabled_at: HubuumDateTime,
-    #[api(read_only)]
-    pub created_at: HubuumDateTime,
-    #[api(read_only)]
-    pub updated_at: HubuumDateTime,
-}
+include!("generated/service_account.rs");
 
 impl ServiceAccount {
     pub fn is_local(&self) -> bool {

@@ -2,7 +2,7 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.7.2 targets Hubuum server v0.0.5. The exact tested image and
+`hubuum_client` 0.7.3 targets Hubuum server v0.0.8. The exact tested image and
 the history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
@@ -36,14 +36,14 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.7.2"
+hubuum_client = "0.7.3"
 ```
 
 Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.7.2", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.7.3", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
@@ -263,6 +263,7 @@ let configured_metrics = client.metrics_at(&config.server.metrics_path).await?;
 - [Scoped authentication](docs/scoped-auth.md): provider-scoped login, identity
   metadata, queries, and import references.
 - [Integration tests](docs/integration-tests.md): Docker-backed real-server tests, e2e client tests, seed data, and environment variables.
+- [Resource code generation](docs/code-generation.md): repository-local specifications, checked-in output, and drift checks.
 - [Server compatibility](COMPATIBILITY.md): declared server targets, immutable test images, and historical compatibility evidence.
 - [Release procedure](RELEASING.md): crates.io release checklist and trusted publishing notes.
 

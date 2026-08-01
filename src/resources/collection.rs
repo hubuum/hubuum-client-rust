@@ -1,7 +1,5 @@
 use std::borrow::Cow;
 
-use hubuum_client_derive::ApiResource;
-
 #[cfg(feature = "async")]
 use crate::client::r#async::{
     CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
@@ -24,22 +22,7 @@ struct UpdateCollectionParent {
     parent_collection_id: CollectionId,
 }
 
-#[allow(dead_code)]
-#[derive(ApiResource)]
-pub struct CollectionResource {
-    #[api(read_only)]
-    pub id: i32,
-    pub name: String,
-    pub description: String,
-    #[api(post_only)]
-    pub group_id: GroupId, // This is the group that the collection belongs to and is set on creation.
-    #[api(optional, skip_patch)]
-    pub parent_collection_id: CollectionId,
-    #[api(read_only)]
-    pub created_at: HubuumDateTime,
-    #[api(read_only)]
-    pub updated_at: HubuumDateTime,
-}
+include!("generated/collection.rs");
 
 #[cfg(feature = "blocking")]
 impl SyncHandle<Collection> {

@@ -6,6 +6,19 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-08-01
+
+### Changed
+
+- This release explicitly targets Hubuum server v0.0.8, with its 196-operation
+  OpenAPI contract and immutable multi-platform image
+  `sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6`.
+- Resource API code generation now runs through the unpublished,
+  repository-local `hubuum_reconcile` tool and commits ordinary Rust source.
+  `hubuum_client_derive` is no longer a client dependency or separately
+  published crate; this internal change leaves the `hubuum_client` public API
+  unchanged.
+
 ## [0.7.2] - 2026-07-26
 
 ### Added

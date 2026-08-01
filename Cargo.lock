@@ -640,7 +640,7 @@ dependencies = [
 
 [[package]]
 name = "hubuum_client"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "async-stream",
  "bytes",
@@ -650,7 +650,6 @@ dependencies = [
  "futures-util",
  "httpdate",
  "httpmock",
- "hubuum_client_derive",
  "log",
  "percent-encoding",
  "reqwest",
@@ -670,8 +669,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "hubuum_client_derive"
-version = "0.7.2"
+name = "hubuum_reconcile"
+version = "0.0.0"
 dependencies = [
  "proc-macro2",
  "quote",

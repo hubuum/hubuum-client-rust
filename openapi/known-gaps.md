@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.5 OpenAPI gaps
+# Known Hubuum server v0.0.8 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.5
+The pinned client contract records these limitations in the server v0.0.8
 specification explicitly:
 
 - `GET /api/v1/search/stream` describes SSE in prose but does not declare a

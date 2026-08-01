@@ -704,7 +704,7 @@ fn async_auth_login_with_token_accepts_valid_token() {
         .expect("failed to login for token");
     assert!(
         logged_in.token_expires_at().is_some(),
-        "v0.0.5 login should preserve the authoritative default expiry"
+        "target server login should preserve the authoritative default expiry"
     );
     let token = logged_in.token().to_string();
 
