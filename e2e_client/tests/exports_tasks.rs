@@ -189,6 +189,10 @@ fn e2e_export_template_update_export_get_and_delete() {
         Some(updated.name.as_str())
     );
     assert_eq!(export_details.warning_count, Some(0));
+    assert!(export_details.total_duration_ms.is_some());
+    assert!(export_details.query_duration_ms.is_some());
+    assert!(export_details.hydration_duration_ms.is_some());
+    assert!(export_details.render_duration_ms.is_some());
 
     let output = harness
         .client

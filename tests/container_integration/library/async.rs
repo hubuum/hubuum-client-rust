@@ -1275,6 +1275,8 @@ fn async_class_relation_create_delete_roundtrip() {
             to_hubuum_class_id: class_b.id,
             forward_template_alias: None,
             reverse_template_alias: None,
+            from_max_relations: None,
+            to_max_relations: None,
         }))
         .expect("async class_relation().create_raw() failed");
 
@@ -1339,6 +1341,8 @@ fn async_object_relation_create_delete_roundtrip() {
             to_hubuum_class_id: class_b.id,
             forward_template_alias: None,
             reverse_template_alias: None,
+            from_max_relations: None,
+            to_max_relations: None,
         }))
         .expect("failed to create supporting class relation");
 

@@ -646,6 +646,8 @@ pub struct ClassRelation {
     pub to_hubuum_class_id: ClassId,
     pub forward_template_alias: Option<String>,
     pub reverse_template_alias: Option<String>,
+    pub from_max_relations: Option<ObjectRelationLimit>,
+    pub to_max_relations: Option<ObjectRelationLimit>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
 }
@@ -659,8 +661,6 @@ pub struct ClassRelationGet {
     pub id: Option<i32>,
     pub from_hubuum_class_id: Option<ClassId>,
     pub to_hubuum_class_id: Option<ClassId>,
-    pub forward_template_alias: Option<String>,
-    pub reverse_template_alias: Option<String>,
     pub created_at: Option<HubuumDateTime>,
     pub updated_at: Option<HubuumDateTime>,
 }
@@ -670,6 +670,8 @@ pub struct ClassRelationPost {
     pub to_hubuum_class_id: ClassId,
     pub forward_template_alias: Option<String>,
     pub reverse_template_alias: Option<String>,
+    pub from_max_relations: Option<ObjectRelationLimit>,
+    pub to_max_relations: Option<ObjectRelationLimit>,
 }
 #[derive(Default, serde :: Serialize, serde :: Deserialize, Clone, PartialEq)]
 pub struct ClassRelationPatch {
@@ -729,28 +731,14 @@ impl crate::resources::ApiResource for ClassRelation {
         }
         if let Some(value) = params.from_hubuum_class_id {
             queries.push(crate::types::QueryFilter {
-                key: stringify!(from_hubuum_class_id).to_string(),
+                key: "from_classes".to_string(),
                 value: value.to_string(),
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
         }
         if let Some(value) = params.to_hubuum_class_id {
             queries.push(crate::types::QueryFilter {
-                key: stringify!(to_hubuum_class_id).to_string(),
-                value: value.to_string(),
-                operator: crate::types::FilterOperator::Equals { is_negated: false },
-            });
-        }
-        if let Some(value) = params.forward_template_alias {
-            queries.push(crate::types::QueryFilter {
-                key: stringify!(forward_template_alias).to_string(),
-                value: value.to_string(),
-                operator: crate::types::FilterOperator::Equals { is_negated: false },
-            });
-        }
-        if let Some(value) = params.reverse_template_alias {
-            queries.push(crate::types::QueryFilter {
-                key: stringify!(reverse_template_alias).to_string(),
+                key: "to_classes".to_string(),
                 value: value.to_string(),
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
@@ -794,6 +782,16 @@ impl crate::client::sync::CreateOp<ClassRelation> {
             params.reverse_template_alias = Some(value.into());
         })
     }
+    pub fn from_max_relations(self, value: ObjectRelationLimit) -> Self {
+        self.edit_params(move |params| {
+            params.from_max_relations = Some(value);
+        })
+    }
+    pub fn to_max_relations(self, value: ObjectRelationLimit) -> Self {
+        self.edit_params(move |params| {
+            params.to_max_relations = Some(value);
+        })
+    }
 }
 #[cfg(feature = "async")]
 impl crate::client::r#async::CreateOp<ClassRelation> {
@@ -815,6 +813,16 @@ impl crate::client::r#async::CreateOp<ClassRelation> {
     pub fn reverse_template_alias(self, value: impl Into<String>) -> Self {
         self.edit_params(move |params| {
             params.reverse_template_alias = Some(value.into());
+        })
+    }
+    pub fn from_max_relations(self, value: ObjectRelationLimit) -> Self {
+        self.edit_params(move |params| {
+            params.from_max_relations = Some(value);
+        })
+    }
+    pub fn to_max_relations(self, value: ObjectRelationLimit) -> Self {
+        self.edit_params(move |params| {
+            params.to_max_relations = Some(value);
         })
     }
 }
@@ -861,6 +869,24 @@ impl<const FROM_HUBUUM_CLASS_ID_SET: bool, const TO_HUBUUM_CLASS_ID_SET: bool>
     ) -> AsyncClassRelationCreate<FROM_HUBUUM_CLASS_ID_SET, TO_HUBUUM_CLASS_ID_SET> {
         AsyncClassRelationCreate {
             inner: self.inner.reverse_template_alias(value),
+        }
+    }
+    #[allow(clippy::wrong_self_convention)]
+    pub fn from_max_relations(
+        self,
+        value: ObjectRelationLimit,
+    ) -> AsyncClassRelationCreate<FROM_HUBUUM_CLASS_ID_SET, TO_HUBUUM_CLASS_ID_SET> {
+        AsyncClassRelationCreate {
+            inner: self.inner.from_max_relations(value),
+        }
+    }
+    #[allow(clippy::wrong_self_convention)]
+    pub fn to_max_relations(
+        self,
+        value: ObjectRelationLimit,
+    ) -> AsyncClassRelationCreate<FROM_HUBUUM_CLASS_ID_SET, TO_HUBUUM_CLASS_ID_SET> {
+        AsyncClassRelationCreate {
+            inner: self.inner.to_max_relations(value),
         }
     }
 }
@@ -922,6 +948,24 @@ impl<const FROM_HUBUUM_CLASS_ID_SET: bool, const TO_HUBUUM_CLASS_ID_SET: bool>
     ) -> SyncClassRelationCreate<FROM_HUBUUM_CLASS_ID_SET, TO_HUBUUM_CLASS_ID_SET> {
         SyncClassRelationCreate {
             inner: self.inner.reverse_template_alias(value),
+        }
+    }
+    #[allow(clippy::wrong_self_convention)]
+    pub fn from_max_relations(
+        self,
+        value: ObjectRelationLimit,
+    ) -> SyncClassRelationCreate<FROM_HUBUUM_CLASS_ID_SET, TO_HUBUUM_CLASS_ID_SET> {
+        SyncClassRelationCreate {
+            inner: self.inner.from_max_relations(value),
+        }
+    }
+    #[allow(clippy::wrong_self_convention)]
+    pub fn to_max_relations(
+        self,
+        value: ObjectRelationLimit,
+    ) -> SyncClassRelationCreate<FROM_HUBUUM_CLASS_ID_SET, TO_HUBUUM_CLASS_ID_SET> {
+        SyncClassRelationCreate {
+            inner: self.inner.to_max_relations(value),
         }
     }
 }
@@ -993,20 +1037,11 @@ impl crate::client::sync::QueryOp<ClassRelation> {
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn from_hubuum_class_id(self) -> crate::client::QueryNumericField<Self, ClassId> {
-        <crate::client::QueryNumericField<Self, ClassId>>::new(
-            self,
-            stringify!(from_hubuum_class_id),
-        )
+        <crate::client::QueryNumericField<Self, ClassId>>::new(self, "from_classes")
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn to_hubuum_class_id(self) -> crate::client::QueryNumericField<Self, ClassId> {
-        <crate::client::QueryNumericField<Self, ClassId>>::new(self, stringify!(to_hubuum_class_id))
-    }
-    pub fn forward_template_alias(self) -> crate::client::QueryTextField<Self> {
-        <crate::client::QueryTextField<Self>>::new(self, stringify!(forward_template_alias))
-    }
-    pub fn reverse_template_alias(self) -> crate::client::QueryTextField<Self> {
-        <crate::client::QueryTextField<Self>>::new(self, stringify!(reverse_template_alias))
+        <crate::client::QueryNumericField<Self, ClassId>>::new(self, "to_classes")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))
@@ -1022,20 +1057,11 @@ impl crate::client::r#async::QueryOp<ClassRelation> {
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn from_hubuum_class_id(self) -> crate::client::QueryNumericField<Self, ClassId> {
-        <crate::client::QueryNumericField<Self, ClassId>>::new(
-            self,
-            stringify!(from_hubuum_class_id),
-        )
+        <crate::client::QueryNumericField<Self, ClassId>>::new(self, "from_classes")
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn to_hubuum_class_id(self) -> crate::client::QueryNumericField<Self, ClassId> {
-        <crate::client::QueryNumericField<Self, ClassId>>::new(self, stringify!(to_hubuum_class_id))
-    }
-    pub fn forward_template_alias(self) -> crate::client::QueryTextField<Self> {
-        <crate::client::QueryTextField<Self>>::new(self, stringify!(forward_template_alias))
-    }
-    pub fn reverse_template_alias(self) -> crate::client::QueryTextField<Self> {
-        <crate::client::QueryTextField<Self>>::new(self, stringify!(reverse_template_alias))
+        <crate::client::QueryNumericField<Self, ClassId>>::new(self, "to_classes")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))
@@ -1051,20 +1077,11 @@ impl crate::client::sync::Resource<ClassRelation> {
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn from_hubuum_class_id(self) -> crate::client::QueryNumericField<Self, ClassId> {
-        <crate::client::QueryNumericField<Self, ClassId>>::new(
-            self,
-            stringify!(from_hubuum_class_id),
-        )
+        <crate::client::QueryNumericField<Self, ClassId>>::new(self, "from_classes")
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn to_hubuum_class_id(self) -> crate::client::QueryNumericField<Self, ClassId> {
-        <crate::client::QueryNumericField<Self, ClassId>>::new(self, stringify!(to_hubuum_class_id))
-    }
-    pub fn forward_template_alias(self) -> crate::client::QueryTextField<Self> {
-        <crate::client::QueryTextField<Self>>::new(self, stringify!(forward_template_alias))
-    }
-    pub fn reverse_template_alias(self) -> crate::client::QueryTextField<Self> {
-        <crate::client::QueryTextField<Self>>::new(self, stringify!(reverse_template_alias))
+        <crate::client::QueryNumericField<Self, ClassId>>::new(self, "to_classes")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))
@@ -1080,20 +1097,11 @@ impl crate::client::r#async::Resource<ClassRelation> {
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn from_hubuum_class_id(self) -> crate::client::QueryNumericField<Self, ClassId> {
-        <crate::client::QueryNumericField<Self, ClassId>>::new(
-            self,
-            stringify!(from_hubuum_class_id),
-        )
+        <crate::client::QueryNumericField<Self, ClassId>>::new(self, "from_classes")
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn to_hubuum_class_id(self) -> crate::client::QueryNumericField<Self, ClassId> {
-        <crate::client::QueryNumericField<Self, ClassId>>::new(self, stringify!(to_hubuum_class_id))
-    }
-    pub fn forward_template_alias(self) -> crate::client::QueryTextField<Self> {
-        <crate::client::QueryTextField<Self>>::new(self, stringify!(forward_template_alias))
-    }
-    pub fn reverse_template_alias(self) -> crate::client::QueryTextField<Self> {
-        <crate::client::QueryTextField<Self>>::new(self, stringify!(reverse_template_alias))
+        <crate::client::QueryNumericField<Self, ClassId>>::new(self, "to_classes")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))

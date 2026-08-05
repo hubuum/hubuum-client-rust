@@ -5,7 +5,8 @@ use strum::{Display, EnumString};
 use super::{
     EventSinkKind, ExportContentType, ExportInclude, ExportLimits, ExportMissingDataPolicy,
     ExportRelationContext, ExportScopeKind, ExportTemplateKind, ImportTaskResultResponse,
-    Permissions, RemoteAuthConfig, RemoteHttpMethod, RemoteTargetSubjectType, TaskResponse,
+    ObjectRelationLimit, Permissions, RemoteAuthConfig, RemoteHttpMethod, RemoteTargetSubjectType,
+    TaskResponse,
 };
 
 pub const CURRENT_IMPORT_VERSION: i32 = 1;
@@ -351,6 +352,8 @@ pub struct ImportCollectionInput {
     pub description: String,
     pub parent_collection_ref: Option<String>,
     pub parent_collection_key: Option<CollectionKey>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamps: Option<RestoreTimestamps>,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
@@ -363,6 +366,8 @@ pub struct ImportClassInput {
     pub validate_schema: Option<bool>,
     pub collection_ref: Option<String>,
     pub collection_key: Option<CollectionKey>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamps: Option<RestoreTimestamps>,
 }
 
 impl std::fmt::Debug for ImportClassInput {
@@ -378,6 +383,7 @@ impl std::fmt::Debug for ImportClassInput {
             .field("validate_schema", &self.validate_schema)
             .field("collection_ref", &self.collection_ref)
             .field("collection_key", &self.collection_key)
+            .field("timestamps", &self.timestamps)
             .finish()
     }
 }
@@ -391,6 +397,8 @@ pub struct ImportObjectInput {
     pub data: serde_json::Value,
     pub class_ref: Option<String>,
     pub class_key: Option<ClassKey>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamps: Option<RestoreTimestamps>,
 }
 
 impl std::fmt::Debug for ImportObjectInput {
@@ -402,6 +410,7 @@ impl std::fmt::Debug for ImportObjectInput {
             .field("data", &"[REDACTED]")
             .field("class_ref", &self.class_ref)
             .field("class_key", &self.class_key)
+            .field("timestamps", &self.timestamps)
             .finish()
     }
 }
@@ -414,6 +423,12 @@ pub struct ImportClassRelationInput {
     pub from_class_key: Option<ClassKey>,
     pub to_class_ref: Option<String>,
     pub to_class_key: Option<ClassKey>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from_max_relations: Option<ObjectRelationLimit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to_max_relations: Option<ObjectRelationLimit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamps: Option<RestoreTimestamps>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -429,6 +444,12 @@ pub struct FullImportClassRelationInput {
     pub forward_template_alias: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reverse_template_alias: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from_max_relations: Option<ObjectRelationLimit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to_max_relations: Option<ObjectRelationLimit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamps: Option<RestoreTimestamps>,
 }
 
 impl FullImportClassRelationInput {
@@ -462,6 +483,21 @@ impl FullImportClassRelationInput {
         self.reverse_template_alias = Some(alias.into());
         self
     }
+
+    pub fn from_max_relations(mut self, limit: ObjectRelationLimit) -> Self {
+        self.from_max_relations = Some(limit);
+        self
+    }
+
+    pub fn to_max_relations(mut self, limit: ObjectRelationLimit) -> Self {
+        self.to_max_relations = Some(limit);
+        self
+    }
+
+    pub fn timestamps(mut self, timestamps: RestoreTimestamps) -> Self {
+        self.timestamps = Some(timestamps);
+        self
+    }
 }
 
 impl From<ImportClassRelationInput> for FullImportClassRelationInput {
@@ -474,6 +510,9 @@ impl From<ImportClassRelationInput> for FullImportClassRelationInput {
             to_class_key: value.to_class_key,
             forward_template_alias: None,
             reverse_template_alias: None,
+            from_max_relations: value.from_max_relations,
+            to_max_relations: value.to_max_relations,
+            timestamps: value.timestamps,
         }
     }
 }
@@ -486,6 +525,8 @@ pub struct ImportObjectRelationInput {
     pub from_object_key: Option<ObjectKey>,
     pub to_object_ref: Option<String>,
     pub to_object_key: Option<ObjectKey>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamps: Option<RestoreTimestamps>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -1001,6 +1042,7 @@ mod tests {
             validate_schema: Some(true),
             collection_ref: Some("collection-ref".into()),
             collection_key: None,
+            timestamps: None,
         };
         let object = ImportObjectInput {
             ref_: Some("object-ref".into()),
@@ -1009,6 +1051,7 @@ mod tests {
             data: serde_json::json!({"token": "object-secret"}),
             class_ref: Some("class-ref".into()),
             class_key: None,
+            timestamps: None,
         };
         let request = ImportRequest::new(ImportGraph {
             classes: vec![class.clone()],
@@ -1093,6 +1136,7 @@ mod tests {
                 description: "Inventory".into(),
                 parent_collection_ref: None,
                 parent_collection_key: None,
+                timestamps: Some(timestamps.clone()),
             }],
             classes: vec![ImportClassInput {
                 ref_: Some("class-a".into()),
@@ -1102,6 +1146,7 @@ mod tests {
                 validate_schema: Some(false),
                 collection_ref: Some("collection".into()),
                 collection_key: None,
+                timestamps: Some(timestamps.clone()),
             }],
             objects: vec![ImportObjectInput {
                 ref_: Some("object".into()),
@@ -1110,12 +1155,16 @@ mod tests {
                 data: serde_json::json!({"address": "192.0.2.1"}),
                 class_ref: Some("class-a".into()),
                 class_key: None,
+                timestamps: Some(timestamps.clone()),
             }],
             class_relations: vec![
                 FullImportClassRelationInput::from_refs("class-a", "class-a")
                     .reference("class-relation")
                     .forward_template_alias("children")
-                    .reverse_template_alias("parents"),
+                    .reverse_template_alias("parents")
+                    .from_max_relations(ObjectRelationLimit::new(1).unwrap())
+                    .to_max_relations(ObjectRelationLimit::new(2).unwrap())
+                    .timestamps(timestamps.clone()),
             ],
             object_relations: vec![ImportObjectRelationInput {
                 ref_: Some("object-relation".into()),
@@ -1123,6 +1172,7 @@ mod tests {
                 from_object_key: None,
                 to_object_ref: Some("object".into()),
                 to_object_key: None,
+                timestamps: Some(timestamps.clone()),
             }],
             collection_permissions: vec![ImportCollectionPermissionInput {
                 ref_: Some("permission".into()),
@@ -1233,6 +1283,12 @@ mod tests {
             graph["identity_scopes"][0]["timestamps"]["created_at"],
             "2026-07-23T08:00:00"
         );
+        assert_eq!(
+            graph["collections"][0]["timestamps"]["updated_at"],
+            "2026-07-23T08:00:01"
+        );
+        assert_eq!(graph["class_relations"][0]["from_max_relations"], 1);
+        assert_eq!(graph["class_relations"][0]["to_max_relations"], 2);
     }
 
     #[test]
@@ -1244,6 +1300,9 @@ mod tests {
                 from_class_key: None,
                 to_class_ref: Some("right".into()),
                 to_class_key: None,
+                from_max_relations: None,
+                to_max_relations: None,
+                timestamps: None,
             }],
             ..ImportGraph::default()
         })
