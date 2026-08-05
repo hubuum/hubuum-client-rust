@@ -676,21 +676,21 @@ impl crate::resources::ApiResource for ObjectRelation {
         }
         if let Some(value) = params.from_hubuum_object_id {
             queries.push(crate::types::QueryFilter {
-                key: stringify!(from_hubuum_object_id).to_string(),
+                key: "from_objects".to_string(),
                 value: value.to_string(),
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
         }
         if let Some(value) = params.to_hubuum_object_id {
             queries.push(crate::types::QueryFilter {
-                key: stringify!(to_hubuum_object_id).to_string(),
+                key: "to_objects".to_string(),
                 value: value.to_string(),
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
         }
         if let Some(value) = params.class_relation_id {
             queries.push(crate::types::QueryFilter {
-                key: stringify!(class_relation_id).to_string(),
+                key: "class_relation".to_string(),
                 value: value.to_string(),
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
@@ -915,23 +915,14 @@ impl crate::client::sync::QueryOp<ObjectRelation> {
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn from_hubuum_object_id(self) -> crate::client::QueryNumericField<Self, ObjectId> {
-        <crate::client::QueryNumericField<Self, ObjectId>>::new(
-            self,
-            stringify!(from_hubuum_object_id),
-        )
+        <crate::client::QueryNumericField<Self, ObjectId>>::new(self, "from_objects")
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn to_hubuum_object_id(self) -> crate::client::QueryNumericField<Self, ObjectId> {
-        <crate::client::QueryNumericField<Self, ObjectId>>::new(
-            self,
-            stringify!(to_hubuum_object_id),
-        )
+        <crate::client::QueryNumericField<Self, ObjectId>>::new(self, "to_objects")
     }
     pub fn class_relation_id(self) -> crate::client::QueryNumericField<Self, ClassRelationId> {
-        <crate::client::QueryNumericField<Self, ClassRelationId>>::new(
-            self,
-            stringify!(class_relation_id),
-        )
+        <crate::client::QueryNumericField<Self, ClassRelationId>>::new(self, "class_relation")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))
@@ -947,23 +938,14 @@ impl crate::client::r#async::QueryOp<ObjectRelation> {
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn from_hubuum_object_id(self) -> crate::client::QueryNumericField<Self, ObjectId> {
-        <crate::client::QueryNumericField<Self, ObjectId>>::new(
-            self,
-            stringify!(from_hubuum_object_id),
-        )
+        <crate::client::QueryNumericField<Self, ObjectId>>::new(self, "from_objects")
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn to_hubuum_object_id(self) -> crate::client::QueryNumericField<Self, ObjectId> {
-        <crate::client::QueryNumericField<Self, ObjectId>>::new(
-            self,
-            stringify!(to_hubuum_object_id),
-        )
+        <crate::client::QueryNumericField<Self, ObjectId>>::new(self, "to_objects")
     }
     pub fn class_relation_id(self) -> crate::client::QueryNumericField<Self, ClassRelationId> {
-        <crate::client::QueryNumericField<Self, ClassRelationId>>::new(
-            self,
-            stringify!(class_relation_id),
-        )
+        <crate::client::QueryNumericField<Self, ClassRelationId>>::new(self, "class_relation")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))
@@ -979,23 +961,14 @@ impl crate::client::sync::Resource<ObjectRelation> {
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn from_hubuum_object_id(self) -> crate::client::QueryNumericField<Self, ObjectId> {
-        <crate::client::QueryNumericField<Self, ObjectId>>::new(
-            self,
-            stringify!(from_hubuum_object_id),
-        )
+        <crate::client::QueryNumericField<Self, ObjectId>>::new(self, "from_objects")
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn to_hubuum_object_id(self) -> crate::client::QueryNumericField<Self, ObjectId> {
-        <crate::client::QueryNumericField<Self, ObjectId>>::new(
-            self,
-            stringify!(to_hubuum_object_id),
-        )
+        <crate::client::QueryNumericField<Self, ObjectId>>::new(self, "to_objects")
     }
     pub fn class_relation_id(self) -> crate::client::QueryNumericField<Self, ClassRelationId> {
-        <crate::client::QueryNumericField<Self, ClassRelationId>>::new(
-            self,
-            stringify!(class_relation_id),
-        )
+        <crate::client::QueryNumericField<Self, ClassRelationId>>::new(self, "class_relation")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))
@@ -1011,23 +984,14 @@ impl crate::client::r#async::Resource<ObjectRelation> {
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn from_hubuum_object_id(self) -> crate::client::QueryNumericField<Self, ObjectId> {
-        <crate::client::QueryNumericField<Self, ObjectId>>::new(
-            self,
-            stringify!(from_hubuum_object_id),
-        )
+        <crate::client::QueryNumericField<Self, ObjectId>>::new(self, "from_objects")
     }
     #[allow(clippy::wrong_self_convention)]
     pub fn to_hubuum_object_id(self) -> crate::client::QueryNumericField<Self, ObjectId> {
-        <crate::client::QueryNumericField<Self, ObjectId>>::new(
-            self,
-            stringify!(to_hubuum_object_id),
-        )
+        <crate::client::QueryNumericField<Self, ObjectId>>::new(self, "to_objects")
     }
     pub fn class_relation_id(self) -> crate::client::QueryNumericField<Self, ClassRelationId> {
-        <crate::client::QueryNumericField<Self, ClassRelationId>>::new(
-            self,
-            stringify!(class_relation_id),
-        )
+        <crate::client::QueryNumericField<Self, ClassRelationId>>::new(self, "class_relation")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))

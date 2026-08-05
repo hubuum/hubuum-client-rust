@@ -14,10 +14,11 @@ use hubuum_client::types::{
     SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
 };
 use hubuum_client::{
-    ApiError, BaseUrl, ClassGet, ClassPatch, Client, ComputedFieldSelector, Credentials,
-    ExportResult, ObjectAggregateDimension, ObjectAggregateJsonPath, ObjectAggregateMeasure,
-    ObjectAggregateMeasureField, ObjectAggregateMeasureOperation, ObjectAggregateSort,
-    ObjectDataPatchDocument, ObjectDataPatchOperation, ObjectPatch, Token, blocking,
+    ApiError, BaseUrl, ClassGet, ClassPatch, ClassRelationCreateOptions, Client,
+    ComputedFieldSelector, Credentials, ExportResult, ObjectAggregateDimension,
+    ObjectAggregateJsonPath, ObjectAggregateMeasure, ObjectAggregateMeasureField,
+    ObjectAggregateMeasureOperation, ObjectAggregateSort, ObjectDataPatchDocument,
+    ObjectDataPatchOperation, ObjectPatch, ObjectRelationLimit, Token, blocking,
 };
 use serde_json::json;
 
@@ -768,6 +769,8 @@ fn class_relation_json(
         "id": relation_id,
         "from_hubuum_class_id": from_class_id,
         "to_hubuum_class_id": to_class_id,
+        "from_max_relations": 1,
+        "to_max_relations": null,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -3765,7 +3768,13 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
     let class_relation_create = server.mock(|when, then| {
         when.method(POST)
             .path("/api/v1/classes/42/relations")
-            .json_body(json!({ "to_hubuum_class_id": 77 }))
+            .json_body(json!({
+                "to_hubuum_class_id": 77,
+                "forward_template_alias": "targets",
+                "reverse_template_alias": "sources",
+                "from_max_relations": 1,
+                "to_max_relations": 2
+            }))
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(201)
             .header("content-type", "application/json")
@@ -3866,6 +3875,29 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
             .json_body(object_relation_json(66, 9, 10, 55));
     });
 
+    let class_relation_query = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/relations/classes")
+            .query_param("from_classes__equals", "42")
+            .query_param("to_classes__equals", "77")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([class_relation_json(55, 42, 77)]));
+    });
+
+    let object_relation_query = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/relations/objects")
+            .query_param("from_objects__equals", "9")
+            .query_param("to_objects__equals", "10")
+            .query_param("class_relation__equals", "55")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([object_relation_json(66, 9, 10, 55)]));
+    });
+
     let client = sync_client(&server);
 
     let class = client
@@ -3913,9 +3945,20 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
     assert_eq!(class_relation.id(), 55);
 
     let created_class_relation = class
-        .create_relation(77)
+        .create_relation_with_options(
+            77,
+            ClassRelationCreateOptions::default()
+                .with_forward_template_alias("targets")
+                .with_reverse_template_alias("sources")
+                .with_from_max_relations(ObjectRelationLimit::new(1).unwrap())
+                .with_to_max_relations(ObjectRelationLimit::new(2).unwrap()),
+        )
         .expect("class relation create should succeed");
     assert_eq!(created_class_relation.id, 56);
+    assert_eq!(
+        created_class_relation.from_max_relations,
+        Some(ObjectRelationLimit::new(1).unwrap())
+    );
 
     class
         .delete_relation(55)
@@ -3982,6 +4025,30 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
         .expect("object relation select should use direct endpoint");
     assert_eq!(selected_object_relation.id(), 66);
 
+    let queried_class_relation = client
+        .class_relation()
+        .query()
+        .from_hubuum_class_id()
+        .eq(42.into())
+        .to_hubuum_class_id()
+        .eq(77.into())
+        .one()
+        .expect("class relation query should use server filter keys");
+    assert_eq!(queried_class_relation.id, 55);
+
+    let queried_object_relation = client
+        .object_relation()
+        .query()
+        .from_hubuum_object_id()
+        .eq(9.into())
+        .to_hubuum_object_id()
+        .eq(10.into())
+        .class_relation_id()
+        .eq(55.into())
+        .one()
+        .expect("object relation query should use server filter keys");
+    assert_eq!(queried_object_relation.id, 66);
+
     class_by_id.assert_calls(1);
     related_classes.assert_calls(1);
     class_relations.assert_calls(1);
@@ -3998,6 +4065,52 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
     object_relation_delete.assert_calls(1);
     class_relation_select.assert_calls(1);
     object_relation_select.assert_calls(1);
+    class_relation_query.assert_calls(1);
+    object_relation_query.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_nested_class_relation_creation_sends_cardinality_limits() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let class_by_id = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/classes/42")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(class_json("class-42"));
+    });
+    let class_relation_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/classes/42/relations")
+            .json_body(json!({
+                "to_hubuum_class_id": 77,
+                "from_max_relations": 1
+            }))
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(class_relation_json(56, 42, 77));
+    });
+
+    let client = async_client(&server).await;
+    let class = client.classes().get(42).await.unwrap();
+    let relation = class
+        .create_relation_with_options(
+            77,
+            ClassRelationCreateOptions::default()
+                .with_from_max_relations(ObjectRelationLimit::new(1).unwrap()),
+        )
+        .await
+        .expect("async class relation create should succeed");
+
+    assert_eq!(
+        relation.from_max_relations,
+        Some(ObjectRelationLimit::new(1).unwrap())
+    );
+    class_by_id.assert_calls(1);
+    class_relation_create.assert_calls(1);
 }
 
 #[test]

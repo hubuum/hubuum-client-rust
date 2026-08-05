@@ -1,4 +1,4 @@
-use hubuum_client::{ClassPost, ObjectPost};
+use hubuum_client::{ClassPost, ClassRelationCreateOptions, ObjectPost, ObjectRelationLimit};
 use serde_json::json;
 
 use e2e_client::harness::{E2EHarness, admin_context};
@@ -37,6 +37,17 @@ fn e2e_class_and_object_relations_roundtrip() {
             data: Some(json!({ "role": "target" })),
         })
         .expect("target object create should succeed");
+    let object_b2 = harness
+        .client
+        .objects(class_b.id)
+        .create_raw(ObjectPost {
+            name: format!("{prefix}-object-b2"),
+            collection_id: Some(collection_id),
+            hubuum_class_id: Some(class_b.id),
+            description: "second relation target object".to_string(),
+            data: Some(json!({ "role": "second-target" })),
+        })
+        .expect("second target object create should succeed");
 
     let class_a = harness
         .client
@@ -44,16 +55,23 @@ fn e2e_class_and_object_relations_roundtrip() {
         .get(class_a_id)
         .expect("source class should be selectable");
     let class_relation = class_a
-        .create_relation_with_aliases(
+        .create_relation_with_options(
             class_b.id,
-            Some("targets".to_string()),
-            Some("sources".to_string()),
+            ClassRelationCreateOptions::default()
+                .with_forward_template_alias("targets")
+                .with_reverse_template_alias("sources")
+                .with_from_max_relations(ObjectRelationLimit::new(1).unwrap()),
         )
         .expect("class relation create should succeed");
     assert_eq!(
         class_relation.forward_template_alias.as_deref(),
         Some("targets")
     );
+    assert_eq!(
+        class_relation.from_max_relations,
+        Some(ObjectRelationLimit::new(1).unwrap())
+    );
+    assert_eq!(class_relation.to_max_relations, None);
     let fetched_class_relation = class_a
         .relation(class_relation.id)
         .expect("class relation should be fetchable through source class");
@@ -107,6 +125,12 @@ fn e2e_class_and_object_relations_roundtrip() {
         .create_relation_to(class_b.id, object_b.id)
         .expect("object relation create should succeed");
     assert_eq!(object_relation.class_relation_id, class_relation.id);
+    assert!(
+        object_a
+            .create_relation_to(class_b.id, object_b2.id)
+            .is_err(),
+        "the from-side cardinality limit must reject a second relation"
+    );
     let scoped_relation = object_a
         .relation_to(class_b.id, object_b.id)
         .expect("scoped object relation should be fetchable");

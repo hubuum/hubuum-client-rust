@@ -3,9 +3,9 @@ use std::time::Duration;
 use e2e_client::harness::{AsyncE2EHarness, E2EHarness, admin_context, async_admin_context};
 use e2e_client::naming::unique_case_prefix;
 use hubuum_client::{
-    ApiError, ExportRequest, ExportScope, ExportScopeKind, HubuumDateTime, NewTokenRequest,
-    ObjectAggregateJsonPath, ObjectAggregateMeasure, ObjectAggregateMeasureField,
-    ObjectAggregateMeasureOperation, ObjectPatch, Permissions, ServiceAccountPost,
+    ApiError, ClassPost, ExportRequest, ExportScope, ExportScopeKind, HubuumDateTime,
+    NewTokenRequest, ObjectAggregateJsonPath, ObjectAggregateMeasure, ObjectAggregateMeasureField,
+    ObjectAggregateMeasureOperation, ObjectPatch, ObjectPost, Permissions, ServiceAccountPost,
     TARGET_SERVER_VERSION, Token, TokenResourceScope, TokenScopeDetails,
 };
 use serde_json::json;
@@ -44,6 +44,44 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
         .create_collection_class_object("v008-token-lifecycle", admin_group_id)
         .expect("failed to create token lifecycle resources");
     let prefix = unique_case_prefix("v008-token-lifecycle");
+    let target_class = harness
+        .client
+        .classes()
+        .create_raw(ClassPost {
+            name: format!("{prefix}-target-class"),
+            collection_id,
+            description: "resource-scoped visibility target class".to_string(),
+            json_schema: None,
+            validate_schema: None,
+        })
+        .expect("visibility target class should create");
+    let target_object = harness
+        .client
+        .objects(target_class.id)
+        .create_raw(ObjectPost {
+            name: format!("{prefix}-target-object"),
+            collection_id: Some(collection_id),
+            hubuum_class_id: Some(target_class.id),
+            description: "resource-scoped visibility target object".to_string(),
+            data: Some(json!({"visibility": true})),
+        })
+        .expect("visibility target object should create");
+    let source_class = harness
+        .client
+        .classes()
+        .get(class_id)
+        .expect("source class should remain selectable");
+    let class_relation = source_class
+        .create_relation(target_class.id)
+        .expect("visibility class relation should create");
+    let source_object = harness
+        .client
+        .objects(class_id)
+        .get(object_id)
+        .expect("source object should remain selectable");
+    let object_relation = source_object
+        .create_relation_to(target_class.id, target_object.id)
+        .expect("visibility object relation should create");
     let admin = harness
         .client
         .users()
@@ -51,6 +89,7 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
         .expect("admin user should be selectable");
     let scoped_name = format!("{prefix}-scoped");
     let unscoped_name = format!("{prefix}-unscoped");
+    let visibility_name = format!("{prefix}-visibility");
     let expected_scope = TokenScopeDetails::new(
         Some(vec![Permissions::ReadObject]),
         Some(vec![TokenResourceScope::Collection(collection_id)]),
@@ -73,6 +112,23 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
     let unscoped_token = admin
         .tokens_create_token(NewTokenRequest::new().name(unscoped_name.clone()))
         .expect("omitting scope should mint an unscoped token");
+    let visibility_token = admin
+        .tokens_create_token(
+            NewTokenRequest::new().name(visibility_name.clone()).scope(
+                TokenScopeDetails::new(
+                    Some(vec![
+                        Permissions::ReadCollection,
+                        Permissions::ReadClass,
+                        Permissions::ReadObject,
+                        Permissions::ReadClassRelation,
+                        Permissions::ReadObjectRelation,
+                    ]),
+                    Some(vec![TokenResourceScope::Collection(collection_id)]),
+                )
+                .expect("visibility token scope should be valid"),
+            ),
+        )
+        .expect("resource-scoped visibility token should mint");
     assert!(scoped_token.expires_at().is_some());
     assert!(unscoped_token.expires_at().is_some());
 
@@ -86,6 +142,10 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
         .iter()
         .find(|token| token.name.as_deref() == Some(unscoped_name.as_str()))
         .expect("unscoped token metadata should list");
+    let visibility_metadata = listed_tokens
+        .iter()
+        .find(|token| token.name.as_deref() == Some(visibility_name.as_str()))
+        .expect("visibility token metadata should list");
     assert!(
         unscoped_metadata.scope.is_none(),
         "omitting scope must create an unscoped token"
@@ -131,6 +191,66 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
     };
     assert_scope_denied(scope_error);
 
+    let visibility_client = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
+        .expect("visibility token client should build")
+        .login_with_token(Token::new(visibility_token.into_inner()))
+        .expect("visibility token should authenticate");
+    assert_eq!(
+        visibility_client
+            .collections()
+            .query()
+            .id()
+            .eq(collection_id.get())
+            .one()
+            .expect("resource-scoped admin should list its collection")
+            .id,
+        collection_id
+    );
+    assert_eq!(
+        visibility_client
+            .classes()
+            .query()
+            .id()
+            .eq(class_id.get())
+            .one()
+            .expect("resource-scoped admin should list its class")
+            .id,
+        class_id
+    );
+    assert_eq!(
+        visibility_client
+            .objects(class_id)
+            .query()
+            .id()
+            .eq(object_id.get())
+            .one()
+            .expect("resource-scoped admin should list its object")
+            .id,
+        object_id
+    );
+    assert_eq!(
+        visibility_client
+            .class_relation()
+            .query()
+            .id()
+            .eq(class_relation.id.get())
+            .one()
+            .expect("resource-scoped admin should list its class relation")
+            .id,
+        class_relation.id
+    );
+    assert_eq!(
+        visibility_client
+            .object_relation()
+            .query()
+            .id()
+            .eq(object_relation.id.get())
+            .one()
+            .expect("resource-scoped admin should list its object relation")
+            .id,
+        object_relation.id
+    );
+
     let unscoped_client = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
         .expect("unscoped token client should build")
         .login_with_token(Token::new(unscoped_token.into_inner()))
@@ -157,6 +277,9 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
     admin
         .token_revoke(unscoped_metadata.id)
         .expect("unscoped token should revoke");
+    admin
+        .token_revoke(visibility_metadata.id)
+        .expect("visibility token should revoke");
 
     assert_token_rejected(
         scoped_client
@@ -172,8 +295,28 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
     harness
         .client
         .objects(class_id)
+        .get(object_id)
+        .expect("source object should remain selectable for cleanup")
+        .delete_relation_to(target_class.id, target_object.id)
+        .expect("visibility object relation cleanup should succeed");
+    source_class
+        .delete_relation(class_relation.id)
+        .expect("visibility class relation cleanup should succeed");
+    harness
+        .client
+        .objects(target_class.id)
+        .delete(target_object.id)
+        .expect("target object cleanup should succeed");
+    harness
+        .client
+        .objects(class_id)
         .delete(object_id)
         .expect("object cleanup should succeed");
+    harness
+        .client
+        .classes()
+        .delete(target_class.id)
+        .expect("target class cleanup should succeed");
     harness
         .client
         .classes()

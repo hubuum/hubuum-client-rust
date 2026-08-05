@@ -6,6 +6,44 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-05
+
+### Added
+
+- Complete typed coverage for the fields added between Hubuum server v0.0.5
+  and v0.0.8: validated positive `ObjectRelationLimit` values and per-side
+  class-relation cardinalities, timestamp preservation for all five core graph
+  import inputs, and total/query/hydration/render export-task timings.
+- `ClassRelationCreateOptions` and matching async/blocking
+  `create_relation_with_options()` helpers compose template aliases with
+  per-side cardinality limits on class-scoped relation creation.
+- Pinned downstream-consumer coverage verifies cardinality enforcement, core
+  import timestamp preservation, export timing details, and Hubuum v0.0.8's
+  resource-scoped administrator list visibility fix.
+
+### Changed
+
+- This release explicitly targets Hubuum server v0.0.8, with its 196-operation
+  OpenAPI contract and immutable multi-platform image
+  `sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6`.
+- Compatible lockfile dependencies are refreshed, including `aho-corasick`
+  1.1.5, `ipnet` 2.12.1, `regex-automata` 0.4.18, and test-only `trybuild`
+  1.0.120.
+- **Breaking:** `ClassRelationPost`, the five core graph `Import*Input` models,
+  and `ExportTaskDetails` have fields added for the v0.0.8 contract. Callers
+  constructing them with struct literals must populate the new optional
+  fields, usually with `None`; alternatively use the typed builders where
+  available.
+- **Breaking:** the nonfunctional class-relation template-alias query methods
+  and matching `ClassRelationGet` fields are removed because Hubuum v0.0.8 does
+  not support filtering relations by those fields.
+
+### Fixed
+
+- Typed class- and object-relation ID filters now emit Hubuum's actual query
+  keys (`from_classes`, `to_classes`, `from_objects`, `to_objects`, and
+  `class_relation`) instead of response-model field names that v0.0.8 rejects.
+
 ## [0.7.3] - 2026-08-01
 
 ### Changed

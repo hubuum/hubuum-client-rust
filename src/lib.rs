@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.7.3 targets Hubuum server v0.0.8. See the repository's
+//! Version 0.8.0 targets Hubuum server v0.0.8. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -97,15 +97,15 @@ pub use types::{
     ImportRunResult, ImportTaskDetails, ImportTaskResultResponse, LDAP_PROVIDER_KIND,
     LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, LoginRateLimitConfig, LoginRateLimitEntry,
     LoginRateLimitState, LogoutTokenRequest, NetworkConfig, NewEventSink, NewEventSubscription,
-    ObjectHistory, ObjectKey, PaginationConfig, PermissionConfig, PermissionId, Permissions,
-    PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalKey, PrincipalSettings,
-    ProbeResponse, Provenance, ProvenanceActor, ProvenancePrincipal, RESTORE_CONFIRMATION_PHRASE,
-    ReleaseRateLimitResponse, RemoteCallConfig, RemoteCallResultId, RemoteTargetHistory,
-    RestoreCapability, RestoreConfig, RestoreConfirmRequest, RestoreId, RestoreJobStatus,
-    RestoreStageResponse, RestoreTimestamps, RestoreValidationSummary, RunningConfig,
-    RunningLoginRateLimitConfig, SecretStatus, ServerConfig, SharedComputedScope, TaskConfig,
-    TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks, TaskProgress,
-    TaskQueueStateResponse, TaskResponse, TaskStatus, TlsConfig, Token, TokenId,
+    ObjectHistory, ObjectKey, ObjectRelationLimit, PaginationConfig, PermissionConfig,
+    PermissionId, Permissions, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalKey,
+    PrincipalSettings, ProbeResponse, Provenance, ProvenanceActor, ProvenancePrincipal,
+    RESTORE_CONFIRMATION_PHRASE, ReleaseRateLimitResponse, RemoteCallConfig, RemoteCallResultId,
+    RemoteTargetHistory, RestoreCapability, RestoreConfig, RestoreConfirmRequest, RestoreId,
+    RestoreJobStatus, RestoreStageResponse, RestoreTimestamps, RestoreValidationSummary,
+    RunningConfig, RunningLoginRateLimitConfig, SecretStatus, ServerConfig, SharedComputedScope,
+    TaskConfig, TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks,
+    TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, TlsConfig, Token, TokenId,
     TokenResourceScope, TokenScopeDetails, TypedObject, UnifiedSearchBatchResponse,
     UnifiedSearchDoneEvent, UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind,
     UnifiedSearchNext, UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent,

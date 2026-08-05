@@ -2,10 +2,11 @@ use std::time::Duration;
 
 use hubuum_client::{
     EventSinkKind, ExportContentType, ExportTemplateKind, FullImportGraph, FullImportRequest,
-    ImportClassInput, ImportCollectionInput, ImportEventSinkInput, ImportEventSubscriptionInput,
-    ImportExportTemplateInput, ImportGraph, ImportGroupInput, ImportGroupMembershipInput,
-    ImportIdentityScopeInput, ImportMode, ImportObjectInput, ImportPrincipalInput,
-    ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, RemoteAuthConfig,
+    ImportClassInput, ImportClassRelationInput, ImportCollectionInput, ImportEventSinkInput,
+    ImportEventSubscriptionInput, ImportExportTemplateInput, ImportGraph, ImportGroupInput,
+    ImportGroupMembershipInput, ImportIdentityScopeInput, ImportMode, ImportObjectInput,
+    ImportObjectRelationInput, ImportPrincipalInput, ImportPrincipalSubtype,
+    ImportRemoteTargetInput, ImportRequest, ObjectRelationLimit, RemoteAuthConfig,
     RemoteHttpMethod, RemoteTargetSubjectType, RestoreTimestamps, TaskKind,
 };
 use serde_json::json;
@@ -20,7 +21,18 @@ fn e2e_import_creates_graph_and_exposes_results() {
     let prefix = unique_case_prefix("imports");
     let collection_name = format!("{prefix}-collection");
     let class_name = format!("{prefix}-class");
+    let target_class_name = format!("{prefix}-target-class");
     let object_name = format!("{prefix}-object");
+    let target_object_name = format!("{prefix}-target-object");
+    let timestamps = RestoreTimestamps {
+        created_at: "2026-07-23T08:00:00"
+            .parse()
+            .expect("valid restore creation timestamp"),
+        updated_at: "2026-07-23T08:00:01"
+            .parse()
+            .expect("valid restore update timestamp"),
+    };
+    let one_relation = ObjectRelationLimit::new(1).expect("positive relation limit");
 
     let imported = harness
         .client
@@ -33,23 +45,67 @@ fn e2e_import_creates_graph_and_exposes_results() {
                     description: "e2e imported collection".to_string(),
                     parent_collection_ref: None,
                     parent_collection_key: None,
+                    timestamps: Some(timestamps.clone()),
                 }],
-                classes: vec![ImportClassInput {
-                    ref_: Some("class".to_string()),
-                    name: class_name.clone(),
-                    description: "e2e imported class".to_string(),
-                    json_schema: None,
-                    validate_schema: Some(false),
-                    collection_ref: Some("ns".to_string()),
-                    collection_key: None,
+                classes: vec![
+                    ImportClassInput {
+                        ref_: Some("class".to_string()),
+                        name: class_name.clone(),
+                        description: "e2e imported class".to_string(),
+                        json_schema: None,
+                        validate_schema: Some(false),
+                        collection_ref: Some("ns".to_string()),
+                        collection_key: None,
+                        timestamps: Some(timestamps.clone()),
+                    },
+                    ImportClassInput {
+                        ref_: Some("target-class".to_string()),
+                        name: target_class_name.clone(),
+                        description: "e2e imported target class".to_string(),
+                        json_schema: None,
+                        validate_schema: Some(false),
+                        collection_ref: Some("ns".to_string()),
+                        collection_key: None,
+                        timestamps: Some(timestamps.clone()),
+                    },
+                ],
+                objects: vec![
+                    ImportObjectInput {
+                        ref_: Some("object".to_string()),
+                        name: object_name.clone(),
+                        description: "e2e imported object".to_string(),
+                        data: json!({"source": "e2e-client", "imported": true}),
+                        class_ref: Some("class".to_string()),
+                        class_key: None,
+                        timestamps: Some(timestamps.clone()),
+                    },
+                    ImportObjectInput {
+                        ref_: Some("target-object".to_string()),
+                        name: target_object_name.clone(),
+                        description: "e2e imported target object".to_string(),
+                        data: json!({"source": "e2e-client", "target": true}),
+                        class_ref: Some("target-class".to_string()),
+                        class_key: None,
+                        timestamps: Some(timestamps.clone()),
+                    },
+                ],
+                class_relations: vec![ImportClassRelationInput {
+                    ref_: Some("class-relation".to_string()),
+                    from_class_ref: Some("class".to_string()),
+                    from_class_key: None,
+                    to_class_ref: Some("target-class".to_string()),
+                    to_class_key: None,
+                    from_max_relations: Some(one_relation),
+                    to_max_relations: None,
+                    timestamps: Some(timestamps.clone()),
                 }],
-                objects: vec![ImportObjectInput {
-                    ref_: Some("object".to_string()),
-                    name: object_name.clone(),
-                    description: "e2e imported object".to_string(),
-                    data: json!({"source": "e2e-client", "imported": true}),
-                    class_ref: Some("class".to_string()),
-                    class_key: None,
+                object_relations: vec![ImportObjectRelationInput {
+                    ref_: Some("object-relation".to_string()),
+                    from_object_ref: Some("object".to_string()),
+                    from_object_key: None,
+                    to_object_ref: Some("target-object".to_string()),
+                    to_object_key: None,
+                    timestamps: Some(timestamps.clone()),
                 }],
                 ..Default::default()
             })
@@ -93,6 +149,65 @@ fn e2e_import_creates_graph_and_exposes_results() {
         .object_by_name(&object_name)
         .expect("imported object should be selectable by name");
     assert_eq!(imported_object.resource().name, object_name);
+    assert_eq!(
+        imported_class.resource().created_at.0.naive_utc(),
+        timestamps.created_at
+    );
+    assert_eq!(
+        imported_object.resource().updated_at.0.naive_utc(),
+        timestamps.updated_at
+    );
+
+    let target_class = harness
+        .client
+        .classes()
+        .get_by_name(&target_class_name)
+        .expect("imported target class should be selectable by name");
+    let target_object = target_class
+        .object_by_name(&target_object_name)
+        .expect("imported target object should be selectable by name");
+    let class_relations = harness
+        .client
+        .class_relation()
+        .from_hubuum_class_id()
+        .eq(imported_class.id())
+        .to_hubuum_class_id()
+        .eq(target_class.id())
+        .list()
+        .expect("imported class relations should be selectable");
+    let class_relation = class_relations
+        .iter()
+        .find(|relation| {
+            relation.from_hubuum_class_id == imported_class.id()
+                && relation.to_hubuum_class_id == target_class.id()
+        })
+        .expect("imported class relation should include the target class");
+    assert_eq!(class_relation.from_max_relations, Some(one_relation));
+    assert_eq!(class_relation.to_max_relations, None);
+    assert_eq!(
+        class_relation.created_at.0.naive_utc(),
+        timestamps.created_at
+    );
+    let object_relations = harness
+        .client
+        .object_relation()
+        .from_hubuum_object_id()
+        .eq(imported_object.id())
+        .to_hubuum_object_id()
+        .eq(target_object.id())
+        .list()
+        .expect("imported object relations should be selectable");
+    let object_relation = object_relations
+        .iter()
+        .find(|relation| {
+            relation.from_hubuum_object_id == imported_object.id()
+                && relation.to_hubuum_object_id == target_object.id()
+        })
+        .expect("imported object relation should include the target object");
+    assert_eq!(
+        object_relation.updated_at.0.naive_utc(),
+        timestamps.updated_at
+    );
 
     let imported_collection = harness
         .client
@@ -100,6 +215,10 @@ fn e2e_import_creates_graph_and_exposes_results() {
         .get_by_name(&collection_name)
         .expect("imported collection should be selectable by name");
     assert_eq!(imported_collection.resource().name, collection_name);
+    assert_eq!(
+        imported_collection.resource().created_at.0.naive_utc(),
+        timestamps.created_at
+    );
 
     let collection_history = harness
         .client
@@ -194,6 +313,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
         description: "Full import collection".to_string(),
         parent_collection_ref: None,
         parent_collection_key: None,
+        timestamps: None,
     });
     graph.export_templates.push(ImportExportTemplateInput {
         ref_: Some("template".to_string()),

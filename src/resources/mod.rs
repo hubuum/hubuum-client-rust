@@ -14,8 +14,9 @@ mod service_account;
 pub(crate) mod user;
 
 pub use self::class::{
-    Class, ClassGet, ClassId, ClassPatch, ClassPost, ClassRelation, ClassRelationGet,
-    ClassRelationId, ClassRelationPatch, ClassRelationPost, ClassWithPath, RelatedClassGraph,
+    Class, ClassGet, ClassId, ClassPatch, ClassPost, ClassRelation, ClassRelationCreateOptions,
+    ClassRelationGet, ClassRelationId, ClassRelationPatch, ClassRelationPost, ClassWithPath,
+    RelatedClassGraph,
 };
 pub use self::collection::{
     Collection, CollectionGet, CollectionId, CollectionPatch, CollectionPost,

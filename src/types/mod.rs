@@ -14,6 +14,7 @@ mod import;
 mod meta;
 mod params;
 mod provenance;
+mod relation;
 mod remote;
 mod search;
 mod settings;
@@ -92,6 +93,7 @@ pub use meta::{
 };
 pub use params::{ClassParams, CollectionPermissionsGrantParams, UserParams};
 pub use provenance::{Provenance, ProvenanceActor, ProvenancePrincipal};
+pub use relation::ObjectRelationLimit;
 pub use remote::{
     NewRemoteTarget, RemoteAuthConfig, RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject,
     RemoteTarget, RemoteTargetGet, RemoteTargetInvokeRequest, RemoteTargetSubjectType,

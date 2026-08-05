@@ -126,6 +126,9 @@ pub enum ApiError {
     #[error("Invalid object aggregate JSON path: {reason}")]
     InvalidObjectAggregateJsonPath { reason: &'static str },
 
+    #[error("Object relation limit must be positive, got {value}")]
+    InvalidObjectRelationLimit { value: i32 },
+
     #[error("Export scope {field} must be positive, got {value}")]
     InvalidExportScopeId { field: &'static str, value: i32 },
 
@@ -261,6 +264,10 @@ impl std::fmt::Debug for ApiError {
             Self::InvalidObjectAggregateJsonPath { reason } => f
                 .debug_struct("InvalidObjectAggregateJsonPath")
                 .field("reason", reason)
+                .finish(),
+            Self::InvalidObjectRelationLimit { value } => f
+                .debug_struct("InvalidObjectRelationLimit")
+                .field("value", value)
                 .finish(),
             Self::InvalidExportScopeId { field, value } => f
                 .debug_struct("InvalidExportScopeId")

@@ -11,21 +11,70 @@ use crate::client::sync::{
     GraphRequest as SyncGraphRequest, Handle as SyncHandle, QueryOp as SyncQueryOp, one_or_err,
 };
 use crate::{
-    ApiError, CollectionId, GroupPermissionsResult, Object, endpoints::Endpoint,
-    types::HubuumDateTime,
+    ApiError, CollectionId, GroupPermissionsResult, Object, ObjectRelationLimit,
+    endpoints::Endpoint, types::HubuumDateTime,
 };
 #[cfg(feature = "blocking")]
 use crate::{FilterOperator, QueryFilter};
 
 use super::Collection;
 
-#[derive(Debug, Clone, serde::Serialize)]
-struct NewClassRelationFromClassParams {
-    to_hubuum_class_id: ClassId,
+/// Optional aliases and per-side cardinality limits for a class relation.
+#[derive(Default, Debug, Clone, serde::Serialize, PartialEq, Eq)]
+pub struct ClassRelationCreateOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     forward_template_alias: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     reverse_template_alias: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    from_max_relations: Option<ObjectRelationLimit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    to_max_relations: Option<ObjectRelationLimit>,
+}
+
+impl ClassRelationCreateOptions {
+    pub fn with_forward_template_alias(mut self, alias: impl Into<String>) -> Self {
+        self.forward_template_alias = Some(alias.into());
+        self
+    }
+
+    pub fn with_reverse_template_alias(mut self, alias: impl Into<String>) -> Self {
+        self.reverse_template_alias = Some(alias.into());
+        self
+    }
+
+    pub fn with_from_max_relations(mut self, limit: ObjectRelationLimit) -> Self {
+        self.from_max_relations = Some(limit);
+        self
+    }
+
+    pub fn with_to_max_relations(mut self, limit: ObjectRelationLimit) -> Self {
+        self.to_max_relations = Some(limit);
+        self
+    }
+
+    pub fn forward_template_alias(&self) -> Option<&str> {
+        self.forward_template_alias.as_deref()
+    }
+
+    pub fn reverse_template_alias(&self) -> Option<&str> {
+        self.reverse_template_alias.as_deref()
+    }
+
+    pub const fn from_max_relations(&self) -> Option<ObjectRelationLimit> {
+        self.from_max_relations
+    }
+
+    pub const fn to_max_relations(&self) -> Option<ObjectRelationLimit> {
+        self.to_max_relations
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+struct NewClassRelationFromClassParams {
+    to_hubuum_class_id: ClassId,
+    #[serde(flatten)]
+    options: ClassRelationCreateOptions,
 }
 
 include!("generated/class.rs");
@@ -158,7 +207,7 @@ impl SyncHandle<Class> {
         &self,
         to_class_id: I,
     ) -> Result<ClassRelation, ApiError> {
-        self.create_relation_with_aliases(to_class_id, None, None)
+        self.create_relation_with_options(to_class_id, ClassRelationCreateOptions::default())
     }
 
     pub fn create_relation_with_aliases<I>(
@@ -166,6 +215,24 @@ impl SyncHandle<Class> {
         to_class_id: I,
         forward_template_alias: Option<String>,
         reverse_template_alias: Option<String>,
+    ) -> Result<ClassRelation, ApiError>
+    where
+        I: Into<ClassId>,
+    {
+        self.create_relation_with_options(
+            to_class_id,
+            ClassRelationCreateOptions {
+                forward_template_alias,
+                reverse_template_alias,
+                ..ClassRelationCreateOptions::default()
+            },
+        )
+    }
+
+    pub fn create_relation_with_options<I>(
+        &self,
+        to_class_id: I,
+        options: ClassRelationCreateOptions,
     ) -> Result<ClassRelation, ApiError>
     where
         I: Into<ClassId>,
@@ -178,8 +245,7 @@ impl SyncHandle<Class> {
                 vec![],
                 NewClassRelationFromClassParams {
                     to_hubuum_class_id: to_class_id.into(),
-                    forward_template_alias,
-                    reverse_template_alias,
+                    options,
                 },
             )?
             .ok_or(ApiError::EmptyResult(
@@ -299,7 +365,7 @@ impl AsyncHandle<Class> {
         &self,
         to_class_id: I,
     ) -> Result<ClassRelation, ApiError> {
-        self.create_relation_with_aliases(to_class_id, None, None)
+        self.create_relation_with_options(to_class_id, ClassRelationCreateOptions::default())
             .await
     }
 
@@ -312,6 +378,25 @@ impl AsyncHandle<Class> {
     where
         I: Into<ClassId>,
     {
+        self.create_relation_with_options(
+            to_class_id,
+            ClassRelationCreateOptions {
+                forward_template_alias,
+                reverse_template_alias,
+                ..ClassRelationCreateOptions::default()
+            },
+        )
+        .await
+    }
+
+    pub async fn create_relation_with_options<I>(
+        &self,
+        to_class_id: I,
+        options: ClassRelationCreateOptions,
+    ) -> Result<ClassRelation, ApiError>
+    where
+        I: Into<ClassId>,
+    {
         self.client()
             .request_with_endpoint::<NewClassRelationFromClassParams, ClassRelation>(
                 reqwest::Method::POST,
@@ -320,8 +405,7 @@ impl AsyncHandle<Class> {
                 vec![],
                 NewClassRelationFromClassParams {
                     to_hubuum_class_id: to_class_id.into(),
-                    forward_template_alias,
-                    reverse_template_alias,
+                    options,
                 },
             )
             .await?
@@ -359,8 +443,7 @@ mod alias_tests {
     fn new_relation_params_without_aliases_serialize_one_key() {
         let params = NewClassRelationFromClassParams {
             to_hubuum_class_id: 2.into(),
-            forward_template_alias: None,
-            reverse_template_alias: None,
+            options: ClassRelationCreateOptions::default(),
         };
         let value = serde_json::to_value(&params).unwrap();
         let obj = value.as_object().unwrap();
@@ -372,11 +455,16 @@ mod alias_tests {
     fn new_relation_params_with_aliases_serialize_three_keys() {
         let params = NewClassRelationFromClassParams {
             to_hubuum_class_id: 2.into(),
-            forward_template_alias: Some("rooms".into()),
-            reverse_template_alias: Some("hosts".into()),
+            options: ClassRelationCreateOptions::default()
+                .with_forward_template_alias("rooms")
+                .with_reverse_template_alias("hosts")
+                .with_from_max_relations(ObjectRelationLimit::new(1).unwrap())
+                .with_to_max_relations(ObjectRelationLimit::new(2).unwrap()),
         };
         let value = serde_json::to_value(&params).unwrap();
         assert_eq!(value["forward_template_alias"], "rooms");
         assert_eq!(value["reverse_template_alias"], "hosts");
+        assert_eq!(value["from_max_relations"], 1);
+        assert_eq!(value["to_max_relations"], 2);
     }
 }

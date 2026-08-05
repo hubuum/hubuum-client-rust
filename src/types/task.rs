@@ -112,6 +112,10 @@ pub struct ExportTaskDetails {
     pub output_content_type: Option<String>,
     pub output_expires_at: Option<HubuumDateTime>,
     pub template_name: Option<String>,
+    pub total_duration_ms: Option<i32>,
+    pub query_duration_ms: Option<i32>,
+    pub hydration_duration_ms: Option<i32>,
+    pub render_duration_ms: Option<i32>,
     pub truncated: Option<bool>,
     pub warning_count: Option<i32>,
 }
@@ -125,6 +129,10 @@ impl std::fmt::Debug for ExportTaskDetails {
             .field("output_content_type", &self.output_content_type)
             .field("output_expires_at", &self.output_expires_at)
             .field("template_name", &self.template_name)
+            .field("total_duration_ms", &self.total_duration_ms)
+            .field("query_duration_ms", &self.query_duration_ms)
+            .field("hydration_duration_ms", &self.hydration_duration_ms)
+            .field("render_duration_ms", &self.render_duration_ms)
             .field("truncated", &self.truncated)
             .field("warning_count", &self.warning_count)
             .finish()
@@ -322,6 +330,10 @@ mod tests {
                 "output_url": "/api/v1/exports/5/output",
                 "output_available": true,
                 "output_expired": false,
+                "total_duration_ms": 12,
+                "query_duration_ms": 3,
+                "hydration_duration_ms": 4,
+                "render_duration_ms": 5,
                 "warning_count": 0
             }
         }))
@@ -329,6 +341,10 @@ mod tests {
         let export = details.export.expect("export details present");
         assert_eq!(export.output_url, "/api/v1/exports/5/output");
         assert!(export.output_available);
+        assert_eq!(export.total_duration_ms, Some(12));
+        assert_eq!(export.query_duration_ms, Some(3));
+        assert_eq!(export.hydration_duration_ms, Some(4));
+        assert_eq!(export.render_duration_ms, Some(5));
         assert_eq!(export.warning_count, Some(0));
     }
 
