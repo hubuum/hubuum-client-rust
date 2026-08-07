@@ -560,6 +560,12 @@ pub struct RenewTokenRequest {
     pub expires_at: Option<HubuumDateTime>,
 }
 
+fn naive_utc_expiry(expires_at: &Option<HubuumDateTime>) -> Option<NaiveDateTime> {
+    expires_at
+        .as_ref()
+        .map(|expires_at| expires_at.0.naive_utc())
+}
+
 impl Serialize for RenewTokenRequest {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -572,10 +578,7 @@ impl Serialize for RenewTokenRequest {
         }
 
         Wire {
-            expires_at: self
-                .expires_at
-                .as_ref()
-                .map(|expires_at| expires_at.0.naive_utc()),
+            expires_at: naive_utc_expiry(&self.expires_at),
         }
         .serialize(serializer)
     }
@@ -602,10 +605,7 @@ impl Serialize for NewTokenRequest {
         Wire {
             name: self.name.as_ref(),
             description: self.description.as_ref(),
-            expires_at: self
-                .expires_at
-                .as_ref()
-                .map(|expires_at| expires_at.0.naive_utc()),
+            expires_at: naive_utc_expiry(&self.expires_at),
             scope: scope.as_deref(),
         }
         .serialize(serializer)

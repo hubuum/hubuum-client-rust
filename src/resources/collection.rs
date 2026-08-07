@@ -35,7 +35,7 @@ enum CollectionPermissionsWire {
 }
 
 fn decode_collection_permissions(body: &str) -> Result<CollectionPermissionsResponse, ApiError> {
-    match serde_json::from_str(body)? {
+    match crate::client::decode_json_body(body)? {
         CollectionPermissionsWire::Revisioned(permission_set) => {
             Ok(CollectionPermissionsResponse::Revisioned(permission_set))
         }
@@ -46,13 +46,6 @@ fn decode_collection_permissions(body: &str) -> Result<CollectionPermissionsResp
             Ok(CollectionPermissionsResponse::Expanded(vec![row]))
         }
     }
-}
-
-fn decode_revisioned_permission_set(
-    body: &str,
-    etag: Option<EntityTag>,
-) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
-    Ok(Revisioned::new(serde_json::from_str(body)?, etag))
 }
 
 fn collection_permission_params(collection_id: CollectionId) -> UrlParams {
@@ -80,6 +73,22 @@ fn collection_single_permission_params(
     let mut params = collection_group_permission_params(collection_id, group_id);
     params.push((Cow::Borrowed("permission"), permission.to_string().into()));
     params
+}
+
+fn collection_principal_permission_params(
+    collection_id: CollectionId,
+    principal_id: PrincipalId,
+) -> UrlParams {
+    vec![
+        (
+            Cow::Borrowed("collection_id"),
+            collection_id.to_string().into(),
+        ),
+        (
+            Cow::Borrowed("principal_id"),
+            principal_id.to_string().into(),
+        ),
+    ]
 }
 
 include!("generated/collection.rs");
@@ -200,13 +209,7 @@ impl SyncHandle<Collection> {
         permissions: Vec<String>,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+        let url_params = collection_group_permission_params(self.id(), group_id);
 
         self.client()
             .request_with_endpoint::<CollectionPermissionsGrantParams, CollectionPermissionSet>(
@@ -233,9 +236,9 @@ impl SyncHandle<Collection> {
             collection_group_permission_params(self.id(), group_id.into()),
             vec![],
             CollectionPermissionsGrantParams::from_strings(permissions)?,
-            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            &crate::client::if_match_headers(etag),
         )?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub fn grant_permissions(
@@ -244,13 +247,7 @@ impl SyncHandle<Collection> {
         permissions: Vec<String>,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+        let url_params = collection_group_permission_params(self.id(), group_id);
 
         self.client()
             .request_with_endpoint::<CollectionPermissionsGrantParams, CollectionPermissionSet>(
@@ -275,9 +272,9 @@ impl SyncHandle<Collection> {
             collection_group_permission_params(self.id(), group_id.into()),
             vec![],
             CollectionPermissionsGrantParams::from_strings(permissions)?,
-            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            &crate::client::if_match_headers(etag),
         )?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub fn group_permissions(
@@ -312,13 +309,7 @@ impl SyncHandle<Collection> {
         group_id: impl Into<GroupId>,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+        let url_params = collection_group_permission_params(self.id(), group_id);
 
         let raw = self.client().request_with_endpoint_raw(
             reqwest::Method::DELETE,
@@ -327,7 +318,7 @@ impl SyncHandle<Collection> {
             vec![],
             SyncEmptyPostParams {},
         )?;
-        Ok(serde_json::from_str(&raw.body)?)
+        crate::client::decode_json_body(&raw.body)
     }
 
     pub fn revoke_permissions_if_match(
@@ -341,9 +332,9 @@ impl SyncHandle<Collection> {
             collection_group_permission_params(self.id(), group_id.into()),
             vec![],
             SyncEmptyPostParams {},
-            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            &crate::client::if_match_headers(etag),
         )?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub fn has_group_permission(
@@ -352,14 +343,7 @@ impl SyncHandle<Collection> {
         permission: Permissions,
     ) -> Result<bool, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-            (Cow::Borrowed("permission"), permission.to_string().into()),
-        ];
+        let url_params = collection_single_permission_params(self.id(), group_id, permission);
 
         match self
             .client()
@@ -386,14 +370,7 @@ impl SyncHandle<Collection> {
         permission: Permissions,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-            (Cow::Borrowed("permission"), permission.to_string().into()),
-        ];
+        let url_params = collection_single_permission_params(self.id(), group_id, permission);
 
         self.client()
             .request_with_endpoint::<SyncEmptyPostParams, CollectionPermissionSet>(
@@ -418,9 +395,9 @@ impl SyncHandle<Collection> {
             collection_single_permission_params(self.id(), group_id.into(), permission),
             vec![],
             SyncEmptyPostParams {},
-            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            &crate::client::if_match_headers(etag),
         )?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub fn revoke_permission(
@@ -429,14 +406,7 @@ impl SyncHandle<Collection> {
         permission: Permissions,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-            (Cow::Borrowed("permission"), permission.to_string().into()),
-        ];
+        let url_params = collection_single_permission_params(self.id(), group_id, permission);
 
         let raw = self.client().request_with_endpoint_raw(
             reqwest::Method::DELETE,
@@ -445,7 +415,7 @@ impl SyncHandle<Collection> {
             vec![],
             SyncEmptyPostParams {},
         )?;
-        Ok(serde_json::from_str(&raw.body)?)
+        crate::client::decode_json_body(&raw.body)
     }
 
     pub fn revoke_permission_if_match(
@@ -460,9 +430,9 @@ impl SyncHandle<Collection> {
             collection_single_permission_params(self.id(), group_id.into(), permission),
             vec![],
             SyncEmptyPostParams {},
-            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            &crate::client::if_match_headers(etag),
         )?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub fn principal_permissions(
@@ -477,13 +447,7 @@ impl SyncHandle<Collection> {
         group_id: impl Into<GroupId>,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+        let url_params = collection_group_permission_params(self.id(), group_id);
 
         let res = self
             .client()
@@ -503,16 +467,7 @@ impl SyncHandle<Collection> {
         principal_id: impl Into<PrincipalId>,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
         let principal_id = principal_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (
-                Cow::Borrowed("principal_id"),
-                principal_id.to_string().into(),
-            ),
-        ];
+        let url_params = collection_principal_permission_params(self.id(), principal_id);
 
         let res = self
             .client()
@@ -535,16 +490,7 @@ impl SyncHandle<Collection> {
         SyncCursorRequest::new(
             self.client().clone(),
             Endpoint::CollectionPrincipalPermissions,
-            vec![
-                (
-                    Cow::Borrowed("collection_id"),
-                    self.resource().id.to_string().into(),
-                ),
-                (
-                    Cow::Borrowed("principal_id"),
-                    principal_id.to_string().into(),
-                ),
-            ],
+            collection_principal_permission_params(self.id(), principal_id),
         )
     }
 
@@ -686,13 +632,7 @@ impl AsyncHandle<Collection> {
         permissions: Vec<String>,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+        let url_params = collection_group_permission_params(self.id(), group_id);
 
         self.client()
             .request_with_endpoint::<CollectionPermissionsGrantParams, CollectionPermissionSet>(
@@ -722,10 +662,10 @@ impl AsyncHandle<Collection> {
                 collection_group_permission_params(self.id(), group_id.into()),
                 vec![],
                 CollectionPermissionsGrantParams::from_strings(permissions)?,
-                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+                &crate::client::if_match_headers(etag),
             )
             .await?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub async fn grant_permissions(
@@ -734,13 +674,7 @@ impl AsyncHandle<Collection> {
         permissions: Vec<String>,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+        let url_params = collection_group_permission_params(self.id(), group_id);
 
         self.client()
             .request_with_endpoint::<CollectionPermissionsGrantParams, CollectionPermissionSet>(
@@ -768,10 +702,10 @@ impl AsyncHandle<Collection> {
                 collection_group_permission_params(self.id(), group_id.into()),
                 vec![],
                 CollectionPermissionsGrantParams::from_strings(permissions)?,
-                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+                &crate::client::if_match_headers(etag),
             )
             .await?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub async fn group_permissions(
@@ -812,13 +746,7 @@ impl AsyncHandle<Collection> {
         group_id: impl Into<GroupId>,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+        let url_params = collection_group_permission_params(self.id(), group_id);
 
         let raw = self
             .client()
@@ -830,7 +758,7 @@ impl AsyncHandle<Collection> {
                 AsyncEmptyPostParams {},
             )
             .await?;
-        Ok(serde_json::from_str(&raw.body)?)
+        crate::client::decode_json_body(&raw.body)
     }
 
     pub async fn revoke_permissions_if_match(
@@ -846,10 +774,10 @@ impl AsyncHandle<Collection> {
                 collection_group_permission_params(self.id(), group_id.into()),
                 vec![],
                 AsyncEmptyPostParams {},
-                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+                &crate::client::if_match_headers(etag),
             )
             .await?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub async fn has_group_permission(
@@ -858,14 +786,7 @@ impl AsyncHandle<Collection> {
         permission: Permissions,
     ) -> Result<bool, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-            (Cow::Borrowed("permission"), permission.to_string().into()),
-        ];
+        let url_params = collection_single_permission_params(self.id(), group_id, permission);
 
         match self
             .client()
@@ -894,14 +815,7 @@ impl AsyncHandle<Collection> {
         permission: Permissions,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-            (Cow::Borrowed("permission"), permission.to_string().into()),
-        ];
+        let url_params = collection_single_permission_params(self.id(), group_id, permission);
 
         self.client()
             .request_with_endpoint::<AsyncEmptyPostParams, CollectionPermissionSet>(
@@ -929,10 +843,10 @@ impl AsyncHandle<Collection> {
                 collection_single_permission_params(self.id(), group_id.into(), permission),
                 vec![],
                 AsyncEmptyPostParams {},
-                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+                &crate::client::if_match_headers(etag),
             )
             .await?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub async fn revoke_permission(
@@ -941,14 +855,7 @@ impl AsyncHandle<Collection> {
         permission: Permissions,
     ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-            (Cow::Borrowed("permission"), permission.to_string().into()),
-        ];
+        let url_params = collection_single_permission_params(self.id(), group_id, permission);
 
         let raw = self
             .client()
@@ -960,7 +867,7 @@ impl AsyncHandle<Collection> {
                 AsyncEmptyPostParams {},
             )
             .await?;
-        Ok(serde_json::from_str(&raw.body)?)
+        crate::client::decode_json_body(&raw.body)
     }
 
     pub async fn revoke_permission_if_match(
@@ -977,10 +884,10 @@ impl AsyncHandle<Collection> {
                 collection_single_permission_params(self.id(), group_id.into(), permission),
                 vec![],
                 AsyncEmptyPostParams {},
-                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+                &crate::client::if_match_headers(etag),
             )
             .await?;
-        decode_revisioned_permission_set(&raw.body, raw.etag)
+        crate::client::decode_revisioned(raw)
     }
 
     pub async fn principal_permissions(
@@ -995,13 +902,7 @@ impl AsyncHandle<Collection> {
         group_id: impl Into<GroupId>,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
         let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+        let url_params = collection_group_permission_params(self.id(), group_id);
 
         let res = self
             .client()
@@ -1022,16 +923,7 @@ impl AsyncHandle<Collection> {
         principal_id: impl Into<PrincipalId>,
     ) -> Result<Vec<EffectiveGroupPermission>, ApiError> {
         let principal_id = principal_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (
-                Cow::Borrowed("principal_id"),
-                principal_id.to_string().into(),
-            ),
-        ];
+        let url_params = collection_principal_permission_params(self.id(), principal_id);
 
         let res = self
             .client()
@@ -1055,16 +947,7 @@ impl AsyncHandle<Collection> {
         AsyncCursorRequest::new(
             self.client().clone(),
             Endpoint::CollectionPrincipalPermissions,
-            vec![
-                (
-                    Cow::Borrowed("collection_id"),
-                    self.resource().id.to_string().into(),
-                ),
-                (
-                    Cow::Borrowed("principal_id"),
-                    principal_id.to_string().into(),
-                ),
-            ],
+            collection_principal_permission_params(self.id(), principal_id),
         )
     }
 

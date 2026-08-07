@@ -20,7 +20,10 @@ pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryNumericField, QueryTextField, QueryValueField,
     RetryPolicy,
 };
-pub(crate) use self::shared::{redact_reqwest_error, redacted_url_for_log};
+pub(crate) use self::shared::{
+    decode_json_body, decode_revisioned, if_match_headers, redact_reqwest_error,
+    redacted_url_for_log,
+};
 #[cfg(feature = "async")]
 pub use self::transport::AsyncTransport;
 #[cfg(feature = "blocking")]

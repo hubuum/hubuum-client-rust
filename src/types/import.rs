@@ -222,6 +222,7 @@ impl std::fmt::Debug for ImportGroupInput {
             .field("external_key", &redacted_if_present(&self.external_key))
             .field("last_sync_attempted_at", &self.last_sync_attempted_at)
             .field("last_sync_success_at", &self.last_sync_success_at)
+            .field("condition", &self.condition)
             .field("timestamps", &self.timestamps)
             .finish()
     }
@@ -319,6 +320,7 @@ impl std::fmt::Debug for ImportPrincipalInput {
             .field("last_sync_attempted_at", &self.last_sync_attempted_at)
             .field("last_sync_success_at", &self.last_sync_success_at)
             .field("subtype", &self.subtype)
+            .field("condition", &self.condition)
             .field("timestamps", &self.timestamps)
             .finish()
     }
@@ -400,6 +402,7 @@ impl std::fmt::Debug for ImportClassInput {
             .field("validate_schema", &self.validate_schema)
             .field("collection_ref", &self.collection_ref)
             .field("collection_key", &self.collection_key)
+            .field("condition", &self.condition)
             .field("timestamps", &self.timestamps)
             .finish()
     }
@@ -428,6 +431,7 @@ impl std::fmt::Debug for ImportObjectInput {
             .field("data", &"[REDACTED]")
             .field("class_ref", &self.class_ref)
             .field("class_key", &self.class_key)
+            .field("condition", &self.condition)
             .field("timestamps", &self.timestamps)
             .finish()
     }
@@ -608,6 +612,7 @@ impl std::fmt::Debug for ImportExportTemplateInput {
                 &self.default_missing_data_policy,
             )
             .field("default_limits", &self.default_limits)
+            .field("condition", &self.condition)
             .field("timestamps", &self.timestamps)
             .finish()
     }
@@ -655,6 +660,7 @@ impl std::fmt::Debug for ImportRemoteTargetInput {
             .field("allowed_subject_types", &self.allowed_subject_types)
             .field("timeout_ms", &self.timeout_ms)
             .field("enabled", &self.enabled)
+            .field("condition", &self.condition)
             .field("timestamps", &self.timestamps)
             .finish()
     }
@@ -683,6 +689,7 @@ impl std::fmt::Debug for ImportEventSinkInput {
             .field("config", &"[REDACTED]")
             .field("secret_ref", &redacted_if_present(&self.secret_ref))
             .field("enabled", &self.enabled)
+            .field("condition", &self.condition)
             .field("timestamps", &self.timestamps)
             .finish()
     }
@@ -773,6 +780,7 @@ impl std::fmt::Debug for ImportEventSubscriptionInput {
             .field("filter", &"[REDACTED]")
             .field("routing", &"[REDACTED]")
             .field("enabled", &self.enabled)
+            .field("condition", &self.condition)
             .field("timestamps", &self.timestamps)
             .finish()
     }
@@ -802,6 +810,7 @@ impl std::fmt::Debug for ImportGraph {
             .field("collection_count", &self.collections.len())
             .field("class_count", &self.classes.len())
             .field("object_count", &self.objects.len())
+            .field("computed_field_count", &self.computed_fields.len())
             .field("class_relation_count", &self.class_relations.len())
             .field("object_relation_count", &self.object_relations.len())
             .field(
@@ -862,6 +871,7 @@ impl std::fmt::Debug for FullImportGraph {
             .field("collection_count", &self.collections.len())
             .field("class_count", &self.classes.len())
             .field("object_count", &self.objects.len())
+            .field("computed_field_count", &self.computed_fields.len())
             .field("class_relation_count", &self.class_relations.len())
             .field("object_relation_count", &self.object_relations.len())
             .field(
@@ -1125,7 +1135,9 @@ mod tests {
             validate_schema: Some(true),
             collection_ref: Some("collection-ref".into()),
             collection_key: None,
-            condition: None,
+            condition: Some(ImportWriteCondition::IfRevision {
+                expected_revision: crate::types::ResourceRevision::new(3).unwrap(),
+            }),
             timestamps: None,
         };
         let object = ImportObjectInput {
@@ -1135,7 +1147,7 @@ mod tests {
             data: serde_json::json!({"token": "object-secret"}),
             class_ref: Some("class-ref".into()),
             class_key: None,
-            condition: None,
+            condition: Some(ImportWriteCondition::CreateOnly),
             timestamps: None,
         };
         let request = ImportRequest::new(ImportGraph {
@@ -1149,6 +1161,12 @@ mod tests {
         assert!(!diagnostic.contains("object-secret"), "{diagnostic}");
         assert!(diagnostic.contains("class_count: 1"), "{diagnostic}");
         assert!(diagnostic.contains("object_count: 1"), "{diagnostic}");
+        assert!(
+            diagnostic.contains("computed_field_count: 0"),
+            "{diagnostic}"
+        );
+        assert!(diagnostic.contains("expected_revision: ResourceRevision(3)"));
+        assert!(diagnostic.contains("condition: Some(CreateOnly)"));
         assert_eq!(
             class.json_schema.as_ref().unwrap()["default"],
             "schema-secret"

@@ -336,19 +336,10 @@ pub(crate) fn principal_token_revoke_sync(
     principal_id: impl Into<PrincipalId>,
     token_id: impl Into<TokenId>,
 ) -> Result<(), ApiError> {
-    let principal_id = principal_id.into();
-    let token_id = token_id.into();
-    let url_params = vec![
-        (
-            Cow::Borrowed("principal_id"),
-            principal_id.to_string().into(),
-        ),
-        (Cow::Borrowed("token_id"), token_id.to_string().into()),
-    ];
     client.request_with_endpoint::<SyncEmptyPostParams, serde_json::Value>(
         reqwest::Method::POST,
         &Endpoint::PrincipalTokenRevoke,
-        url_params,
+        principal_token_url_params(principal_id, token_id),
         vec![],
         SyncEmptyPostParams {},
     )?;
@@ -368,8 +359,7 @@ pub(crate) fn principal_token_get_sync(
         vec![],
         SyncEmptyPostParams {},
     )?;
-    let value = serde_json::from_str(&raw.body)?;
-    Ok(Revisioned::new(value, raw.etag))
+    crate::client::decode_revisioned(raw)
 }
 
 #[cfg(feature = "blocking")]
@@ -403,7 +393,7 @@ pub(crate) fn principal_token_revoke_if_match_sync(
         principal_token_url_params(principal_id, token_id),
         vec![],
         SyncEmptyPostParams {},
-        &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+        &crate::client::if_match_headers(etag),
     )?;
     Ok(())
 }
@@ -475,20 +465,11 @@ pub(crate) async fn principal_token_revoke_async(
     principal_id: impl Into<PrincipalId>,
     token_id: impl Into<TokenId>,
 ) -> Result<(), ApiError> {
-    let principal_id = principal_id.into();
-    let token_id = token_id.into();
-    let url_params = vec![
-        (
-            Cow::Borrowed("principal_id"),
-            principal_id.to_string().into(),
-        ),
-        (Cow::Borrowed("token_id"), token_id.to_string().into()),
-    ];
     client
         .request_with_endpoint::<AsyncEmptyPostParams, serde_json::Value>(
             reqwest::Method::POST,
             &Endpoint::PrincipalTokenRevoke,
-            url_params,
+            principal_token_url_params(principal_id, token_id),
             vec![],
             AsyncEmptyPostParams {},
         )
@@ -526,8 +507,7 @@ pub(crate) async fn principal_token_get_async(
             AsyncEmptyPostParams {},
         )
         .await?;
-    let value = serde_json::from_str(&raw.body)?;
-    Ok(Revisioned::new(value, raw.etag))
+    crate::client::decode_revisioned(raw)
 }
 
 #[cfg(feature = "async")]
@@ -563,7 +543,7 @@ pub(crate) async fn principal_token_revoke_if_match_async(
             principal_token_url_params(principal_id, token_id),
             vec![],
             AsyncEmptyPostParams {},
-            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            &crate::client::if_match_headers(etag),
         )
         .await?;
     Ok(())

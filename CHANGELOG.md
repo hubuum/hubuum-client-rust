@@ -55,6 +55,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   revision-aware disaster-recovery snapshot format. Older backup artifacts
   must be restored with the server version that produced them.
 
+### Fixed
+
+- Validate response ETags instead of silently discarding malformed values,
+  and preserve path-aware JSON errors for successful responses with bodies,
+  including DELETE operations.
+
 ## [0.8.0] - 2026-08-05
 
 ### Added

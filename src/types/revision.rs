@@ -117,6 +117,12 @@ impl fmt::Display for EntityTag {
     }
 }
 
+impl AsRef<str> for EntityTag {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
 impl TryFrom<String> for EntityTag {
     type Error = ApiError;
 

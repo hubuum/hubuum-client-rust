@@ -84,7 +84,7 @@ impl SyncHandle<Group> {
             vec![],
             SyncEmptyPostParams {},
         )?;
-        Ok(Revisioned::new(serde_json::from_str(&raw.body)?, raw.etag))
+        crate::client::decode_revisioned(raw)
     }
 
     pub fn remove_member_if_match(
@@ -98,7 +98,7 @@ impl SyncHandle<Group> {
             group_member_url_params(self.id(), principal_id),
             vec![],
             SyncEmptyPostParams {},
-            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            &crate::client::if_match_headers(etag),
         )?;
         Ok(())
     }
@@ -171,7 +171,7 @@ impl AsyncHandle<Group> {
                 AsyncEmptyPostParams {},
             )
             .await?;
-        Ok(Revisioned::new(serde_json::from_str(&raw.body)?, raw.etag))
+        crate::client::decode_revisioned(raw)
     }
 
     pub async fn remove_member_if_match(
@@ -186,7 +186,7 @@ impl AsyncHandle<Group> {
                 group_member_url_params(self.id(), principal_id),
                 vec![],
                 AsyncEmptyPostParams {},
-                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+                &crate::client::if_match_headers(etag),
             )
             .await?;
         Ok(())

@@ -406,7 +406,7 @@ impl<S> Client<S> {
             let status = response.status();
             let (next_cursor, total_count, page_limit, content_type) =
                 shared::response_metadata(response.headers());
-            let etag = shared::response_etag(response.headers());
+            let etag = shared::response_etag(response.headers())?;
             let body =
                 shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
             shared::RawResponse {
@@ -946,7 +946,7 @@ impl Client<Authenticated> {
             vec![],
             EmptyPostParams,
         )?;
-        serde_json::from_str(&raw.body).map_err(ApiError::from)
+        shared::decode_json_body(&raw.body)
     }
 
     pub fn meta_login_rate_limit_clear(&self) -> Result<ClearRateLimitResponse, ApiError> {
@@ -957,7 +957,7 @@ impl Client<Authenticated> {
             vec![],
             EmptyPostParams,
         )?;
-        serde_json::from_str(&raw.body).map_err(ApiError::from)
+        shared::decode_json_body(&raw.body)
     }
 
     pub(crate) fn request_with_endpoint_raw<T: Serialize>(
@@ -1111,7 +1111,7 @@ impl Client<Authenticated> {
         let status = response.status();
         let (next_cursor, total_count, page_limit, content_type) =
             shared::response_metadata(response.headers());
-        let etag = shared::response_etag(response.headers());
+        let etag = shared::response_etag(response.headers())?;
         let body = shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
         debug!("Response: {} ({} bytes)", status, body.len());
 
@@ -1918,8 +1918,7 @@ impl PrincipalSettingsScope {
             .client
             .raw(reqwest::Method::GET, &self.path)
             .execute()?;
-        let value = serde_json::from_str(&raw.body)?;
-        Ok(Revisioned::new(value, raw.etag))
+        shared::decode_revisioned(raw)
     }
 
     /// Replace the complete settings document (`PUT`).
@@ -1973,7 +1972,7 @@ impl PrincipalSettingsScope {
         let settings = PrincipalSettings::from_serializable(settings)?;
         self.client
             .raw(reqwest::Method::PUT, &self.path)
-            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .header(reqwest::header::IF_MATCH.as_str(), etag.as_str())
             .json(&settings)?
             .send()
     }
@@ -1989,7 +1988,7 @@ impl PrincipalSettingsScope {
         let patch = PrincipalSettings::from_serializable(patch)?;
         self.client
             .raw(reqwest::Method::PATCH, &self.path)
-            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .header(reqwest::header::IF_MATCH.as_str(), etag.as_str())
             .json(&patch)?
             .send()
     }
@@ -2005,7 +2004,7 @@ impl PrincipalSettingsScope {
                 reqwest::header::CONTENT_TYPE.as_str(),
                 "application/json-patch+json",
             )
-            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .header(reqwest::header::IF_MATCH.as_str(), etag.as_str())
             .json(patch)?
             .send()
     }
@@ -2021,7 +2020,7 @@ impl PrincipalSettingsScope {
     pub fn reset_if_match(&self, etag: &crate::types::EntityTag) -> Result<(), ApiError> {
         self.client
             .raw(reqwest::Method::DELETE, &self.path)
-            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .header(reqwest::header::IF_MATCH.as_str(), etag.as_str())
             .send_optional::<serde_json::Value>()?;
         Ok(())
     }
@@ -2141,7 +2140,7 @@ impl RawRequest {
         let status = response.status();
         let (next_cursor, total_count, page_limit, content_type) =
             shared::response_metadata(response.headers());
-        let etag = shared::response_etag(response.headers());
+        let etag = shared::response_etag(response.headers())?;
         let body =
             shared::read_blocking_body(response, self.client.options().max_response_body_bytes)?;
         Ok(shared::RawResponse {
@@ -3165,7 +3164,7 @@ impl SharedComputedFields {
             .replace("{class_id}", &self.class_id.to_string())
             .replace("{field_id}", &field_id.into().to_string());
         let raw = self.client.raw(reqwest::Method::GET, path).execute()?;
-        Ok(Revisioned::new(serde_json::from_str(&raw.body)?, raw.etag))
+        shared::decode_revisioned(raw)
     }
 
     pub fn update(
@@ -3201,7 +3200,7 @@ impl SharedComputedFields {
             .replace("{field_id}", &field_id.into().to_string());
         self.client
             .raw(reqwest::Method::PATCH, path)
-            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .header(reqwest::header::IF_MATCH.as_str(), etag.as_str())
             .json(&patch)?
             .send()
     }
@@ -3215,7 +3214,7 @@ impl SharedComputedFields {
             .replace("{class_id}", &self.class_id.to_string())
             .replace("{field_id}", &field_id.into().to_string());
         let raw = self.client.raw(reqwest::Method::DELETE, path).execute()?;
-        serde_json::from_str(&raw.body).map_err(ApiError::from)
+        shared::decode_json_body(&raw.body)
     }
 
     pub fn delete_if_match(
@@ -3230,9 +3229,9 @@ impl SharedComputedFields {
         let raw = self
             .client
             .raw(reqwest::Method::DELETE, path)
-            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .header(reqwest::header::IF_MATCH.as_str(), etag.as_str())
             .execute()?;
-        serde_json::from_str(&raw.body).map_err(ApiError::from)
+        shared::decode_json_body(&raw.body)
     }
 
     pub fn preview(
@@ -3318,7 +3317,7 @@ impl PersonalComputedFields {
             .path()
             .replace("{field_id}", &field_id.into().to_string());
         let raw = self.client.raw(reqwest::Method::GET, path).execute()?;
-        Ok(Revisioned::new(serde_json::from_str(&raw.body)?, raw.etag))
+        shared::decode_revisioned(raw)
     }
 
     pub fn update(
@@ -3351,7 +3350,7 @@ impl PersonalComputedFields {
             .replace("{field_id}", &field_id.into().to_string());
         self.client
             .raw(reqwest::Method::PATCH, path)
-            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .header(reqwest::header::IF_MATCH.as_str(), etag.as_str())
             .json(&patch)?
             .send()
     }
@@ -3374,7 +3373,7 @@ impl PersonalComputedFields {
             .replace("{field_id}", &field_id.into().to_string());
         self.client
             .raw(reqwest::Method::DELETE, path)
-            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .header(reqwest::header::IF_MATCH.as_str(), etag.as_str())
             .execute()?;
         Ok(())
     }
@@ -4065,7 +4064,7 @@ impl MetaLoginRateLimitOp {
             self.query_params,
             EmptyPostParams,
         )?;
-        serde_json::from_str(&raw.body).map_err(ApiError::from)
+        shared::decode_json_body(&raw.body)
     }
 }
 
@@ -4488,7 +4487,7 @@ impl<T: ApiResource> UpdateOp<T> {
                 self.id,
                 self.url_params,
                 self.params,
-                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+                &shared::if_match_headers(&etag),
             ),
             None => self
                 .client
@@ -5503,7 +5502,7 @@ impl<T: ApiResource> Resource<T> {
             T::default(),
             id.into(),
             self.url_params.clone(),
-            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            &shared::if_match_headers(etag),
         )
     }
 }
