@@ -131,11 +131,11 @@ fn e2e_shared_and_personal_computed_fields_enrich_objects() {
     harness
         .client
         .personal_computed_fields()
-        .delete(personal.id, personal.revision)
+        .delete(personal.id)
         .expect("personal computed field should delete");
     harness
         .client
         .computed_fields(class_id)
-        .delete(shared.definition.id, shared.definition.revision)
+        .delete(shared.definition.id)
         .expect("shared computed field should delete");
 }

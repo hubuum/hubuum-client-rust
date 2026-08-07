@@ -13,6 +13,8 @@ pub struct ObjectResource {
     pub created_at: HubuumDateTime,
     #[api(read_only)]
     pub updated_at: HubuumDateTime,
+    #[api(read_only)]
+    pub revision: ResourceRevision,
 }
 
 pub struct ObjectRelationResource {
@@ -28,4 +30,6 @@ pub struct ObjectRelationResource {
     pub created_at: HubuumDateTime,
     #[api(read_only)]
     pub updated_at: HubuumDateTime,
+    #[api(read_only)]
+    pub revision: ResourceRevision,
 }

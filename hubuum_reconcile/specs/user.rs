@@ -1,9 +1,11 @@
 pub struct UserResource {
     #[api(read_only)]
     pub id: i32,
-    #[api(post_optional, skip_patch, default_local)]
+    #[api(post_optional, skip_patch, response_optional)]
     pub identity_scope: String,
-    #[api(read_only, skip_query, default_local)]
+    #[api(read_only, response_optional)]
+    pub identity_scope_id: i32,
+    #[api(read_only, skip_query, response_optional)]
     pub provider_kind: String,
     #[api(read_only, skip_query, default)]
     pub provider_managed: bool,
@@ -25,4 +27,6 @@ pub struct UserResource {
     pub last_sync_attempted_at: HubuumDateTime,
     #[api(read_only, optional, skip_query)]
     pub last_sync_success_at: HubuumDateTime,
+    #[api(read_only)]
+    pub revision: ResourceRevision,
 }

@@ -16,6 +16,7 @@ mod params;
 mod provenance;
 mod relation;
 mod remote;
+mod revision;
 mod search;
 mod settings;
 mod task;
@@ -79,12 +80,13 @@ pub use import::{
     CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, EventSinkKey, FullImportClassRelationInput,
     FullImportGraph, FullImportRequest, GroupKey, IdentityScopeKey, ImportAtomicity,
     ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
-    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportEventSinkInput,
-    ImportEventSubscriptionInput, ImportExportTemplateInput, ImportGraph, ImportGroupInput,
-    ImportGroupMembershipInput, ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode,
-    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
-    ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportRunResult, ObjectKey,
-    PrincipalKey, RestoreTimestamps,
+    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportComputedFieldInput,
+    ImportComputedFieldVisibility, ImportEventSinkInput, ImportEventSubscriptionInput,
+    ImportExportTemplateInput, ImportGraph, ImportGroupInput, ImportGroupMembershipInput,
+    ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode, ImportObjectInput,
+    ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
+    ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportRunResult,
+    ImportWriteCondition, ObjectKey, PrincipalKey, RestoreTimestamps,
 };
 pub use meta::{
     ClearRateLimitResponse, CountsResponse, DbStateResponse, FullDbStateResponse,
@@ -99,6 +101,7 @@ pub use remote::{
     RemoteTarget, RemoteTargetGet, RemoteTargetInvokeRequest, RemoteTargetSubjectType,
     UpdateRemoteTarget,
 };
+pub use revision::{EntityTag, ResourceRevision, Revisioned};
 #[cfg(any(feature = "async", feature = "blocking"))]
 pub(crate) use search::UnifiedSearchSseDecoder;
 pub use search::{
@@ -106,13 +109,16 @@ pub use search::{
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
     UnifiedSearchResults, UnifiedSearchStartedEvent,
 };
-pub use settings::PrincipalSettings;
+pub use settings::{
+    PrincipalSettings, PrincipalSettingsPatchDocument, PrincipalSettingsPatchOperation,
+    PrincipalSettingsResponse,
+};
 pub use task::{
     BackupTaskDetails, ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse, TaskDetails,
     TaskEventResponse, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse,
     TaskStatus,
 };
-pub use token::{MAX_TOKEN_RESOURCE_SCOPES, TokenResourceScope, TokenScopeDetails};
+pub use token::{MAX_TOKEN_RESOURCE_SCOPES, TokenListState, TokenResourceScope, TokenScopeDetails};
 pub use typed_object::TypedObject;
 #[cfg(feature = "typed-schemas")]
 pub use typed_object::schema_for;

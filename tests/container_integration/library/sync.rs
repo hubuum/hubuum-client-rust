@@ -214,7 +214,10 @@ fn sync_external_provider_login_materializes_groups_and_supports_settings() {
         .eq("fry")
         .one()
         .expect("materialized LDAP user query failed");
-    assert_eq!(materialized.provider_kind, LDAP_PROVIDER_KIND);
+    assert_eq!(
+        materialized.provider_kind.as_deref(),
+        Some(LDAP_PROVIDER_KIND)
+    );
     assert!(materialized.is_provider_managed());
     assert_eq!(materialized.proper_name.as_deref(), Some("Fry"));
     assert_eq!(materialized.email.as_deref(), Some("fry@planetexpress.com"));
@@ -245,8 +248,8 @@ fn sync_scoped_identity_and_principal_settings_roundtrip() {
         .eq(ADMIN_USERNAME)
         .one()
         .expect("scoped admin user query failed");
-    assert_eq!(admin.identity_scope, LOCAL_IDENTITY_SCOPE);
-    assert_eq!(admin.provider_kind, LOCAL_PROVIDER_KIND);
+    assert_eq!(admin.identity_scope.as_deref(), Some(LOCAL_IDENTITY_SCOPE));
+    assert_eq!(admin.provider_kind.as_deref(), Some(LOCAL_PROVIDER_KIND));
     assert!(!admin.is_provider_managed());
 
     let admin_group = client
@@ -271,9 +274,15 @@ fn sync_scoped_identity_and_principal_settings_roundtrip() {
         .into_iter()
         .find(|member| i32::from(member.principal_id) == admin.id)
         .expect("admin principal should belong to the admin group");
-    assert_eq!(member.identity_scope, LOCAL_IDENTITY_SCOPE);
-    assert!(member.created_at.is_some());
-    assert!(member.updated_at.is_some());
+    assert_eq!(
+        member
+            .principal
+            .as_ref()
+            .expect("expanded member principal should be present")
+            .identity_scope,
+        LOCAL_IDENTITY_SCOPE
+    );
+    assert!(member.created_at <= member.updated_at);
 
     client.settings().reset().expect("settings reset failed");
     let replaced = client
@@ -418,7 +427,7 @@ fn sync_collection_group_permissions_endpoint_matches_group() {
         .group_permissions(admin_group_id)
         .expect("sync collection.group_permissions(group_id) failed");
 
-    assert_eq!(group_permissions.group_id, admin_group_id);
+    assert_eq!(group_permissions[0].group_id, admin_group_id);
 }
 
 #[rstest]
@@ -476,7 +485,7 @@ fn sync_collection_permission_mutation_endpoint_succeeds(
         .get(collection_id)
         .expect("sync collections().get(collection_id) failed");
 
-    match mutation {
+    let _permission_set = match mutation {
         SyncMutationCase::GrantSingle => collection
             .grant_permission(admin_group_id, Permissions::ReadCollection)
             .expect("sync collection.grant_permission() failed"),
@@ -495,9 +504,9 @@ fn sync_collection_permission_mutation_endpoint_succeeds(
                 .expect("sync collection.grant_permissions() setup failed");
             collection
                 .revoke_permissions(admin_group_id)
-                .expect("sync collection.revoke_permissions() failed");
+                .expect("sync collection.revoke_permissions() failed")
         }
-    }
+    };
 }
 
 #[test]

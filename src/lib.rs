@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.8.0 targets Hubuum server v0.0.8. See the repository's
+//! Version 0.9.0 targets Hubuum server v0.0.9. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -45,7 +45,7 @@ pub mod types;
 mod endpoints;
 
 /// Hubuum server release targeted by this client release.
-pub const TARGET_SERVER_VERSION: &str = "0.0.8";
+pub const TARGET_SERVER_VERSION: &str = "0.0.9";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
@@ -76,8 +76,8 @@ pub use types::{
     ComputedFieldPreviewResponse, ComputedFieldQueryScope, ComputedFieldSelector,
     ComputedFieldVisibility, ComputedObject, ComputedObjectScopes, ComputedResultType,
     ComputedScope, CountsResponse, Credentials, DEFAULT_METRICS_PATH, DatabaseConfig,
-    DbStateResponse, EventConfig, EventDelivery, EventDeliveryHealthResponse, EventDeliveryId,
-    EventDeliveryQueueHealth, EventDeliveryStatus, EventDeliveryStatusCounts,
+    DbStateResponse, EntityTag, EventConfig, EventDelivery, EventDeliveryHealthResponse,
+    EventDeliveryId, EventDeliveryQueueHealth, EventDeliveryStatus, EventDeliveryStatusCounts,
     EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse, EventSink,
     EventSinkDeliveryHealth, EventSinkGet, EventSinkKey, EventSinkKind, EventSubscription,
     EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventSubscriptionId,
@@ -89,23 +89,26 @@ pub use types::{
     FullCollectionHistory, FullDbStateResponse, FullImportClassRelationInput, FullImportGraph,
     FullImportRequest, GroupKey, HistoryId, HistoryMetadata, IdentityScopeKey, ImportAtomicity,
     ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
-    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportEventSinkInput,
-    ImportEventSubscriptionInput, ImportExportTemplateInput, ImportGraph, ImportGroupInput,
-    ImportGroupMembershipInput, ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode,
-    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
+    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportComputedFieldInput,
+    ImportComputedFieldVisibility, ImportEventSinkInput, ImportEventSubscriptionInput,
+    ImportExportTemplateInput, ImportGraph, ImportGroupInput, ImportGroupMembershipInput,
+    ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode, ImportObjectInput,
+    ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
     ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportResultId,
-    ImportRunResult, ImportTaskDetails, ImportTaskResultResponse, LDAP_PROVIDER_KIND,
-    LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, LoginRateLimitConfig, LoginRateLimitEntry,
-    LoginRateLimitState, LogoutTokenRequest, NetworkConfig, NewEventSink, NewEventSubscription,
-    ObjectHistory, ObjectKey, ObjectRelationLimit, PaginationConfig, PermissionConfig,
-    PermissionId, Permissions, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalKey,
-    PrincipalSettings, ProbeResponse, Provenance, ProvenanceActor, ProvenancePrincipal,
-    RESTORE_CONFIRMATION_PHRASE, ReleaseRateLimitResponse, RemoteCallConfig, RemoteCallResultId,
-    RemoteTargetHistory, RestoreCapability, RestoreConfig, RestoreConfirmRequest, RestoreId,
-    RestoreJobStatus, RestoreStageResponse, RestoreTimestamps, RestoreValidationSummary,
-    RunningConfig, RunningLoginRateLimitConfig, SecretStatus, ServerConfig, SharedComputedScope,
-    TaskConfig, TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks,
-    TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, TlsConfig, Token, TokenId,
+    ImportRunResult, ImportTaskDetails, ImportTaskResultResponse, ImportWriteCondition,
+    LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, LoginRateLimitConfig,
+    LoginRateLimitEntry, LoginRateLimitState, LogoutTokenRequest, NetworkConfig, NewEventSink,
+    NewEventSubscription, ObjectHistory, ObjectKey, ObjectRelationLimit, PaginationConfig,
+    PermissionConfig, PermissionId, Permissions, PersonalComputedFieldDefinitionRequest,
+    PrincipalId, PrincipalKey, PrincipalSettings, PrincipalSettingsPatchDocument,
+    PrincipalSettingsPatchOperation, PrincipalSettingsResponse, ProbeResponse, Provenance,
+    ProvenanceActor, ProvenancePrincipal, RESTORE_CONFIRMATION_PHRASE, ReleaseRateLimitResponse,
+    RemoteCallConfig, RemoteCallResultId, RemoteTargetHistory, ResourceRevision, RestoreCapability,
+    RestoreConfig, RestoreConfirmRequest, RestoreId, RestoreJobStatus, RestoreStageResponse,
+    RestoreTimestamps, RestoreValidationSummary, Revisioned, RunningConfig,
+    RunningLoginRateLimitConfig, SecretStatus, ServerConfig, SharedComputedScope, TaskConfig,
+    TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks, TaskProgress,
+    TaskQueueStateResponse, TaskResponse, TaskStatus, TlsConfig, Token, TokenId, TokenListState,
     TokenResourceScope, TokenScopeDetails, TypedObject, UnifiedSearchBatchResponse,
     UnifiedSearchDoneEvent, UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind,
     UnifiedSearchNext, UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent,

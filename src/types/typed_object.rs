@@ -1,5 +1,6 @@
 use serde::{Serialize, de::DeserializeOwned};
 
+use super::ResourceRevision;
 use crate::{ApiError, ClassId, CollectionId, HubuumDateTime, Object, ObjectId};
 
 /// A Hubuum object whose `data` payload has been decoded into a consumer type.
@@ -13,6 +14,7 @@ pub struct TypedObject<T> {
     pub data: T,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
 }
 
 impl<T: DeserializeOwned> TryFrom<Object> for TypedObject<T> {
@@ -38,6 +40,7 @@ impl<T: DeserializeOwned> TryFrom<Object> for TypedObject<T> {
             data,
             created_at: value.created_at,
             updated_at: value.updated_at,
+            revision: value.revision,
         })
     }
 }
@@ -53,6 +56,7 @@ impl<T: Serialize> TypedObject<T> {
             data: Some(serde_json::to_value(self.data)?),
             created_at: self.created_at,
             updated_at: self.updated_at,
+            revision: self.revision,
         })
     }
 }

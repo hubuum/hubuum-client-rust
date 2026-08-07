@@ -62,11 +62,13 @@ pub struct Class {
     pub id: ClassId,
     pub name: String,
     pub description: String,
-    pub collection: Collection,
+    pub collection: Option<Collection>,
+    pub collection_id: Option<CollectionId>,
     pub json_schema: Option<serde_json::Value>,
     pub validate_schema: Option<bool>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
 }
 impl crate::client::GetID for Class {
     fn id(&self) -> Self::Id {
@@ -78,11 +80,12 @@ pub struct ClassGet {
     pub id: Option<i32>,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub collection_id: Option<<Collection as crate::resources::ApiResource>::Id>,
+    pub collection_id: Option<CollectionId>,
     pub json_schema: Option<serde_json::Value>,
     pub validate_schema: Option<bool>,
     pub created_at: Option<HubuumDateTime>,
     pub updated_at: Option<HubuumDateTime>,
+    pub revision: Option<ResourceRevision>,
 }
 #[derive(Default, serde :: Serialize, serde :: Deserialize, Clone, PartialEq)]
 pub struct ClassPost {
@@ -96,7 +99,7 @@ pub struct ClassPost {
 pub struct ClassPatch {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub collection_id: <Collection as crate::resources::ApiResource>::Id,
+    pub collection_id: Option<<Collection as crate::resources::ApiResource>::Id>,
     pub json_schema: Option<serde_json::Value>,
     pub validate_schema: Option<bool>,
 }
@@ -194,6 +197,13 @@ impl crate::resources::ApiResource for Class {
         if let Some(value) = params.updated_at {
             queries.push(crate::types::QueryFilter {
                 key: stringify!(updated_at).to_string(),
+                value: value.to_string(),
+                operator: crate::types::FilterOperator::Equals { is_negated: false },
+            });
+        }
+        if let Some(value) = params.revision {
+            queries.push(crate::types::QueryFilter {
+                key: stringify!(revision).to_string(),
                 value: value.to_string(),
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
@@ -416,7 +426,7 @@ impl crate::client::sync::UpdateOp<Class> {
         value: impl Into<<Collection as crate::resources::ApiResource>::Id>,
     ) -> Self {
         self.edit_params(move |params| {
-            params.collection_id = value.into();
+            params.collection_id = Some(value.into());
         })
     }
     pub fn json_schema(self, value: serde_json::Value) -> Self {
@@ -447,7 +457,7 @@ impl crate::client::r#async::UpdateOp<Class> {
         value: impl Into<<Collection as crate::resources::ApiResource>::Id>,
     ) -> Self {
         self.edit_params(move |params| {
-            params.collection_id = value.into();
+            params.collection_id = Some(value.into());
         })
     }
     pub fn json_schema(self, value: serde_json::Value) -> Self {
@@ -472,11 +482,8 @@ impl crate::client::sync::QueryOp<Class> {
     pub fn description(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(description))
     }
-    pub fn collection_id(
-        self,
-    ) -> crate::client::QueryNumericField<Self, <Collection as crate::resources::ApiResource>::Id>
-    {
-        < crate :: client :: QueryNumericField < Self , < Collection as crate :: resources :: ApiResource > :: Id > > :: new (self , stringify ! (collection_id))
+    pub fn collection_id(self) -> crate::client::QueryNumericField<Self, CollectionId> {
+        <crate::client::QueryNumericField<Self, CollectionId>>::new(self, stringify!(collection_id))
     }
     pub fn json_schema(self) -> crate::client::QueryJsonField<Self> {
         <crate::client::QueryJsonField<Self>>::new(self, stringify!(json_schema))
@@ -489,6 +496,9 @@ impl crate::client::sync::QueryOp<Class> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }
 #[cfg(feature = "async")]
@@ -502,11 +512,8 @@ impl crate::client::r#async::QueryOp<Class> {
     pub fn description(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(description))
     }
-    pub fn collection_id(
-        self,
-    ) -> crate::client::QueryNumericField<Self, <Collection as crate::resources::ApiResource>::Id>
-    {
-        < crate :: client :: QueryNumericField < Self , < Collection as crate :: resources :: ApiResource > :: Id > > :: new (self , stringify ! (collection_id))
+    pub fn collection_id(self) -> crate::client::QueryNumericField<Self, CollectionId> {
+        <crate::client::QueryNumericField<Self, CollectionId>>::new(self, stringify!(collection_id))
     }
     pub fn json_schema(self) -> crate::client::QueryJsonField<Self> {
         <crate::client::QueryJsonField<Self>>::new(self, stringify!(json_schema))
@@ -519,6 +526,9 @@ impl crate::client::r#async::QueryOp<Class> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }
 #[cfg(feature = "blocking")]
@@ -532,11 +542,8 @@ impl crate::client::sync::Resource<Class> {
     pub fn description(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(description))
     }
-    pub fn collection_id(
-        self,
-    ) -> crate::client::QueryNumericField<Self, <Collection as crate::resources::ApiResource>::Id>
-    {
-        < crate :: client :: QueryNumericField < Self , < Collection as crate :: resources :: ApiResource > :: Id > > :: new (self , stringify ! (collection_id))
+    pub fn collection_id(self) -> crate::client::QueryNumericField<Self, CollectionId> {
+        <crate::client::QueryNumericField<Self, CollectionId>>::new(self, stringify!(collection_id))
     }
     pub fn json_schema(self) -> crate::client::QueryJsonField<Self> {
         <crate::client::QueryJsonField<Self>>::new(self, stringify!(json_schema))
@@ -549,6 +556,9 @@ impl crate::client::sync::Resource<Class> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }
 #[cfg(feature = "async")]
@@ -562,11 +572,8 @@ impl crate::client::r#async::Resource<Class> {
     pub fn description(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(description))
     }
-    pub fn collection_id(
-        self,
-    ) -> crate::client::QueryNumericField<Self, <Collection as crate::resources::ApiResource>::Id>
-    {
-        < crate :: client :: QueryNumericField < Self , < Collection as crate :: resources :: ApiResource > :: Id > > :: new (self , stringify ! (collection_id))
+    pub fn collection_id(self) -> crate::client::QueryNumericField<Self, CollectionId> {
+        <crate::client::QueryNumericField<Self, CollectionId>>::new(self, stringify!(collection_id))
     }
     pub fn json_schema(self) -> crate::client::QueryJsonField<Self> {
         <crate::client::QueryJsonField<Self>>::new(self, stringify!(json_schema))
@@ -579,6 +586,9 @@ impl crate::client::r#async::Resource<Class> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }
 #[derive(
@@ -650,6 +660,7 @@ pub struct ClassRelation {
     pub to_max_relations: Option<ObjectRelationLimit>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
 }
 impl crate::client::GetID for ClassRelation {
     fn id(&self) -> Self::Id {
@@ -663,6 +674,7 @@ pub struct ClassRelationGet {
     pub to_hubuum_class_id: Option<ClassId>,
     pub created_at: Option<HubuumDateTime>,
     pub updated_at: Option<HubuumDateTime>,
+    pub revision: Option<ResourceRevision>,
 }
 #[derive(Default, serde :: Serialize, serde :: Deserialize, Clone, PartialEq)]
 pub struct ClassRelationPost {
@@ -753,6 +765,13 @@ impl crate::resources::ApiResource for ClassRelation {
         if let Some(value) = params.updated_at {
             queries.push(crate::types::QueryFilter {
                 key: stringify!(updated_at).to_string(),
+                value: value.to_string(),
+                operator: crate::types::FilterOperator::Equals { is_negated: false },
+            });
+        }
+        if let Some(value) = params.revision {
+            queries.push(crate::types::QueryFilter {
+                key: stringify!(revision).to_string(),
                 value: value.to_string(),
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
@@ -1049,6 +1068,9 @@ impl crate::client::sync::QueryOp<ClassRelation> {
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
     }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
+    }
 }
 #[cfg(feature = "async")]
 impl crate::client::r#async::QueryOp<ClassRelation> {
@@ -1068,6 +1090,9 @@ impl crate::client::r#async::QueryOp<ClassRelation> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }
 #[cfg(feature = "blocking")]
@@ -1089,6 +1114,9 @@ impl crate::client::sync::Resource<ClassRelation> {
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
     }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
+    }
 }
 #[cfg(feature = "async")]
 impl crate::client::r#async::Resource<ClassRelation> {
@@ -1108,5 +1136,8 @@ impl crate::client::r#async::Resource<ClassRelation> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }

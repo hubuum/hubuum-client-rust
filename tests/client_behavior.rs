@@ -51,11 +51,13 @@ fn class_json(name: &str) -> serde_json::Value {
             "id": 7,
             "name": "collection-1",
             "description": "Collection",
+            "revision": 1,
             "created_at": ts(),
             "updated_at": ts()
         },
         "json_schema": null,
         "validate_schema": null,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -66,6 +68,9 @@ fn group_json(group_id: i32, groupname: &str) -> serde_json::Value {
         "id": group_id,
         "groupname": groupname,
         "description": "Group",
+        "identity_scope": "local",
+        "managed_by": "local",
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -77,6 +82,11 @@ fn user_json(user_id: i32, name: &str) -> serde_json::Value {
         "name": name,
         "email": format!("{name}@example.com"),
         "proper_name": null,
+        "identity_scope": "local",
+        "identity_scope_id": 1,
+        "provider_kind": "local",
+        "provider_managed": false,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -85,8 +95,19 @@ fn user_json(user_id: i32, name: &str) -> serde_json::Value {
 fn principal_member_json(principal_id: i32, name: &str) -> serde_json::Value {
     json!({
         "principal_id": principal_id,
-        "kind": "human",
-        "name": name,
+        "group_id": 10,
+        "created_at": ts(),
+        "updated_at": ts(),
+        "revision": 1,
+        "principal": {
+            "principal_id": principal_id,
+            "identity_scope": "local",
+            "kind": "human",
+            "name": name,
+            "created_at": ts(),
+            "updated_at": ts(),
+            "revision": 1
+        }
     })
 }
 
@@ -95,6 +116,7 @@ fn collection_json(collection_id: i32, name: &str) -> serde_json::Value {
         "id": collection_id,
         "name": name,
         "description": "Collection",
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -108,6 +130,7 @@ fn object_json(object_id: i32, class_id: i32, name: &str) -> serde_json::Value {
         "hubuum_class_id": class_id,
         "description": "Object",
         "data": { "owner": "infra" },
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -140,6 +163,26 @@ fn permission_json(collection_id: i32, group_id: i32) -> serde_json::Value {
         "has_delete_object_relation": false,
         "created_at": ts(),
         "updated_at": ts()
+    })
+}
+
+fn collection_permission_set_json(collection_id: i32, group_id: i32) -> serde_json::Value {
+    json!({
+        "collection_id": collection_id,
+        "revision": 1,
+        "permissions": [permission_json(collection_id, group_id)]
+    })
+}
+
+fn principal_token_json(id: i32, principal_id: i32, scoped: bool) -> serde_json::Value {
+    json!({
+        "id": id,
+        "principal_id": principal_id,
+        "scoped": scoped,
+        "issued": if id == 1 { "2024-01-01T00:00:00Z" } else { "2024-01-02T00:00:00Z" },
+        "active": true,
+        "expired": false,
+        "revision": 1
     })
 }
 
@@ -223,18 +266,8 @@ fn mock_paginated_handle_lists(server: &MockServer) {
         server,
         "/api/v1/iam/principals/11/tokens",
         "tokens-2",
-        json!([{
-            "id": 1,
-            "principal_id": 11,
-            "scoped": false,
-            "issued": "2024-01-01T00:00:00Z"
-        }]),
-        json!([{
-            "id": 2,
-            "principal_id": 11,
-            "scoped": true,
-            "issued": "2024-01-02T00:00:00Z"
-        }]),
+        json!([principal_token_json(1, 11, false)]),
+        json!([principal_token_json(2, 11, true)]),
     );
     mock_paginated_json_route(
         server,
@@ -257,13 +290,21 @@ fn mock_paginated_handle_lists(server: &MockServer) {
         json!([group_permission_json(7, 10, "admins")]),
         json!([group_permission_json(7, 12, "operators")]),
     );
-    mock_paginated_json_route(
-        server,
-        "/api/v1/collections/7/permissions",
-        "collection-permissions-2",
-        json!([group_permission_json(7, 10, "admins")]),
-        json!([group_permission_json(7, 12, "operators")]),
-    );
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "collection_id": 7,
+                "revision": 1,
+                "permissions": [
+                    permission_json(7, 10),
+                    permission_json(7, 12)
+                ]
+            }));
+    });
     mock_paginated_json_route(
         server,
         "/api/v1/collections/7/permissions/principal/11",
@@ -371,6 +412,7 @@ fn running_config_json() -> serde_json::Value {
         },
         "authentication": {
             "token_lifetime_hours": 24,
+            "max_token_lifetime_hours": 8760,
             "token_retention_purge_enabled": true,
             "token_retention_days": 30,
             "token_retention_purge_interval_seconds": 3600,
@@ -446,7 +488,7 @@ fn db_state_json() -> serde_json::Value {
 
 fn backup_document_json() -> serde_json::Value {
     json!({
-        "backup_version": 3,
+        "backup_version": 4,
         "created_at": ts(),
         "source_version": "0.0.2",
         "state": { "sections": {} },
@@ -503,7 +545,7 @@ fn restore_stage_json(status: &str, include_capability: bool) -> serde_json::Val
         "created_at": ts(),
         "updated_at": ts(),
         "validation": {
-            "backup_version": 3,
+            "backup_version": 4,
             "source_version": "0.0.2",
             "includes_history": true,
             "total_items": 1
@@ -565,6 +607,7 @@ fn computed_object_json(include_personal: bool) -> serde_json::Value {
         "hubuum_class_id": 42,
         "description": "Object",
         "data": {"subtotal": 10, "tax": 2.5},
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts(),
         "computed": {
@@ -598,6 +641,7 @@ fn export_template_json(template_id: i32, name: &str) -> serde_json::Value {
         "relation_context": null,
         "default_missing_data_policy": null,
         "default_limits": null,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -620,7 +664,7 @@ fn export_request() -> ExportRequest {
 
 fn import_request() -> ImportRequest {
     ImportRequest {
-        version: 1,
+        version: 2,
         dry_run: Some(true),
         mode: None,
         graph: ImportGraph::default(),
@@ -633,6 +677,7 @@ fn full_import_request() -> FullImportRequest {
         ref_: Some("scope".into()),
         name: "directory".into(),
         provider_kind: "ldap".into(),
+        condition: None,
         timestamps: None,
     });
     FullImportRequest::new(graph).dry_run(true)
@@ -756,6 +801,7 @@ fn class_with_path_json(class_id: i32, collection_id: i32, path: &[i32]) -> serd
         "validate_schema": true,
         "created_at": ts(),
         "updated_at": ts(),
+        "revision": 1,
         "path": path
     })
 }
@@ -771,6 +817,7 @@ fn class_relation_json(
         "to_hubuum_class_id": to_class_id,
         "from_max_relations": 1,
         "to_max_relations": null,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -787,6 +834,7 @@ fn object_relation_json(
         "from_hubuum_object_id": from_object_id,
         "to_hubuum_object_id": to_object_id,
         "class_relation_id": class_relation_id,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -800,6 +848,7 @@ fn object_with_path_json(object_id: i32, class_id: i32, path: &[i32]) -> serde_j
         "hubuum_class_id": class_id,
         "description": "Object",
         "data": { "owner": "infra" },
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts(),
         "path": path
@@ -868,6 +917,8 @@ fn audit_event_json(event_id: i64, entity_type: &str, action: &str) -> serde_jso
         "summary": "updated servers",
         "before": {"name": "old"},
         "after": {"name": "new"},
+        "before_revision": 1,
+        "after_revision": 2,
         "metadata": {"source": "test"},
         "schema_version": 1
     })
@@ -881,6 +932,7 @@ fn class_history_json() -> serde_json::Value {
         "validate_schema": true,
         "description": "Class",
         "json_schema": {"type": "object"},
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts(),
         "op": "update",
@@ -902,6 +954,7 @@ fn collection_history_json() -> serde_json::Value {
         "name": "servers",
         "description": "Collection",
         "parent_collection_id": 2,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts(),
         "op": "update",
@@ -925,6 +978,7 @@ fn event_sink_json() -> serde_json::Value {
         "config": {"url": "https://example.invalid/hook"},
         "enabled": true,
         "secret_ref": null,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -945,6 +999,7 @@ fn event_subscription_json() -> serde_json::Value {
             "actor_kinds": ["human"],
             "initiator_user_ids": [3]
         },
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -958,7 +1013,6 @@ fn event_delivery_json(status: &str) -> serde_json::Value {
         "status": status,
         "attempts": 2,
         "next_attempt_at": ts(),
-        "claim_token": null,
         "last_error": null,
         "locked_until": null,
         "created_at": ts(),
@@ -1214,6 +1268,7 @@ fn sync_scoped_login_and_identity_filter_use_provider_scope() {
                 "proper_name": "Directory Tester",
                 "last_sync_attempted_at": ts(),
                 "last_sync_success_at": ts(),
+                "revision": 1,
                 "created_at": ts(),
                 "updated_at": ts()
             }]));
@@ -1231,10 +1286,10 @@ fn sync_scoped_login_and_identity_filter_use_provider_scope() {
         .unwrap();
 
     assert_eq!(matches.len(), 1);
-    assert_eq!(matches[0].identity_scope, "corp-directory");
-    assert_eq!(matches[0].provider_kind, "ldap");
+    assert_eq!(matches[0].identity_scope.as_deref(), Some("corp-directory"));
+    assert_eq!(matches[0].provider_kind.as_deref(), Some("ldap"));
     assert!(matches[0].is_provider_managed());
-    assert!(!matches[0].is_local());
+    assert_eq!(matches[0].is_local(), Some(false));
     login.assert_calls(1);
     users.assert_calls(1);
 }
@@ -1802,7 +1857,7 @@ fn sync_handle_list_helpers_fetch_every_cursor_page() {
         .permissions()
         .expect("collection permissions should succeed");
     assert_eq!(permissions.len(), 2);
-    assert_eq!(permissions[1].permission.group_id, 12);
+    assert_eq!(permissions[1].group_id, 12);
     let principal_permissions = collection
         .principal_permissions(11)
         .expect("principal permissions should succeed");
@@ -1863,7 +1918,7 @@ async fn async_handle_list_helpers_fetch_every_cursor_page() {
         .await
         .expect("collection permissions should succeed");
     assert_eq!(permissions.len(), 2);
-    assert_eq!(permissions[1].permission.group_id, 12);
+    assert_eq!(permissions[1].group_id, 12);
     let principal_permissions = collection
         .principal_permissions(11)
         .await
@@ -2430,12 +2485,7 @@ fn sync_supports_user_group_and_token_endpoints() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([{
-                "id": 1,
-                "principal_id": 11,
-                "scoped": false,
-                "issued": "2024-01-01T00:00:00Z"
-            }]));
+            .json_body(json!([principal_token_json(1, 11, false)]));
     });
 
     let user_permissions = server.mock(|when, then| {
@@ -2535,12 +2585,7 @@ async fn async_supports_user_group_and_token_endpoints() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([{
-                "id": 1,
-                "principal_id": 11,
-                "scoped": false,
-                "issued": "2024-01-01T00:00:00Z"
-            }]));
+            .json_body(json!([principal_token_json(1, 11, false)]));
     });
 
     let user_permissions = server.mock(|when, then| {
@@ -2644,12 +2689,7 @@ fn sync_handle_list_requests_support_sorting() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([{
-                "id": 1,
-                "principal_id": 11,
-                "scoped": false,
-                "issued": "2024-01-01T00:00:00Z"
-            }]));
+            .json_body(json!([principal_token_json(1, 11, false)]));
     });
 
     let group_by_id = server.mock(|when, then| {
@@ -2715,12 +2755,10 @@ fn sync_handle_list_requests_support_sorting() {
     let collection_permissions = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/collections/7/permissions")
-            .query_param("sort", "group.groupname.asc")
-            .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([group_permission_json(7, 10, "admins")]));
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let collection_user_permissions = server.mock(|when, then| {
@@ -2789,13 +2827,10 @@ fn sync_handle_list_requests_support_sorting() {
         .collections()
         .get(7)
         .expect("collection lookup should succeed");
-    let collection_permission_page = collection
-        .permissions_request()
-        .sort("group.groupname", SortDirection::Asc)
-        .limit(1)
-        .page()
-        .expect("collection permissions request builder should succeed");
-    assert_eq!(collection_permission_page.items[0].permission.group_id, 10);
+    let collection_permission_set = collection
+        .permissions()
+        .expect("collection permissions should succeed");
+    assert_eq!(collection_permission_set[0].group_id, 10);
 
     let collection_user_permission_page = collection
         .principal_permissions_request(11)
@@ -2854,12 +2889,7 @@ async fn async_handle_list_requests_support_sorting() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([{
-                "id": 1,
-                "principal_id": 11,
-                "scoped": false,
-                "issued": "2024-01-01T00:00:00Z"
-            }]));
+            .json_body(json!([principal_token_json(1, 11, false)]));
     });
 
     let group_by_id = server.mock(|when, then| {
@@ -2925,12 +2955,10 @@ async fn async_handle_list_requests_support_sorting() {
     let collection_permissions = server.mock(|when, then| {
         when.method(GET)
             .path("/api/v1/collections/7/permissions")
-            .query_param("sort", "group.groupname.asc")
-            .query_param("limit", "1")
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([group_permission_json(7, 10, "admins")]));
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let collection_user_permissions = server.mock(|when, then| {
@@ -3011,14 +3039,11 @@ async fn async_handle_list_requests_support_sorting() {
         .get(7)
         .await
         .expect("collection lookup should succeed");
-    let collection_permission_page = collection
-        .permissions_request()
-        .sort("group.groupname", SortDirection::Asc)
-        .limit(1)
-        .page()
+    let collection_permission_set = collection
+        .permissions()
         .await
-        .expect("collection permissions request builder should succeed");
-    assert_eq!(collection_permission_page.items[0].permission.group_id, 10);
+        .expect("collection permissions should succeed");
+    assert_eq!(collection_permission_set[0].group_id, 10);
 
     let collection_user_permission_page = collection
         .principal_permissions_request(11)
@@ -3083,14 +3108,16 @@ fn sync_supports_class_and_collection_permission_endpoints() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!(permission_json(7, 10)));
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let collection_revoke_permissions = server.mock(|when, then| {
         when.method(DELETE)
             .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(204);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let has_read_permission = server.mock(|when, then| {
@@ -3113,14 +3140,18 @@ fn sync_supports_class_and_collection_permission_endpoints() {
         when.method(POST)
             .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(201);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let revoke_permission = server.mock(|when, then| {
         when.method(DELETE)
             .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(204);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let user_permissions = server.mock(|when, then| {
@@ -3151,7 +3182,8 @@ fn sync_supports_class_and_collection_permission_endpoints() {
     let group_permission = collection
         .group_permissions(10)
         .expect("collection group permissions should succeed");
-    assert_eq!(group_permission.group_id, 10);
+    assert_eq!(group_permission[0].group_id, 10);
+    assert_eq!(group_permission.revision().unwrap().get(), 1);
     collection
         .revoke_permissions(10)
         .expect("revoke_permissions should succeed");
@@ -3227,14 +3259,16 @@ async fn async_supports_class_and_collection_permission_endpoints() {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!(permission_json(7, 10)));
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let collection_revoke_permissions = server.mock(|when, then| {
         when.method(DELETE)
             .path("/api/v1/collections/7/permissions/group/10")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(204);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let has_read_permission = server.mock(|when, then| {
@@ -3257,14 +3291,18 @@ async fn async_supports_class_and_collection_permission_endpoints() {
         when.method(POST)
             .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(201);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let revoke_permission = server.mock(|when, then| {
         when.method(DELETE)
             .path("/api/v1/collections/7/permissions/group/10/ReadCollection")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(204);
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(collection_permission_set_json(7, 10));
     });
 
     let user_permissions = server.mock(|when, then| {
@@ -3299,7 +3337,8 @@ async fn async_supports_class_and_collection_permission_endpoints() {
         .group_permissions(10)
         .await
         .expect("collection group permissions should succeed");
-    assert_eq!(group_permission.group_id, 10);
+    assert_eq!(group_permission[0].group_id, 10);
+    assert_eq!(group_permission.revision().unwrap().get(), 1);
     collection
         .revoke_permissions(10)
         .await
@@ -3341,6 +3380,232 @@ async fn async_supports_class_and_collection_permission_endpoints() {
     grant_permission.assert_calls(1);
     revoke_permission.assert_calls(1);
     user_permissions.assert_calls(1);
+}
+
+#[test]
+fn sync_collection_permission_reads_support_treetop_wire_shapes() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let collection = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/collections/7");
+        then.status(200)
+            .json_body(collection_json(7, "collection-1"));
+    });
+    let first_page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions")
+            .query_param_missing("cursor");
+        then.status(200)
+            .header("x-next-cursor", "treetop-next")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+    let second_page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions")
+            .query_param("cursor", "treetop-next");
+        then.status(200)
+            .json_body(json!([group_permission_json(7, 11, "operators")]));
+    });
+    let group = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions/group/10");
+        then.status(200)
+            .json_body(group_permission_json(7, 10, "admins"));
+    });
+
+    let handle = sync_client(&server).collections().get(7).unwrap();
+    let permissions = handle.permissions_revisioned().unwrap();
+    assert!(permissions.etag().is_none());
+    assert!(permissions.revision().is_none());
+    assert_eq!(permissions.len(), 2);
+    assert_eq!(permissions[1].group_id, 11);
+    assert_eq!(permissions.expanded().unwrap()[0].group.groupname, "admins");
+
+    let group_permissions = handle.group_permissions(10).unwrap();
+    assert!(group_permissions.revision().is_none());
+    assert_eq!(group_permissions[0].group_id, 10);
+
+    collection.assert_calls(1);
+    first_page.assert_calls(1);
+    second_page.assert_calls(1);
+    group.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_collection_permission_reads_support_treetop_wire_shapes() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let collection = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/collections/7");
+        then.status(200)
+            .json_body(collection_json(7, "collection-1"));
+    });
+    let first_page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions")
+            .query_param_missing("cursor");
+        then.status(200)
+            .header("x-next-cursor", "treetop-next")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+    let second_page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions")
+            .query_param("cursor", "treetop-next");
+        then.status(200)
+            .json_body(json!([group_permission_json(7, 11, "operators")]));
+    });
+    let group = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions/group/10");
+        then.status(200)
+            .json_body(group_permission_json(7, 10, "admins"));
+    });
+
+    let handle = async_client(&server)
+        .await
+        .collections()
+        .get(7)
+        .await
+        .unwrap();
+    let permissions = handle.permissions_revisioned().await.unwrap();
+    assert!(permissions.etag().is_none());
+    assert!(permissions.revision().is_none());
+    assert_eq!(permissions.len(), 2);
+    assert_eq!(permissions[1].group_id, 11);
+    assert_eq!(permissions.expanded().unwrap()[0].group.groupname, "admins");
+
+    let group_permissions = handle.group_permissions(10).await.unwrap();
+    assert!(group_permissions.revision().is_none());
+    assert_eq!(group_permissions[0].group_id, 10);
+
+    collection.assert_calls(1);
+    first_page.assert_calls(1);
+    second_page.assert_calls(1);
+    group.assert_calls(1);
+}
+
+fn mock_conditional_collection_permissions(server: &MockServer) {
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/collections/7");
+        then.status(200)
+            .json_body(collection_json(7, "collection-1"));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/collections/7/permissions");
+        then.status(200)
+            .header("etag", "\"hubuum-v1.permission-set.7.1\"")
+            .json_body(collection_permission_set_json(7, 10));
+    });
+    for (method, path, status) in [
+        (PUT, "/api/v1/collections/7/permissions/group/10", 200),
+        (POST, "/api/v1/collections/7/permissions/group/10", 201),
+        (DELETE, "/api/v1/collections/7/permissions/group/10", 200),
+        (
+            POST,
+            "/api/v1/collections/7/permissions/group/10/ReadCollection",
+            201,
+        ),
+        (
+            DELETE,
+            "/api/v1/collections/7/permissions/group/10/ReadCollection",
+            200,
+        ),
+    ] {
+        server.mock(move |when, then| {
+            when.method(method)
+                .path(path)
+                .header("if-match", "\"hubuum-v1.permission-set.7.1\"");
+            then.status(status)
+                .header("etag", "\"hubuum-v1.permission-set.7.2\"")
+                .json_body(collection_permission_set_json(7, 10));
+        });
+    }
+}
+
+fn assert_conditional_permission_result(
+    response: &hubuum_client::Revisioned<hubuum_client::CollectionPermissionSet>,
+) {
+    assert_eq!(response.revision.get(), 1);
+    assert_eq!(
+        response.etag().unwrap().as_str(),
+        "\"hubuum-v1.permission-set.7.2\""
+    );
+}
+
+#[test]
+fn sync_collection_acl_mutations_accept_permission_set_etags() {
+    let server = MockServer::start();
+    mock_login(&server);
+    mock_conditional_collection_permissions(&server);
+    let handle = sync_client(&server).collections().get(7).unwrap();
+    let read = handle.permissions_revisioned().unwrap();
+    let etag = read.etag().unwrap();
+
+    assert_conditional_permission_result(
+        &handle
+            .replace_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .grant_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .unwrap(),
+    );
+    assert_conditional_permission_result(&handle.revoke_permissions_if_match(10, etag).unwrap());
+    assert_conditional_permission_result(
+        &handle
+            .grant_permission_if_match(10, Permissions::ReadCollection, etag)
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .revoke_permission_if_match(10, Permissions::ReadCollection, etag)
+            .unwrap(),
+    );
+}
+
+#[tokio::test]
+async fn async_collection_acl_mutations_accept_permission_set_etags() {
+    let server = MockServer::start();
+    mock_login(&server);
+    mock_conditional_collection_permissions(&server);
+    let handle = async_client(&server)
+        .await
+        .collections()
+        .get(7)
+        .await
+        .unwrap();
+    let read = handle.permissions_revisioned().await.unwrap();
+    let etag = read.etag().unwrap();
+
+    assert_conditional_permission_result(
+        &handle
+            .replace_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .await
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .grant_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .await
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle.revoke_permissions_if_match(10, etag).await.unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .grant_permission_if_match(10, Permissions::ReadCollection, etag)
+            .await
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .revoke_permission_if_match(10, Permissions::ReadCollection, etag)
+            .await
+            .unwrap(),
+    );
 }
 
 #[test]
@@ -4496,7 +4761,7 @@ async fn async_full_import_submit_serializes_extended_graph() {
             .path("/api/v1/imports")
             .header("authorization", format!("Bearer {}", TOKEN))
             .json_body(json!({
-                "version": 1,
+                "version": 2,
                 "dry_run": true,
                 "mode": null,
                 "graph": {
@@ -4504,6 +4769,7 @@ async fn async_full_import_submit_serializes_extended_graph() {
                         "ref": "scope",
                         "name": "directory",
                         "provider_kind": "ldap",
+                        "condition": null,
                         "timestamps": null
                     }],
                     "groups": [],
@@ -4518,7 +4784,8 @@ async fn async_full_import_submit_serializes_extended_graph() {
                     "export_templates": [],
                     "remote_targets": [],
                     "event_sinks": [],
-                    "event_subscriptions": []
+                    "event_subscriptions": [],
+                    "computed_fields": []
                 }
             }));
         then.status(202)
@@ -4548,7 +4815,7 @@ fn sync_full_import_submit_serializes_extended_graph() {
             .path("/api/v1/imports")
             .header("authorization", format!("Bearer {}", TOKEN))
             .json_body(json!({
-                "version": 1,
+                "version": 2,
                 "dry_run": true,
                 "mode": null,
                 "graph": {
@@ -4556,6 +4823,7 @@ fn sync_full_import_submit_serializes_extended_graph() {
                         "ref": "scope",
                         "name": "directory",
                         "provider_kind": "ldap",
+                        "condition": null,
                         "timestamps": null
                     }],
                     "groups": [],
@@ -4570,7 +4838,8 @@ fn sync_full_import_submit_serializes_extended_graph() {
                     "export_templates": [],
                     "remote_targets": [],
                     "event_sinks": [],
-                    "event_subscriptions": []
+                    "event_subscriptions": [],
+                    "computed_fields": []
                 }
             }));
         then.status(202)
@@ -5062,6 +5331,9 @@ fn service_account_json(id: i32, name: &str, owner_group_id: i32) -> serde_json:
         "owner_group_id": owner_group_id,
         "created_by": null,
         "disabled_at": null,
+        "identity_scope": "local",
+        "identity_scope_id": 1,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -5110,6 +5382,8 @@ fn sync_service_account_create_and_disable() {
                 "owner_group_id": 10,
                 "created_by": null,
                 "disabled_at": ts(),
+                "identity_scope_id": 1,
+                "revision": 2,
                 "created_at": ts(),
                 "updated_at": ts()
             }));
@@ -5302,12 +5576,19 @@ fn invalid_token_scope_requests_fail_during_serialization() {
 
 #[test]
 fn token_expiry_serializes_as_the_server_naive_utc_request_shape() {
-    use hubuum_client::{HubuumDateTime, NewTokenRequest};
+    use hubuum_client::{HubuumDateTime, NewTokenRequest, RenewTokenRequest};
 
     let expires_at: HubuumDateTime =
         serde_json::from_str(r#""2026-07-25T21:00:05+02:00""#).unwrap();
     assert_eq!(
-        serde_json::to_value(NewTokenRequest::new().expires_at(expires_at)).unwrap(),
+        serde_json::to_value(NewTokenRequest::new().expires_at(expires_at.clone())).unwrap(),
+        json!({"expires_at": "2026-07-25T19:00:05"})
+    );
+    assert_eq!(
+        serde_json::to_value(RenewTokenRequest {
+            expires_at: Some(expires_at),
+        })
+        .unwrap(),
         json!({"expires_at": "2026-07-25T19:00:05"})
     );
 }
@@ -5415,6 +5696,7 @@ fn sync_remote_target_invoke_returns_task() {
                 "enabled": true,
                 "body_template": null,
                 "class_id": null,
+                "revision": 1,
                 "created_at": ts(),
                 "updated_at": ts()
             }));
@@ -5463,7 +5745,15 @@ fn sync_me_returns_identity_and_token() {
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
-                "principal": { "principal_id": 11, "kind": "human", "name": "alice" },
+                "principal": {
+                    "principal_id": 11,
+                    "identity_scope": "local",
+                    "kind": "human",
+                    "name": "alice",
+                    "created_at": ts(),
+                    "updated_at": ts(),
+                    "revision": 1
+                },
                 "token": {
                     "id": 1,
                     "name": null,
@@ -5478,7 +5768,8 @@ fn sync_me_returns_identity_and_token() {
                     "scopes": ["ReadClass"],
                     "issued": ts(),
                     "expires_at": null,
-                    "last_used_at": null
+                    "last_used_at": null,
+                    "revision": 1
                 }
             }));
     });
@@ -5534,12 +5825,7 @@ fn mock_paginated_me_lists(server: &MockServer) {
         then.status(200)
             .header("content-type", "application/json")
             .header("x-next-cursor", "tokens-2")
-            .json_body(json!([{
-                "id": 1,
-                "principal_id": 11,
-                "scoped": false,
-                "issued": "2024-01-01T00:00:00Z"
-            }]));
+            .json_body(json!([principal_token_json(1, 11, false)]));
     });
     server.mock(|when, then| {
         when.method(GET)
@@ -5548,12 +5834,7 @@ fn mock_paginated_me_lists(server: &MockServer) {
             .header("authorization", format!("Bearer {}", TOKEN));
         then.status(200)
             .header("content-type", "application/json")
-            .json_body(json!([{
-                "id": 2,
-                "principal_id": 11,
-                "scoped": true,
-                "issued": "2024-01-02T00:00:00Z"
-            }]));
+            .json_body(json!([principal_token_json(2, 11, true)]));
     });
 }
 
@@ -5843,7 +6124,7 @@ async fn async_shared_computed_field_lifecycle_uses_class_scoped_routes() {
     let shared_update = server.mock(|when, then| {
         when.method(PATCH)
             .path("/api/v1/classes/42/computed-fields/7")
-            .json_body(json!({"expected_revision": 2, "label": "Grand total"}));
+            .json_body(json!({"label": "Grand total"}));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
@@ -5853,8 +6134,7 @@ async fn async_shared_computed_field_lifecycle_uses_class_scoped_routes() {
     });
     let shared_delete = server.mock(|when, then| {
         when.method(DELETE)
-            .path("/api/v1/classes/42/computed-fields/7")
-            .query_param("expected_revision", "2");
+            .path("/api/v1/classes/42/computed-fields/7");
         then.status(202)
             .header("content-type", "application/json")
             .json_body(json!({
@@ -5889,10 +6169,10 @@ async fn async_shared_computed_field_lifecycle_uses_class_scoped_routes() {
         7
     );
     shared
-        .update(7, ComputedFieldDefinitionPatch::new(2).label("Grand total"))
+        .update(7, ComputedFieldDefinitionPatch::new().label("Grand total"))
         .await
         .unwrap();
-    assert_eq!(shared.delete(7, 2).await.unwrap().deleted_definition_id, 7);
+    assert_eq!(shared.delete(7).await.unwrap().deleted_definition_id, 7);
     assert_eq!(
         shared
             .preview(ComputedFieldPreviewRequest::for_data(
@@ -5916,6 +6196,61 @@ async fn async_shared_computed_field_lifecycle_uses_class_scoped_routes() {
     ] {
         mock.assert_calls(1);
     }
+}
+
+#[test]
+fn sync_conditional_shared_computed_field_delete_decodes_accepted_body() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let deletion = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/classes/42/computed-fields/7")
+            .header("if-match", "\"hubuum-v1.computed-field.7.1\"");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "deleted_definition_id": 7,
+                "state": computation_state_json()
+            }));
+    });
+    let client = sync_client(&server);
+    let etag = hubuum_client::EntityTag::new("\"hubuum-v1.computed-field.7.1\"").unwrap();
+
+    let response = client
+        .computed_fields(42)
+        .delete_if_match(7, &etag)
+        .unwrap();
+
+    assert_eq!(response.deleted_definition_id.get(), 7);
+    deletion.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_conditional_shared_computed_field_delete_decodes_accepted_body() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let deletion = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/classes/42/computed-fields/7")
+            .header("if-match", "\"hubuum-v1.computed-field.7.1\"");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "deleted_definition_id": 7,
+                "state": computation_state_json()
+            }));
+    });
+    let client = async_client(&server).await;
+    let etag = hubuum_client::EntityTag::new("\"hubuum-v1.computed-field.7.1\"").unwrap();
+
+    let response = client
+        .computed_fields(42)
+        .delete_if_match(7, &etag)
+        .await
+        .unwrap();
+
+    assert_eq!(response.deleted_definition_id.get(), 7);
+    deletion.assert_calls(1);
 }
 
 #[tokio::test]
@@ -5944,9 +6279,7 @@ async fn async_personal_computed_field_lifecycle_uses_current_user_routes() {
             .json_body(computed_definition_json("personal"));
     });
     let delete = server.mock(|when, then| {
-        when.method(DELETE)
-            .path("/api/v1/iam/me/computed-fields/7")
-            .query_param("expected_revision", "2");
+        when.method(DELETE).path("/api/v1/iam/me/computed-fields/7");
         then.status(204);
     });
     let preview = server.mock(|when, then| {
@@ -5969,10 +6302,10 @@ async fn async_personal_computed_field_lifecycle_uses_current_user_routes() {
         .unwrap();
     assert_eq!(created.id, 7);
     personal
-        .update(7, ComputedFieldDefinitionPatch::new(2).enabled(false))
+        .update(7, ComputedFieldDefinitionPatch::new().enabled(false))
         .await
         .unwrap();
-    personal.delete(7, 2).await.unwrap();
+    personal.delete(7).await.unwrap();
     let result = personal
         .preview(
             ComputedFieldPreviewRequest::for_data(
@@ -6041,7 +6374,8 @@ async fn async_v003_public_config_is_unauthenticated() {
                     "max_page_limit": 500
                 },
                 "authentication": {
-                    "default_token_lifetime_hours": 24
+                    "default_token_lifetime_hours": 24,
+                    "max_token_lifetime_hours": 8760
                 }
             }));
     });
@@ -6072,7 +6406,8 @@ fn sync_v003_public_config_is_unauthenticated() {
                     "max_page_limit": 500
                 },
                 "authentication": {
-                    "default_token_lifetime_hours": 24
+                    "default_token_lifetime_hours": 24,
+                    "max_token_lifetime_hours": 8760
                 }
             }));
     });
@@ -6233,7 +6568,7 @@ async fn async_v003_natural_key_routes_cover_crud_relations_and_permissions() {
         .update(ClassPatch {
             name: Some("123".into()),
             description: Some("Class".into()),
-            collection_id: 7.into(),
+            collection_id: Some(7.into()),
             json_schema: None,
             validate_schema: None,
         })

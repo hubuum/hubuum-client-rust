@@ -12,16 +12,26 @@ use crate::client::sync::{
 };
 use crate::{
     ApiError, Group, NewTokenRequest, PrincipalCollectionPermissions, PrincipalTokenMetadata,
-    Token,
+    PrincipalTokenPointResponse, RenewTokenRequest, Token,
     endpoints::Endpoint,
-    types::{HubuumDateTime, PrincipalId, TokenId},
+    types::{
+        EntityTag, HubuumDateTime, PrincipalId, ResourceRevision, Revisioned, TokenId,
+        TokenListState,
+    },
 };
 
 include!("generated/user.rs");
 
 impl User {
-    pub fn is_local(&self) -> bool {
-        self.identity_scope == crate::types::LOCAL_IDENTITY_SCOPE
+    /// Whether this user belongs to the local identity scope.
+    ///
+    /// Canonical point responses expose only `identity_scope_id`, whose local
+    /// value is server-owned, so locality is unknown when the scope name is
+    /// omitted.
+    pub fn is_local(&self) -> Option<bool> {
+        self.identity_scope
+            .as_deref()
+            .map(|scope| scope == crate::types::LOCAL_IDENTITY_SCOPE)
     }
 
     pub fn is_provider_managed(&self) -> bool {
@@ -62,6 +72,13 @@ impl SyncHandle<User> {
         principal_tokens_request_sync(self.client(), self.id())
     }
 
+    pub fn tokens_request_state(
+        &self,
+        state: TokenListState,
+    ) -> SyncCursorRequest<PrincipalTokenMetadata> {
+        self.tokens_request().query_param("state", state)
+    }
+
     pub fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
         principal_tokens_sync(self.client(), self.id())
     }
@@ -79,6 +96,29 @@ impl SyncHandle<User> {
     /// Revoke (soft-delete) one of this user's tokens.
     pub fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
         principal_token_revoke_sync(self.client(), self.id(), token_id)
+    }
+
+    pub fn token(
+        &self,
+        token_id: impl Into<TokenId>,
+    ) -> Result<Revisioned<PrincipalTokenPointResponse>, ApiError> {
+        principal_token_get_sync(self.client(), self.id(), token_id)
+    }
+
+    pub fn token_renew(
+        &self,
+        token_id: impl Into<TokenId>,
+        request: RenewTokenRequest,
+    ) -> Result<Token, ApiError> {
+        principal_token_renew_sync(self.client(), self.id(), token_id, request)
+    }
+
+    pub fn token_revoke_if_match(
+        &self,
+        token_id: impl Into<TokenId>,
+        etag: &EntityTag,
+    ) -> Result<(), ApiError> {
+        principal_token_revoke_if_match_sync(self.client(), self.id(), token_id, etag)
     }
 
     /// Set a new plaintext password for this user.
@@ -145,6 +185,13 @@ impl AsyncHandle<User> {
         principal_tokens_request_async(self.client(), self.id())
     }
 
+    pub fn tokens_request_state(
+        &self,
+        state: TokenListState,
+    ) -> AsyncCursorRequest<PrincipalTokenMetadata> {
+        self.tokens_request().query_param("state", state)
+    }
+
     pub async fn tokens(&self) -> Result<Vec<PrincipalTokenMetadata>, ApiError> {
         principal_tokens_async(self.client(), self.id()).await
     }
@@ -162,6 +209,29 @@ impl AsyncHandle<User> {
     /// Revoke (soft-delete) one of this user's tokens.
     pub async fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
         principal_token_revoke_async(self.client(), self.id(), token_id).await
+    }
+
+    pub async fn token(
+        &self,
+        token_id: impl Into<TokenId>,
+    ) -> Result<Revisioned<PrincipalTokenPointResponse>, ApiError> {
+        principal_token_get_async(self.client(), self.id(), token_id).await
+    }
+
+    pub async fn token_renew(
+        &self,
+        token_id: impl Into<TokenId>,
+        request: RenewTokenRequest,
+    ) -> Result<Token, ApiError> {
+        principal_token_renew_async(self.client(), self.id(), token_id, request).await
+    }
+
+    pub async fn token_revoke_if_match(
+        &self,
+        token_id: impl Into<TokenId>,
+        etag: &EntityTag,
+    ) -> Result<(), ApiError> {
+        principal_token_revoke_if_match_async(self.client(), self.id(), token_id, etag).await
     }
 
     /// Set a new plaintext password for this user.
@@ -205,7 +275,7 @@ struct SetPasswordBody {
 // handles (a principal id is the user/service-account id).
 
 #[cfg(feature = "blocking")]
-fn principal_tokens_request_sync(
+pub(crate) fn principal_tokens_request_sync(
     client: &crate::client::sync::Client<crate::Authenticated>,
     principal_id: impl Into<PrincipalId>,
 ) -> SyncCursorRequest<PrincipalTokenMetadata> {
@@ -266,27 +336,70 @@ pub(crate) fn principal_token_revoke_sync(
     principal_id: impl Into<PrincipalId>,
     token_id: impl Into<TokenId>,
 ) -> Result<(), ApiError> {
-    let principal_id = principal_id.into();
-    let token_id = token_id.into();
-    let url_params = vec![
-        (
-            Cow::Borrowed("principal_id"),
-            principal_id.to_string().into(),
-        ),
-        (Cow::Borrowed("token_id"), token_id.to_string().into()),
-    ];
     client.request_with_endpoint::<SyncEmptyPostParams, serde_json::Value>(
         reqwest::Method::POST,
         &Endpoint::PrincipalTokenRevoke,
-        url_params,
+        principal_token_url_params(principal_id, token_id),
         vec![],
         SyncEmptyPostParams {},
     )?;
     Ok(())
 }
 
+#[cfg(feature = "blocking")]
+pub(crate) fn principal_token_get_sync(
+    client: &crate::client::sync::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+    token_id: impl Into<TokenId>,
+) -> Result<Revisioned<PrincipalTokenPointResponse>, ApiError> {
+    let raw = client.request_with_endpoint_raw(
+        reqwest::Method::GET,
+        &Endpoint::PrincipalToken,
+        principal_token_url_params(principal_id, token_id),
+        vec![],
+        SyncEmptyPostParams {},
+    )?;
+    crate::client::decode_revisioned(raw)
+}
+
+#[cfg(feature = "blocking")]
+pub(crate) fn principal_token_renew_sync(
+    client: &crate::client::sync::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+    token_id: impl Into<TokenId>,
+    request: RenewTokenRequest,
+) -> Result<Token, ApiError> {
+    client
+        .request_with_endpoint::<RenewTokenRequest, Token>(
+            reqwest::Method::POST,
+            &Endpoint::PrincipalTokenRenew,
+            principal_token_url_params(principal_id, token_id),
+            vec![],
+            request,
+        )?
+        .ok_or_else(|| ApiError::EmptyResult("Token renewal returned no token".into()))
+}
+
+#[cfg(feature = "blocking")]
+pub(crate) fn principal_token_revoke_if_match_sync(
+    client: &crate::client::sync::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+    token_id: impl Into<TokenId>,
+    etag: &EntityTag,
+) -> Result<(), ApiError> {
+    client.request_with_endpoint_raw_with_headers(
+        reqwest::Method::POST,
+        &Endpoint::PrincipalTokenRevoke,
+        principal_token_url_params(principal_id, token_id),
+        vec![],
+        SyncEmptyPostParams {},
+        &crate::client::if_match_headers(etag),
+    )?;
+    Ok(())
+}
+
 #[cfg(feature = "async")]
-fn principal_tokens_request_async(
+pub(crate) fn principal_tokens_request_async(
     client: &crate::client::r#async::Client<crate::Authenticated>,
     principal_id: impl Into<PrincipalId>,
 ) -> AsyncCursorRequest<PrincipalTokenMetadata> {
@@ -352,22 +465,85 @@ pub(crate) async fn principal_token_revoke_async(
     principal_id: impl Into<PrincipalId>,
     token_id: impl Into<TokenId>,
 ) -> Result<(), ApiError> {
+    client
+        .request_with_endpoint::<AsyncEmptyPostParams, serde_json::Value>(
+            reqwest::Method::POST,
+            &Endpoint::PrincipalTokenRevoke,
+            principal_token_url_params(principal_id, token_id),
+            vec![],
+            AsyncEmptyPostParams {},
+        )
+        .await?;
+    Ok(())
+}
+
+fn principal_token_url_params(
+    principal_id: impl Into<PrincipalId>,
+    token_id: impl Into<TokenId>,
+) -> crate::client::UrlParams {
     let principal_id = principal_id.into();
     let token_id = token_id.into();
-    let url_params = vec![
+    vec![
         (
             Cow::Borrowed("principal_id"),
             principal_id.to_string().into(),
         ),
         (Cow::Borrowed("token_id"), token_id.to_string().into()),
-    ];
-    client
-        .request_with_endpoint::<AsyncEmptyPostParams, serde_json::Value>(
-            reqwest::Method::POST,
-            &Endpoint::PrincipalTokenRevoke,
-            url_params,
+    ]
+}
+
+#[cfg(feature = "async")]
+pub(crate) async fn principal_token_get_async(
+    client: &crate::client::r#async::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+    token_id: impl Into<TokenId>,
+) -> Result<Revisioned<PrincipalTokenPointResponse>, ApiError> {
+    let raw = client
+        .request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::PrincipalToken,
+            principal_token_url_params(principal_id, token_id),
             vec![],
             AsyncEmptyPostParams {},
+        )
+        .await?;
+    crate::client::decode_revisioned(raw)
+}
+
+#[cfg(feature = "async")]
+pub(crate) async fn principal_token_renew_async(
+    client: &crate::client::r#async::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+    token_id: impl Into<TokenId>,
+    request: RenewTokenRequest,
+) -> Result<Token, ApiError> {
+    client
+        .request_with_endpoint::<RenewTokenRequest, Token>(
+            reqwest::Method::POST,
+            &Endpoint::PrincipalTokenRenew,
+            principal_token_url_params(principal_id, token_id),
+            vec![],
+            request,
+        )
+        .await?
+        .ok_or_else(|| ApiError::EmptyResult("Token renewal returned no token".into()))
+}
+
+#[cfg(feature = "async")]
+pub(crate) async fn principal_token_revoke_if_match_async(
+    client: &crate::client::r#async::Client<crate::Authenticated>,
+    principal_id: impl Into<PrincipalId>,
+    token_id: impl Into<TokenId>,
+    etag: &EntityTag,
+) -> Result<(), ApiError> {
+    client
+        .request_with_endpoint_raw_with_headers(
+            reqwest::Method::POST,
+            &Endpoint::PrincipalTokenRevoke,
+            principal_token_url_params(principal_id, token_id),
+            vec![],
+            AsyncEmptyPostParams {},
+            &crate::client::if_match_headers(etag),
         )
         .await?;
     Ok(())

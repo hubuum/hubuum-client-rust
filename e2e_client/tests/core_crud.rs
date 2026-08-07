@@ -30,7 +30,7 @@ fn e2e_core_collection_class_object_crud_and_query() {
             ClassPatch {
                 name: Some(updated_class_name.clone()),
                 description: Some("updated e2e class".to_string()),
-                collection_id,
+                collection_id: Some(collection_id),
                 json_schema: None,
                 validate_schema: Some(false),
             },

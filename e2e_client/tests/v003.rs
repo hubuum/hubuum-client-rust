@@ -64,7 +64,7 @@ fn e2e_v003_natural_keys_aggregates_patching_and_public_config() {
         .update(ClassPatch {
             name: None,
             description: Some("updated through exact-name route".to_string()),
-            collection_id: collection.id,
+            collection_id: Some(collection.id),
             json_schema: None,
             validate_schema: None,
         })

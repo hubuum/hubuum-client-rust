@@ -20,7 +20,11 @@ fn e2e_iam_user_group_membership_lifecycle() {
 
     let members = group.members().expect("group members should list");
     assert!(members.iter().any(|member| {
-        member.principal_id == PrincipalId::from(user.id) && member.name == user.username
+        member.principal_id == PrincipalId::from(user.id)
+            && member
+                .principal
+                .as_ref()
+                .is_some_and(|principal| principal.name == user.username)
     }));
 
     let selected_user = harness

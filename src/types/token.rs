@@ -3,6 +3,18 @@ use serde::{Deserialize, Serialize};
 use super::Permissions;
 use crate::{ApiError, ClassId, CollectionId, ObjectId};
 
+/// Lifecycle subset selected by a token-management list endpoint.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum::Display)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum TokenListState {
+    Active,
+    Expired,
+    Revoked,
+    All,
+}
+
 /// Maximum number of collection, class, and object entries in one token
 /// resource boundary.
 pub const MAX_TOKEN_RESOURCE_SCOPES: usize = 1_000;

@@ -117,6 +117,7 @@ pub struct GroupResult {
     pub description: String,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: crate::types::ResourceRevision,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -170,6 +171,84 @@ pub struct PermissionResult {
     pub updated_at: HubuumDateTime,
 }
 
+/// Revision-owned SQL authorization state for one collection.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct CollectionPermissionSet {
+    pub collection_id: CollectionId,
+    pub revision: crate::types::ResourceRevision,
+    pub permissions: Vec<PermissionResult>,
+}
+
+impl std::ops::Deref for CollectionPermissionSet {
+    type Target = [PermissionResult];
+
+    fn deref(&self) -> &Self::Target {
+        &self.permissions
+    }
+}
+
+/// Collection permissions returned by either supported authorization backend.
+///
+/// The SQL backend owns a revisioned aggregate. Treetop-style backends return
+/// expanded group/permission rows and do not expose an aggregate revision or
+/// ETag.
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub enum CollectionPermissionsResponse {
+    Revisioned(CollectionPermissionSet),
+    Expanded(Vec<GroupPermissionsResult>),
+}
+
+impl CollectionPermissionsResponse {
+    pub fn revision(&self) -> Option<crate::types::ResourceRevision> {
+        match self {
+            Self::Revisioned(permission_set) => Some(permission_set.revision),
+            Self::Expanded(_) => None,
+        }
+    }
+
+    pub fn revisioned(&self) -> Option<&CollectionPermissionSet> {
+        match self {
+            Self::Revisioned(permission_set) => Some(permission_set),
+            Self::Expanded(_) => None,
+        }
+    }
+
+    pub fn expanded(&self) -> Option<&[GroupPermissionsResult]> {
+        match self {
+            Self::Revisioned(_) => None,
+            Self::Expanded(rows) => Some(rows),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Revisioned(permission_set) => permission_set.permissions.len(),
+            Self::Expanded(rows) => rows.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn get(&self, index: usize) -> Option<&PermissionResult> {
+        match self {
+            Self::Revisioned(permission_set) => permission_set.permissions.get(index),
+            Self::Expanded(rows) => rows.get(index).map(|row| &row.permission),
+        }
+    }
+}
+
+impl std::ops::Index<usize> for CollectionPermissionsResponse {
+    type Output = PermissionResult;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index)
+            .expect("collection permission index out of bounds")
+    }
+}
+
 /// Public, hash-free projection of a principal token (used for listing).
 #[derive(Debug, Serialize, Clone, PartialEq)]
 pub struct PrincipalTokenMetadata {
@@ -195,6 +274,32 @@ pub struct PrincipalTokenMetadata {
     pub last_used_at: Option<HubuumDateTime>,
     #[serde(default)]
     pub revoked_at: Option<HubuumDateTime>,
+    /// Whether this token can currently authenticate.
+    pub active: bool,
+    /// Whether this token's effective expiry has elapsed.
+    pub expired: bool,
+    pub revision: crate::types::ResourceRevision,
+}
+
+/// Canonical token point response. `last_used_at` and derived lifecycle flags
+/// remain available from token lists because routine use does not advance the
+/// token revision.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PrincipalTokenPointResponse {
+    pub id: crate::types::TokenId,
+    pub principal_id: crate::types::PrincipalId,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub scope: Option<crate::types::TokenScopeDetails>,
+    pub issued: HubuumDateTime,
+    #[serde(default)]
+    pub expires_at: Option<HubuumDateTime>,
+    #[serde(default)]
+    pub revoked_at: Option<HubuumDateTime>,
+    pub revision: crate::types::ResourceRevision,
 }
 
 #[derive(Deserialize)]
@@ -266,6 +371,9 @@ impl<'de> Deserialize<'de> for PrincipalTokenMetadata {
             last_used_at: Option<HubuumDateTime>,
             #[serde(default)]
             revoked_at: Option<HubuumDateTime>,
+            active: bool,
+            expired: bool,
+            revision: crate::types::ResourceRevision,
         }
 
         let wire = Wire::deserialize(deserializer)?;
@@ -286,23 +394,36 @@ impl<'de> Deserialize<'de> for PrincipalTokenMetadata {
             expires_at: wire.expires_at,
             last_used_at: wire.last_used_at,
             revoked_at: wire.revoked_at,
+            active: wire.active,
+            expired: wire.expired,
+            revision: wire.revision,
         })
     }
 }
 
-/// A group member, which is a principal of either kind (`human` or
-/// `service_account`).
+/// Principal details nested in a group membership or returned by `/iam/me`.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PrincipalMember {
+pub struct MembershipPrincipal {
     pub principal_id: crate::types::PrincipalId,
     #[serde(default = "crate::types::default_local_identity_value")]
     pub identity_scope: String,
     pub kind: String,
     pub name: String,
+    pub created_at: HubuumDateTime,
+    pub updated_at: HubuumDateTime,
+    pub revision: crate::types::ResourceRevision,
+}
+
+/// Revision-owned membership between one principal and one group.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PrincipalMember {
+    pub principal_id: crate::types::PrincipalId,
+    pub group_id: GroupId,
+    pub created_at: HubuumDateTime,
+    pub updated_at: HubuumDateTime,
+    pub revision: crate::types::ResourceRevision,
     #[serde(default)]
-    pub created_at: Option<HubuumDateTime>,
-    #[serde(default)]
-    pub updated_at: Option<HubuumDateTime>,
+    pub principal: Option<MembershipPrincipal>,
 }
 
 /// One group's contribution to a principal's effective permissions on a collection.
@@ -355,6 +476,7 @@ pub struct CurrentTokenMetadata {
     pub expires_at: Option<HubuumDateTime>,
     #[serde(default)]
     pub last_used_at: Option<HubuumDateTime>,
+    pub revision: crate::types::ResourceRevision,
 }
 
 impl<'de> Deserialize<'de> for CurrentTokenMetadata {
@@ -376,6 +498,7 @@ impl<'de> Deserialize<'de> for CurrentTokenMetadata {
             expires_at: Option<HubuumDateTime>,
             #[serde(default)]
             last_used_at: Option<HubuumDateTime>,
+            revision: crate::types::ResourceRevision,
         }
 
         let wire = Wire::deserialize(deserializer)?;
@@ -394,6 +517,7 @@ impl<'de> Deserialize<'de> for CurrentTokenMetadata {
             issued: wire.issued,
             expires_at: wire.expires_at,
             last_used_at: wire.last_used_at,
+            revision: wire.revision,
         })
     }
 }
@@ -402,7 +526,7 @@ impl<'de> Deserialize<'de> for CurrentTokenMetadata {
 /// by `GET /api/v1/iam/me`.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct MeResponse {
-    pub principal: PrincipalMember,
+    pub principal: MembershipPrincipal,
     pub token: CurrentTokenMetadata,
 }
 
@@ -426,6 +550,40 @@ pub struct NewTokenRequest {
     pub scopes: Option<Vec<crate::types::Permissions>>,
 }
 
+/// Optional expiry override for a replacement token.
+///
+/// Renewal copies the source token's descriptive metadata and scope into a
+/// newly issued token. The source token is not modified or reactivated.
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Default)]
+pub struct RenewTokenRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<HubuumDateTime>,
+}
+
+fn naive_utc_expiry(expires_at: &Option<HubuumDateTime>) -> Option<NaiveDateTime> {
+    expires_at
+        .as_ref()
+        .map(|expires_at| expires_at.0.naive_utc())
+}
+
+impl Serialize for RenewTokenRequest {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(Serialize)]
+        struct Wire {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            expires_at: Option<NaiveDateTime>,
+        }
+
+        Wire {
+            expires_at: naive_utc_expiry(&self.expires_at),
+        }
+        .serialize(serializer)
+    }
+}
+
 impl Serialize for NewTokenRequest {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -447,10 +605,7 @@ impl Serialize for NewTokenRequest {
         Wire {
             name: self.name.as_ref(),
             description: self.description.as_ref(),
-            expires_at: self
-                .expires_at
-                .as_ref()
-                .map(|expires_at| expires_at.0.naive_utc()),
+            expires_at: naive_utc_expiry(&self.expires_at),
             scope: scope.as_deref(),
         }
         .serialize(serializer)

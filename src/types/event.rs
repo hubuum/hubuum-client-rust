@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::resources::{CollectionId, EventSinkId, UserId};
 
-use super::{EventDeliveryId, EventSubscriptionId, HubuumDateTime, PrincipalId, Provenance};
+use super::{
+    EventDeliveryId, EventSubscriptionId, HubuumDateTime, PrincipalId, Provenance, ResourceRevision,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
@@ -32,7 +34,11 @@ pub struct EventResponse {
     #[serde(default)]
     pub before: Option<serde_json::Value>,
     #[serde(default)]
+    pub before_revision: Option<ResourceRevision>,
+    #[serde(default)]
     pub after: Option<serde_json::Value>,
+    #[serde(default)]
+    pub after_revision: Option<ResourceRevision>,
     pub metadata: serde_json::Value,
     pub schema_version: i32,
 }
@@ -62,6 +68,7 @@ pub struct EventSink {
     pub secret_ref: Option<String>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -136,6 +143,7 @@ pub struct EventSubscription {
     pub filter: Option<EventSubscriptionFilter>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -289,8 +297,6 @@ pub struct EventDelivery {
     pub attempts: i32,
     pub next_attempt_at: HubuumDateTime,
     #[serde(default)]
-    pub claim_token: Option<String>,
-    #[serde(default)]
     pub last_error: Option<String>,
     #[serde(default)]
     pub locked_until: Option<HubuumDateTime>,
@@ -307,10 +313,6 @@ impl std::fmt::Debug for EventDelivery {
             .field("status", &self.status)
             .field("attempts", &self.attempts)
             .field("next_attempt_at", &self.next_attempt_at)
-            .field(
-                "claim_token",
-                &self.claim_token.as_ref().map(|_| "[REDACTED]"),
-            )
             .field(
                 "last_error",
                 &self.last_error.as_ref().map(|_| "[REDACTED]"),
@@ -420,7 +422,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn delivery_debug_redacts_claim_and_error_details() {
+    fn delivery_debug_redacts_error_details_and_ignores_removed_claim_tokens() {
         let delivery: EventDelivery = serde_json::from_value(json!({
             "id": 41,
             "event_id": 42,
@@ -437,14 +439,9 @@ mod tests {
         .expect("delivery fixture should deserialize");
 
         let diagnostic = format!("{delivery:?}");
-        assert!(diagnostic.contains("claim_token: Some(\"[REDACTED]\")"));
         assert!(diagnostic.contains("last_error: Some(\"[REDACTED]\")"));
         assert!(!diagnostic.contains("delivery-claim-secret"));
         assert!(!diagnostic.contains("sink-secret"));
-        assert_eq!(
-            delivery.claim_token.as_deref(),
-            Some("delivery-claim-secret")
-        );
         assert_eq!(
             delivery.last_error.as_deref(),
             Some("sink rejected bearer sink-secret")
@@ -460,6 +457,7 @@ mod tests {
             "config": {"url": "https://example.invalid?token=response-secret"},
             "enabled": true,
             "secret_ref": "response-secret-ref",
+            "revision": 1,
             "created_at": "2026-07-23T08:00:00Z",
             "updated_at": "2026-07-23T08:00:00Z"
         }))
@@ -487,6 +485,7 @@ mod tests {
             "routing": {"url": "https://example.invalid?token=routing-secret"},
             "enabled": true,
             "filter": null,
+            "revision": 1,
             "created_at": "2026-07-23T08:00:00Z",
             "updated_at": "2026-07-23T08:00:00Z"
         }))

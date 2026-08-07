@@ -18,7 +18,9 @@ use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::ApiResource;
 use crate::types::FilterOperator;
-use crate::types::{BaseUrl, ExportContentType, IntoQueryTuples, TaskResponse};
+use crate::types::{
+    BaseUrl, EntityTag, ExportContentType, IntoQueryTuples, Revisioned, TaskResponse,
+};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";
@@ -406,6 +408,7 @@ pub(crate) fn process_transport_response(
     Ok(RawResponse {
         status: response.status,
         body: decode_response_text(response.body)?,
+        etag: response_etag(&response.headers)?,
         next_cursor,
         total_count,
         page_limit,
@@ -663,10 +666,27 @@ impl<'a, T> IntoIterator for &'a Page<T> {
 pub(crate) struct RawResponse {
     pub status: StatusCode,
     pub body: String,
+    pub etag: Option<crate::types::EntityTag>,
     pub next_cursor: Option<String>,
     pub total_count: Option<u64>,
     pub page_limit: Option<usize>,
     pub content_type: Option<ExportContentType>,
+}
+
+/// Decode a response body while preserving its optional strong ETag.
+///
+/// Keeping this conversion here ensures every transport-backed point read uses
+/// the same body and metadata handling.
+pub(crate) fn decode_revisioned<T: DeserializeOwned>(
+    raw: RawResponse,
+) -> Result<Revisioned<T>, ApiError> {
+    let value = decode_json_body(&raw.body)?;
+    Ok(Revisioned::new(value, raw.etag))
+}
+
+/// Build the conditional request header accepted by endpoint-aware helpers.
+pub(crate) fn if_match_headers(etag: &EntityTag) -> [(&'static str, String); 1] {
+    [(reqwest::header::IF_MATCH.as_str(), etag.as_str().into())]
 }
 
 impl std::fmt::Debug for RawResponse {
@@ -675,6 +695,7 @@ impl std::fmt::Debug for RawResponse {
             .field("status", &self.status)
             .field("body", &"[REDACTED]")
             .field("body_len", &self.body.len())
+            .field("etag", &self.etag)
             .field(
                 "next_cursor",
                 &self.next_cursor.as_ref().map(|_| "[REDACTED]"),
@@ -805,6 +826,14 @@ pub(crate) fn response_metadata(
     (next_cursor, total_count, page_limit, content_type)
 }
 
+pub(crate) fn response_etag(headers: &HeaderMap) -> Result<Option<EntityTag>, ApiError> {
+    let Some(value) = headers.get(reqwest::header::ETAG) else {
+        return Ok(None);
+    };
+    let value = value.to_str().map_err(|_| ApiError::InvalidEntityTag)?;
+    EntityTag::new(value).map(Some)
+}
+
 pub(crate) fn parse_http_error_message(body: &str) -> String {
     match serde_json::from_str::<Value>(body) {
         Ok(json) => json["message"]
@@ -813,6 +842,26 @@ pub(crate) fn parse_http_error_message(body: &str) -> String {
             .to_string(),
         Err(_) => body.to_string(),
     }
+}
+
+/// Decode one complete JSON response body with a path-aware error.
+pub(crate) fn decode_json_body<U: DeserializeOwned>(response_text: &str) -> Result<U, ApiError> {
+    let mut deserializer = serde_json::Deserializer::from_str(response_text);
+    let value = serde_path_to_error::deserialize(&mut deserializer).map_err(|error| {
+        ApiError::DeserializationError(format!(
+            "failed to decode {} at {}: {}",
+            type_name::<U>(),
+            error.path(),
+            error.inner()
+        ))
+    })?;
+    deserializer.end().map_err(|error| {
+        ApiError::DeserializationError(format!(
+            "failed to decode {}: trailing data: {error}",
+            type_name::<U>()
+        ))
+    })?;
+    Ok(value)
 }
 
 pub(crate) fn parse_response<U: DeserializeOwned>(
@@ -834,22 +883,7 @@ pub(crate) fn parse_response<U: DeserializeOwned>(
         return Ok(None);
     }
 
-    let mut deserializer = serde_json::Deserializer::from_str(&response_text);
-    let obj = serde_path_to_error::deserialize(&mut deserializer).map_err(|error| {
-        ApiError::DeserializationError(format!(
-            "failed to decode {} at {}: {}",
-            type_name::<U>(),
-            error.path(),
-            error.inner()
-        ))
-    })?;
-    deserializer.end().map_err(|error| {
-        ApiError::DeserializationError(format!(
-            "failed to decode {}: trailing data: {error}",
-            type_name::<U>()
-        ))
-    })?;
-    Ok(Some(obj))
+    decode_json_body(&response_text).map(Some)
 }
 
 pub(crate) fn parse_page_response<U: DeserializeOwned>(
@@ -1320,6 +1354,8 @@ pub struct Handle<C, T> {
     client: C,
     #[serde(flatten)]
     resource: T,
+    #[serde(skip)]
+    etag: Option<crate::types::EntityTag>,
 }
 
 impl<C, T> Handle<C, T>
@@ -1327,7 +1363,23 @@ where
     T: ApiResource + GetID + Default,
 {
     pub fn new(client: C, resource: T) -> Self {
-        Handle { client, resource }
+        Handle {
+            client,
+            resource,
+            etag: None,
+        }
+    }
+
+    pub(crate) fn new_with_etag(
+        client: C,
+        resource: T,
+        etag: Option<crate::types::EntityTag>,
+    ) -> Self {
+        Handle {
+            client,
+            resource,
+            etag,
+        }
     }
 
     pub fn resource(&self) -> &T {
@@ -1344,6 +1396,12 @@ where
 
     pub fn client(&self) -> &C {
         &self.client
+    }
+
+    /// Strong validator returned by the canonical point response, when that
+    /// representation supports conditional mutations.
+    pub fn etag(&self) -> Option<&crate::types::EntityTag> {
+        self.etag.as_ref()
     }
 }
 
@@ -1796,12 +1854,31 @@ mod test {
     }
 
     #[test]
+    fn response_etags_are_validated_instead_of_silently_discarded() {
+        let mut headers = HeaderMap::new();
+        assert!(response_etag(&headers).unwrap().is_none());
+
+        headers.insert(reqwest::header::ETAG, HeaderValue::from_static("\"valid\""));
+        assert_eq!(
+            response_etag(&headers).unwrap().unwrap().as_str(),
+            "\"valid\""
+        );
+
+        headers.insert(reqwest::header::ETAG, HeaderValue::from_static("unquoted"));
+        assert!(matches!(
+            response_etag(&headers),
+            Err(ApiError::InvalidEntityTag)
+        ));
+    }
+
+    #[test]
     fn parse_page_response_preserves_next_cursor() {
         let page = parse_page_response::<serde_json::Value>(
             &reqwest::Method::GET,
             RawResponse {
                 status: StatusCode::OK,
                 body: "[{\"id\":1}]".to_string(),
+                etag: None,
                 next_cursor: Some("abc".to_string()),
                 total_count: Some(12),
                 page_limit: Some(25),
@@ -1826,6 +1903,7 @@ mod test {
         let response = RawResponse {
             status: StatusCode::OK,
             body: "response-body-secret".into(),
+            etag: None,
             next_cursor: Some("cursor-secret".into()),
             total_count: Some(1),
             page_limit: Some(25),

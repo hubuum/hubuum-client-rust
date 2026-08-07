@@ -14,7 +14,7 @@ use crate::{
     ApiError, PrincipalMember,
     client::UrlParams,
     endpoints::Endpoint,
-    types::{HubuumDateTime, PrincipalId},
+    types::{EntityTag, HubuumDateTime, PrincipalId, ResourceRevision, Revisioned},
 };
 
 fn group_member_url_params(group_id: GroupId, principal_id: impl Into<PrincipalId>) -> UrlParams {
@@ -42,18 +42,21 @@ impl Group {
 
 #[cfg(feature = "blocking")]
 impl SyncHandle<Group> {
-    pub fn add_member(&self, principal_id: impl Into<PrincipalId>) -> Result<(), ApiError> {
+    pub fn add_member(
+        &self,
+        principal_id: impl Into<PrincipalId>,
+    ) -> Result<PrincipalMember, ApiError> {
         let url_params = group_member_url_params(self.id(), principal_id);
 
         self.client()
-            .request_with_endpoint::<SyncEmptyPostParams, ()>(
+            .request_with_endpoint::<SyncEmptyPostParams, PrincipalMember>(
                 reqwest::Method::POST,
                 &Endpoint::GroupMembersAddRemove,
                 url_params,
                 vec![],
                 SyncEmptyPostParams {},
-            )?;
-        Ok(())
+            )?
+            .ok_or_else(|| ApiError::EmptyResult("Membership creation returned no entity".into()))
     }
 
     pub fn remove_member(&self, principal_id: impl Into<PrincipalId>) -> Result<(), ApiError> {
@@ -67,6 +70,36 @@ impl SyncHandle<Group> {
                 vec![],
                 SyncEmptyPostParams {},
             )?;
+        Ok(())
+    }
+
+    pub fn member(
+        &self,
+        principal_id: impl Into<PrincipalId>,
+    ) -> Result<Revisioned<PrincipalMember>, ApiError> {
+        let raw = self.client().request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::GroupMembersAddRemove,
+            group_member_url_params(self.id(), principal_id),
+            vec![],
+            SyncEmptyPostParams {},
+        )?;
+        crate::client::decode_revisioned(raw)
+    }
+
+    pub fn remove_member_if_match(
+        &self,
+        principal_id: impl Into<PrincipalId>,
+        etag: &EntityTag,
+    ) -> Result<(), ApiError> {
+        self.client().request_with_endpoint_raw_with_headers(
+            reqwest::Method::DELETE,
+            &Endpoint::GroupMembersAddRemove,
+            group_member_url_params(self.id(), principal_id),
+            vec![],
+            SyncEmptyPostParams {},
+            &crate::client::if_match_headers(etag),
+        )?;
         Ok(())
     }
 
@@ -88,19 +121,22 @@ impl SyncHandle<Group> {
 
 #[cfg(feature = "async")]
 impl AsyncHandle<Group> {
-    pub async fn add_member(&self, principal_id: impl Into<PrincipalId>) -> Result<(), ApiError> {
+    pub async fn add_member(
+        &self,
+        principal_id: impl Into<PrincipalId>,
+    ) -> Result<PrincipalMember, ApiError> {
         let url_params = group_member_url_params(self.id(), principal_id);
 
         self.client()
-            .request_with_endpoint::<AsyncEmptyPostParams, ()>(
+            .request_with_endpoint::<AsyncEmptyPostParams, PrincipalMember>(
                 reqwest::Method::POST,
                 &Endpoint::GroupMembersAddRemove,
                 url_params,
                 vec![],
                 AsyncEmptyPostParams {},
             )
-            .await?;
-        Ok(())
+            .await?
+            .ok_or_else(|| ApiError::EmptyResult("Membership creation returned no entity".into()))
     }
 
     pub async fn remove_member(
@@ -116,6 +152,41 @@ impl AsyncHandle<Group> {
                 url_params,
                 vec![],
                 AsyncEmptyPostParams {},
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub async fn member(
+        &self,
+        principal_id: impl Into<PrincipalId>,
+    ) -> Result<Revisioned<PrincipalMember>, ApiError> {
+        let raw = self
+            .client()
+            .request_with_endpoint_raw(
+                reqwest::Method::GET,
+                &Endpoint::GroupMembersAddRemove,
+                group_member_url_params(self.id(), principal_id),
+                vec![],
+                AsyncEmptyPostParams {},
+            )
+            .await?;
+        crate::client::decode_revisioned(raw)
+    }
+
+    pub async fn remove_member_if_match(
+        &self,
+        principal_id: impl Into<PrincipalId>,
+        etag: &EntityTag,
+    ) -> Result<(), ApiError> {
+        self.client()
+            .request_with_endpoint_raw_with_headers(
+                reqwest::Method::DELETE,
+                &Endpoint::GroupMembersAddRemove,
+                group_member_url_params(self.id(), principal_id),
+                vec![],
+                AsyncEmptyPostParams {},
+                &crate::client::if_match_headers(etag),
             )
             .await?;
         Ok(())

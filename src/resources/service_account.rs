@@ -2,36 +2,48 @@ use std::borrow::Cow;
 
 #[cfg(feature = "async")]
 use crate::client::r#async::{
-    EmptyPostParams as AsyncEmptyPostParams, Handle as AsyncHandle,
-    PrincipalSettingsScope as AsyncPrincipalSettingsScope,
+    CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+    Handle as AsyncHandle, PrincipalSettingsScope as AsyncPrincipalSettingsScope,
 };
 #[cfg(feature = "blocking")]
 use crate::client::sync::{
-    EmptyPostParams as SyncEmptyPostParams, Handle as SyncHandle,
-    PrincipalSettingsScope as SyncPrincipalSettingsScope,
+    CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+    Handle as SyncHandle, PrincipalSettingsScope as SyncPrincipalSettingsScope,
 };
 #[cfg(feature = "async")]
 use crate::resources::user::{
-    principal_token_create_async, principal_token_create_token_async, principal_token_revoke_async,
-    principal_tokens_async,
+    principal_token_create_async, principal_token_create_token_async, principal_token_get_async,
+    principal_token_renew_async, principal_token_revoke_async,
+    principal_token_revoke_if_match_async, principal_tokens_async, principal_tokens_request_async,
 };
 #[cfg(feature = "blocking")]
 use crate::resources::user::{
-    principal_token_create_sync, principal_token_create_token_sync, principal_token_revoke_sync,
-    principal_tokens_sync,
+    principal_token_create_sync, principal_token_create_token_sync, principal_token_get_sync,
+    principal_token_renew_sync, principal_token_revoke_if_match_sync, principal_token_revoke_sync,
+    principal_tokens_request_sync, principal_tokens_sync,
 };
 use crate::{
     ApiError, GroupId, NewTokenRequest, PrincipalCollectionPermissions, PrincipalTokenMetadata,
-    Token,
+    PrincipalTokenPointResponse, RenewTokenRequest, Token,
     endpoints::Endpoint,
-    types::{HubuumDateTime, PrincipalId, TokenId},
+    types::{
+        EntityTag, HubuumDateTime, PrincipalId, ResourceRevision, Revisioned, TokenId,
+        TokenListState,
+    },
 };
 
 include!("generated/service_account.rs");
 
 impl ServiceAccount {
-    pub fn is_local(&self) -> bool {
-        self.identity_scope == crate::types::LOCAL_IDENTITY_SCOPE
+    /// Whether this service account belongs to the local identity scope.
+    ///
+    /// Canonical point responses expose only `identity_scope_id`, whose local
+    /// value is server-owned, so locality is unknown when the scope name is
+    /// omitted.
+    pub fn is_local(&self) -> Option<bool> {
+        self.identity_scope
+            .as_deref()
+            .map(|scope| scope == crate::types::LOCAL_IDENTITY_SCOPE)
     }
 }
 
@@ -70,6 +82,17 @@ impl SyncHandle<ServiceAccount> {
         principal_tokens_sync(self.client(), self.id())
     }
 
+    pub fn tokens_request(&self) -> SyncCursorRequest<PrincipalTokenMetadata> {
+        principal_tokens_request_sync(self.client(), self.id())
+    }
+
+    pub fn tokens_request_state(
+        &self,
+        state: TokenListState,
+    ) -> SyncCursorRequest<PrincipalTokenMetadata> {
+        self.tokens_request().query_param("state", state)
+    }
+
     /// Mint a new token for this service account. Returns the raw token, shown once.
     pub fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
         principal_token_create_sync(self.client(), self.id(), request)
@@ -82,6 +105,29 @@ impl SyncHandle<ServiceAccount> {
 
     pub fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
         principal_token_revoke_sync(self.client(), self.id(), token_id)
+    }
+
+    pub fn token(
+        &self,
+        token_id: impl Into<TokenId>,
+    ) -> Result<Revisioned<PrincipalTokenPointResponse>, ApiError> {
+        principal_token_get_sync(self.client(), self.id(), token_id)
+    }
+
+    pub fn token_renew(
+        &self,
+        token_id: impl Into<TokenId>,
+        request: RenewTokenRequest,
+    ) -> Result<Token, ApiError> {
+        principal_token_renew_sync(self.client(), self.id(), token_id, request)
+    }
+
+    pub fn token_revoke_if_match(
+        &self,
+        token_id: impl Into<TokenId>,
+        etag: &EntityTag,
+    ) -> Result<(), ApiError> {
+        principal_token_revoke_if_match_sync(self.client(), self.id(), token_id, etag)
     }
 }
 
@@ -121,6 +167,17 @@ impl AsyncHandle<ServiceAccount> {
         principal_tokens_async(self.client(), self.id()).await
     }
 
+    pub fn tokens_request(&self) -> AsyncCursorRequest<PrincipalTokenMetadata> {
+        principal_tokens_request_async(self.client(), self.id())
+    }
+
+    pub fn tokens_request_state(
+        &self,
+        state: TokenListState,
+    ) -> AsyncCursorRequest<PrincipalTokenMetadata> {
+        self.tokens_request().query_param("state", state)
+    }
+
     /// Mint a new token for this service account. Returns the raw token, shown once.
     pub async fn tokens_create(&self, request: NewTokenRequest) -> Result<String, ApiError> {
         principal_token_create_async(self.client(), self.id(), request).await
@@ -133,5 +190,28 @@ impl AsyncHandle<ServiceAccount> {
 
     pub async fn token_revoke(&self, token_id: impl Into<TokenId>) -> Result<(), ApiError> {
         principal_token_revoke_async(self.client(), self.id(), token_id).await
+    }
+
+    pub async fn token(
+        &self,
+        token_id: impl Into<TokenId>,
+    ) -> Result<Revisioned<PrincipalTokenPointResponse>, ApiError> {
+        principal_token_get_async(self.client(), self.id(), token_id).await
+    }
+
+    pub async fn token_renew(
+        &self,
+        token_id: impl Into<TokenId>,
+        request: RenewTokenRequest,
+    ) -> Result<Token, ApiError> {
+        principal_token_renew_async(self.client(), self.id(), token_id, request).await
+    }
+
+    pub async fn token_revoke_if_match(
+        &self,
+        token_id: impl Into<TokenId>,
+        etag: &EntityTag,
+    ) -> Result<(), ApiError> {
+        principal_token_revoke_if_match_async(self.client(), self.id(), token_id, etag).await
     }
 }

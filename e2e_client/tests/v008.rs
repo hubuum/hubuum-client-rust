@@ -32,7 +32,7 @@ fn assert_scope_denied(error: ApiError) {
 #[test]
 #[ignore = "requires Docker and Hubuum server v0.0.8 image"]
 fn e2e_v008_token_lifecycle_with_and_without_scopes() {
-    if TARGET_SERVER_VERSION != "0.0.8" {
+    if !matches!(TARGET_SERVER_VERSION, "0.0.8" | "0.0.9") {
         eprintln!("skipping v0.0.8 scenario while the declared target is {TARGET_SERVER_VERSION}");
         return;
     }
@@ -332,7 +332,7 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
 #[tokio::test]
 #[ignore = "requires Docker and Hubuum server v0.0.8 image"]
 async fn e2e_v008_async_service_account_token_lifecycle_with_expiry() {
-    if TARGET_SERVER_VERSION != "0.0.8" {
+    if !matches!(TARGET_SERVER_VERSION, "0.0.8" | "0.0.9") {
         eprintln!("skipping v0.0.8 scenario while the declared target is {TARGET_SERVER_VERSION}");
         return;
     }
@@ -541,7 +541,7 @@ async fn e2e_v008_async_service_account_token_lifecycle_with_expiry() {
 #[test]
 #[ignore = "requires Docker and Hubuum server v0.0.8 image"]
 fn e2e_v008_numeric_aggregates_and_provenance() {
-    if TARGET_SERVER_VERSION != "0.0.8" {
+    if !matches!(TARGET_SERVER_VERSION, "0.0.8" | "0.0.9") {
         eprintln!("skipping v0.0.8 scenario while the declared target is {TARGET_SERVER_VERSION}");
         return;
     }

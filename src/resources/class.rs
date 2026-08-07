@@ -12,7 +12,8 @@ use crate::client::sync::{
 };
 use crate::{
     ApiError, CollectionId, GroupPermissionsResult, Object, ObjectRelationLimit,
-    endpoints::Endpoint, types::HubuumDateTime,
+    endpoints::Endpoint,
+    types::{HubuumDateTime, ResourceRevision},
 };
 #[cfg(feature = "blocking")]
 use crate::{FilterOperator, QueryFilter};
@@ -79,6 +80,14 @@ struct NewClassRelationFromClassParams {
 
 include!("generated/class.rs");
 
+impl Class {
+    /// Stable collection identifier from either the list or expanded point shape.
+    pub fn stable_collection_id(&self) -> Option<CollectionId> {
+        self.collection_id
+            .or_else(|| self.collection.as_ref().map(|collection| collection.id))
+    }
+}
+
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
 pub struct ClassWithPath {
     pub id: ClassId,
@@ -89,6 +98,7 @@ pub struct ClassWithPath {
     pub validate_schema: bool,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
     pub path: Vec<ClassId>,
 }
 

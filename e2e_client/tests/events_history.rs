@@ -30,7 +30,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
             ClassPatch {
                 name: Some(first_class_name.clone()),
                 description: Some("e2e class update for audit event".to_string()),
-                collection_id,
+                collection_id: Some(collection_id),
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -87,7 +87,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
             ClassPatch {
                 name: Some(second_class_name),
                 description: Some("e2e class update for delivery fanout".to_string()),
-                collection_id,
+                collection_id: Some(collection_id),
                 json_schema: None,
                 validate_schema: Some(false),
             },
@@ -193,7 +193,7 @@ fn e2e_events_and_history_cover_core_and_templates() {
             ClassPatch {
                 name: Some(updated_class_name.clone()),
                 description: Some("e2e class history update".to_string()),
-                collection_id,
+                collection_id: Some(collection_id),
                 json_schema: None,
                 validate_schema: Some(false),
             },

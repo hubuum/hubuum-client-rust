@@ -484,6 +484,9 @@ fn group_json(id: i32) -> serde_json::Value {
         "id": id,
         "groupname": format!("group-{id}"),
         "description": "Group",
+        "identity_scope": "local",
+        "managed_by": "local",
+        "revision": 1,
         "created_at": "2026-07-21T10:00:00Z",
         "updated_at": "2026-07-21T10:00:00Z"
     })
@@ -603,14 +606,106 @@ fn exact_name_class_json(name: &str) -> serde_json::Value {
             "id": 7,
             "name": "collection-1",
             "description": "Collection",
+            "revision": 1,
             "created_at": "2026-07-21T10:00:00Z",
             "updated_at": "2026-07-21T10:00:00Z"
         },
         "json_schema": null,
         "validate_schema": null,
+        "revision": 1,
         "created_at": "2026-07-21T10:00:00Z",
         "updated_at": "2026-07-21T10:00:00Z"
     })
+}
+
+fn revisioned_class_response_for(name: &str) -> TransportResponse {
+    let mut response =
+        TransportResponse::json(StatusCode::OK, &exact_name_class_json(name)).unwrap();
+    response.headers.insert(
+        reqwest::header::ETAG,
+        reqwest::header::HeaderValue::from_static("\"hubuum-v1.class.42.1\""),
+    );
+    response
+}
+
+fn revisioned_class_response() -> TransportResponse {
+    revisioned_class_response_for("server")
+}
+
+fn enqueue_conditional_class_responses(transport: &MockTransport) {
+    transport.push_response(revisioned_class_response());
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &exact_name_class_json("server")).unwrap(),
+    );
+    transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+}
+
+fn assert_conditional_class_requests(transport: &MockTransport) {
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 3);
+    assert_eq!(requests[0].method, Method::GET);
+    assert_eq!(requests[0].url.path(), "/api/v1/classes/42");
+
+    for (request, method) in [
+        (&requests[1], Method::PATCH),
+        (&requests[2], Method::DELETE),
+    ] {
+        assert_eq!(request.method, method);
+        assert_eq!(request.url.path(), "/api/v1/classes/42");
+        assert_eq!(
+            request.headers.get(reqwest::header::IF_MATCH).unwrap(),
+            "\"hubuum-v1.class.42.1\""
+        );
+    }
+}
+
+#[test]
+fn blocking_point_etags_drive_conditional_updates_and_deletes() {
+    let transport = MockTransport::default();
+    enqueue_conditional_class_responses(&transport);
+    let client = blocking_mock_client(transport.clone(), 4096);
+
+    let handle = client.classes().get(42).unwrap();
+    let etag = handle.etag().unwrap().clone();
+    assert_eq!(etag.as_str(), "\"hubuum-v1.class.42.1\"");
+
+    client
+        .classes()
+        .update(42)
+        .description("updated")
+        .if_match(etag.clone())
+        .send()
+        .unwrap();
+    client.classes().delete_if_match(42, &etag).unwrap();
+
+    assert_conditional_class_requests(&transport);
+}
+
+#[tokio::test]
+async fn async_point_etags_drive_conditional_updates_and_deletes() {
+    let transport = MockTransport::default();
+    enqueue_conditional_class_responses(&transport);
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    let handle = client.classes().get(42).await.unwrap();
+    let etag = handle.etag().unwrap().clone();
+    assert_eq!(etag.as_str(), "\"hubuum-v1.class.42.1\"");
+
+    client
+        .classes()
+        .update(42)
+        .description("updated")
+        .if_match(etag.clone())
+        .send()
+        .await
+        .unwrap();
+    client.classes().delete_if_match(42, &etag).await.unwrap();
+
+    assert_conditional_class_requests(&transport);
 }
 
 fn exact_name_object_json(name: &str) -> serde_json::Value {
@@ -621,9 +716,20 @@ fn exact_name_object_json(name: &str) -> serde_json::Value {
         "hubuum_class_id": 42,
         "description": "Object",
         "data": {"owner": "network"},
+        "revision": 1,
         "created_at": "2026-07-21T10:00:00Z",
         "updated_at": "2026-07-21T10:00:00Z"
     })
+}
+
+fn revisioned_object_response(name: &str) -> TransportResponse {
+    let mut response =
+        TransportResponse::json(StatusCode::OK, &exact_name_object_json(name)).unwrap();
+    response.headers.insert(
+        reqwest::header::ETAG,
+        reqwest::header::HeaderValue::from_static("\"hubuum-v1.object.9.1\""),
+    );
+    response
 }
 
 fn remote_target_json() -> serde_json::Value {
@@ -641,6 +747,7 @@ fn remote_target_json() -> serde_json::Value {
         "enabled": true,
         "body_template": null,
         "class_id": null,
+        "revision": 1,
         "created_at": "2026-07-21T10:00:00Z",
         "updated_at": "2026-07-21T10:00:00Z"
     })
@@ -664,15 +771,17 @@ fn new_remote_target() -> NewRemoteTarget {
 }
 
 fn enqueue_exact_name_responses(transport: &MockTransport, class_name: &str, object_name: &str) {
-    for body in [
-        exact_name_class_json(class_name),
-        exact_name_class_json(class_name),
-        exact_name_object_json(object_name),
-        exact_name_object_json(object_name),
-        exact_name_object_json(object_name),
-    ] {
-        transport.push_response(TransportResponse::json(StatusCode::OK, &body).unwrap());
-    }
+    transport.push_response(revisioned_class_response_for(class_name));
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &exact_name_class_json(class_name)).unwrap(),
+    );
+    transport.push_response(revisioned_object_response(object_name));
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &exact_name_object_json(object_name)).unwrap(),
+    );
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &exact_name_object_json(object_name)).unwrap(),
+    );
     transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
     transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
 }
@@ -714,7 +823,7 @@ fn class_patch() -> ClassPatch {
     ClassPatch {
         name: None,
         description: Some("updated".into()),
-        collection_id: 7.into(),
+        collection_id: Some(7.into()),
         json_schema: None,
         validate_schema: None,
     }
@@ -778,10 +887,16 @@ fn blocking_exact_name_routes_preserve_opaque_path_segments() {
     let client = blocking_mock_client(transport.clone(), 4096);
 
     let class = client.class_by_name(class_name);
-    class.get().unwrap();
+    assert_eq!(
+        class.get().unwrap().etag().unwrap().as_str(),
+        "\"hubuum-v1.class.42.1\""
+    );
     class.update(class_patch()).unwrap();
     let object = class.objects().by_name(object_name);
-    object.get().unwrap();
+    assert_eq!(
+        object.get().unwrap().etag().unwrap().as_str(),
+        "\"hubuum-v1.object.9.1\""
+    );
     object.update(object_patch()).unwrap();
     object.patch_data(&object_data_patch()).unwrap();
     object.delete().unwrap();
@@ -805,10 +920,16 @@ async fn async_exact_name_routes_preserve_opaque_path_segments() {
         .authenticate(Token::new("consumer-secret"));
 
     let class = client.class_by_name(class_name);
-    class.get().await.unwrap();
+    assert_eq!(
+        class.get().await.unwrap().etag().unwrap().as_str(),
+        "\"hubuum-v1.class.42.1\""
+    );
     class.update(class_patch()).await.unwrap();
     let object = class.objects().by_name(object_name);
-    object.get().await.unwrap();
+    assert_eq!(
+        object.get().await.unwrap().etag().unwrap().as_str(),
+        "\"hubuum-v1.object.9.1\""
+    );
     object.update(object_patch()).await.unwrap();
     object.patch_data(&object_data_patch()).await.unwrap();
     object.delete().await.unwrap();
@@ -820,10 +941,23 @@ async fn async_exact_name_routes_preserve_opaque_path_segments() {
 }
 
 fn enqueue_dot_name_responses(transport: &MockTransport, class_name: &str, object_name: &str) {
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &json!([exact_name_class_json(class_name)]))
+            .unwrap(),
+    );
+    transport.push_response(revisioned_class_response_for(class_name));
+    transport.push_response(
+        TransportResponse::json(StatusCode::OK, &exact_name_class_json(class_name)).unwrap(),
+    );
+    transport.push_response(
+        TransportResponse::json(
+            StatusCode::OK,
+            &json!([exact_name_object_json(object_name)]),
+        )
+        .unwrap(),
+    );
+    transport.push_response(revisioned_object_response(object_name));
     for body in [
-        json!([exact_name_class_json(class_name)]),
-        exact_name_class_json(class_name),
-        json!([exact_name_object_json(object_name)]),
         exact_name_object_json(object_name),
         exact_name_object_json(object_name),
         json!([]),
@@ -841,44 +975,48 @@ fn assert_dot_name_requests(transport: &MockTransport, class_name: &str, object_
     let requests = transport.requests();
     let class_query = format!("name__equals={class_name}");
     let object_query = format!("name__equals={object_name}");
-    assert_eq!(requests.len(), 11);
+    assert_eq!(requests.len(), 13);
     assert_eq!(requests[0].method, Method::GET);
     assert_eq!(requests[0].url.path(), "/api/v1/classes");
     assert_eq!(requests[0].url.query(), Some(class_query.as_str()));
-    assert_eq!(requests[1].method, Method::PATCH);
+    assert_eq!(requests[1].method, Method::GET);
     assert_eq!(requests[1].url.path(), "/api/v1/classes/42");
-    assert_eq!(requests[2].method, Method::GET);
-    assert_eq!(requests[2].url.path(), "/api/v1/classes/42/");
-    assert_eq!(requests[2].url.query(), Some(object_query.as_str()));
-    assert_eq!(requests[3].method, Method::PATCH);
-    assert_eq!(requests[3].url.path(), "/api/v1/classes/42/9");
-    assert_eq!(requests[4].method, Method::PATCH);
-    assert_eq!(requests[4].url.path(), "/api/v1/classes/42/9/data");
+    assert_eq!(requests[2].method, Method::PATCH);
+    assert_eq!(requests[2].url.path(), "/api/v1/classes/42");
+    assert_eq!(requests[3].method, Method::GET);
+    assert_eq!(requests[3].url.path(), "/api/v1/classes/42/");
+    assert_eq!(requests[3].url.query(), Some(object_query.as_str()));
+    assert_eq!(requests[4].method, Method::GET);
+    assert_eq!(requests[4].url.path(), "/api/v1/classes/42/9");
+    assert_eq!(requests[5].method, Method::PATCH);
+    assert_eq!(requests[5].url.path(), "/api/v1/classes/42/9");
+    assert_eq!(requests[6].method, Method::PATCH);
+    assert_eq!(requests[6].url.path(), "/api/v1/classes/42/9/data");
     assert_eq!(
-        requests[4]
+        requests[6]
             .headers
             .get(reqwest::header::CONTENT_TYPE)
             .unwrap(),
         "application/json-patch+json"
     );
-    assert_eq!(requests[5].method, Method::GET);
-    assert_eq!(requests[5].url.path(), "/api/v1/classes/42/permissions");
-    assert_eq!(requests[6].method, Method::GET);
-    assert_eq!(requests[6].url.path(), "/api/v1/classes/42/related/graph");
     assert_eq!(requests[7].method, Method::GET);
+    assert_eq!(requests[7].url.path(), "/api/v1/classes/42/permissions");
+    assert_eq!(requests[8].method, Method::GET);
+    assert_eq!(requests[8].url.path(), "/api/v1/classes/42/related/graph");
+    assert_eq!(requests[9].method, Method::GET);
     assert_eq!(
-        requests[7].url.path(),
+        requests[9].url.path(),
         "/api/v1/classes/42/objects/9/related/objects"
     );
-    assert_eq!(requests[8].method, Method::GET);
+    assert_eq!(requests[10].method, Method::GET);
     assert_eq!(
-        requests[8].url.path(),
+        requests[10].url.path(),
         "/api/v1/classes/42/objects/9/related/graph"
     );
-    assert_eq!(requests[9].method, Method::DELETE);
-    assert_eq!(requests[9].url.path(), "/api/v1/classes/42/9");
-    assert_eq!(requests[10].method, Method::DELETE);
-    assert_eq!(requests[10].url.path(), "/api/v1/classes/42");
+    assert_eq!(requests[11].method, Method::DELETE);
+    assert_eq!(requests[11].url.path(), "/api/v1/classes/42/9");
+    assert_eq!(requests[12].method, Method::DELETE);
+    assert_eq!(requests[12].url.path(), "/api/v1/classes/42");
 }
 
 #[test]
@@ -889,10 +1027,16 @@ fn blocking_exact_name_routes_resolve_dot_segments_to_id_routes() {
         let client = blocking_mock_client(transport.clone(), 4096);
 
         let class = client.class_by_name(class_name);
-        class.get().unwrap();
+        assert_eq!(
+            class.get().unwrap().etag().unwrap().as_str(),
+            "\"hubuum-v1.class.42.1\""
+        );
         class.update(class_patch()).unwrap();
         let object = class.objects().by_name(object_name);
-        object.get().unwrap();
+        assert_eq!(
+            object.get().unwrap().etag().unwrap().as_str(),
+            "\"hubuum-v1.object.9.1\""
+        );
         object.update(object_patch()).unwrap();
         object.patch_data(&object_data_patch()).unwrap();
         class.permissions().list().unwrap();
@@ -919,10 +1063,16 @@ async fn async_exact_name_routes_resolve_dot_segments_to_id_routes() {
                 .authenticate(Token::new("consumer-secret"));
 
         let class = client.class_by_name(class_name);
-        class.get().await.unwrap();
+        assert_eq!(
+            class.get().await.unwrap().etag().unwrap().as_str(),
+            "\"hubuum-v1.class.42.1\""
+        );
         class.update(class_patch()).await.unwrap();
         let object = class.objects().by_name(object_name);
-        object.get().await.unwrap();
+        assert_eq!(
+            object.get().await.unwrap().etag().unwrap().as_str(),
+            "\"hubuum-v1.object.9.1\""
+        );
         object.update(object_patch()).await.unwrap();
         object.patch_data(&object_data_patch()).await.unwrap();
         class.permissions().list().await.unwrap();
@@ -1413,10 +1563,10 @@ async fn async_retry_errors_redact_query_values() {
 fn principal_settings_support_get_replace_patch_and_reset() {
     let transport = MockTransport::default();
     for response in [
-        json!({ "theme": "light" }),
-        json!({ "theme": "dark" }),
-        json!({ "theme": "dark", "dashboard": { "columns": 3 } }),
-        json!({ "locale": "nb-NO" }),
+        json!({ "revision": 1, "settings": { "theme": "light" } }),
+        json!({ "revision": 2, "settings": { "theme": "dark" } }),
+        json!({ "revision": 3, "settings": { "theme": "dark", "dashboard": { "columns": 3 } } }),
+        json!({ "revision": 1, "settings": { "locale": "nb-NO" } }),
     ] {
         transport.push_response(TransportResponse::json(StatusCode::OK, &response).unwrap());
     }
@@ -1573,7 +1723,11 @@ async fn async_remote_targets_reject_transport_controlled_api_key_headers_before
 async fn async_principal_settings_use_the_same_typed_surface() {
     let transport = MockTransport::default();
     transport.push_response(
-        TransportResponse::json(StatusCode::OK, &json!({ "locale": "nb-NO" })).unwrap(),
+        TransportResponse::json(
+            StatusCode::OK,
+            &json!({ "revision": 2, "settings": { "locale": "nb-NO" } }),
+        )
+        .unwrap(),
     );
     let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
         .with_transport(Arc::new(transport.clone()))
@@ -1680,6 +1834,7 @@ fn object_data_patch_preserves_its_media_type_for_custom_transports() {
                 "hubuum_class_id": 42,
                 "description": "Router",
                 "data": {"owner": "network"},
+                "revision": 1,
                 "created_at": "2026-07-21T10:00:00Z",
                 "updated_at": "2026-07-21T10:00:00Z"
             }),
@@ -1721,6 +1876,7 @@ fn typed_objects_round_trip_and_generate_schema() {
         "hubuum_class_id": 9,
         "description": "server",
         "data": { "hostname": "node-3", "cores": 8 },
+        "revision": 1,
         "created_at": "2026-07-10T10:00:00Z",
         "updated_at": "2026-07-10T10:00:00Z"
     }))
@@ -1762,6 +1918,7 @@ fn scoped_identity_resource_models_preserve_provider_metadata() {
         "email": "alice@example.com",
         "last_sync_attempted_at": "2026-07-10T10:00:00Z",
         "last_sync_success_at": "2026-07-10T10:00:00Z",
+        "revision": 1,
         "created_at": "2026-07-10T10:00:00Z",
         "updated_at": "2026-07-10T10:00:00Z"
     }))
@@ -1775,6 +1932,7 @@ fn scoped_identity_resource_models_preserve_provider_metadata() {
         "external_key": "cn=operators,dc=example,dc=com",
         "last_sync_attempted_at": "2026-07-10T10:00:00Z",
         "last_sync_success_at": "2026-07-10T10:00:00Z",
+        "revision": 1,
         "created_at": "2026-07-10T10:00:00Z",
         "updated_at": "2026-07-10T10:00:00Z"
     }))
@@ -1787,28 +1945,35 @@ fn scoped_identity_resource_models_preserve_provider_metadata() {
         "owner_group_id": 8,
         "created_by": 7,
         "disabled_at": null,
+        "revision": 1,
         "created_at": "2026-07-10T10:00:00Z",
         "updated_at": "2026-07-10T10:00:00Z"
     }))
     .unwrap();
 
     assert!(user.is_provider_managed());
-    assert_eq!(user.provider_kind, hubuum_client::LDAP_PROVIDER_KIND);
+    assert_eq!(
+        user.provider_kind.as_deref(),
+        Some(hubuum_client::LDAP_PROVIDER_KIND)
+    );
     assert!(group.is_provider_managed());
     assert_eq!(
         group.external_key.as_deref(),
         Some("cn=operators,dc=example,dc=com")
     );
-    assert!(service_account.is_local());
+    assert_eq!(service_account.is_local(), Some(true));
 }
 
 #[test]
-fn identity_metadata_defaults_to_local_for_older_server_responses() {
+fn canonical_point_identity_metadata_uses_stable_scope_ids() {
     let user: hubuum_client::User = serde_json::from_value(json!({
         "id": 7,
         "name": "alice",
         "proper_name": null,
         "email": null,
+        "identity_scope_id": 1,
+        "provider_managed": false,
+        "revision": 1,
         "created_at": "2026-07-10T10:00:00Z",
         "updated_at": "2026-07-10T10:00:00Z"
     }))
@@ -1817,14 +1982,31 @@ fn identity_metadata_defaults_to_local_for_older_server_responses() {
         "id": 8,
         "groupname": "operators",
         "description": "Operators",
+        "revision": 1,
+        "created_at": "2026-07-10T10:00:00Z",
+        "updated_at": "2026-07-10T10:00:00Z"
+    }))
+    .unwrap();
+    let service_account: hubuum_client::ServiceAccount = serde_json::from_value(json!({
+        "id": 9,
+        "name": "automation",
+        "description": "Automation",
+        "identity_scope_id": 1,
+        "owner_group_id": 8,
+        "created_by": 7,
+        "disabled_at": null,
+        "revision": 1,
         "created_at": "2026-07-10T10:00:00Z",
         "updated_at": "2026-07-10T10:00:00Z"
     }))
     .unwrap();
 
-    assert_eq!(user.identity_scope, hubuum_client::LOCAL_IDENTITY_SCOPE);
-    assert_eq!(user.provider_kind, hubuum_client::LOCAL_PROVIDER_KIND);
+    assert_eq!(user.identity_scope.as_deref(), None);
+    assert_eq!(user.provider_kind.as_deref(), None);
+    assert_eq!(user.is_local(), None);
     assert!(!user.is_provider_managed());
+    assert_eq!(service_account.identity_scope.as_deref(), None);
+    assert_eq!(service_account.is_local(), None);
     assert_eq!(group.identity_scope, hubuum_client::LOCAL_IDENTITY_SCOPE);
     assert_eq!(group.managed_by, hubuum_client::LOCAL_PROVIDER_KIND);
     assert!(!group.is_provider_managed());

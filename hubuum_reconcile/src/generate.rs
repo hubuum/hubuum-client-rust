@@ -19,6 +19,7 @@ struct FieldOptions {
     read_only: bool,
     post_only: bool,
     optional: bool,
+    response_optional: bool,
     post_optional: bool,
     as_id: bool,
     skip_patch: bool,
@@ -93,6 +94,7 @@ impl FieldOptions {
                     "read_only" => &mut options.read_only,
                     "post_only" => &mut options.post_only,
                     "optional" => &mut options.optional,
+                    "response_optional" => &mut options.response_optional,
                     "post_optional" => &mut options.post_optional,
                     "as_id" => &mut options.as_id,
                     "skip_patch" => &mut options.skip_patch,
@@ -314,6 +316,7 @@ fn expand_api_resource(input: ItemStruct) -> syn::Result<TokenStream> {
             read_only: is_read_only,
             post_only: is_post_only,
             optional: is_optional,
+            response_optional: _,
             post_optional: is_post_optional,
             as_id: is_as_id,
             skip_patch,
@@ -416,11 +419,7 @@ fn expand_api_resource(input: ItemStruct) -> syn::Result<TokenStream> {
 
         if !is_post_only && !is_read_only && !skip_patch {
             let patch_field_ty = if is_as_id {
-                if is_optional {
-                    quote!(Option<<#field_ty as crate::resources::ApiResource>::Id>)
-                } else {
-                    quote!(<#field_ty as crate::resources::ApiResource>::Id)
-                }
+                quote!(Option<<#field_ty as crate::resources::ApiResource>::Id>)
             } else {
                 quote!(Option<#field_ty>)
             };
@@ -800,6 +799,7 @@ fn process_fields(fields: &[ResourceField<'_>], id_name: &syn::Ident) -> Generat
             read_only: is_read_only,
             post_only: is_post_only,
             optional: is_optional,
+            response_optional,
             post_optional: is_post_optional,
             as_id: is_as_id,
             skip_patch,
@@ -825,7 +825,7 @@ fn process_fields(fields: &[ResourceField<'_>], id_name: &syn::Ident) -> Generat
         if !is_post_only {
             let main_field_ty = if field_name == "id" {
                 quote!(#id_name)
-            } else if is_optional {
+            } else if is_optional || response_optional {
                 quote!(Option<#ty>)
             } else {
                 quote!(#ty)
@@ -850,25 +850,25 @@ fn process_fields(fields: &[ResourceField<'_>], id_name: &syn::Ident) -> Generat
             generated.post.extend(quote!(pub #id_field_ident: #ty,));
         } else if !is_read_only {
             if is_as_id {
-                let id_type = if is_optional || is_post_optional {
+                let post_id_type = if is_optional || is_post_optional {
                     quote!(Option<<#ty as crate::resources::ApiResource>::Id>)
                 } else {
                     quote!(<#ty as crate::resources::ApiResource>::Id)
                 };
                 if !skip_patch {
-                    generated
-                        .patch
-                        .extend(quote!(pub #id_field_ident: #id_type,));
+                    generated.patch.extend(quote!(
+                        pub #id_field_ident: Option<<#ty as crate::resources::ApiResource>::Id>,
+                    ));
                 }
                 if is_post_optional {
                     generated.post.extend(quote! {
                         #[serde(skip_serializing_if = "Option::is_none")]
-                        pub #id_field_ident: #id_type,
+                        pub #id_field_ident: #post_id_type,
                     });
                 } else {
                     generated
                         .post
-                        .extend(quote!(pub #id_field_ident: #id_type,));
+                        .extend(quote!(pub #id_field_ident: #post_id_type,));
                 }
             } else {
                 if !skip_patch {
@@ -993,6 +993,49 @@ mod tests {
         .unwrap()
         .to_string();
         assert!(expanded.contains("\"from_widgets\""));
+    }
+
+    #[test]
+    fn required_relationship_ids_remain_required_on_create_but_optional_on_patch() {
+        let expanded: syn::File = syn::parse2(
+            expand_item(parse_quote!(
+                struct WidgetResource {
+                    #[api(read_only)]
+                    id: i32,
+                    name: String,
+                    #[api(as_id)]
+                    collection: Collection,
+                }
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let field_type = |struct_name: &str| {
+            expanded
+                .items
+                .iter()
+                .find_map(|item| match item {
+                    syn::Item::Struct(item) if item.ident == struct_name => item
+                        .fields
+                        .iter()
+                        .find(|field| field.ident.as_ref().is_some_and(|id| id == "collection_id"))
+                        .map(|field| &field.ty),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("missing {struct_name}.collection_id"))
+        };
+        let is_option = |ty: &syn::Type| {
+            matches!(
+                ty,
+                syn::Type::Path(path)
+                    if path.qself.is_none()
+                        && path.path.segments.last().is_some_and(|segment| segment.ident == "Option")
+            )
+        };
+
+        assert!(!is_option(field_type("WidgetPost")));
+        assert!(is_option(field_type("WidgetPatch")));
     }
 
     #[test]

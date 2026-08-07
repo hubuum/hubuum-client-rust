@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use super::ResourceRevision;
 use crate::ApiError;
 
 /// An object-only JSON document containing a principal's local preferences.
@@ -97,6 +98,80 @@ impl TryFrom<Value> for PrincipalSettings {
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         Self::from_value(value)
+    }
+}
+
+/// Revisioned response envelope used by principal-settings endpoints.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "typed-schemas", derive(schemars::JsonSchema))]
+pub struct PrincipalSettingsResponse {
+    pub revision: ResourceRevision,
+    pub settings: PrincipalSettings,
+}
+
+impl std::ops::Deref for PrincipalSettingsResponse {
+    type Target = PrincipalSettings;
+
+    fn deref(&self) -> &Self::Target {
+        &self.settings
+    }
+}
+
+/// One RFC 6902 operation for a principal-settings document.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "op", rename_all = "lowercase")]
+#[cfg_attr(feature = "typed-schemas", derive(schemars::JsonSchema))]
+pub enum PrincipalSettingsPatchOperation {
+    Add { path: String, value: Value },
+    Remove { path: String },
+    Replace { path: String, value: Value },
+    Move { from: String, path: String },
+    Copy { from: String, path: String },
+    Test { path: String, value: Value },
+}
+
+/// Bounded RFC 6902 patch document for principal settings.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(transparent)]
+#[cfg_attr(feature = "typed-schemas", derive(schemars::JsonSchema))]
+pub struct PrincipalSettingsPatchDocument(Vec<PrincipalSettingsPatchOperation>);
+
+impl PrincipalSettingsPatchDocument {
+    pub const MAX_OPERATIONS: usize = 1_000;
+
+    pub fn new(
+        operations: impl IntoIterator<Item = PrincipalSettingsPatchOperation>,
+    ) -> Result<Self, ApiError> {
+        let document = Self(operations.into_iter().collect());
+        if document.0.len() > Self::MAX_OPERATIONS {
+            return Err(ApiError::PrincipalSettingsPatchLimit {
+                operations: document.0.len(),
+                limit: Self::MAX_OPERATIONS,
+            });
+        }
+        Ok(document)
+    }
+
+    pub fn as_slice(&self) -> &[PrincipalSettingsPatchOperation] {
+        &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for PrincipalSettingsPatchDocument {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let operations = Vec::<PrincipalSettingsPatchOperation>::deserialize(deserializer)?;
+        Self::new(operations).map_err(serde::de::Error::custom)
+    }
+}
+
+impl TryFrom<Vec<PrincipalSettingsPatchOperation>> for PrincipalSettingsPatchDocument {
+    type Error = ApiError;
+
+    fn try_from(value: Vec<PrincipalSettingsPatchOperation>) -> Result<Self, Self::Error> {
+        Self::new(value)
     }
 }
 

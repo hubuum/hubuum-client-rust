@@ -6,6 +6,61 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Target Hubuum server v0.0.9 with its 202-operation OpenAPI contract and
+  immutable multi-platform image
+  `sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db`.
+- Model positive resource revisions and opaque strong HTTP entity tags, retain
+  point-response ETags on resource handles, and support optional `If-Match`
+  preconditions on generic updates and deletes. Collection ACL reads retain
+  SQL permission-set ETags, with conditional helpers for every ACL mutation.
+- Add import v2 write conditions and computed-field inputs; bounded RFC 6902
+  principal-settings patches; computed-field point reads; group-membership
+  point reads; and principal-token active/expired state filters, point reads,
+  renewal, and conditional revocation.
+- Expose the server's maximum explicit token lifetime through public and
+  administrative authentication configuration.
+
+### Changed
+
+- **Breaking:** authoritative resource, history, integration, token, event, and
+  import response models expose v0.0.9 revisions. Struct-literal callers must
+  populate the new `revision`, `condition`, or `computed_fields` fields.
+- **Breaking:** collection permission reads return
+  `CollectionPermissionsResponse`: SQL-backed responses contain a revisioned
+  `CollectionPermissionSet`, while Treetop-backed responses preserve their
+  expanded group/permission rows without inventing a revision. Group
+  membership is represented by `PrincipalMember` with stable principal/group
+  IDs and an optional nested principal projection.
+- **Breaking:** principal settings operations return
+  `PrincipalSettingsResponse { revision, settings }`; class point responses
+  expose optional expanded collection data plus a stable `collection_id`.
+- **Breaking:** user and service-account list/point projections now expose
+  optional identity-scope/provider names plus stable `identity_scope_id`
+  fields, matching the distinct v0.0.9 response shapes. Their `is_local()`
+  helpers now return `Option<bool>` so point responses with no scope name are
+  reported as unknown rather than incorrectly non-local.
+- **Breaking:** `ClassPatch::collection_id` is now optional; struct-literal
+  callers should wrap an intended move in `Some(...)`. This also fixes
+  description-only fluent updates incorrectly serializing collection ID zero.
+- **Breaking:** computed-field patches and deletes no longer carry an
+  `expected_revision` body or query parameter. Use the new `If-Match` helpers
+  with an ETag obtained from a point read when optimistic concurrency is
+  required.
+- **Breaking:** event deliveries no longer expose the removed `claim_token`;
+  token metadata exposes lifecycle state, and event responses expose before
+  and after revisions.
+- **Breaking:** `CURRENT_BACKUP_VERSION` is 4, matching the v0.0.9 server's
+  revision-aware disaster-recovery snapshot format. Older backup artifacts
+  must be restored with the server version that produced them.
+
+### Fixed
+
+- Validate response ETags instead of silently discarding malformed values,
+  and preserve path-aware JSON errors for successful responses with bodies,
+  including DELETE operations.
+
 ## [0.8.0] - 2026-08-05
 
 ### Added
