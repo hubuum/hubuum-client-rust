@@ -1,8 +1,8 @@
 use e2e_client::harness::{E2EHarness, admin_context};
 use e2e_client::naming::unique_case_prefix;
 use hubuum_client::{
-    ApiError, NewTokenRequest, PrincipalSettingsPatchDocument, PrincipalSettingsPatchOperation,
-    RenewTokenRequest, TARGET_SERVER_VERSION, TokenListState,
+    ApiError, HubuumDateTime, NewTokenRequest, Permissions, PrincipalSettingsPatchDocument,
+    PrincipalSettingsPatchOperation, RenewTokenRequest, TARGET_SERVER_VERSION, TokenListState,
 };
 use serde_json::json;
 
@@ -24,7 +24,7 @@ fn e2e_v009_revisions_etags_settings_memberships_and_tokens() {
     let harness = E2EHarness::from_env().expect("failed to start e2e harness");
     let (_, admin_group_id) =
         admin_context(&harness.client).expect("failed to resolve admin context");
-    let (_, class_id, _) = harness
+    let (collection_id, class_id, _) = harness
         .create_collection_class_object("v009-revisions", admin_group_id)
         .expect("failed to create revision resources");
 
@@ -89,6 +89,22 @@ fn e2e_v009_revisions_etags_settings_memberships_and_tokens() {
     let (_, group_id) = harness
         .create_group("v009-revisions")
         .expect("test group should create");
+    let collection = harness
+        .client
+        .collections()
+        .get(collection_id)
+        .expect("test collection should be selectable");
+    let permission_set = collection
+        .permissions_revisioned()
+        .expect("SQL permission set should decode with its ETag");
+    let permission_etag = permission_set
+        .etag()
+        .expect("SQL permission set should include a strong ETag");
+    let updated_permissions = collection
+        .grant_permission_if_match(group_id, Permissions::ReadCollection, permission_etag)
+        .expect("matching permission-set ETag should permit an ACL grant");
+    assert!(updated_permissions.revision > permission_set.revision().unwrap());
+
     let group = harness
         .client
         .groups()
@@ -120,9 +136,17 @@ fn e2e_v009_revisions_etags_settings_memberships_and_tokens() {
         .into_iter()
         .find(|token| token.name.as_deref() == Some(token_name.as_str()))
         .expect("new token should appear in active state filter");
+    let renewal_expiry =
+        HubuumDateTime(token_metadata.issued.0 + std::time::Duration::from_secs(60 * 60));
     let replacement = user_handle
-        .token_renew(token_metadata.id, RenewTokenRequest::default())
-        .expect("token should renew");
+        .token_renew(
+            token_metadata.id,
+            RenewTokenRequest {
+                expires_at: Some(renewal_expiry.clone()),
+            },
+        )
+        .expect("token should renew with an explicit expiry");
+    assert_eq!(replacement.expires_at(), Some(&renewal_expiry));
     assert_eq!(
         hubuum_client::blocking::Client::try_new(harness.base_url.clone())
             .expect("replacement-token client should build")

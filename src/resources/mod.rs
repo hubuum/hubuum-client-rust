@@ -187,6 +187,68 @@ impl std::ops::Deref for CollectionPermissionSet {
     }
 }
 
+/// Collection permissions returned by either supported authorization backend.
+///
+/// The SQL backend owns a revisioned aggregate. Treetop-style backends return
+/// expanded group/permission rows and do not expose an aggregate revision or
+/// ETag.
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub enum CollectionPermissionsResponse {
+    Revisioned(CollectionPermissionSet),
+    Expanded(Vec<GroupPermissionsResult>),
+}
+
+impl CollectionPermissionsResponse {
+    pub fn revision(&self) -> Option<crate::types::ResourceRevision> {
+        match self {
+            Self::Revisioned(permission_set) => Some(permission_set.revision),
+            Self::Expanded(_) => None,
+        }
+    }
+
+    pub fn revisioned(&self) -> Option<&CollectionPermissionSet> {
+        match self {
+            Self::Revisioned(permission_set) => Some(permission_set),
+            Self::Expanded(_) => None,
+        }
+    }
+
+    pub fn expanded(&self) -> Option<&[GroupPermissionsResult]> {
+        match self {
+            Self::Revisioned(_) => None,
+            Self::Expanded(rows) => Some(rows),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Revisioned(permission_set) => permission_set.permissions.len(),
+            Self::Expanded(rows) => rows.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn get(&self, index: usize) -> Option<&PermissionResult> {
+        match self {
+            Self::Revisioned(permission_set) => permission_set.permissions.get(index),
+            Self::Expanded(rows) => rows.get(index).map(|row| &row.permission),
+        }
+    }
+}
+
+impl std::ops::Index<usize> for CollectionPermissionsResponse {
+    type Output = PermissionResult;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index)
+            .expect("collection permission index out of bounds")
+    }
+}
+
 /// Public, hash-free projection of a principal token (used for listing).
 #[derive(Debug, Serialize, Clone, PartialEq)]
 pub struct PrincipalTokenMetadata {
@@ -492,10 +554,31 @@ pub struct NewTokenRequest {
 ///
 /// Renewal copies the source token's descriptive metadata and scope into a
 /// newly issued token. The source token is not modified or reactivated.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Default)]
 pub struct RenewTokenRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<HubuumDateTime>,
+}
+
+impl Serialize for RenewTokenRequest {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(Serialize)]
+        struct Wire {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            expires_at: Option<NaiveDateTime>,
+        }
+
+        Wire {
+            expires_at: self
+                .expires_at
+                .as_ref()
+                .map(|expires_at| expires_at.0.naive_utc()),
+        }
+        .serialize(serializer)
+    }
 }
 
 impl Serialize for NewTokenRequest {

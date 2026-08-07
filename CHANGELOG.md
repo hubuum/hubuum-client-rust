@@ -13,7 +13,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   `sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db`.
 - Model positive resource revisions and opaque strong HTTP entity tags, retain
   point-response ETags on resource handles, and support optional `If-Match`
-  preconditions on generic updates and deletes.
+  preconditions on generic updates and deletes. Collection ACL reads retain
+  SQL permission-set ETags, with conditional helpers for every ACL mutation.
 - Add import v2 write conditions and computed-field inputs; bounded RFC 6902
   principal-settings patches; computed-field point reads; group-membership
   point reads; and principal-token active/expired state filters, point reads,
@@ -26,16 +27,20 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - **Breaking:** authoritative resource, history, integration, token, event, and
   import response models expose v0.0.9 revisions. Struct-literal callers must
   populate the new `revision`, `condition`, or `computed_fields` fields.
-- **Breaking:** collection permissions are returned as a revision-owned
-  `CollectionPermissionSet` rather than a cursor page, and group membership is
-  represented by `PrincipalMember` with stable principal/group IDs and an
-  optional nested principal projection.
+- **Breaking:** collection permission reads return
+  `CollectionPermissionsResponse`: SQL-backed responses contain a revisioned
+  `CollectionPermissionSet`, while Treetop-backed responses preserve their
+  expanded group/permission rows without inventing a revision. Group
+  membership is represented by `PrincipalMember` with stable principal/group
+  IDs and an optional nested principal projection.
 - **Breaking:** principal settings operations return
   `PrincipalSettingsResponse { revision, settings }`; class point responses
   expose optional expanded collection data plus a stable `collection_id`.
 - **Breaking:** user and service-account list/point projections now expose
   optional identity-scope/provider names plus stable `identity_scope_id`
-  fields, matching the distinct v0.0.9 response shapes.
+  fields, matching the distinct v0.0.9 response shapes. Their `is_local()`
+  helpers now return `Option<bool>` so point responses with no scope name are
+  reported as unknown rather than incorrectly non-local.
 - **Breaking:** `ClassPatch::collection_id` is now optional; struct-literal
   callers should wrap an intended move in `Some(...)`. This also fixes
   description-only fluent updates incorrectly serializing collection ID zero.

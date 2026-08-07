@@ -1289,7 +1289,7 @@ fn sync_scoped_login_and_identity_filter_use_provider_scope() {
     assert_eq!(matches[0].identity_scope.as_deref(), Some("corp-directory"));
     assert_eq!(matches[0].provider_kind.as_deref(), Some("ldap"));
     assert!(matches[0].is_provider_managed());
-    assert!(!matches[0].is_local());
+    assert_eq!(matches[0].is_local(), Some(false));
     login.assert_calls(1);
     users.assert_calls(1);
 }
@@ -3182,7 +3182,8 @@ fn sync_supports_class_and_collection_permission_endpoints() {
     let group_permission = collection
         .group_permissions(10)
         .expect("collection group permissions should succeed");
-    assert_eq!(group_permission.permissions[0].group_id, 10);
+    assert_eq!(group_permission[0].group_id, 10);
+    assert_eq!(group_permission.revision().unwrap().get(), 1);
     collection
         .revoke_permissions(10)
         .expect("revoke_permissions should succeed");
@@ -3336,7 +3337,8 @@ async fn async_supports_class_and_collection_permission_endpoints() {
         .group_permissions(10)
         .await
         .expect("collection group permissions should succeed");
-    assert_eq!(group_permission.permissions[0].group_id, 10);
+    assert_eq!(group_permission[0].group_id, 10);
+    assert_eq!(group_permission.revision().unwrap().get(), 1);
     collection
         .revoke_permissions(10)
         .await
@@ -3378,6 +3380,232 @@ async fn async_supports_class_and_collection_permission_endpoints() {
     grant_permission.assert_calls(1);
     revoke_permission.assert_calls(1);
     user_permissions.assert_calls(1);
+}
+
+#[test]
+fn sync_collection_permission_reads_support_treetop_wire_shapes() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let collection = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/collections/7");
+        then.status(200)
+            .json_body(collection_json(7, "collection-1"));
+    });
+    let first_page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions")
+            .query_param_missing("cursor");
+        then.status(200)
+            .header("x-next-cursor", "treetop-next")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+    let second_page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions")
+            .query_param("cursor", "treetop-next");
+        then.status(200)
+            .json_body(json!([group_permission_json(7, 11, "operators")]));
+    });
+    let group = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions/group/10");
+        then.status(200)
+            .json_body(group_permission_json(7, 10, "admins"));
+    });
+
+    let handle = sync_client(&server).collections().get(7).unwrap();
+    let permissions = handle.permissions_revisioned().unwrap();
+    assert!(permissions.etag().is_none());
+    assert!(permissions.revision().is_none());
+    assert_eq!(permissions.len(), 2);
+    assert_eq!(permissions[1].group_id, 11);
+    assert_eq!(permissions.expanded().unwrap()[0].group.groupname, "admins");
+
+    let group_permissions = handle.group_permissions(10).unwrap();
+    assert!(group_permissions.revision().is_none());
+    assert_eq!(group_permissions[0].group_id, 10);
+
+    collection.assert_calls(1);
+    first_page.assert_calls(1);
+    second_page.assert_calls(1);
+    group.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_collection_permission_reads_support_treetop_wire_shapes() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let collection = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/collections/7");
+        then.status(200)
+            .json_body(collection_json(7, "collection-1"));
+    });
+    let first_page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions")
+            .query_param_missing("cursor");
+        then.status(200)
+            .header("x-next-cursor", "treetop-next")
+            .json_body(json!([group_permission_json(7, 10, "admins")]));
+    });
+    let second_page = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions")
+            .query_param("cursor", "treetop-next");
+        then.status(200)
+            .json_body(json!([group_permission_json(7, 11, "operators")]));
+    });
+    let group = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/collections/7/permissions/group/10");
+        then.status(200)
+            .json_body(group_permission_json(7, 10, "admins"));
+    });
+
+    let handle = async_client(&server)
+        .await
+        .collections()
+        .get(7)
+        .await
+        .unwrap();
+    let permissions = handle.permissions_revisioned().await.unwrap();
+    assert!(permissions.etag().is_none());
+    assert!(permissions.revision().is_none());
+    assert_eq!(permissions.len(), 2);
+    assert_eq!(permissions[1].group_id, 11);
+    assert_eq!(permissions.expanded().unwrap()[0].group.groupname, "admins");
+
+    let group_permissions = handle.group_permissions(10).await.unwrap();
+    assert!(group_permissions.revision().is_none());
+    assert_eq!(group_permissions[0].group_id, 10);
+
+    collection.assert_calls(1);
+    first_page.assert_calls(1);
+    second_page.assert_calls(1);
+    group.assert_calls(1);
+}
+
+fn mock_conditional_collection_permissions(server: &MockServer) {
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/collections/7");
+        then.status(200)
+            .json_body(collection_json(7, "collection-1"));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path("/api/v1/collections/7/permissions");
+        then.status(200)
+            .header("etag", "\"hubuum-v1.permission-set.7.1\"")
+            .json_body(collection_permission_set_json(7, 10));
+    });
+    for (method, path, status) in [
+        (PUT, "/api/v1/collections/7/permissions/group/10", 200),
+        (POST, "/api/v1/collections/7/permissions/group/10", 201),
+        (DELETE, "/api/v1/collections/7/permissions/group/10", 200),
+        (
+            POST,
+            "/api/v1/collections/7/permissions/group/10/ReadCollection",
+            201,
+        ),
+        (
+            DELETE,
+            "/api/v1/collections/7/permissions/group/10/ReadCollection",
+            200,
+        ),
+    ] {
+        server.mock(move |when, then| {
+            when.method(method)
+                .path(path)
+                .header("if-match", "\"hubuum-v1.permission-set.7.1\"");
+            then.status(status)
+                .header("etag", "\"hubuum-v1.permission-set.7.2\"")
+                .json_body(collection_permission_set_json(7, 10));
+        });
+    }
+}
+
+fn assert_conditional_permission_result(
+    response: &hubuum_client::Revisioned<hubuum_client::CollectionPermissionSet>,
+) {
+    assert_eq!(response.revision.get(), 1);
+    assert_eq!(
+        response.etag().unwrap().as_str(),
+        "\"hubuum-v1.permission-set.7.2\""
+    );
+}
+
+#[test]
+fn sync_collection_acl_mutations_accept_permission_set_etags() {
+    let server = MockServer::start();
+    mock_login(&server);
+    mock_conditional_collection_permissions(&server);
+    let handle = sync_client(&server).collections().get(7).unwrap();
+    let read = handle.permissions_revisioned().unwrap();
+    let etag = read.etag().unwrap();
+
+    assert_conditional_permission_result(
+        &handle
+            .replace_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .grant_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .unwrap(),
+    );
+    assert_conditional_permission_result(&handle.revoke_permissions_if_match(10, etag).unwrap());
+    assert_conditional_permission_result(
+        &handle
+            .grant_permission_if_match(10, Permissions::ReadCollection, etag)
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .revoke_permission_if_match(10, Permissions::ReadCollection, etag)
+            .unwrap(),
+    );
+}
+
+#[tokio::test]
+async fn async_collection_acl_mutations_accept_permission_set_etags() {
+    let server = MockServer::start();
+    mock_login(&server);
+    mock_conditional_collection_permissions(&server);
+    let handle = async_client(&server)
+        .await
+        .collections()
+        .get(7)
+        .await
+        .unwrap();
+    let read = handle.permissions_revisioned().await.unwrap();
+    let etag = read.etag().unwrap();
+
+    assert_conditional_permission_result(
+        &handle
+            .replace_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .await
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .grant_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .await
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle.revoke_permissions_if_match(10, etag).await.unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .grant_permission_if_match(10, Permissions::ReadCollection, etag)
+            .await
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .revoke_permission_if_match(10, Permissions::ReadCollection, etag)
+            .await
+            .unwrap(),
+    );
 }
 
 #[test]
@@ -5348,12 +5576,19 @@ fn invalid_token_scope_requests_fail_during_serialization() {
 
 #[test]
 fn token_expiry_serializes_as_the_server_naive_utc_request_shape() {
-    use hubuum_client::{HubuumDateTime, NewTokenRequest};
+    use hubuum_client::{HubuumDateTime, NewTokenRequest, RenewTokenRequest};
 
     let expires_at: HubuumDateTime =
         serde_json::from_str(r#""2026-07-25T21:00:05+02:00""#).unwrap();
     assert_eq!(
-        serde_json::to_value(NewTokenRequest::new().expires_at(expires_at)).unwrap(),
+        serde_json::to_value(NewTokenRequest::new().expires_at(expires_at.clone())).unwrap(),
+        json!({"expires_at": "2026-07-25T19:00:05"})
+    );
+    assert_eq!(
+        serde_json::to_value(RenewTokenRequest {
+            expires_at: Some(expires_at),
+        })
+        .unwrap(),
         json!({"expires_at": "2026-07-25T19:00:05"})
     );
 }
@@ -5961,6 +6196,61 @@ async fn async_shared_computed_field_lifecycle_uses_class_scoped_routes() {
     ] {
         mock.assert_calls(1);
     }
+}
+
+#[test]
+fn sync_conditional_shared_computed_field_delete_decodes_accepted_body() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let deletion = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/classes/42/computed-fields/7")
+            .header("if-match", "\"hubuum-v1.computed-field.7.1\"");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "deleted_definition_id": 7,
+                "state": computation_state_json()
+            }));
+    });
+    let client = sync_client(&server);
+    let etag = hubuum_client::EntityTag::new("\"hubuum-v1.computed-field.7.1\"").unwrap();
+
+    let response = client
+        .computed_fields(42)
+        .delete_if_match(7, &etag)
+        .unwrap();
+
+    assert_eq!(response.deleted_definition_id.get(), 7);
+    deletion.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_conditional_shared_computed_field_delete_decodes_accepted_body() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let deletion = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/classes/42/computed-fields/7")
+            .header("if-match", "\"hubuum-v1.computed-field.7.1\"");
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "deleted_definition_id": 7,
+                "state": computation_state_json()
+            }));
+    });
+    let client = async_client(&server).await;
+    let etag = hubuum_client::EntityTag::new("\"hubuum-v1.computed-field.7.1\"").unwrap();
+
+    let response = client
+        .computed_fields(42)
+        .delete_if_match(7, &etag)
+        .await
+        .unwrap();
+
+    assert_eq!(response.deleted_definition_id.get(), 7);
+    deletion.assert_calls(1);
 }
 
 #[tokio::test]

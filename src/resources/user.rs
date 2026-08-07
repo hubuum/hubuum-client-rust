@@ -23,8 +23,15 @@ use crate::{
 include!("generated/user.rs");
 
 impl User {
-    pub fn is_local(&self) -> bool {
-        self.identity_scope.as_deref() == Some(crate::types::LOCAL_IDENTITY_SCOPE)
+    /// Whether this user belongs to the local identity scope.
+    ///
+    /// Canonical point responses expose only `identity_scope_id`, whose local
+    /// value is server-owned, so locality is unknown when the scope name is
+    /// omitted.
+    pub fn is_local(&self) -> Option<bool> {
+        self.identity_scope
+            .as_deref()
+            .map(|scope| scope == crate::types::LOCAL_IDENTITY_SCOPE)
     }
 
     pub fn is_provider_managed(&self) -> bool {

@@ -997,24 +997,45 @@ mod tests {
 
     #[test]
     fn required_relationship_ids_remain_required_on_create_but_optional_on_patch() {
-        let expanded = expand_item(parse_quote!(
-            struct WidgetResource {
-                #[api(read_only)]
-                id: i32,
-                name: String,
-                #[api(as_id)]
-                collection: Collection,
-            }
-        ))
-        .unwrap()
-        .to_string();
+        let expanded: syn::File = syn::parse2(
+            expand_item(parse_quote!(
+                struct WidgetResource {
+                    #[api(read_only)]
+                    id: i32,
+                    name: String,
+                    #[api(as_id)]
+                    collection: Collection,
+                }
+            ))
+            .unwrap(),
+        )
+        .unwrap();
 
-        assert!(expanded.contains(
-            "pub collection_id : < Collection as crate :: resources :: ApiResource > :: Id"
-        ));
-        assert!(expanded.contains(
-            "pub collection_id : Option < < Collection as crate :: resources :: ApiResource > :: Id >"
-        ));
+        let field_type = |struct_name: &str| {
+            expanded
+                .items
+                .iter()
+                .find_map(|item| match item {
+                    syn::Item::Struct(item) if item.ident == struct_name => item
+                        .fields
+                        .iter()
+                        .find(|field| field.ident.as_ref().is_some_and(|id| id == "collection_id"))
+                        .map(|field| &field.ty),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("missing {struct_name}.collection_id"))
+        };
+        let is_option = |ty: &syn::Type| {
+            matches!(
+                ty,
+                syn::Type::Path(path)
+                    if path.qself.is_none()
+                        && path.path.segments.last().is_some_and(|segment| segment.ident == "Option")
+            )
+        };
+
+        assert!(!is_option(field_type("WidgetPost")));
+        assert!(is_option(field_type("WidgetPatch")));
     }
 
     #[test]

@@ -99,7 +99,10 @@ Identity responses expose the server's scope and management state:
 
 Users provide `is_local()` and `is_provider_managed()` helpers. Groups provide
 the same helpers, with provider management derived from `managed_by`. Service
-accounts provide `is_local()`.
+accounts provide `is_local()`. For users and service accounts, `is_local()`
+returns `Some(true)` or `Some(false)` when a list projection includes the scope
+name, and `None` when a canonical point projection exposes only the server-owned
+scope ID.
 
 ```rust
 let user = client.users().get(user_id).await?;

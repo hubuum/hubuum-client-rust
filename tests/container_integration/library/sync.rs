@@ -427,12 +427,7 @@ fn sync_collection_group_permissions_endpoint_matches_group() {
         .group_permissions(admin_group_id)
         .expect("sync collection.group_permissions(group_id) failed");
 
-    assert!(
-        group_permissions
-            .permissions
-            .iter()
-            .any(|permission| permission.group_id == admin_group_id)
-    );
+    assert_eq!(group_permissions[0].group_id, admin_group_id);
 }
 
 #[rstest]

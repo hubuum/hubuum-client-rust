@@ -11,18 +11,75 @@ use crate::client::sync::{
     Handle as SyncHandle, Resource as SyncResource,
 };
 use crate::{
-    ApiError, Class, CollectionPermissionSet, EffectiveGroupPermission, ExportTemplate, Group,
-    GroupId, GroupPermissionsResult, RemoteTarget,
+    ApiError, Class, CollectionPermissionSet, CollectionPermissionsResponse,
+    EffectiveGroupPermission, ExportTemplate, Group, GroupId, GroupPermissionsResult, RemoteTarget,
+    client::UrlParams,
     endpoints::Endpoint,
     types::{
-        CollectionPermissionsGrantParams, HubuumDateTime, Permissions, PrincipalId,
-        ResourceRevision,
+        CollectionPermissionsGrantParams, EntityTag, HubuumDateTime, Permissions, PrincipalId,
+        ResourceRevision, Revisioned,
     },
 };
 
 #[derive(Debug, Clone, serde::Serialize)]
 struct UpdateCollectionParent {
     parent_collection_id: CollectionId,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum CollectionPermissionsWire {
+    Revisioned(CollectionPermissionSet),
+    Expanded(Vec<GroupPermissionsResult>),
+    ExpandedOne(GroupPermissionsResult),
+}
+
+fn decode_collection_permissions(body: &str) -> Result<CollectionPermissionsResponse, ApiError> {
+    match serde_json::from_str(body)? {
+        CollectionPermissionsWire::Revisioned(permission_set) => {
+            Ok(CollectionPermissionsResponse::Revisioned(permission_set))
+        }
+        CollectionPermissionsWire::Expanded(rows) => {
+            Ok(CollectionPermissionsResponse::Expanded(rows))
+        }
+        CollectionPermissionsWire::ExpandedOne(row) => {
+            Ok(CollectionPermissionsResponse::Expanded(vec![row]))
+        }
+    }
+}
+
+fn decode_revisioned_permission_set(
+    body: &str,
+    etag: Option<EntityTag>,
+) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+    Ok(Revisioned::new(serde_json::from_str(body)?, etag))
+}
+
+fn collection_permission_params(collection_id: CollectionId) -> UrlParams {
+    vec![(
+        Cow::Borrowed("collection_id"),
+        collection_id.to_string().into(),
+    )]
+}
+
+fn collection_group_permission_params(collection_id: CollectionId, group_id: GroupId) -> UrlParams {
+    vec![
+        (
+            Cow::Borrowed("collection_id"),
+            collection_id.to_string().into(),
+        ),
+        (Cow::Borrowed("group_id"), group_id.to_string().into()),
+    ]
+}
+
+fn collection_single_permission_params(
+    collection_id: CollectionId,
+    group_id: GroupId,
+    permission: Permissions,
+) -> UrlParams {
+    let mut params = collection_group_permission_params(collection_id, group_id);
+    params.push((Cow::Borrowed("permission"), permission.to_string().into()));
+    params
 }
 
 include!("generated/collection.rs");
@@ -101,21 +158,40 @@ impl SyncHandle<Collection> {
             })
     }
 
-    pub fn permissions(&self) -> Result<CollectionPermissionSet, ApiError> {
-        self.client()
-            .request_with_endpoint::<SyncEmptyPostParams, CollectionPermissionSet>(
-                reqwest::Method::GET,
-                &Endpoint::CollectionPermissions,
-                vec![(
-                    Cow::Borrowed("collection_id"),
-                    self.resource().id.to_string().into(),
-                )],
-                vec![],
-                SyncEmptyPostParams {},
-            )?
-            .ok_or_else(|| {
-                ApiError::EmptyResult("Collection permissions returned empty result".into())
-            })
+    pub fn permissions(&self) -> Result<CollectionPermissionsResponse, ApiError> {
+        Ok(self.permissions_revisioned()?.into_inner())
+    }
+
+    /// Read permissions and retain the SQL aggregate ETag when available.
+    /// Treetop responses have no aggregate ETag and use the expanded variant.
+    pub fn permissions_revisioned(
+        &self,
+    ) -> Result<Revisioned<CollectionPermissionsResponse>, ApiError> {
+        let url_params = collection_permission_params(self.id());
+        let raw = self.client().request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::CollectionPermissions,
+            url_params.clone(),
+            vec![],
+            SyncEmptyPostParams {},
+        )?;
+        let next_cursor = raw.next_cursor.clone();
+        let etag = raw.etag;
+        let mut permissions = decode_collection_permissions(&raw.body)?;
+        if let (CollectionPermissionsResponse::Expanded(rows), Some(cursor)) =
+            (&mut permissions, next_cursor)
+        {
+            rows.extend(
+                SyncCursorRequest::new(
+                    self.client().clone(),
+                    Endpoint::CollectionPermissions,
+                    url_params,
+                )
+                .cursor(cursor)
+                .all()?,
+            );
+        }
+        Ok(Revisioned::new(permissions, etag))
     }
 
     pub fn replace_permissions(
@@ -145,6 +221,23 @@ impl SyncHandle<Collection> {
             })
     }
 
+    pub fn replace_permissions_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        permissions: Vec<String>,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self.client().request_with_endpoint_raw_with_headers(
+            reqwest::Method::PUT,
+            &Endpoint::CollectionPermissionsGrant,
+            collection_group_permission_params(self.id(), group_id.into()),
+            vec![],
+            CollectionPermissionsGrantParams::from_strings(permissions)?,
+            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+        )?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
+    }
+
     pub fn grant_permissions(
         &self,
         group_id: impl Into<GroupId>,
@@ -170,32 +263,48 @@ impl SyncHandle<Collection> {
             .ok_or_else(|| ApiError::EmptyResult("Permission grant returned empty result".into()))
     }
 
+    pub fn grant_permissions_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        permissions: Vec<String>,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self.client().request_with_endpoint_raw_with_headers(
+            reqwest::Method::POST,
+            &Endpoint::CollectionPermissionsGrant,
+            collection_group_permission_params(self.id(), group_id.into()),
+            vec![],
+            CollectionPermissionsGrantParams::from_strings(permissions)?,
+            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+        )?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
+    }
+
     pub fn group_permissions(
         &self,
         group_id: impl Into<GroupId>,
-    ) -> Result<CollectionPermissionSet, ApiError> {
-        let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+    ) -> Result<CollectionPermissionsResponse, ApiError> {
+        Ok(self.group_permissions_revisioned(group_id)?.into_inner())
+    }
 
-        self.client()
-            .request_with_endpoint::<SyncEmptyPostParams, CollectionPermissionSet>(
-                reqwest::Method::GET,
-                &Endpoint::CollectionPermissionsGrant,
-                url_params,
-                vec![],
-                SyncEmptyPostParams {},
-            )
-            .and_then(|opt| {
-                opt.ok_or(ApiError::EmptyResult(
-                    "Collection group permissions returned empty result".into(),
-                ))
-            })
+    /// Read one group's permissions and retain the SQL aggregate ETag when
+    /// available. Treetop returns one expanded group/permission row.
+    pub fn group_permissions_revisioned(
+        &self,
+        group_id: impl Into<GroupId>,
+    ) -> Result<Revisioned<CollectionPermissionsResponse>, ApiError> {
+        let group_id = group_id.into();
+        let raw = self.client().request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::CollectionPermissionsGrant,
+            collection_group_permission_params(self.id(), group_id),
+            vec![],
+            SyncEmptyPostParams {},
+        )?;
+        Ok(Revisioned::new(
+            decode_collection_permissions(&raw.body)?,
+            raw.etag,
+        ))
     }
 
     pub fn revoke_permissions(
@@ -219,6 +328,22 @@ impl SyncHandle<Collection> {
             SyncEmptyPostParams {},
         )?;
         Ok(serde_json::from_str(&raw.body)?)
+    }
+
+    pub fn revoke_permissions_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self.client().request_with_endpoint_raw_with_headers(
+            reqwest::Method::DELETE,
+            &Endpoint::CollectionPermissionsGrant,
+            collection_group_permission_params(self.id(), group_id.into()),
+            vec![],
+            SyncEmptyPostParams {},
+            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+        )?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
     }
 
     pub fn has_group_permission(
@@ -281,6 +406,23 @@ impl SyncHandle<Collection> {
             .ok_or_else(|| ApiError::EmptyResult("Permission grant returned empty result".into()))
     }
 
+    pub fn grant_permission_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        permission: Permissions,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self.client().request_with_endpoint_raw_with_headers(
+            reqwest::Method::POST,
+            &Endpoint::CollectionPermissionGrant,
+            collection_single_permission_params(self.id(), group_id.into(), permission),
+            vec![],
+            SyncEmptyPostParams {},
+            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+        )?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
+    }
+
     pub fn revoke_permission(
         &self,
         group_id: impl Into<GroupId>,
@@ -304,6 +446,23 @@ impl SyncHandle<Collection> {
             SyncEmptyPostParams {},
         )?;
         Ok(serde_json::from_str(&raw.body)?)
+    }
+
+    pub fn revoke_permission_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        permission: Permissions,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self.client().request_with_endpoint_raw_with_headers(
+            reqwest::Method::DELETE,
+            &Endpoint::CollectionPermissionGrant,
+            collection_single_permission_params(self.id(), group_id.into(), permission),
+            vec![],
+            SyncEmptyPostParams {},
+            &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+        )?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
     }
 
     pub fn principal_permissions(
@@ -481,22 +640,44 @@ impl AsyncHandle<Collection> {
             })
     }
 
-    pub async fn permissions(&self) -> Result<CollectionPermissionSet, ApiError> {
-        self.client()
-            .request_with_endpoint::<AsyncEmptyPostParams, CollectionPermissionSet>(
+    pub async fn permissions(&self) -> Result<CollectionPermissionsResponse, ApiError> {
+        Ok(self.permissions_revisioned().await?.into_inner())
+    }
+
+    /// Read permissions and retain the SQL aggregate ETag when available.
+    /// Treetop responses have no aggregate ETag and use the expanded variant.
+    pub async fn permissions_revisioned(
+        &self,
+    ) -> Result<Revisioned<CollectionPermissionsResponse>, ApiError> {
+        let url_params = collection_permission_params(self.id());
+        let raw = self
+            .client()
+            .request_with_endpoint_raw(
                 reqwest::Method::GET,
                 &Endpoint::CollectionPermissions,
-                vec![(
-                    Cow::Borrowed("collection_id"),
-                    self.resource().id.to_string().into(),
-                )],
+                url_params.clone(),
                 vec![],
                 AsyncEmptyPostParams {},
             )
-            .await?
-            .ok_or_else(|| {
-                ApiError::EmptyResult("Collection permissions returned empty result".into())
-            })
+            .await?;
+        let next_cursor = raw.next_cursor.clone();
+        let etag = raw.etag;
+        let mut permissions = decode_collection_permissions(&raw.body)?;
+        if let (CollectionPermissionsResponse::Expanded(rows), Some(cursor)) =
+            (&mut permissions, next_cursor)
+        {
+            rows.extend(
+                AsyncCursorRequest::new(
+                    self.client().clone(),
+                    Endpoint::CollectionPermissions,
+                    url_params,
+                )
+                .cursor(cursor)
+                .all()
+                .await?,
+            );
+        }
+        Ok(Revisioned::new(permissions, etag))
     }
 
     pub async fn replace_permissions(
@@ -527,6 +708,26 @@ impl AsyncHandle<Collection> {
             })
     }
 
+    pub async fn replace_permissions_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        permissions: Vec<String>,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self
+            .client()
+            .request_with_endpoint_raw_with_headers(
+                reqwest::Method::PUT,
+                &Endpoint::CollectionPermissionsGrant,
+                collection_group_permission_params(self.id(), group_id.into()),
+                vec![],
+                CollectionPermissionsGrantParams::from_strings(permissions)?,
+                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            )
+            .await?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
+    }
+
     pub async fn grant_permissions(
         &self,
         group_id: impl Into<GroupId>,
@@ -553,33 +754,57 @@ impl AsyncHandle<Collection> {
             .ok_or_else(|| ApiError::EmptyResult("Permission grant returned empty result".into()))
     }
 
+    pub async fn grant_permissions_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        permissions: Vec<String>,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self
+            .client()
+            .request_with_endpoint_raw_with_headers(
+                reqwest::Method::POST,
+                &Endpoint::CollectionPermissionsGrant,
+                collection_group_permission_params(self.id(), group_id.into()),
+                vec![],
+                CollectionPermissionsGrantParams::from_strings(permissions)?,
+                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            )
+            .await?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
+    }
+
     pub async fn group_permissions(
         &self,
         group_id: impl Into<GroupId>,
-    ) -> Result<CollectionPermissionSet, ApiError> {
-        let group_id = group_id.into();
-        let url_params = vec![
-            (
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            ),
-            (Cow::Borrowed("group_id"), group_id.to_string().into()),
-        ];
+    ) -> Result<CollectionPermissionsResponse, ApiError> {
+        Ok(self
+            .group_permissions_revisioned(group_id)
+            .await?
+            .into_inner())
+    }
 
-        self.client()
-            .request_with_endpoint::<AsyncEmptyPostParams, CollectionPermissionSet>(
+    /// Read one group's permissions and retain the SQL aggregate ETag when
+    /// available. Treetop returns one expanded group/permission row.
+    pub async fn group_permissions_revisioned(
+        &self,
+        group_id: impl Into<GroupId>,
+    ) -> Result<Revisioned<CollectionPermissionsResponse>, ApiError> {
+        let group_id = group_id.into();
+        let raw = self
+            .client()
+            .request_with_endpoint_raw(
                 reqwest::Method::GET,
                 &Endpoint::CollectionPermissionsGrant,
-                url_params,
+                collection_group_permission_params(self.id(), group_id),
                 vec![],
                 AsyncEmptyPostParams {},
             )
-            .await
-            .and_then(|opt| {
-                opt.ok_or(ApiError::EmptyResult(
-                    "Collection group permissions returned empty result".into(),
-                ))
-            })
+            .await?;
+        Ok(Revisioned::new(
+            decode_collection_permissions(&raw.body)?,
+            raw.etag,
+        ))
     }
 
     pub async fn revoke_permissions(
@@ -606,6 +831,25 @@ impl AsyncHandle<Collection> {
             )
             .await?;
         Ok(serde_json::from_str(&raw.body)?)
+    }
+
+    pub async fn revoke_permissions_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self
+            .client()
+            .request_with_endpoint_raw_with_headers(
+                reqwest::Method::DELETE,
+                &Endpoint::CollectionPermissionsGrant,
+                collection_group_permission_params(self.id(), group_id.into()),
+                vec![],
+                AsyncEmptyPostParams {},
+                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            )
+            .await?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
     }
 
     pub async fn has_group_permission(
@@ -671,6 +915,26 @@ impl AsyncHandle<Collection> {
             .ok_or_else(|| ApiError::EmptyResult("Permission grant returned empty result".into()))
     }
 
+    pub async fn grant_permission_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        permission: Permissions,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self
+            .client()
+            .request_with_endpoint_raw_with_headers(
+                reqwest::Method::POST,
+                &Endpoint::CollectionPermissionGrant,
+                collection_single_permission_params(self.id(), group_id.into(), permission),
+                vec![],
+                AsyncEmptyPostParams {},
+                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            )
+            .await?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
+    }
+
     pub async fn revoke_permission(
         &self,
         group_id: impl Into<GroupId>,
@@ -697,6 +961,26 @@ impl AsyncHandle<Collection> {
             )
             .await?;
         Ok(serde_json::from_str(&raw.body)?)
+    }
+
+    pub async fn revoke_permission_if_match(
+        &self,
+        group_id: impl Into<GroupId>,
+        permission: Permissions,
+        etag: &EntityTag,
+    ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
+        let raw = self
+            .client()
+            .request_with_endpoint_raw_with_headers(
+                reqwest::Method::DELETE,
+                &Endpoint::CollectionPermissionGrant,
+                collection_single_permission_params(self.id(), group_id.into(), permission),
+                vec![],
+                AsyncEmptyPostParams {},
+                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            )
+            .await?;
+        decode_revisioned_permission_set(&raw.body, raw.etag)
     }
 
     pub async fn principal_permissions(

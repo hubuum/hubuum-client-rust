@@ -474,6 +474,23 @@ mod parity_contract {
             };
 
             let _ = $module::Handle::<Collection>::permissions;
+            let _ = $module::Handle::<Collection>::permissions_revisioned;
+            let _ = |handle: &$module::Handle<Collection>, etag: &crate::types::EntityTag| {
+                std::mem::drop(handle.group_permissions_revisioned(1));
+                std::mem::drop(handle.replace_permissions_if_match(1, vec![], etag));
+                std::mem::drop(handle.grant_permissions_if_match(1, vec![], etag));
+                std::mem::drop(handle.revoke_permissions_if_match(1, etag));
+                std::mem::drop(handle.grant_permission_if_match(
+                    1,
+                    crate::types::Permissions::ReadCollection,
+                    etag,
+                ));
+                std::mem::drop(handle.revoke_permission_if_match(
+                    1,
+                    crate::types::Permissions::ReadCollection,
+                    etag,
+                ));
+            };
             let _ = $module::Handle::<Collection>::groups_with_permission;
         };
     }

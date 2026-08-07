@@ -2337,24 +2337,28 @@ impl ClassNameScope {
 
     pub async fn get(&self) -> Result<Handle<Class>, ApiError> {
         if shared::requires_name_route_fallback(&self.class_name) {
-            let class = self.client.classes().get_by_name(&self.class_name).await?;
-            let _ = self.class_id.set(class.id());
-            return Ok(class);
+            let class_id = self
+                .client
+                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .await?;
+            return self.client.classes().get(class_id).await;
         }
 
-        let class: Class = self
+        let raw = self
             .client
-            .request_with_endpoint::<EmptyPostParams, Class>(
+            .request_with_endpoint_raw(
                 reqwest::Method::GET,
                 &Endpoint::ClassesByName,
                 self.class_params(),
                 vec![],
                 EmptyPostParams,
             )
-            .await?
-            .ok_or_else(|| ApiError::EmptyResult("Class returned an empty response".into()))?;
+            .await?;
+        let class =
+            shared::parse_response::<Class>(&reqwest::Method::GET, raw.status, raw.body)?
+                .ok_or_else(|| ApiError::EmptyResult("Class returned an empty response".into()))?;
         let _ = self.class_id.set(class.id);
-        Ok(Handle::new(self.client.clone(), class))
+        Ok(Handle::new_with_etag(self.client.clone(), class, raw.etag))
     }
 
     pub async fn update(&self, patch: ClassPatch) -> Result<Class, ApiError> {
@@ -2591,31 +2595,32 @@ impl ObjectNameScope {
 
     pub async fn get(&self) -> Result<Handle<Object>, ApiError> {
         if self.requires_fallback() {
-            let class_id = self
+            let (class_id, object_id) = self
                 .client
-                .resolve_class_name_id(&self.class_name, &self.class_id)
+                .resolve_object_name_ids(
+                    &self.class_name,
+                    &self.object_name,
+                    &self.class_id,
+                    &self.object_id,
+                )
                 .await?;
-            let object = self
-                .client
-                .objects(class_id)
-                .get_by_name(&self.object_name)
-                .await?;
-            let _ = self.object_id.set(object.id());
-            return Ok(object);
+            return self.client.objects(class_id).get(object_id).await;
         }
 
-        let object: Object = self
+        let raw = self
             .client
-            .request_with_endpoint::<EmptyPostParams, Object>(
+            .request_with_endpoint_raw(
                 reqwest::Method::GET,
                 &Endpoint::ObjectByName,
                 self.object_params(),
                 vec![],
                 EmptyPostParams,
             )
-            .await?
+            .await?;
+        let object = shared::parse_response::<Object>(&reqwest::Method::GET, raw.status, raw.body)?
             .ok_or_else(|| ApiError::EmptyResult("Object returned an empty response".into()))?;
-        Ok(Handle::new(self.client.clone(), object))
+        let _ = self.object_id.set(object.id);
+        Ok(Handle::new_with_etag(self.client.clone(), object, raw.etag))
     }
 
     pub async fn get_computed(&self) -> Result<ComputedObject, ApiError> {
@@ -3437,11 +3442,13 @@ impl SharedComputedFields {
             .path()
             .replace("{class_id}", &self.class_id.to_string())
             .replace("{field_id}", &field_id.into().to_string());
-        self.client
+        let raw = self
+            .client
             .raw(reqwest::Method::DELETE, path)
             .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
-            .send()
-            .await
+            .execute()
+            .await?;
+        serde_json::from_str(&raw.body).map_err(ApiError::from)
     }
 
     pub async fn preview(
