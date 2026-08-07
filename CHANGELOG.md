@@ -6,10 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-07
+
 ### Added
 
-- Target Hubuum server v0.0.9 with its 202-operation OpenAPI contract and
-  immutable multi-platform image
+- This release explicitly targets Hubuum server v0.0.9, with its 202-operation
+  OpenAPI contract and immutable multi-platform image
   `sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db`.
 - Model positive resource revisions and opaque strong HTTP entity tags, retain
   point-response ETags on resource handles, and support optional `If-Match`
@@ -24,6 +26,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Changed
 
+- Compatible lockfile dependencies are refreshed, including `aws-lc-rs`
+  1.18.0, `aws-lc-sys` 0.44.0, and `cc` 1.4.1.
 - **Breaking:** authoritative resource, history, integration, token, event, and
   import response models expose v0.0.9 revisions. Struct-literal callers must
   populate the new `revision`, `condition`, or `computed_fields` fields.
