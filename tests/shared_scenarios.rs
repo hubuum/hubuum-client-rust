@@ -28,6 +28,7 @@ fn collection_json() -> serde_json::Value {
         "id": NAMESPACE_ID,
         "name": "collection-1",
         "description": "Collection",
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -41,6 +42,7 @@ fn class_json() -> serde_json::Value {
         "collection": collection_json(),
         "json_schema": null,
         "validate_schema": null,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -54,6 +56,7 @@ fn object_json() -> serde_json::Value {
         "hubuum_class_id": CLASS_ID,
         "description": "Object",
         "data": null,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -64,6 +67,12 @@ fn group_json() -> serde_json::Value {
         "id": GROUP_ID,
         "groupname": "group-1",
         "description": "Group",
+        "identity_scope": "local",
+        "managed_by": "local",
+        "external_key": null,
+        "last_sync_attempted_at": null,
+        "last_sync_success_at": null,
+        "revision": 1,
         "created_at": ts(),
         "updated_at": ts()
     })
@@ -72,8 +81,18 @@ fn group_json() -> serde_json::Value {
 fn principal_member_json() -> serde_json::Value {
     json!({
         "principal_id": USER_ID,
-        "kind": "human",
-        "name": "alice",
+        "group_id": GROUP_ID,
+        "revision": 1,
+        "created_at": ts(),
+        "updated_at": ts(),
+    })
+}
+
+fn permission_set_json(revision: i32) -> serde_json::Value {
+    json!({
+        "collection_id": NAMESPACE_ID,
+        "revision": revision,
+        "permissions": [permissions_json()]
     })
 }
 
@@ -172,7 +191,7 @@ fn setup_scenario_mocks(server: &MockServer) {
         when.method(POST)
             .path("/api/v1/iam/groups/10/members/11")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(204);
+        then.status(200).json_body(principal_member_json());
     });
 
     server.mock(|when, then| {
@@ -193,10 +212,7 @@ fn setup_scenario_mocks(server: &MockServer) {
         when.method(GET)
             .path("/api/v1/collections/3/permissions")
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(200).json_body(json!([{
-            "group": group_json(),
-            "permission": permissions_json()
-        }]));
+        then.status(200).json_body(permission_set_json(1));
     });
 
     server.mock(|when, then| {
@@ -204,7 +220,7 @@ fn setup_scenario_mocks(server: &MockServer) {
             .path("/api/v1/collections/3/permissions/group/10")
             .json_body(json!(["ReadCollection"]))
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(200);
+        then.status(200).json_body(permission_set_json(2));
     });
 
     server.mock(|when, then| {
@@ -212,7 +228,7 @@ fn setup_scenario_mocks(server: &MockServer) {
             .path("/api/v1/collections/3/permissions/group/10")
             .json_body(json!(["ReadCollection"]))
             .header("authorization", format!("Bearer {}", TOKEN));
-        then.status(201);
+        then.status(201).json_body(permission_set_json(3));
     });
 }
 

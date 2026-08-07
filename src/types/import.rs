@@ -3,13 +3,24 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
 use super::{
-    EventSinkKind, ExportContentType, ExportInclude, ExportLimits, ExportMissingDataPolicy,
-    ExportRelationContext, ExportScopeKind, ExportTemplateKind, ImportTaskResultResponse,
-    ObjectRelationLimit, Permissions, RemoteAuthConfig, RemoteHttpMethod, RemoteTargetSubjectType,
-    TaskResponse,
+    ComputedResultType, EventSinkKind, ExportContentType, ExportInclude, ExportLimits,
+    ExportMissingDataPolicy, ExportRelationContext, ExportScopeKind, ExportTemplateKind,
+    ImportTaskResultResponse, ObjectRelationLimit, Permissions, RemoteAuthConfig, RemoteHttpMethod,
+    RemoteTargetSubjectType, TaskResponse,
 };
 
-pub const CURRENT_IMPORT_VERSION: i32 = 1;
+pub const CURRENT_IMPORT_VERSION: i32 = 2;
+
+/// Per-item collision and optimistic-concurrency behavior for import v2.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "mode", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ImportWriteCondition {
+    CreateOnly,
+    Overwrite,
+    IfRevision {
+        expected_revision: super::ResourceRevision,
+    },
+}
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
@@ -179,6 +190,7 @@ pub struct ImportIdentityScopeInput {
     pub ref_: Option<String>,
     pub name: String,
     pub provider_kind: String,
+    pub condition: Option<ImportWriteCondition>,
     pub timestamps: Option<RestoreTimestamps>,
 }
 
@@ -194,6 +206,7 @@ pub struct ImportGroupInput {
     pub external_key: Option<String>,
     pub last_sync_attempted_at: Option<NaiveDateTime>,
     pub last_sync_success_at: Option<NaiveDateTime>,
+    pub condition: Option<ImportWriteCondition>,
     pub timestamps: Option<RestoreTimestamps>,
 }
 
@@ -286,6 +299,7 @@ pub struct ImportPrincipalInput {
     pub last_sync_success_at: Option<NaiveDateTime>,
     #[serde(flatten)]
     pub subtype: ImportPrincipalSubtype,
+    pub condition: Option<ImportWriteCondition>,
     pub timestamps: Option<RestoreTimestamps>,
 }
 
@@ -341,6 +355,7 @@ pub struct ImportGroupMembershipInput {
     pub group_key: Option<GroupKey>,
     #[serde(default)]
     pub sources: Vec<ImportMembershipSourceInput>,
+    pub condition: Option<ImportWriteCondition>,
     pub timestamps: Option<RestoreTimestamps>,
 }
 
@@ -352,6 +367,7 @@ pub struct ImportCollectionInput {
     pub description: String,
     pub parent_collection_ref: Option<String>,
     pub parent_collection_key: Option<CollectionKey>,
+    pub condition: Option<ImportWriteCondition>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamps: Option<RestoreTimestamps>,
 }
@@ -366,6 +382,7 @@ pub struct ImportClassInput {
     pub validate_schema: Option<bool>,
     pub collection_ref: Option<String>,
     pub collection_key: Option<CollectionKey>,
+    pub condition: Option<ImportWriteCondition>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamps: Option<RestoreTimestamps>,
 }
@@ -397,6 +414,7 @@ pub struct ImportObjectInput {
     pub data: serde_json::Value,
     pub class_ref: Option<String>,
     pub class_key: Option<ClassKey>,
+    pub condition: Option<ImportWriteCondition>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamps: Option<RestoreTimestamps>,
 }
@@ -427,6 +445,7 @@ pub struct ImportClassRelationInput {
     pub from_max_relations: Option<ObjectRelationLimit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub to_max_relations: Option<ObjectRelationLimit>,
+    pub condition: Option<ImportWriteCondition>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamps: Option<RestoreTimestamps>,
 }
@@ -448,6 +467,7 @@ pub struct FullImportClassRelationInput {
     pub from_max_relations: Option<ObjectRelationLimit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub to_max_relations: Option<ObjectRelationLimit>,
+    pub condition: Option<ImportWriteCondition>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamps: Option<RestoreTimestamps>,
 }
@@ -512,6 +532,7 @@ impl From<ImportClassRelationInput> for FullImportClassRelationInput {
             reverse_template_alias: None,
             from_max_relations: value.from_max_relations,
             to_max_relations: value.to_max_relations,
+            condition: value.condition,
             timestamps: value.timestamps,
         }
     }
@@ -525,6 +546,7 @@ pub struct ImportObjectRelationInput {
     pub from_object_key: Option<ObjectKey>,
     pub to_object_ref: Option<String>,
     pub to_object_key: Option<ObjectKey>,
+    pub condition: Option<ImportWriteCondition>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamps: Option<RestoreTimestamps>,
 }
@@ -538,6 +560,7 @@ pub struct ImportCollectionPermissionInput {
     pub group_key: GroupKey,
     pub permissions: Vec<Permissions>,
     pub replace_existing: Option<bool>,
+    pub condition: Option<ImportWriteCondition>,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -559,6 +582,7 @@ pub struct ImportExportTemplateInput {
     pub relation_context: Option<ExportRelationContext>,
     pub default_missing_data_policy: Option<ExportMissingDataPolicy>,
     pub default_limits: Option<ExportLimits>,
+    pub condition: Option<ImportWriteCondition>,
     pub timestamps: Option<RestoreTimestamps>,
 }
 
@@ -609,6 +633,7 @@ pub struct ImportRemoteTargetInput {
     pub allowed_subject_types: Vec<RemoteTargetSubjectType>,
     pub timeout_ms: i32,
     pub enabled: bool,
+    pub condition: Option<ImportWriteCondition>,
     pub timestamps: Option<RestoreTimestamps>,
 }
 
@@ -645,6 +670,7 @@ pub struct ImportEventSinkInput {
     pub config: serde_json::Value,
     pub secret_ref: Option<String>,
     pub enabled: bool,
+    pub condition: Option<ImportWriteCondition>,
     pub timestamps: Option<RestoreTimestamps>,
 }
 
@@ -679,7 +705,57 @@ pub struct ImportEventSubscriptionInput {
     #[serde(default = "empty_json_object")]
     pub routing: serde_json::Value,
     pub enabled: bool,
+    pub condition: Option<ImportWriteCondition>,
     pub timestamps: Option<RestoreTimestamps>,
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ImportComputedFieldVisibility {
+    Shared,
+    Personal,
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ImportComputedFieldInput {
+    #[serde(rename = "ref")]
+    pub ref_: Option<String>,
+    pub class_ref: Option<String>,
+    pub class_key: Option<ClassKey>,
+    pub visibility: ImportComputedFieldVisibility,
+    pub owner_ref: Option<String>,
+    pub owner_key: Option<PrincipalKey>,
+    pub key: String,
+    pub label: String,
+    #[serde(default)]
+    pub description: String,
+    pub operation: serde_json::Value,
+    pub result_type: ComputedResultType,
+    pub enabled: bool,
+    pub condition: Option<ImportWriteCondition>,
+    pub timestamps: Option<RestoreTimestamps>,
+}
+
+impl std::fmt::Debug for ImportComputedFieldInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImportComputedFieldInput")
+            .field("ref_", &self.ref_)
+            .field("class_ref", &self.class_ref)
+            .field("class_key", &self.class_key)
+            .field("visibility", &self.visibility)
+            .field("owner_ref", &self.owner_ref)
+            .field("owner_key", &self.owner_key)
+            .field("key", &self.key)
+            .field("label", &self.label)
+            .field("description", &self.description)
+            .field("operation", &"[REDACTED]")
+            .field("result_type", &self.result_type)
+            .field("enabled", &self.enabled)
+            .field("condition", &self.condition)
+            .field("timestamps", &self.timestamps)
+            .finish()
+    }
 }
 
 impl std::fmt::Debug for ImportEventSubscriptionInput {
@@ -710,6 +786,8 @@ pub struct ImportGraph {
     pub classes: Vec<ImportClassInput>,
     #[serde(default)]
     pub objects: Vec<ImportObjectInput>,
+    #[serde(default)]
+    pub computed_fields: Vec<ImportComputedFieldInput>,
     #[serde(default)]
     pub class_relations: Vec<ImportClassRelationInput>,
     #[serde(default)]
@@ -757,6 +835,8 @@ pub struct FullImportGraph {
     #[serde(default)]
     pub objects: Vec<ImportObjectInput>,
     #[serde(default)]
+    pub computed_fields: Vec<ImportComputedFieldInput>,
+    #[serde(default)]
     pub class_relations: Vec<FullImportClassRelationInput>,
     #[serde(default)]
     pub object_relations: Vec<ImportObjectRelationInput>,
@@ -802,6 +882,7 @@ impl From<ImportGraph> for FullImportGraph {
             collections: value.collections,
             classes: value.classes,
             objects: value.objects,
+            computed_fields: value.computed_fields,
             class_relations: value
                 .class_relations
                 .into_iter()
@@ -857,6 +938,7 @@ impl ImportRequest {
         (self.graph.collections.len()
             + self.graph.classes.len()
             + self.graph.objects.len()
+            + self.graph.computed_fields.len()
             + self.graph.class_relations.len()
             + self.graph.object_relations.len()
             + self.graph.collection_permissions.len()) as i32
@@ -912,6 +994,7 @@ impl FullImportRequest {
             + self.graph.group_memberships.len()
             + self.graph.classes.len()
             + self.graph.objects.len()
+            + self.graph.computed_fields.len()
             + self.graph.class_relations.len()
             + self.graph.object_relations.len()
             + self.graph.collection_permissions.len()
@@ -1042,6 +1125,7 @@ mod tests {
             validate_schema: Some(true),
             collection_ref: Some("collection-ref".into()),
             collection_key: None,
+            condition: None,
             timestamps: None,
         };
         let object = ImportObjectInput {
@@ -1051,6 +1135,7 @@ mod tests {
             data: serde_json::json!({"token": "object-secret"}),
             class_ref: Some("class-ref".into()),
             class_key: None,
+            condition: None,
             timestamps: None,
         };
         let request = ImportRequest::new(ImportGraph {
@@ -1082,6 +1167,7 @@ mod tests {
                 ref_: Some("scope".into()),
                 name: "directory".into(),
                 provider_kind: "ldap".into(),
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             groups: vec![ImportGroupInput {
@@ -1094,6 +1180,7 @@ mod tests {
                 external_key: None,
                 last_sync_attempted_at: None,
                 last_sync_success_at: None,
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             principals: vec![ImportPrincipalInput {
@@ -1113,6 +1200,7 @@ mod tests {
                     email: Some("imported@example.invalid".into()),
                     anonymized_at: None,
                 },
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             group_memberships: vec![ImportGroupMembershipInput {
@@ -1128,6 +1216,7 @@ mod tests {
                     source_key: "membership-1".into(),
                     timestamps: Some(timestamps.clone()),
                 }],
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             collections: vec![ImportCollectionInput {
@@ -1136,6 +1225,7 @@ mod tests {
                 description: "Inventory".into(),
                 parent_collection_ref: None,
                 parent_collection_key: None,
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             classes: vec![ImportClassInput {
@@ -1146,6 +1236,7 @@ mod tests {
                 validate_schema: Some(false),
                 collection_ref: Some("collection".into()),
                 collection_key: None,
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             objects: vec![ImportObjectInput {
@@ -1155,8 +1246,10 @@ mod tests {
                 data: serde_json::json!({"address": "192.0.2.1"}),
                 class_ref: Some("class-a".into()),
                 class_key: None,
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
+            computed_fields: vec![],
             class_relations: vec![
                 FullImportClassRelationInput::from_refs("class-a", "class-a")
                     .reference("class-relation")
@@ -1172,6 +1265,7 @@ mod tests {
                 from_object_key: None,
                 to_object_ref: Some("object".into()),
                 to_object_key: None,
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             collection_permissions: vec![ImportCollectionPermissionInput {
@@ -1181,6 +1275,7 @@ mod tests {
                 group_key: GroupKey::in_scope("directory", "operators"),
                 permissions: vec![Permissions::ReadCollection],
                 replace_existing: Some(false),
+                condition: None,
             }],
             export_templates: vec![ImportExportTemplateInput {
                 ref_: Some("template".into()),
@@ -1199,6 +1294,7 @@ mod tests {
                 relation_context: None,
                 default_missing_data_policy: None,
                 default_limits: None,
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             remote_targets: vec![ImportRemoteTargetInput {
@@ -1217,6 +1313,7 @@ mod tests {
                 allowed_subject_types: vec![RemoteTargetSubjectType::Collection],
                 timeout_ms: 1_000,
                 enabled: false,
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             event_sinks: vec![ImportEventSinkInput {
@@ -1226,6 +1323,7 @@ mod tests {
                 config: serde_json::json!({}),
                 secret_ref: None,
                 enabled: false,
+                condition: None,
                 timestamps: Some(timestamps.clone()),
             }],
             event_subscriptions: vec![ImportEventSubscriptionInput {
@@ -1241,6 +1339,7 @@ mod tests {
                 filter: serde_json::json!({}),
                 routing: serde_json::json!({}),
                 enabled: false,
+                condition: None,
                 timestamps: Some(timestamps),
             }],
         })
@@ -1250,7 +1349,7 @@ mod tests {
         assert_eq!(request.total_items(), 14);
         let encoded = serde_json::to_value(&request).unwrap();
         let graph = encoded["graph"].as_object().unwrap();
-        assert_eq!(graph.len(), 14);
+        assert_eq!(graph.len(), 15);
         for section in [
             "identity_scopes",
             "groups",
@@ -1302,6 +1401,7 @@ mod tests {
                 to_class_key: None,
                 from_max_relations: None,
                 to_max_relations: None,
+                condition: None,
                 timestamps: None,
             }],
             ..ImportGraph::default()
@@ -1340,6 +1440,7 @@ mod tests {
             external_key: Some("group-external-secret".into()),
             last_sync_attempted_at: None,
             last_sync_success_at: None,
+            condition: None,
             timestamps: None,
         };
         let principal = ImportPrincipalInput {
@@ -1359,6 +1460,7 @@ mod tests {
                 email: None,
                 anonymized_at: None,
             },
+            condition: None,
             timestamps: None,
         };
         let sink = ImportEventSinkInput {
@@ -1368,6 +1470,7 @@ mod tests {
             config: serde_json::json!({"token": "sink-secret"}),
             secret_ref: Some("sink-secret-ref".into()),
             enabled: false,
+            condition: None,
             timestamps: None,
         };
         let source = ImportMembershipSourceInput {

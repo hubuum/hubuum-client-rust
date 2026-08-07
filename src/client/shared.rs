@@ -406,6 +406,7 @@ pub(crate) fn process_transport_response(
     Ok(RawResponse {
         status: response.status,
         body: decode_response_text(response.body)?,
+        etag: response_etag(&response.headers),
         next_cursor,
         total_count,
         page_limit,
@@ -663,6 +664,7 @@ impl<'a, T> IntoIterator for &'a Page<T> {
 pub(crate) struct RawResponse {
     pub status: StatusCode,
     pub body: String,
+    pub etag: Option<crate::types::EntityTag>,
     pub next_cursor: Option<String>,
     pub total_count: Option<u64>,
     pub page_limit: Option<usize>,
@@ -675,6 +677,7 @@ impl std::fmt::Debug for RawResponse {
             .field("status", &self.status)
             .field("body", &"[REDACTED]")
             .field("body_len", &self.body.len())
+            .field("etag", &self.etag)
             .field(
                 "next_cursor",
                 &self.next_cursor.as_ref().map(|_| "[REDACTED]"),
@@ -803,6 +806,13 @@ pub(crate) fn response_metadata(
         .and_then(|value| value.to_str().ok())
         .and_then(ExportContentType::from_header);
     (next_cursor, total_count, page_limit, content_type)
+}
+
+pub(crate) fn response_etag(headers: &HeaderMap) -> Option<crate::types::EntityTag> {
+    headers
+        .get(reqwest::header::ETAG)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| crate::types::EntityTag::new(value).ok())
 }
 
 pub(crate) fn parse_http_error_message(body: &str) -> String {
@@ -1320,6 +1330,8 @@ pub struct Handle<C, T> {
     client: C,
     #[serde(flatten)]
     resource: T,
+    #[serde(skip)]
+    etag: Option<crate::types::EntityTag>,
 }
 
 impl<C, T> Handle<C, T>
@@ -1327,7 +1339,23 @@ where
     T: ApiResource + GetID + Default,
 {
     pub fn new(client: C, resource: T) -> Self {
-        Handle { client, resource }
+        Handle {
+            client,
+            resource,
+            etag: None,
+        }
+    }
+
+    pub(crate) fn new_with_etag(
+        client: C,
+        resource: T,
+        etag: Option<crate::types::EntityTag>,
+    ) -> Self {
+        Handle {
+            client,
+            resource,
+            etag,
+        }
     }
 
     pub fn resource(&self) -> &T {
@@ -1344,6 +1372,12 @@ where
 
     pub fn client(&self) -> &C {
         &self.client
+    }
+
+    /// Strong validator returned by the canonical point response, when that
+    /// representation supports conditional mutations.
+    pub fn etag(&self) -> Option<&crate::types::EntityTag> {
+        self.etag.as_ref()
     }
 }
 
@@ -1802,6 +1836,7 @@ mod test {
             RawResponse {
                 status: StatusCode::OK,
                 body: "[{\"id\":1}]".to_string(),
+                etag: None,
                 next_cursor: Some("abc".to_string()),
                 total_count: Some(12),
                 page_limit: Some(25),
@@ -1826,6 +1861,7 @@ mod test {
         let response = RawResponse {
             status: StatusCode::OK,
             body: "response-body-secret".into(),
+            etag: None,
             next_cursor: Some("cursor-secret".into()),
             total_count: Some(1),
             page_limit: Some(25),

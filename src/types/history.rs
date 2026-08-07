@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     ExportContentType, ExportMissingDataPolicy, ExportScopeKind, ExportTemplateKind, HistoryId,
     HubuumDateTime, PrincipalId, Provenance, RemoteAuthConfig, RemoteHttpMethod,
-    RemoteTargetSubjectType, TaskId,
+    RemoteTargetSubjectType, ResourceRevision, TaskId,
 };
 use crate::{ClassId, CollectionId, ExportTemplateId, ObjectId, RemoteTargetId};
 
@@ -37,6 +37,7 @@ pub struct CollectionHistory {
     pub description: String,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
     #[serde(flatten)]
     pub history: HistoryMetadata,
 }
@@ -55,6 +56,7 @@ pub struct FullCollectionHistory {
     pub parent_collection_id: Option<CollectionId>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
     #[serde(flatten)]
     pub history: HistoryMetadata,
 }
@@ -67,6 +69,7 @@ impl From<FullCollectionHistory> for CollectionHistory {
             description: value.description,
             created_at: value.created_at,
             updated_at: value.updated_at,
+            revision: value.revision,
             history: value.history,
         }
     }
@@ -83,6 +86,7 @@ pub struct ClassHistory {
     pub json_schema: Option<serde_json::Value>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
     #[serde(flatten)]
     pub history: HistoryMetadata,
 }
@@ -97,6 +101,7 @@ pub struct ObjectHistory {
     pub description: String,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
     #[serde(flatten)]
     pub history: HistoryMetadata,
 }
@@ -126,6 +131,7 @@ pub struct ExportTemplateHistory {
     pub scope_kind: Option<ExportScopeKind>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
     #[serde(flatten)]
     pub history: HistoryMetadata,
 }
@@ -150,6 +156,7 @@ pub struct RemoteTargetHistory {
     pub class_id: Option<ClassId>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
     #[serde(flatten)]
     pub history: HistoryMetadata,
 }
@@ -178,6 +185,7 @@ impl std::fmt::Debug for RemoteTargetHistory {
             .field("class_id", &self.class_id)
             .field("created_at", &self.created_at)
             .field("updated_at", &self.updated_at)
+            .field("revision", &self.revision)
             .field("history", &self.history)
             .finish()
     }
@@ -194,6 +202,7 @@ mod tests {
             "name": "child",
             "description": "Child collection",
             "parent_collection_id": 3,
+            "revision": 1,
             "created_at": "2026-07-23T08:00:00Z",
             "updated_at": "2026-07-23T08:01:00Z",
             "op": "INSERT",

@@ -3,7 +3,7 @@
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
-use super::{RemoteCallResultId, TaskId};
+use super::{RemoteCallResultId, ResourceRevision, TaskId};
 use crate::ApiError;
 use crate::resources::{
     ClassId, ClassRelationId, CollectionId, ObjectId, ObjectRelationId, RemoteTargetId,
@@ -202,6 +202,7 @@ pub struct RemoteTarget {
     pub class_id: Option<ClassId>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
 }
 
 /// Request body to create a remote target.
@@ -421,6 +422,7 @@ impl std::fmt::Debug for RemoteTarget {
             .field("class_id", &self.class_id)
             .field("created_at", &self.created_at)
             .field("updated_at", &self.updated_at)
+            .field("revision", &self.revision)
             .finish()
     }
 }

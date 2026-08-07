@@ -11,10 +11,13 @@ use crate::client::sync::{
     Handle as SyncHandle, Resource as SyncResource,
 };
 use crate::{
-    ApiError, Class, EffectiveGroupPermission, ExportTemplate, Group, GroupId,
-    GroupPermissionsResult, PermissionResult, RemoteTarget,
+    ApiError, Class, CollectionPermissionSet, EffectiveGroupPermission, ExportTemplate, Group,
+    GroupId, GroupPermissionsResult, RemoteTarget,
     endpoints::Endpoint,
-    types::{CollectionPermissionsGrantParams, HubuumDateTime, Permissions, PrincipalId},
+    types::{
+        CollectionPermissionsGrantParams, HubuumDateTime, Permissions, PrincipalId,
+        ResourceRevision,
+    },
 };
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -98,26 +101,28 @@ impl SyncHandle<Collection> {
             })
     }
 
-    pub fn permissions_request(&self) -> SyncCursorRequest<GroupPermissionsResult> {
-        SyncCursorRequest::new(
-            self.client().clone(),
-            Endpoint::CollectionPermissions,
-            vec![(
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            )],
-        )
-    }
-
-    pub fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
-        self.permissions_request().all()
+    pub fn permissions(&self) -> Result<CollectionPermissionSet, ApiError> {
+        self.client()
+            .request_with_endpoint::<SyncEmptyPostParams, CollectionPermissionSet>(
+                reqwest::Method::GET,
+                &Endpoint::CollectionPermissions,
+                vec![(
+                    Cow::Borrowed("collection_id"),
+                    self.resource().id.to_string().into(),
+                )],
+                vec![],
+                SyncEmptyPostParams {},
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Collection permissions returned empty result".into())
+            })
     }
 
     pub fn replace_permissions(
         &self,
         group_id: impl Into<GroupId>,
         permissions: Vec<String>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -128,21 +133,23 @@ impl SyncHandle<Collection> {
         ];
 
         self.client()
-            .request_with_endpoint::<CollectionPermissionsGrantParams, ()>(
+            .request_with_endpoint::<CollectionPermissionsGrantParams, CollectionPermissionSet>(
                 reqwest::Method::PUT,
                 &Endpoint::CollectionPermissionsGrant,
                 url_params,
                 vec![],
                 CollectionPermissionsGrantParams::from_strings(permissions)?,
-            )?;
-        Ok(())
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Permission replacement returned empty result".into())
+            })
     }
 
     pub fn grant_permissions(
         &self,
         group_id: impl Into<GroupId>,
         permissions: Vec<String>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -153,20 +160,20 @@ impl SyncHandle<Collection> {
         ];
 
         self.client()
-            .request_with_endpoint::<CollectionPermissionsGrantParams, ()>(
+            .request_with_endpoint::<CollectionPermissionsGrantParams, CollectionPermissionSet>(
                 reqwest::Method::POST,
                 &Endpoint::CollectionPermissionsGrant,
                 url_params,
                 vec![],
                 CollectionPermissionsGrantParams::from_strings(permissions)?,
-            )?;
-        Ok(())
+            )?
+            .ok_or_else(|| ApiError::EmptyResult("Permission grant returned empty result".into()))
     }
 
     pub fn group_permissions(
         &self,
         group_id: impl Into<GroupId>,
-    ) -> Result<PermissionResult, ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -177,7 +184,7 @@ impl SyncHandle<Collection> {
         ];
 
         self.client()
-            .request_with_endpoint::<SyncEmptyPostParams, PermissionResult>(
+            .request_with_endpoint::<SyncEmptyPostParams, CollectionPermissionSet>(
                 reqwest::Method::GET,
                 &Endpoint::CollectionPermissionsGrant,
                 url_params,
@@ -191,7 +198,10 @@ impl SyncHandle<Collection> {
             })
     }
 
-    pub fn revoke_permissions(&self, group_id: impl Into<GroupId>) -> Result<(), ApiError> {
+    pub fn revoke_permissions(
+        &self,
+        group_id: impl Into<GroupId>,
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -201,15 +211,14 @@ impl SyncHandle<Collection> {
             (Cow::Borrowed("group_id"), group_id.to_string().into()),
         ];
 
-        self.client()
-            .request_with_endpoint::<SyncEmptyPostParams, ()>(
-                reqwest::Method::DELETE,
-                &Endpoint::CollectionPermissionsGrant,
-                url_params,
-                vec![],
-                SyncEmptyPostParams {},
-            )?;
-        Ok(())
+        let raw = self.client().request_with_endpoint_raw(
+            reqwest::Method::DELETE,
+            &Endpoint::CollectionPermissionsGrant,
+            url_params,
+            vec![],
+            SyncEmptyPostParams {},
+        )?;
+        Ok(serde_json::from_str(&raw.body)?)
     }
 
     pub fn has_group_permission(
@@ -250,7 +259,7 @@ impl SyncHandle<Collection> {
         &self,
         group_id: impl Into<GroupId>,
         permission: Permissions,
-    ) -> Result<(), ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -262,21 +271,21 @@ impl SyncHandle<Collection> {
         ];
 
         self.client()
-            .request_with_endpoint::<SyncEmptyPostParams, ()>(
+            .request_with_endpoint::<SyncEmptyPostParams, CollectionPermissionSet>(
                 reqwest::Method::POST,
                 &Endpoint::CollectionPermissionGrant,
                 url_params,
                 vec![],
                 SyncEmptyPostParams {},
-            )?;
-        Ok(())
+            )?
+            .ok_or_else(|| ApiError::EmptyResult("Permission grant returned empty result".into()))
     }
 
     pub fn revoke_permission(
         &self,
         group_id: impl Into<GroupId>,
         permission: Permissions,
-    ) -> Result<(), ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -287,15 +296,14 @@ impl SyncHandle<Collection> {
             (Cow::Borrowed("permission"), permission.to_string().into()),
         ];
 
-        self.client()
-            .request_with_endpoint::<SyncEmptyPostParams, ()>(
-                reqwest::Method::DELETE,
-                &Endpoint::CollectionPermissionGrant,
-                url_params,
-                vec![],
-                SyncEmptyPostParams {},
-            )?;
-        Ok(())
+        let raw = self.client().request_with_endpoint_raw(
+            reqwest::Method::DELETE,
+            &Endpoint::CollectionPermissionGrant,
+            url_params,
+            vec![],
+            SyncEmptyPostParams {},
+        )?;
+        Ok(serde_json::from_str(&raw.body)?)
     }
 
     pub fn principal_permissions(
@@ -473,26 +481,29 @@ impl AsyncHandle<Collection> {
             })
     }
 
-    pub fn permissions_request(&self) -> AsyncCursorRequest<GroupPermissionsResult> {
-        AsyncCursorRequest::new(
-            self.client().clone(),
-            Endpoint::CollectionPermissions,
-            vec![(
-                Cow::Borrowed("collection_id"),
-                self.resource().id.to_string().into(),
-            )],
-        )
-    }
-
-    pub async fn permissions(&self) -> Result<Vec<GroupPermissionsResult>, ApiError> {
-        self.permissions_request().all().await
+    pub async fn permissions(&self) -> Result<CollectionPermissionSet, ApiError> {
+        self.client()
+            .request_with_endpoint::<AsyncEmptyPostParams, CollectionPermissionSet>(
+                reqwest::Method::GET,
+                &Endpoint::CollectionPermissions,
+                vec![(
+                    Cow::Borrowed("collection_id"),
+                    self.resource().id.to_string().into(),
+                )],
+                vec![],
+                AsyncEmptyPostParams {},
+            )
+            .await?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Collection permissions returned empty result".into())
+            })
     }
 
     pub async fn replace_permissions(
         &self,
         group_id: impl Into<GroupId>,
         permissions: Vec<String>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -503,22 +514,24 @@ impl AsyncHandle<Collection> {
         ];
 
         self.client()
-            .request_with_endpoint::<CollectionPermissionsGrantParams, ()>(
+            .request_with_endpoint::<CollectionPermissionsGrantParams, CollectionPermissionSet>(
                 reqwest::Method::PUT,
                 &Endpoint::CollectionPermissionsGrant,
                 url_params,
                 vec![],
                 CollectionPermissionsGrantParams::from_strings(permissions)?,
             )
-            .await?;
-        Ok(())
+            .await?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Permission replacement returned empty result".into())
+            })
     }
 
     pub async fn grant_permissions(
         &self,
         group_id: impl Into<GroupId>,
         permissions: Vec<String>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -529,21 +542,21 @@ impl AsyncHandle<Collection> {
         ];
 
         self.client()
-            .request_with_endpoint::<CollectionPermissionsGrantParams, ()>(
+            .request_with_endpoint::<CollectionPermissionsGrantParams, CollectionPermissionSet>(
                 reqwest::Method::POST,
                 &Endpoint::CollectionPermissionsGrant,
                 url_params,
                 vec![],
                 CollectionPermissionsGrantParams::from_strings(permissions)?,
             )
-            .await?;
-        Ok(())
+            .await?
+            .ok_or_else(|| ApiError::EmptyResult("Permission grant returned empty result".into()))
     }
 
     pub async fn group_permissions(
         &self,
         group_id: impl Into<GroupId>,
-    ) -> Result<PermissionResult, ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -554,7 +567,7 @@ impl AsyncHandle<Collection> {
         ];
 
         self.client()
-            .request_with_endpoint::<AsyncEmptyPostParams, PermissionResult>(
+            .request_with_endpoint::<AsyncEmptyPostParams, CollectionPermissionSet>(
                 reqwest::Method::GET,
                 &Endpoint::CollectionPermissionsGrant,
                 url_params,
@@ -569,7 +582,10 @@ impl AsyncHandle<Collection> {
             })
     }
 
-    pub async fn revoke_permissions(&self, group_id: impl Into<GroupId>) -> Result<(), ApiError> {
+    pub async fn revoke_permissions(
+        &self,
+        group_id: impl Into<GroupId>,
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -579,8 +595,9 @@ impl AsyncHandle<Collection> {
             (Cow::Borrowed("group_id"), group_id.to_string().into()),
         ];
 
-        self.client()
-            .request_with_endpoint::<AsyncEmptyPostParams, ()>(
+        let raw = self
+            .client()
+            .request_with_endpoint_raw(
                 reqwest::Method::DELETE,
                 &Endpoint::CollectionPermissionsGrant,
                 url_params,
@@ -588,7 +605,7 @@ impl AsyncHandle<Collection> {
                 AsyncEmptyPostParams {},
             )
             .await?;
-        Ok(())
+        Ok(serde_json::from_str(&raw.body)?)
     }
 
     pub async fn has_group_permission(
@@ -631,7 +648,7 @@ impl AsyncHandle<Collection> {
         &self,
         group_id: impl Into<GroupId>,
         permission: Permissions,
-    ) -> Result<(), ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -643,22 +660,22 @@ impl AsyncHandle<Collection> {
         ];
 
         self.client()
-            .request_with_endpoint::<AsyncEmptyPostParams, ()>(
+            .request_with_endpoint::<AsyncEmptyPostParams, CollectionPermissionSet>(
                 reqwest::Method::POST,
                 &Endpoint::CollectionPermissionGrant,
                 url_params,
                 vec![],
                 AsyncEmptyPostParams {},
             )
-            .await?;
-        Ok(())
+            .await?
+            .ok_or_else(|| ApiError::EmptyResult("Permission grant returned empty result".into()))
     }
 
     pub async fn revoke_permission(
         &self,
         group_id: impl Into<GroupId>,
         permission: Permissions,
-    ) -> Result<(), ApiError> {
+    ) -> Result<CollectionPermissionSet, ApiError> {
         let group_id = group_id.into();
         let url_params = vec![
             (
@@ -669,8 +686,9 @@ impl AsyncHandle<Collection> {
             (Cow::Borrowed("permission"), permission.to_string().into()),
         ];
 
-        self.client()
-            .request_with_endpoint::<AsyncEmptyPostParams, ()>(
+        let raw = self
+            .client()
+            .request_with_endpoint_raw(
                 reqwest::Method::DELETE,
                 &Endpoint::CollectionPermissionGrant,
                 url_params,
@@ -678,7 +696,7 @@ impl AsyncHandle<Collection> {
                 AsyncEmptyPostParams {},
             )
             .await?;
-        Ok(())
+        Ok(serde_json::from_str(&raw.body)?)
     }
 
     pub async fn principal_permissions(

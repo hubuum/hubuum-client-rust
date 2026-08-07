@@ -3,8 +3,10 @@ pub struct ClassResource {
     pub id: i32,
     pub name: String,
     pub description: String,
-    #[api(as_id)]
+    #[api(as_id, response_optional, skip_query)]
     pub collection: Collection,
+    #[api(read_only, response_optional)]
+    pub collection_id: CollectionId,
     #[api(optional)]
     pub json_schema: serde_json::Value,
     #[api(optional)]
@@ -13,6 +15,8 @@ pub struct ClassResource {
     pub created_at: HubuumDateTime,
     #[api(read_only)]
     pub updated_at: HubuumDateTime,
+    #[api(read_only)]
+    pub revision: ResourceRevision,
 }
 
 pub struct ClassRelationResource {
@@ -34,4 +38,6 @@ pub struct ClassRelationResource {
     pub created_at: HubuumDateTime,
     #[api(read_only)]
     pub updated_at: HubuumDateTime,
+    #[api(read_only)]
+    pub revision: ResourceRevision,
 }

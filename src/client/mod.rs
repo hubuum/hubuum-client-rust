@@ -207,9 +207,15 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::principal_settings::<i32>;
             let _ = $module::Client::<Authenticated>::principal_permissions::<i32>;
             let _ = $module::PrincipalSettingsScope::get;
+            let _ = $module::PrincipalSettingsScope::get_revisioned;
             let _ = $module::PrincipalSettingsScope::replace::<serde_json::Value>;
             let _ = $module::PrincipalSettingsScope::patch::<serde_json::Value>;
+            let _ = $module::PrincipalSettingsScope::json_patch;
+            let _ = $module::PrincipalSettingsScope::replace_if_match::<serde_json::Value>;
+            let _ = $module::PrincipalSettingsScope::patch_if_match::<serde_json::Value>;
+            let _ = $module::PrincipalSettingsScope::json_patch_if_match;
             let _ = $module::PrincipalSettingsScope::reset;
+            let _ = $module::PrincipalSettingsScope::reset_if_match;
         };
     }
 
@@ -254,6 +260,10 @@ mod parity_contract {
             let _ = $module::Resource::<Class>::create_raw;
             let _ = $module::Resource::<Class>::update::<ClassId>;
             let _ = $module::Resource::<Class>::delete::<ClassId>;
+            let _ = $module::Resource::<Class>::delete_if_match::<ClassId>;
+            let _ = |operation: $module::UpdateOp<Class>, etag: crate::types::EntityTag| {
+                operation.if_match(etag)
+            };
             let _ = $module::Resource::<Class>::set_raw_param::<&str, &str>;
             let _ = $module::Resource::<Class>::include_total;
             let _ = $module::Resource::<Class>::get::<ClassId>;
@@ -267,6 +277,7 @@ mod parity_contract {
             let _ = $module::Handle::<Class>::resource;
             let _ = $module::Handle::<Class>::id;
             let _ = $module::Handle::<Class>::client;
+            let _ = $module::Handle::<Class>::etag;
         };
     }
 
@@ -297,10 +308,36 @@ mod parity_contract {
             let _ = $module::Restores::stage;
             let _ = $module::SharedComputedFields::list;
             let _ = $module::SharedComputedFields::create;
+            let _ = |fields: &$module::SharedComputedFields, etag: &crate::types::EntityTag| {
+                std::mem::drop(fields.get(1));
+                std::mem::drop(
+                    fields.update(1, crate::types::ComputedFieldDefinitionPatch::default()),
+                );
+                std::mem::drop(fields.update_if_match(
+                    1,
+                    crate::types::ComputedFieldDefinitionPatch::default(),
+                    etag,
+                ));
+                std::mem::drop(fields.delete(1));
+                std::mem::drop(fields.delete_if_match(1, etag));
+            };
             let _ = $module::SharedComputedFields::preview;
             let _ = $module::SharedComputedFields::rebuild;
             let _ = $module::PersonalComputedFields::query;
             let _ = $module::PersonalComputedFields::create;
+            let _ = |fields: &$module::PersonalComputedFields, etag: &crate::types::EntityTag| {
+                std::mem::drop(fields.get(1));
+                std::mem::drop(
+                    fields.update(1, crate::types::ComputedFieldDefinitionPatch::default()),
+                );
+                std::mem::drop(fields.update_if_match(
+                    1,
+                    crate::types::ComputedFieldDefinitionPatch::default(),
+                    etag,
+                ));
+                std::mem::drop(fields.delete(1));
+                std::mem::drop(fields.delete_if_match(1, etag));
+            };
             let _ = $module::PersonalComputedFields::preview;
         };
     }
@@ -398,15 +435,32 @@ mod parity_contract {
             let _ = $module::Handle::<User>::groups_request;
             let _ = $module::Handle::<User>::tokens;
             let _ = $module::Handle::<User>::tokens_request;
+            let _ = $module::Handle::<User>::tokens_request_state;
             let _ = $module::Handle::<User>::tokens_create;
             let _ = $module::Handle::<User>::tokens_create_token;
+            let _ = |handle: &$module::Handle<User>, etag: &crate::types::EntityTag| {
+                std::mem::drop(handle.token(1));
+                std::mem::drop(
+                    handle.token_renew(1, crate::resources::RenewTokenRequest::default()),
+                );
+                std::mem::drop(handle.token_revoke_if_match(1, etag));
+            };
             let _ = $module::Handle::<User>::settings;
             let _ = $module::Handle::<User>::permissions;
 
             let _ = $module::Handle::<ServiceAccount>::disable;
             let _ = $module::Handle::<ServiceAccount>::tokens;
+            let _ = $module::Handle::<ServiceAccount>::tokens_request;
+            let _ = $module::Handle::<ServiceAccount>::tokens_request_state;
             let _ = $module::Handle::<ServiceAccount>::tokens_create;
             let _ = $module::Handle::<ServiceAccount>::tokens_create_token;
+            let _ = |handle: &$module::Handle<ServiceAccount>, etag: &crate::types::EntityTag| {
+                std::mem::drop(handle.token(1));
+                std::mem::drop(
+                    handle.token_renew(1, crate::resources::RenewTokenRequest::default()),
+                );
+                std::mem::drop(handle.token_revoke_if_match(1, etag));
+            };
             let _ = $module::Handle::<ServiceAccount>::settings;
             let _ = $module::Handle::<ServiceAccount>::permissions;
 
@@ -414,9 +468,12 @@ mod parity_contract {
 
             let _ = $module::Handle::<Group>::members;
             let _ = $module::Handle::<Group>::members_request;
+            let _ = |handle: &$module::Handle<Group>, etag: &crate::types::EntityTag| {
+                std::mem::drop(handle.member(1));
+                std::mem::drop(handle.remove_member_if_match(1, etag));
+            };
 
             let _ = $module::Handle::<Collection>::permissions;
-            let _ = $module::Handle::<Collection>::permissions_request;
             let _ = $module::Handle::<Collection>::groups_with_permission;
         };
     }

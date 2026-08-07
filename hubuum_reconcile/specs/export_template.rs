@@ -26,4 +26,6 @@ pub struct ExportTemplateResource {
     pub created_at: HubuumDateTime,
     #[api(read_only)]
     pub updated_at: HubuumDateTime,
+    #[api(read_only)]
+    pub revision: ResourceRevision,
 }

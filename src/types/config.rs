@@ -25,6 +25,8 @@ pub struct ClientPaginationConfig {
 pub struct ClientAuthenticationConfig {
     /// Lifetime applied when login or token minting omits an explicit expiry.
     pub default_token_lifetime_hours: i64,
+    /// Largest lifetime accepted for an explicitly requested token expiry.
+    pub max_token_lifetime_hours: i64,
 }
 
 /// Redacted effective process configuration returned by the administrative
@@ -163,6 +165,7 @@ pub struct RemoteCallConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuthenticationConfig {
     pub token_lifetime_hours: i64,
+    pub max_token_lifetime_hours: i64,
     pub token_retention_purge_enabled: bool,
     pub token_retention_days: i64,
     pub token_retention_purge_interval_seconds: u64,

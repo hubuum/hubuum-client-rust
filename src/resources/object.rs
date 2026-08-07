@@ -13,7 +13,7 @@ use crate::client::sync::{
 use crate::{
     ApiError, ClassId, ClassRelationId, CollectionId,
     endpoints::Endpoint,
-    types::{ComputedFieldSelector, HubuumDateTime},
+    types::{ComputedFieldSelector, HubuumDateTime, ResourceRevision},
 };
 
 include!("generated/object.rs");
@@ -28,6 +28,7 @@ pub struct ObjectWithPath {
     pub data: serde_json::Value,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
     pub path: Vec<ObjectId>,
 }
 

@@ -36,10 +36,11 @@ use crate::types::{
     FullCollectionHistory, FullDbStateResponse, FullImportRequest, HubuumDateTime, ImportRequest,
     ImportRequestPayload, ImportRunResult, ImportTaskResultResponse, LoginRateLimitState,
     LogoutTokenRequest, NewEventSubscription, ObjectHistory,
-    PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings, ProbeResponse,
+    PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings,
+    PrincipalSettingsPatchDocument, PrincipalSettingsResponse, ProbeResponse,
     ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability, RestoreConfirmRequest,
-    RestoreId, RestoreStageResponse, RunningConfig, SortDirection, TaskEventResponse, TaskId,
-    TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
+    RestoreId, RestoreStageResponse, Revisioned, RunningConfig, SortDirection, TaskEventResponse,
+    TaskId, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UnifiedSearchSseDecoder,
     UpdateEventSubscription,
 };
@@ -331,6 +332,7 @@ impl<S> Client<S> {
             shared::RawResponse {
                 status,
                 body,
+                etag: None,
                 next_cursor: None,
                 total_count: None,
                 page_limit: None,
@@ -451,11 +453,13 @@ impl<S> Client<S> {
             let status = response.status();
             let (next_cursor, total_count, page_limit, content_type) =
                 shared::response_metadata(response.headers());
+            let etag = shared::response_etag(response.headers());
             let body =
                 shared::read_async_body(response, self.options().max_response_body_bytes).await?;
             shared::RawResponse {
                 status,
                 body,
+                etag,
                 next_cursor,
                 total_count,
                 page_limit,
@@ -651,6 +655,7 @@ impl Client<Unauthenticated> {
             shared::RawResponse {
                 status,
                 body,
+                etag: None,
                 next_cursor: None,
                 total_count: None,
                 page_limit: None,
@@ -710,6 +715,7 @@ impl Client<Unauthenticated> {
             shared::RawResponse {
                 status,
                 body,
+                etag: None,
                 next_cursor: None,
                 total_count: None,
                 page_limit: None,
@@ -1191,6 +1197,7 @@ impl Client<Authenticated> {
         let status = response.status();
         let (next_cursor, total_count, page_limit, content_type) =
             shared::response_metadata(response.headers());
+        let etag = shared::response_etag(response.headers());
         let body =
             shared::read_async_body(response, self.options().max_response_body_bytes).await?;
         debug!("Response: {} ({} bytes)", status, body.len());
@@ -1198,6 +1205,7 @@ impl Client<Authenticated> {
         Ok(shared::RawResponse {
             status,
             body,
+            etag,
             next_cursor,
             total_count,
             page_limit,
@@ -1324,6 +1332,32 @@ impl Client<Authenticated> {
             .and_then(|opt| opt.ok_or(ApiError::EmptyResult("PATCH returned empty result".into())))
     }
 
+    async fn patch_with_headers<R: ApiResource, I>(
+        &self,
+        resource: R,
+        id: I,
+        mut url_params: UrlParams,
+        params: R::PatchParams,
+        headers: &[(&str, String)],
+    ) -> Result<R::PatchOutput, ApiError>
+    where
+        I: Into<R::Id>,
+    {
+        url_params.push(("patch_id".into(), id.into().to_string().into()));
+        let raw = self
+            .request_with_endpoint_raw_with_headers(
+                reqwest::Method::PATCH,
+                &resource.endpoint(),
+                url_params,
+                vec![],
+                params,
+                headers,
+            )
+            .await?;
+        shared::parse_response(&reqwest::Method::PATCH, raw.status, raw.body)?
+            .ok_or_else(|| ApiError::EmptyResult("Conditional PATCH returned empty result".into()))
+    }
+
     pub async fn delete<R: ApiResource, I>(
         &self,
         resource: R,
@@ -1345,6 +1379,29 @@ impl Client<Authenticated> {
         )
         .await
         .map(|_| ())
+    }
+
+    async fn delete_with_headers<R: ApiResource, I>(
+        &self,
+        resource: R,
+        id: I,
+        mut url_params: UrlParams,
+        headers: &[(&str, String)],
+    ) -> Result<(), ApiError>
+    where
+        I: Into<R::Id>,
+    {
+        url_params.push(("delete_id".into(), id.into().to_string().into()));
+        self.request_with_endpoint_raw_with_headers(
+            reqwest::Method::DELETE,
+            &resource.endpoint(),
+            url_params,
+            vec![],
+            EmptyPostParams,
+            headers,
+        )
+        .await?;
+        Ok(())
     }
 
     pub fn users(&self) -> Resource<User> {
@@ -1424,6 +1481,13 @@ impl Client<Authenticated> {
 
     pub fn me_tokens_request(&self) -> CursorRequest<PrincipalTokenMetadata> {
         CursorRequest::new(self.clone(), Endpoint::MeTokens, UrlParams::default())
+    }
+
+    pub fn me_tokens_request_state(
+        &self,
+        state: crate::types::TokenListState,
+    ) -> CursorRequest<PrincipalTokenMetadata> {
+        self.me_tokens_request().query_param("state", state)
     }
 
     /// The authenticated caller's own effective permissions, per collection.
@@ -1959,15 +2023,22 @@ impl PrincipalSettingsScope {
         Self { client, path }
     }
 
-    pub async fn get(&self) -> Result<PrincipalSettings, ApiError> {
-        self.client
+    pub async fn get(&self) -> Result<PrincipalSettingsResponse, ApiError> {
+        Ok(self.get_revisioned().await?.into_inner())
+    }
+
+    pub async fn get_revisioned(&self) -> Result<Revisioned<PrincipalSettingsResponse>, ApiError> {
+        let raw = self
+            .client
             .raw(reqwest::Method::GET, &self.path)
-            .send()
-            .await
+            .execute()
+            .await?;
+        let value = serde_json::from_str(&raw.body)?;
+        Ok(Revisioned::new(value, raw.etag))
     }
 
     /// Replace the complete settings document (`PUT`).
-    pub async fn replace<T>(&self, settings: &T) -> Result<PrincipalSettings, ApiError>
+    pub async fn replace<T>(&self, settings: &T) -> Result<PrincipalSettingsResponse, ApiError>
     where
         T: Serialize + ?Sized,
     {
@@ -1981,7 +2052,7 @@ impl PrincipalSettingsScope {
 
     /// Apply recursive JSON Merge Patch semantics (`PATCH`). Null values remove
     /// keys, object values merge, and all other values replace existing values.
-    pub async fn patch<T>(&self, patch: &T) -> Result<PrincipalSettings, ApiError>
+    pub async fn patch<T>(&self, patch: &T) -> Result<PrincipalSettingsResponse, ApiError>
     where
         T: Serialize + ?Sized,
     {
@@ -1993,10 +2064,86 @@ impl PrincipalSettingsScope {
             .await
     }
 
+    /// Apply a bounded RFC 6902 JSON Patch document atomically.
+    pub async fn json_patch(
+        &self,
+        patch: &PrincipalSettingsPatchDocument,
+    ) -> Result<PrincipalSettingsResponse, ApiError> {
+        self.client
+            .raw(reqwest::Method::PATCH, &self.path)
+            .header(
+                reqwest::header::CONTENT_TYPE.as_str(),
+                "application/json-patch+json",
+            )
+            .json(patch)?
+            .send()
+            .await
+    }
+
+    pub async fn replace_if_match<T>(
+        &self,
+        settings: &T,
+        etag: &crate::types::EntityTag,
+    ) -> Result<PrincipalSettingsResponse, ApiError>
+    where
+        T: Serialize + ?Sized,
+    {
+        let settings = PrincipalSettings::from_serializable(settings)?;
+        self.client
+            .raw(reqwest::Method::PUT, &self.path)
+            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .json(&settings)?
+            .send()
+            .await
+    }
+
+    pub async fn patch_if_match<T>(
+        &self,
+        patch: &T,
+        etag: &crate::types::EntityTag,
+    ) -> Result<PrincipalSettingsResponse, ApiError>
+    where
+        T: Serialize + ?Sized,
+    {
+        let patch = PrincipalSettings::from_serializable(patch)?;
+        self.client
+            .raw(reqwest::Method::PATCH, &self.path)
+            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .json(&patch)?
+            .send()
+            .await
+    }
+
+    pub async fn json_patch_if_match(
+        &self,
+        patch: &PrincipalSettingsPatchDocument,
+        etag: &crate::types::EntityTag,
+    ) -> Result<PrincipalSettingsResponse, ApiError> {
+        self.client
+            .raw(reqwest::Method::PATCH, &self.path)
+            .header(
+                reqwest::header::CONTENT_TYPE.as_str(),
+                "application/json-patch+json",
+            )
+            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .json(patch)?
+            .send()
+            .await
+    }
+
     /// Reset the settings document to an empty object (`DELETE`).
     pub async fn reset(&self) -> Result<(), ApiError> {
         self.client
             .raw(reqwest::Method::DELETE, &self.path)
+            .send_optional::<serde_json::Value>()
+            .await?;
+        Ok(())
+    }
+
+    pub async fn reset_if_match(&self, etag: &crate::types::EntityTag) -> Result<(), ApiError> {
+        self.client
+            .raw(reqwest::Method::DELETE, &self.path)
+            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
             .send_optional::<serde_json::Value>()
             .await?;
         Ok(())
@@ -2122,11 +2269,13 @@ impl RawRequest {
         let status = response.status();
         let (next_cursor, total_count, page_limit, content_type) =
             shared::response_metadata(response.headers());
+        let etag = shared::response_etag(response.headers());
         let body = shared::read_async_body(response, self.client.options().max_response_body_bytes)
             .await?;
         Ok(shared::RawResponse {
             status,
             body,
+            etag,
             next_cursor,
             total_count,
             page_limit,
@@ -3206,6 +3355,23 @@ impl SharedComputedFields {
             })
     }
 
+    /// Fetch one canonical shared definition and its strong ETag.
+    pub async fn get(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+    ) -> Result<Revisioned<ComputedFieldDefinition>, ApiError> {
+        let path = Endpoint::ClassComputedFieldById
+            .path()
+            .replace("{class_id}", &self.class_id.to_string())
+            .replace("{field_id}", &field_id.into().to_string());
+        let raw = self
+            .client
+            .raw(reqwest::Method::GET, path)
+            .execute()
+            .await?;
+        Ok(Revisioned::new(serde_json::from_str(&raw.body)?, raw.etag))
+    }
+
     pub async fn update(
         &self,
         field_id: impl Into<ComputedFieldDefinitionId>,
@@ -3228,10 +3394,27 @@ impl SharedComputedFields {
             })
     }
 
+    pub async fn update_if_match(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+        patch: ComputedFieldDefinitionPatch,
+        etag: &crate::types::EntityTag,
+    ) -> Result<ComputedFieldMutationResponse, ApiError> {
+        let path = Endpoint::ClassComputedFieldById
+            .path()
+            .replace("{class_id}", &self.class_id.to_string())
+            .replace("{field_id}", &field_id.into().to_string());
+        self.client
+            .raw(reqwest::Method::PATCH, path)
+            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .json(&patch)?
+            .send()
+            .await
+    }
+
     pub async fn delete(
         &self,
         field_id: impl Into<ComputedFieldDefinitionId>,
-        expected_revision: i64,
     ) -> Result<ComputedFieldDeleteResponse, ApiError> {
         let path = Endpoint::ClassComputedFieldById
             .path()
@@ -3240,10 +3423,25 @@ impl SharedComputedFields {
         let raw = self
             .client
             .raw(reqwest::Method::DELETE, path)
-            .query_param("expected_revision", expected_revision)
             .execute()
             .await?;
         serde_json::from_str(&raw.body).map_err(ApiError::from)
+    }
+
+    pub async fn delete_if_match(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+        etag: &crate::types::EntityTag,
+    ) -> Result<ComputedFieldDeleteResponse, ApiError> {
+        let path = Endpoint::ClassComputedFieldById
+            .path()
+            .replace("{class_id}", &self.class_id.to_string())
+            .replace("{field_id}", &field_id.into().to_string());
+        self.client
+            .raw(reqwest::Method::DELETE, path)
+            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .send()
+            .await
     }
 
     pub async fn preview(
@@ -3323,6 +3521,22 @@ impl PersonalComputedFields {
             })
     }
 
+    /// Fetch one canonical personal definition and its strong ETag.
+    pub async fn get(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+    ) -> Result<Revisioned<ComputedFieldDefinition>, ApiError> {
+        let path = Endpoint::MeComputedFieldById
+            .path()
+            .replace("{field_id}", &field_id.into().to_string());
+        let raw = self
+            .client
+            .raw(reqwest::Method::GET, path)
+            .execute()
+            .await?;
+        Ok(Revisioned::new(serde_json::from_str(&raw.body)?, raw.etag))
+    }
+
     pub async fn update(
         &self,
         field_id: impl Into<ComputedFieldDefinitionId>,
@@ -3343,17 +3557,48 @@ impl PersonalComputedFields {
             })
     }
 
+    pub async fn update_if_match(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+        patch: ComputedFieldDefinitionPatch,
+        etag: &crate::types::EntityTag,
+    ) -> Result<ComputedFieldDefinition, ApiError> {
+        let path = Endpoint::MeComputedFieldById
+            .path()
+            .replace("{field_id}", &field_id.into().to_string());
+        self.client
+            .raw(reqwest::Method::PATCH, path)
+            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
+            .json(&patch)?
+            .send()
+            .await
+    }
+
     pub async fn delete(
         &self,
         field_id: impl Into<ComputedFieldDefinitionId>,
-        expected_revision: i64,
     ) -> Result<(), ApiError> {
         let path = Endpoint::MeComputedFieldById
             .path()
             .replace("{field_id}", &field_id.into().to_string());
         self.client
             .raw(reqwest::Method::DELETE, path)
-            .query_param("expected_revision", expected_revision)
+            .execute()
+            .await?;
+        Ok(())
+    }
+
+    pub async fn delete_if_match(
+        &self,
+        field_id: impl Into<ComputedFieldDefinitionId>,
+        etag: &crate::types::EntityTag,
+    ) -> Result<(), ApiError> {
+        let path = Endpoint::MeComputedFieldById
+            .path()
+            .replace("{field_id}", &field_id.into().to_string());
+        self.client
+            .raw(reqwest::Method::DELETE, path)
+            .header(reqwest::header::IF_MATCH.as_str(), etag.to_string())
             .execute()
             .await?;
         Ok(())
@@ -4425,6 +4670,7 @@ pub struct UpdateOp<T: ApiResource> {
     id: T::Id,
     url_params: UrlParams,
     params: T::PatchParams,
+    if_match: Option<crate::types::EntityTag>,
     _phantom: PhantomData<T>,
 }
 
@@ -4435,6 +4681,7 @@ impl<T: ApiResource> UpdateOp<T> {
             id,
             url_params,
             params: T::PatchParams::default(),
+            if_match: None,
             _phantom: PhantomData,
         }
     }
@@ -4452,11 +4699,32 @@ impl<T: ApiResource> UpdateOp<T> {
         self
     }
 
+    /// Apply this update only if the resource still matches `etag`.
+    pub fn if_match(mut self, etag: impl Into<crate::types::EntityTag>) -> Self {
+        self.if_match = Some(etag.into());
+        self
+    }
+
     pub async fn send(self) -> Result<T::PatchOutput, ApiError> {
         T::validate_patch(&self.params)?;
-        self.client
-            .patch::<T, _>(T::default(), self.id, self.url_params, self.params)
-            .await
+        match self.if_match {
+            Some(etag) => {
+                self.client
+                    .patch_with_headers::<T, _>(
+                        T::default(),
+                        self.id,
+                        self.url_params,
+                        self.params,
+                        &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+                    )
+                    .await
+            }
+            None => {
+                self.client
+                    .patch::<T, _>(T::default(), self.id, self.url_params, self.params)
+                    .await
+            }
+        }
     }
 }
 
@@ -5362,6 +5630,22 @@ impl<T: ApiResource> Resource<T> {
             .delete::<T, _>(T::default(), id.into(), self.url_params.clone())
             .await
     }
+
+    /// Delete a resource only if it still matches `etag`.
+    pub async fn delete_if_match<I: Into<T::Id>>(
+        &self,
+        id: I,
+        etag: &crate::types::EntityTag,
+    ) -> Result<(), ApiError> {
+        self.client
+            .delete_with_headers::<T, _>(
+                T::default(),
+                id.into(),
+                self.url_params.clone(),
+                &[(reqwest::header::IF_MATCH.as_str(), etag.to_string())],
+            )
+            .await
+    }
 }
 
 impl<T: ApiResource> shared::QueryFilterTarget for Resource<T> {
@@ -5409,7 +5693,7 @@ where
             url_params.push((Cow::Borrowed(T::ID_PARAM), id.to_string().into()));
             match self
                 .client
-                .request_with_endpoint::<EmptyPostParams, T>(
+                .request_with_endpoint_raw(
                     reqwest::Method::GET,
                     &endpoint,
                     url_params,
@@ -5418,8 +5702,17 @@ where
                 )
                 .await
             {
-                Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                Ok(None) => {}
+                Ok(raw) => {
+                    if let Some(resource) =
+                        shared::parse_response::<T>(&reqwest::Method::GET, raw.status, raw.body)?
+                    {
+                        return Ok(Handle::new_with_etag(
+                            self.client.clone(),
+                            resource,
+                            raw.etag,
+                        ));
+                    }
+                }
                 Err(ApiError::HttpWithBody { status, .. })
                     if status == reqwest::StatusCode::NOT_FOUND => {}
                 Err(err) => return Err(err),
@@ -5444,7 +5737,7 @@ where
             url_params.push((Cow::Borrowed(T::NAME_PARAM), name.to_string().into()));
             match self
                 .client
-                .request_with_endpoint::<EmptyPostParams, T>(
+                .request_with_endpoint_raw(
                     reqwest::Method::GET,
                     &endpoint,
                     url_params,
@@ -5453,8 +5746,17 @@ where
                 )
                 .await
             {
-                Ok(Some(resource)) => return Ok(Handle::new(self.client.clone(), resource)),
-                Ok(None) => {}
+                Ok(raw) => {
+                    if let Some(resource) =
+                        shared::parse_response::<T>(&reqwest::Method::GET, raw.status, raw.body)?
+                    {
+                        return Ok(Handle::new_with_etag(
+                            self.client.clone(),
+                            resource,
+                            raw.etag,
+                        ));
+                    }
+                }
                 Err(ApiError::HttpWithBody { status, .. })
                     if status == reqwest::StatusCode::NOT_FOUND => {}
                 Err(error) => return Err(error),

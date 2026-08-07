@@ -1,5 +1,6 @@
 use crate::types::{
-    ExportContentType, ExportMissingDataPolicy, ExportScopeKind, ExportTemplateKind, HubuumDateTime,
+    ExportContentType, ExportMissingDataPolicy, ExportScopeKind, ExportTemplateKind,
+    HubuumDateTime, ResourceRevision,
 };
 use crate::{ClassId, CollectionId};
 

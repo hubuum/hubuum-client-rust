@@ -1,8 +1,10 @@
 pub struct ServiceAccountResource {
     #[api(read_only)]
     pub id: i32,
-    #[api(post_optional, skip_patch, default_local)]
+    #[api(post_optional, skip_patch, response_optional)]
     pub identity_scope: String,
+    #[api(read_only, response_optional)]
+    pub identity_scope_id: i32,
     // Required on create; principal renaming is not exposed through this PATCH.
     #[api(skip_patch)]
     pub name: String,
@@ -18,4 +20,6 @@ pub struct ServiceAccountResource {
     pub created_at: HubuumDateTime,
     #[api(read_only)]
     pub updated_at: HubuumDateTime,
+    #[api(read_only)]
+    pub revision: ResourceRevision,
 }

@@ -45,6 +45,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
                     description: "e2e imported collection".to_string(),
                     parent_collection_ref: None,
                     parent_collection_key: None,
+                    condition: None,
                     timestamps: Some(timestamps.clone()),
                 }],
                 classes: vec![
@@ -56,6 +57,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
                         validate_schema: Some(false),
                         collection_ref: Some("ns".to_string()),
                         collection_key: None,
+                        condition: None,
                         timestamps: Some(timestamps.clone()),
                     },
                     ImportClassInput {
@@ -66,6 +68,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
                         validate_schema: Some(false),
                         collection_ref: Some("ns".to_string()),
                         collection_key: None,
+                        condition: None,
                         timestamps: Some(timestamps.clone()),
                     },
                 ],
@@ -77,6 +80,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
                         data: json!({"source": "e2e-client", "imported": true}),
                         class_ref: Some("class".to_string()),
                         class_key: None,
+                        condition: None,
                         timestamps: Some(timestamps.clone()),
                     },
                     ImportObjectInput {
@@ -86,6 +90,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
                         data: json!({"source": "e2e-client", "target": true}),
                         class_ref: Some("target-class".to_string()),
                         class_key: None,
+                        condition: None,
                         timestamps: Some(timestamps.clone()),
                     },
                 ],
@@ -97,6 +102,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
                     to_class_key: None,
                     from_max_relations: Some(one_relation),
                     to_max_relations: None,
+                    condition: None,
                     timestamps: Some(timestamps.clone()),
                 }],
                 object_relations: vec![ImportObjectRelationInput {
@@ -105,6 +111,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
                     from_object_key: None,
                     to_object_ref: Some("target-object".to_string()),
                     to_object_key: None,
+                    condition: None,
                     timestamps: Some(timestamps.clone()),
                 }],
                 ..Default::default()
@@ -265,6 +272,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
         ref_: Some("scope".to_string()),
         name: scope_name,
         provider_kind: "ldap".to_string(),
+        condition: None,
         timestamps: Some(timestamps),
     });
     graph.groups.push(ImportGroupInput {
@@ -277,6 +285,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
         external_key: None,
         last_sync_attempted_at: None,
         last_sync_success_at: None,
+        condition: None,
         timestamps: None,
     });
     graph.principals.push(ImportPrincipalInput {
@@ -296,6 +305,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
             email: None,
             anonymized_at: None,
         },
+        condition: None,
         timestamps: None,
     });
     graph.group_memberships.push(ImportGroupMembershipInput {
@@ -305,6 +315,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
         group_ref: Some("group".to_string()),
         group_key: None,
         sources: Vec::new(),
+        condition: None,
         timestamps: None,
     });
     graph.collections.push(ImportCollectionInput {
@@ -313,6 +324,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
         description: "Full import collection".to_string(),
         parent_collection_ref: None,
         parent_collection_key: None,
+        condition: None,
         timestamps: None,
     });
     graph.export_templates.push(ImportExportTemplateInput {
@@ -332,6 +344,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
         relation_context: None,
         default_missing_data_policy: None,
         default_limits: None,
+        condition: None,
         timestamps: None,
     });
     graph.remote_targets.push(ImportRemoteTargetInput {
@@ -350,6 +363,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
         allowed_subject_types: vec![RemoteTargetSubjectType::Collection],
         timeout_ms: 1_000,
         enabled: false,
+        condition: None,
         timestamps: None,
     });
     graph.event_sinks.push(ImportEventSinkInput {
@@ -359,6 +373,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
         config: json!({}),
         secret_ref: None,
         enabled: false,
+        condition: None,
         timestamps: None,
     });
     graph
@@ -376,6 +391,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
             filter: json!({}),
             routing: json!({}),
             enabled: false,
+            condition: None,
             timestamps: None,
         });
 

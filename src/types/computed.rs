@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::resources::{ClassId, Object, ObjectId, UserId};
 
-use super::{ComputedFieldDefinitionId, HubuumDateTime, PrincipalId, TaskId};
+use super::{ComputedFieldDefinitionId, HubuumDateTime, PrincipalId, ResourceRevision, TaskId};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -150,7 +150,7 @@ pub struct ComputedFieldDefinition {
     pub operation: ComputedFieldOperation,
     pub result_type: ComputedResultType,
     pub enabled: bool,
-    pub revision: i64,
+    pub revision: ResourceRevision,
     pub semantics_version: i16,
     pub created_by: Option<PrincipalId>,
     pub updated_by: Option<PrincipalId>,
@@ -223,7 +223,6 @@ impl PersonalComputedFieldDefinitionRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(deny_unknown_fields)]
 pub struct ComputedFieldDefinitionPatch {
-    pub expected_revision: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -239,9 +238,8 @@ pub struct ComputedFieldDefinitionPatch {
 }
 
 impl ComputedFieldDefinitionPatch {
-    pub const fn new(expected_revision: i64) -> Self {
+    pub const fn new() -> Self {
         Self {
-            expected_revision,
             key: None,
             label: None,
             description: None,

@@ -126,7 +126,7 @@ fn async_v003_exact_names_aggregates_patching_and_public_config() {
         .block_on(scope.update(ClassPatch {
             name: None,
             description: Some("updated through exact-name route".to_string()),
-            collection_id,
+            collection_id: Some(collection_id),
             json_schema: None,
             validate_schema: None,
         }))
@@ -346,27 +346,28 @@ fn async_v002_shared_and_personal_computed_field_lifecycle() {
     let shared_updated = harness
         .block_on(client.computed_fields(class_id).update(
             shared.definition.id,
-            ComputedFieldDefinitionPatch::new(shared.definition.revision).label("Renamed source"),
+            ComputedFieldDefinitionPatch::new().label("Renamed source"),
         ))
         .expect("shared computed field should update");
     harness
-        .block_on(client.computed_fields(class_id).delete(
-            shared_updated.definition.id,
-            shared_updated.definition.revision,
-        ))
+        .block_on(
+            client
+                .computed_fields(class_id)
+                .delete(shared_updated.definition.id),
+        )
         .expect("shared computed field should delete");
 
     let personal_updated = harness
         .block_on(client.personal_computed_fields().update(
             personal.id,
-            ComputedFieldDefinitionPatch::new(personal.revision).label("Renamed personal source"),
+            ComputedFieldDefinitionPatch::new().label("Renamed personal source"),
         ))
         .expect("personal computed field should update");
     harness
         .block_on(
             client
                 .personal_computed_fields()
-                .delete(personal_updated.id, personal_updated.revision),
+                .delete(personal_updated.id),
         )
         .expect("personal computed field should delete");
 }
@@ -570,7 +571,12 @@ fn async_collection_group_permissions_endpoint_matches_group() {
         .block_on(collection.group_permissions(admin_group_id))
         .expect("async collection.group_permissions(group_id) failed");
 
-    assert_eq!(group_permissions.group_id, admin_group_id);
+    assert!(
+        group_permissions
+            .permissions
+            .iter()
+            .any(|permission| permission.group_id == admin_group_id)
+    );
 }
 
 #[rstest]
@@ -638,7 +644,7 @@ fn async_collection_permission_mutation_endpoint_succeeds(
         .block_on(client.collections().get(collection_id))
         .expect("async collections().get(collection_id) failed");
 
-    match mutation {
+    let _permission_set = match mutation {
         AsyncMutationCase::GrantSingle => harness
             .block_on(collection.grant_permission(admin_group_id, Permissions::ReadCollection))
             .expect("async collection.grant_permission() failed"),
@@ -657,9 +663,9 @@ fn async_collection_permission_mutation_endpoint_succeeds(
                 .expect("async collection.grant_permissions() setup failed");
             harness
                 .block_on(collection.revoke_permissions(admin_group_id))
-                .expect("async collection.revoke_permissions() failed");
+                .expect("async collection.revoke_permissions() failed")
         }
-    }
+    };
 }
 
 #[test]

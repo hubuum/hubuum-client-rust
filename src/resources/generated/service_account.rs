@@ -60,8 +60,8 @@ impl crate::resources::ResourceId for ServiceAccountId {
 #[non_exhaustive]
 pub struct ServiceAccount {
     pub id: ServiceAccountId,
-    #[serde(default = "crate::types::default_local_identity_value")]
-    pub identity_scope: String,
+    pub identity_scope: Option<String>,
+    pub identity_scope_id: Option<i32>,
     pub name: String,
     pub description: String,
     pub owner_group_id: GroupId,
@@ -69,6 +69,7 @@ pub struct ServiceAccount {
     pub disabled_at: Option<HubuumDateTime>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
 }
 impl crate::client::GetID for ServiceAccount {
     fn id(&self) -> Self::Id {
@@ -79,6 +80,7 @@ impl crate::client::GetID for ServiceAccount {
 pub struct ServiceAccountGet {
     pub id: Option<i32>,
     pub identity_scope: Option<String>,
+    pub identity_scope_id: Option<i32>,
     pub name: Option<String>,
     pub description: Option<String>,
     pub owner_group_id: Option<GroupId>,
@@ -86,6 +88,7 @@ pub struct ServiceAccountGet {
     pub disabled_at: Option<HubuumDateTime>,
     pub created_at: Option<HubuumDateTime>,
     pub updated_at: Option<HubuumDateTime>,
+    pub revision: Option<ResourceRevision>,
 }
 #[derive(Default, serde :: Serialize, serde :: Deserialize, Clone, PartialEq)]
 pub struct ServiceAccountPost {
@@ -157,6 +160,13 @@ impl crate::resources::ApiResource for ServiceAccount {
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
         }
+        if let Some(value) = params.identity_scope_id {
+            queries.push(crate::types::QueryFilter {
+                key: stringify!(identity_scope_id).to_string(),
+                value: value.to_string(),
+                operator: crate::types::FilterOperator::Equals { is_negated: false },
+            });
+        }
         if let Some(value) = params.name {
             queries.push(crate::types::QueryFilter {
                 key: stringify!(name).to_string(),
@@ -202,6 +212,13 @@ impl crate::resources::ApiResource for ServiceAccount {
         if let Some(value) = params.updated_at {
             queries.push(crate::types::QueryFilter {
                 key: stringify!(updated_at).to_string(),
+                value: value.to_string(),
+                operator: crate::types::FilterOperator::Equals { is_negated: false },
+            });
+        }
+        if let Some(value) = params.revision {
+            queries.push(crate::types::QueryFilter {
+                key: stringify!(revision).to_string(),
                 value: value.to_string(),
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
@@ -401,6 +418,9 @@ impl crate::client::sync::QueryOp<ServiceAccount> {
     pub fn identity_scope(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(identity_scope))
     }
+    pub fn identity_scope_id(self) -> crate::client::QueryNumericField<Self, i32> {
+        <crate::client::QueryNumericField<Self, i32>>::new(self, stringify!(identity_scope_id))
+    }
     pub fn name(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(name))
     }
@@ -421,6 +441,9 @@ impl crate::client::sync::QueryOp<ServiceAccount> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }
 #[cfg(feature = "async")]
@@ -431,6 +454,9 @@ impl crate::client::r#async::QueryOp<ServiceAccount> {
     pub fn identity_scope(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(identity_scope))
     }
+    pub fn identity_scope_id(self) -> crate::client::QueryNumericField<Self, i32> {
+        <crate::client::QueryNumericField<Self, i32>>::new(self, stringify!(identity_scope_id))
+    }
     pub fn name(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(name))
     }
@@ -451,6 +477,9 @@ impl crate::client::r#async::QueryOp<ServiceAccount> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }
 #[cfg(feature = "blocking")]
@@ -461,6 +490,9 @@ impl crate::client::sync::Resource<ServiceAccount> {
     pub fn identity_scope(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(identity_scope))
     }
+    pub fn identity_scope_id(self) -> crate::client::QueryNumericField<Self, i32> {
+        <crate::client::QueryNumericField<Self, i32>>::new(self, stringify!(identity_scope_id))
+    }
     pub fn name(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(name))
     }
@@ -481,6 +513,9 @@ impl crate::client::sync::Resource<ServiceAccount> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }
 #[cfg(feature = "async")]
@@ -491,6 +526,9 @@ impl crate::client::r#async::Resource<ServiceAccount> {
     pub fn identity_scope(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(identity_scope))
     }
+    pub fn identity_scope_id(self) -> crate::client::QueryNumericField<Self, i32> {
+        <crate::client::QueryNumericField<Self, i32>>::new(self, stringify!(identity_scope_id))
+    }
     pub fn name(self) -> crate::client::QueryTextField<Self> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(name))
     }
@@ -511,5 +549,8 @@ impl crate::client::r#async::Resource<ServiceAccount> {
     }
     pub fn updated_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(updated_at))
+    }
+    pub fn revision(self) -> crate::client::QueryValueField<Self, ResourceRevision> {
+        <crate::client::QueryValueField<Self, ResourceRevision>>::new(self, stringify!(revision))
     }
 }

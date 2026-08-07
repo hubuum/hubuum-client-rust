@@ -246,6 +246,7 @@ pub struct ImportTaskResultResponse {
     pub outcome: String,
     pub error: Option<String>,
     pub details: Option<serde_json::Value>,
+    pub observed_revision: Option<super::ResourceRevision>,
     pub created_at: HubuumDateTime,
 }
 
@@ -261,6 +262,7 @@ impl std::fmt::Debug for ImportTaskResultResponse {
             .field("outcome", &self.outcome)
             .field("error", &redacted_if_present(&self.error))
             .field("details", &redacted_if_present(&self.details))
+            .field("observed_revision", &self.observed_revision)
             .field("created_at", &self.created_at)
             .finish()
     }

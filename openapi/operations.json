@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.8",
+  "api_version": "0.0.9",
   "openapi": "3.1.0",
-  "operation_count": 196,
+  "operation_count": 202,
   "operations": [
     {
       "method": "POST",
@@ -13,6 +13,9 @@
       ],
       "responses": {
         "200": [
+          "application/json"
+        ],
+        "400": [
           "application/json"
         ],
         "401": [
@@ -494,6 +497,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1ClassesByNameByClassName",
       "parameters": [
+        "header:If-Match",
         "path:class_name"
       ],
       "path": "/api/v1/classes/by-name/{class_name}",
@@ -508,7 +512,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -545,6 +550,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1ClassesByNameByClassName",
       "parameters": [
+        "header:If-Match",
         "path:class_name"
       ],
       "path": "/api/v1/classes/by-name/{class_name}",
@@ -566,7 +572,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -681,6 +688,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1ClassesByNameByClassNameObjectsByNameByObjectName",
       "parameters": [
+        "header:If-Match",
         "path:class_name",
         "path:object_name"
       ],
@@ -696,7 +704,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -738,6 +747,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1ClassesByNameByClassNameObjectsByNameByObjectName",
       "parameters": [
+        "header:If-Match",
         "path:class_name",
         "path:object_name"
       ],
@@ -760,7 +770,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -772,6 +783,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1ClassesByNameByClassNameObjectsByNameByObjectNameData",
       "parameters": [
+        "header:If-Match",
         "path:class_name",
         "path:object_name"
       ],
@@ -801,6 +813,7 @@
         "409": [
           "application/json"
         ],
+        "412": [],
         "413": [
           "application/json"
         ],
@@ -1039,6 +1052,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1ClassesByClassId",
       "parameters": [
+        "header:If-Match",
         "path:class_id"
       ],
       "path": "/api/v1/classes/{class_id}",
@@ -1050,7 +1064,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -1087,6 +1102,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1ClassesByClassId",
       "parameters": [
+        "header:If-Match",
         "path:class_id"
       ],
       "path": "/api/v1/classes/{class_id}",
@@ -1105,7 +1121,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -1284,9 +1301,9 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1ClassesByClassIdComputedFieldsByFieldId",
       "parameters": [
+        "header:If-Match",
         "path:class_id",
-        "path:field_id",
-        "query:expected_revision"
+        "path:field_id"
       ],
       "path": "/api/v1/classes/{class_id}/computed-fields/{field_id}",
       "request_content": [],
@@ -1295,6 +1312,33 @@
           "application/json"
         ],
         "409": [
+          "application/json"
+        ],
+        "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdComputedFieldsByFieldId",
+      "parameters": [
+        "path:class_id",
+        "path:field_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/computed-fields/{field_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
           "application/json"
         ]
       },
@@ -1308,6 +1352,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1ClassesByClassIdComputedFieldsByFieldId",
       "parameters": [
+        "header:If-Match",
         "path:class_id",
         "path:field_id"
       ],
@@ -1324,7 +1369,8 @@
         ],
         "409": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -1718,6 +1764,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1ClassesByClassIdRelationsByRelationId",
       "parameters": [
+        "header:If-Match",
         "path:class_id",
         "path:relation_id"
       ],
@@ -1726,6 +1773,33 @@
       "responses": {
         "204": [],
         "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdRelationsByRelationId",
+      "parameters": [
+        "path:class_id",
+        "path:relation_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/relations/{relation_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
           "application/json"
         ],
         "401": [
@@ -1745,6 +1819,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1ClassesByClassIdByFromObjectIdRelationsByToClassIdByToObjectId",
       "parameters": [
+        "header:If-Match",
         "path:class_id",
         "path:from_object_id",
         "path:to_class_id",
@@ -1759,7 +1834,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -1833,6 +1909,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1ClassesByClassIdByObjectId",
       "parameters": [
+        "header:If-Match",
         "path:class_id",
         "path:object_id"
       ],
@@ -1845,7 +1922,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -1884,6 +1962,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1ClassesByClassIdByObjectId",
       "parameters": [
+        "header:If-Match",
         "path:class_id",
         "path:object_id"
       ],
@@ -1903,7 +1982,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -1915,6 +1995,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1ClassesByClassIdByObjectIdData",
       "parameters": [
+        "header:If-Match",
         "path:class_id",
         "path:object_id"
       ],
@@ -1944,6 +2025,7 @@
         "409": [
           "application/json"
         ],
+        "412": [],
         "413": [
           "application/json"
         ],
@@ -2126,6 +2208,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1CollectionsByCollectionId",
       "parameters": [
+        "header:If-Match",
         "path:collection_id"
       ],
       "path": "/api/v1/collections/{collection_id}",
@@ -2137,7 +2220,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -2174,6 +2258,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1CollectionsByCollectionId",
       "parameters": [
+        "header:If-Match",
         "path:collection_id"
       ],
       "path": "/api/v1/collections/{collection_id}",
@@ -2192,7 +2277,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -2322,6 +2408,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1CollectionsByCollectionIdEventSubscriptionsBySubscriptionId",
       "parameters": [
+        "header:If-Match",
         "path:collection_id",
         "path:subscription_id"
       ],
@@ -2337,7 +2424,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -2378,6 +2466,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1CollectionsByCollectionIdEventSubscriptionsBySubscriptionId",
       "parameters": [
+        "header:If-Match",
         "path:collection_id",
         "path:subscription_id"
       ],
@@ -2403,7 +2492,8 @@
         ],
         "409": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -2544,6 +2634,7 @@
       "method": "PUT",
       "operation_id": "putApiV1CollectionsByCollectionIdParent",
       "parameters": [
+        "header:If-Match",
         "path:collection_id"
       ],
       "path": "/api/v1/collections/{collection_id}/parent",
@@ -2568,7 +2659,8 @@
         ],
         "409": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -2661,19 +2753,23 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1CollectionsByCollectionIdPermissionsGroupByGroupId",
       "parameters": [
+        "header:If-Match",
         "path:collection_id",
         "path:group_id"
       ],
       "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}",
       "request_content": [],
       "responses": {
-        "204": [],
+        "200": [
+          "application/json"
+        ],
         "401": [
           "application/json"
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -2711,6 +2807,7 @@
       "method": "POST",
       "operation_id": "postApiV1CollectionsByCollectionIdPermissionsGroupByGroupId",
       "parameters": [
+        "header:If-Match",
         "path:collection_id",
         "path:group_id"
       ],
@@ -2719,7 +2816,9 @@
         "application/json"
       ],
       "responses": {
-        "201": [],
+        "201": [
+          "application/json"
+        ],
         "400": [
           "application/json"
         ],
@@ -2728,7 +2827,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -2740,6 +2840,7 @@
       "method": "PUT",
       "operation_id": "putApiV1CollectionsByCollectionIdPermissionsGroupByGroupId",
       "parameters": [
+        "header:If-Match",
         "path:collection_id",
         "path:group_id"
       ],
@@ -2748,7 +2849,9 @@
         "application/json"
       ],
       "responses": {
-        "200": [],
+        "200": [
+          "application/json"
+        ],
         "400": [
           "application/json"
         ],
@@ -2757,7 +2860,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -2769,6 +2873,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1CollectionsByCollectionIdPermissionsGroupByGroupIdByPermission",
       "parameters": [
+        "header:If-Match",
         "path:collection_id",
         "path:group_id",
         "path:permission"
@@ -2776,13 +2881,16 @@
       "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}",
       "request_content": [],
       "responses": {
-        "204": [],
+        "200": [
+          "application/json"
+        ],
         "401": [
           "application/json"
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -2816,6 +2924,7 @@
       "method": "POST",
       "operation_id": "postApiV1CollectionsByCollectionIdPermissionsGroupByGroupIdByPermission",
       "parameters": [
+        "header:If-Match",
         "path:collection_id",
         "path:group_id",
         "path:permission"
@@ -2823,13 +2932,16 @@
       "path": "/api/v1/collections/{collection_id}/permissions/group/{group_id}/{permission}",
       "request_content": [],
       "responses": {
-        "201": [],
+        "201": [
+          "application/json"
+        ],
         "401": [
           "application/json"
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -3090,6 +3202,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1EventSinksBySinkId",
       "parameters": [
+        "header:If-Match",
         "path:sink_id"
       ],
       "path": "/api/v1/event-sinks/{sink_id}",
@@ -3104,7 +3217,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -3144,6 +3258,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1EventSinksBySinkId",
       "parameters": [
+        "header:If-Match",
         "path:sink_id"
       ],
       "path": "/api/v1/event-sinks/{sink_id}",
@@ -3168,7 +3283,8 @@
         ],
         "409": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -3276,6 +3392,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1ExportTemplatesByTemplateId",
       "parameters": [
+        "header:If-Match",
         "path:template_id"
       ],
       "path": "/api/v1/export-templates/{template_id}",
@@ -3290,7 +3407,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -3330,6 +3448,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1ExportTemplatesByTemplateId",
       "parameters": [
+        "header:If-Match",
         "path:template_id"
       ],
       "path": "/api/v1/export-templates/{template_id}",
@@ -3354,7 +3473,8 @@
         ],
         "409": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -3651,6 +3771,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1IamGroupsByGroupId",
       "parameters": [
+        "header:If-Match",
         "path:group_id"
       ],
       "path": "/api/v1/iam/groups/{group_id}",
@@ -3668,7 +3789,8 @@
         ],
         "409": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -3705,6 +3827,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1IamGroupsByGroupId",
       "parameters": [
+        "header:If-Match",
         "path:group_id"
       ],
       "path": "/api/v1/iam/groups/{group_id}",
@@ -3726,7 +3849,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -3803,6 +3927,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1IamGroupsByGroupIdMembersByPrincipalId",
       "parameters": [
+        "header:If-Match",
         "path:group_id",
         "path:principal_id"
       ],
@@ -3810,6 +3935,33 @@
       "request_content": [],
       "responses": {
         "204": [],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamGroupsByGroupIdMembersByPrincipalId",
+      "parameters": [
+        "path:group_id",
+        "path:principal_id"
+      ],
+      "path": "/api/v1/iam/groups/{group_id}/members/{principal_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
         "401": [
           "application/json"
         ],
@@ -3827,19 +3979,23 @@
       "method": "POST",
       "operation_id": "postApiV1IamGroupsByGroupIdMembersByPrincipalId",
       "parameters": [
+        "header:If-Match",
         "path:group_id",
         "path:principal_id"
       ],
       "path": "/api/v1/iam/groups/{group_id}/members/{principal_id}",
       "request_content": [],
       "responses": {
-        "204": [],
+        "201": [
+          "application/json"
+        ],
         "401": [
           "application/json"
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -3941,14 +4097,43 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1IamMeComputedFieldsByFieldId",
       "parameters": [
-        "path:field_id",
-        "query:expected_revision"
+        "header:If-Match",
+        "path:field_id"
       ],
       "path": "/api/v1/iam/me/computed-fields/{field_id}",
       "request_content": [],
       "responses": {
         "204": [],
         "409": [
+          "application/json"
+        ],
+        "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamMeComputedFieldsByFieldId",
+      "parameters": [
+        "path:field_id"
+      ],
+      "path": "/api/v1/iam/me/computed-fields/{field_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
           "application/json"
         ]
       },
@@ -3962,6 +4147,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1IamMeComputedFieldsByFieldId",
       "parameters": [
+        "header:If-Match",
         "path:field_id"
       ],
       "path": "/api/v1/iam/me/computed-fields/{field_id}",
@@ -3974,7 +4160,8 @@
         ],
         "409": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4030,14 +4217,17 @@
     {
       "method": "DELETE",
       "operation_id": "deleteApiV1IamMeSettings",
-      "parameters": [],
+      "parameters": [
+        "header:If-Match"
+      ],
       "path": "/api/v1/iam/me/settings",
       "request_content": [],
       "responses": {
         "204": [],
         "401": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4068,10 +4258,14 @@
     {
       "method": "PATCH",
       "operation_id": "patchApiV1IamMeSettings",
-      "parameters": [],
+      "parameters": [
+        "header:If-Match"
+      ],
       "path": "/api/v1/iam/me/settings",
       "request_content": [
-        "application/json"
+        "application/json",
+        "application/json-patch+json",
+        "application/merge-patch+json"
       ],
       "responses": {
         "200": [
@@ -4081,6 +4275,19 @@
           "application/json"
         ],
         "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "412": [],
+        "413": [
+          "application/json"
+        ],
+        "415": [
+          "application/json"
+        ],
+        "500": [
           "application/json"
         ]
       },
@@ -4093,7 +4300,9 @@
     {
       "method": "PUT",
       "operation_id": "putApiV1IamMeSettings",
-      "parameters": [],
+      "parameters": [
+        "header:If-Match"
+      ],
       "path": "/api/v1/iam/me/settings",
       "request_content": [
         "application/json"
@@ -4107,7 +4316,8 @@
         ],
         "401": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4122,7 +4332,8 @@
         "query:cursor",
         "query:include_total",
         "query:limit",
-        "query:sort"
+        "query:sort",
+        "query:state"
       ],
       "path": "/api/v1/iam/me/tokens",
       "request_content": [],
@@ -4201,6 +4412,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1IamPrincipalsByPrincipalIdSettings",
       "parameters": [
+        "header:If-Match",
         "path:principal_id"
       ],
       "path": "/api/v1/iam/principals/{principal_id}/settings",
@@ -4212,7 +4424,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4249,11 +4462,14 @@
       "method": "PATCH",
       "operation_id": "patchApiV1IamPrincipalsByPrincipalIdSettings",
       "parameters": [
+        "header:If-Match",
         "path:principal_id"
       ],
       "path": "/api/v1/iam/principals/{principal_id}/settings",
       "request_content": [
-        "application/json"
+        "application/json",
+        "application/json-patch+json",
+        "application/merge-patch+json"
       ],
       "responses": {
         "200": [
@@ -4266,6 +4482,19 @@
           "application/json"
         ],
         "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "412": [],
+        "413": [
+          "application/json"
+        ],
+        "415": [
+          "application/json"
+        ],
+        "500": [
           "application/json"
         ]
       },
@@ -4279,6 +4508,7 @@
       "method": "PUT",
       "operation_id": "putApiV1IamPrincipalsByPrincipalIdSettings",
       "parameters": [
+        "header:If-Match",
         "path:principal_id"
       ],
       "path": "/api/v1/iam/principals/{principal_id}/settings",
@@ -4297,7 +4527,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4313,7 +4544,8 @@
         "query:cursor",
         "query:include_total",
         "query:limit",
-        "query:sort"
+        "query:sort",
+        "query:state"
       ],
       "path": "/api/v1/iam/principals/{principal_id}/tokens",
       "request_content": [],
@@ -4368,9 +4600,76 @@
       ]
     },
     {
+      "method": "GET",
+      "operation_id": "getApiV1IamPrincipalsByPrincipalIdTokensByTokenId",
+      "parameters": [
+        "path:principal_id",
+        "path:token_id"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/tokens/{token_id}",
+      "request_content": [],
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamPrincipalsByPrincipalIdTokensByTokenIdRenew",
+      "parameters": [
+        "path:principal_id",
+        "path:token_id"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/renew",
+      "request_content": [
+        "application/json"
+      ],
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
       "method": "POST",
       "operation_id": "postApiV1IamPrincipalsByPrincipalIdTokensByTokenIdRevoke",
       "parameters": [
+        "header:If-Match",
         "path:principal_id",
         "path:token_id"
       ],
@@ -4386,7 +4685,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4454,6 +4754,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1IamServiceAccountsByServiceAccountId",
       "parameters": [
+        "header:If-Match",
         "path:service_account_id"
       ],
       "path": "/api/v1/iam/service-accounts/{service_account_id}",
@@ -4468,7 +4769,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4508,6 +4810,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1IamServiceAccountsByServiceAccountId",
       "parameters": [
+        "header:If-Match",
         "path:service_account_id"
       ],
       "path": "/api/v1/iam/service-accounts/{service_account_id}",
@@ -4526,7 +4829,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4538,6 +4842,7 @@
       "method": "POST",
       "operation_id": "postApiV1IamServiceAccountsByServiceAccountIdDisable",
       "parameters": [
+        "header:If-Match",
         "path:service_account_id"
       ],
       "path": "/api/v1/iam/service-accounts/{service_account_id}/disable",
@@ -4554,7 +4859,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4625,6 +4931,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1IamUsersByUserId",
       "parameters": [
+        "header:If-Match",
         "path:user_id"
       ],
       "path": "/api/v1/iam/users/{user_id}",
@@ -4639,7 +4946,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4679,6 +4987,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1IamUsersByUserId",
       "parameters": [
+        "header:If-Match",
         "path:user_id"
       ],
       "path": "/api/v1/iam/users/{user_id}",
@@ -4700,7 +5009,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4712,6 +5022,7 @@
       "method": "POST",
       "operation_id": "postApiV1IamUsersByUserIdAnonymize",
       "parameters": [
+        "header:If-Match",
         "path:user_id"
       ],
       "path": "/api/v1/iam/users/{user_id}/anonymize",
@@ -4726,7 +5037,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -4924,6 +5236,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1RelationsClassesByRelationId",
       "parameters": [
+        "header:If-Match",
         "path:relation_id"
       ],
       "path": "/api/v1/relations/classes/{relation_id}",
@@ -4935,7 +5248,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -5028,6 +5342,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1RelationsObjectsByRelationId",
       "parameters": [
+        "header:If-Match",
         "path:relation_id"
       ],
       "path": "/api/v1/relations/objects/{relation_id}",
@@ -5039,7 +5354,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -5199,6 +5515,7 @@
       "method": "DELETE",
       "operation_id": "deleteApiV1RemoteTargetsByTargetId",
       "parameters": [
+        "header:If-Match",
         "path:target_id"
       ],
       "path": "/api/v1/remote-targets/{target_id}",
@@ -5213,7 +5530,8 @@
         ],
         "404": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -5253,6 +5571,7 @@
       "method": "PATCH",
       "operation_id": "patchApiV1RemoteTargetsByTargetId",
       "parameters": [
+        "header:If-Match",
         "path:target_id"
       ],
       "path": "/api/v1/remote-targets/{target_id}",
@@ -5277,7 +5596,8 @@
         ],
         "409": [
           "application/json"
-        ]
+        ],
+        "412": []
       },
       "security": [
         {
@@ -5440,9 +5760,6 @@
           "application/json"
         ],
         "403": [
-          "application/json"
-        ],
-        "404": [
           "application/json"
         ]
       },
@@ -5635,8 +5952,8 @@
       "security": []
     }
   ],
-  "path_count": 137,
-  "schema_count": 246,
+  "path_count": 139,
+  "schema_count": 259,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -5660,6 +5977,7 @@
     "CollectionHistory",
     "CollectionID",
     "CollectionKey",
+    "CollectionPermissionSet",
     "ComputedFieldDefinition",
     "ComputedFieldDefinitionPatch",
     "ComputedFieldDefinitionRequest",
@@ -5679,9 +5997,9 @@
     "DbStateResponse",
     "EffectiveGroupPermission",
     "EventConfig",
-    "EventDelivery",
     "EventDeliveryHealthResponse",
     "EventDeliveryQueueHealth",
+    "EventDeliveryResponse",
     "EventDeliveryStatus",
     "EventDeliveryStatusCounts",
     "EventDeliveryUpdateResponse",
@@ -5722,6 +6040,7 @@
     "GroupGrant",
     "GroupKey",
     "GroupPermission",
+    "GroupPointResponse",
     "GroupResponse",
     "HistoryResponse_CollectionHistory",
     "HistoryResponse_ExportTemplateHistory",
@@ -5750,6 +6069,8 @@
     "ImportCollectionInput",
     "ImportCollectionPermissionInput",
     "ImportCollisionPolicy",
+    "ImportComputedFieldInput",
+    "ImportComputedFieldVisibility",
     "ImportEventSinkInput",
     "ImportEventSubscriptionInput",
     "ImportExportTemplateInput",
@@ -5768,6 +6089,7 @@
     "ImportRequest",
     "ImportTaskDetails",
     "ImportTaskResultResponse",
+    "ImportWriteCondition",
     "LoginRateLimitConfig",
     "LoginRateLimitConfigResponse",
     "LoginRateLimitEntryResponse",
@@ -5776,6 +6098,7 @@
     "LoginUser",
     "LogoutTokenRequest",
     "MeResponse",
+    "MembershipPrincipalResponse",
     "MessageResponse",
     "MoveOperation",
     "NetworkConfig",
@@ -5815,8 +6138,10 @@
     "PrincipalKey",
     "PrincipalMemberResponse",
     "PrincipalSettings",
-    "PrincipalToken",
+    "PrincipalSettingsPatchDocument",
+    "PrincipalSettingsResponse",
     "PrincipalTokenMetadata",
+    "PrincipalTokenPointResponse",
     "ProbeResponse",
     "Provenance",
     "ProvenanceActor",
@@ -5837,7 +6162,9 @@
     "RemoteTargetInvokeRequest",
     "RemoteTargetSubjectType",
     "RemoveOperation",
+    "RenewTokenRequest",
     "ReplaceOperation",
+    "ResourceRevision",
     "RestoreConfig",
     "RestoreConfirmRequest",
     "RestoreJobStatus",
@@ -5847,6 +6174,7 @@
     "RunningConfig",
     "SecretStatus",
     "ServerConfig",
+    "ServiceAccountPointResponse",
     "ServiceAccountResponse",
     "SharedComputedScopeResponse",
     "TaskConfig",
@@ -5861,6 +6189,7 @@
     "TestOperation",
     "TlsConfig",
     "TokenID",
+    "TokenListState",
     "TokenResourceScope",
     "TokenScopeDetails",
     "UnifiedSearchBatchResponse",
@@ -5883,7 +6212,8 @@
     "UpdateRemoteTarget",
     "UpdateServiceAccount",
     "UpdateUser",
+    "UserPointResponse",
     "UserResponse"
   ],
-  "spec_sha256": "5fa0bac7ae943d338980653ea63c2645cd8a55e04dfab8c3adda0ff61ed9791c"
+  "spec_sha256": "0a77a9c04ea80a904410c393a98a2988f96e1c6b2c37f7785acfd50ef2737a54"
 }
