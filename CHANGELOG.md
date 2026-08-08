@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Fixed
+
+- Make async and blocking export path downloads publish atomically after a
+  successful flush, preserving existing destination files and removing partial
+  temporary files when a download fails.
+
 ## [0.9.0] - 2026-08-07
 
 ### Added
