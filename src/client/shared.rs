@@ -749,7 +749,6 @@ pub(crate) fn build_request_url(
 }
 
 const MIN_PAGE_LIMIT: usize = 1;
-const MAX_PAGE_LIMIT: usize = 250;
 
 fn validate_page_limits(query_params: &[QueryFilter]) -> Result<(), ApiError> {
     for parameter in query_params.iter().filter(|parameter| {
@@ -759,11 +758,11 @@ fn validate_page_limits(query_params: &[QueryFilter]) -> Result<(), ApiError> {
         let Ok(value) = parameter.value.parse::<usize>() else {
             continue;
         };
-        if !(MIN_PAGE_LIMIT..=MAX_PAGE_LIMIT).contains(&value) {
+        if value < MIN_PAGE_LIMIT {
             return Err(ApiError::InvalidPageLimit {
                 value,
                 min: MIN_PAGE_LIMIT,
-                max: MAX_PAGE_LIMIT,
+                max: usize::MAX,
             });
         }
     }
@@ -1611,16 +1610,16 @@ mod test {
     }
 
     #[test]
-    fn build_request_url_accepts_page_limit_boundaries() {
+    fn build_request_url_accepts_positive_page_limits() {
         for key in ["limit", "limit_per_kind"] {
-            for limit in [MIN_PAGE_LIMIT, MAX_PAGE_LIMIT] {
+            for limit in [MIN_PAGE_LIMIT, 250, 500, usize::MAX] {
                 let url = build_request_url(
                     &reqwest::Method::GET,
                     "https://api.example.com/api/v1/search".to_string(),
                     &vec![],
                     vec![QueryFilter::raw(key, limit.to_string())],
                 )
-                .expect("page limit boundary should build");
+                .expect("positive page limit should build");
 
                 assert!(url.ends_with(&format!("{key}={limit}")));
             }
@@ -1628,22 +1627,23 @@ mod test {
     }
 
     #[test]
-    fn build_request_url_rejects_out_of_range_page_limits() {
-        for (key, value) in [("limit", 0), ("limit_per_kind", MAX_PAGE_LIMIT + 1)] {
+    fn build_request_url_rejects_zero_page_limits() {
+        for key in ["limit", "limit_per_kind"] {
+            let value = 0;
             let error = build_request_url(
                 &reqwest::Method::GET,
                 "https://api.example.com/api/v1/search".to_string(),
                 &vec![],
                 vec![QueryFilter::raw(key, value.to_string())],
             )
-            .expect_err("out-of-range page limit should fail");
+            .expect_err("zero page limit should fail");
 
             assert!(matches!(
                 error,
                 ApiError::InvalidPageLimit {
                     value: rejected,
                     min: MIN_PAGE_LIMIT,
-                    max: MAX_PAGE_LIMIT,
+                    max: usize::MAX,
                 } if rejected == value
             ));
         }
