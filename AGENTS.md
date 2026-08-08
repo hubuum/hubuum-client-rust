@@ -46,9 +46,13 @@ cargo check -p hubuum_client --locked --no-default-features --features async,typ
 cargo check -p hubuum_client --locked --no-default-features --features blocking,typed-schemas
 ```
 
-- Check the workspace with the `rust-version` declared in the manifests
-  (currently Rust 1.88) when changing dependencies, language features, or public
-  macros.
+- Check every workspace member and target with the `rust-version` declared in
+  the manifests (currently Rust 1.88) when changing dependencies, language
+  features, or public macros:
+
+  ```bash
+  cargo +1.88 check --workspace --all-targets --all-features --locked
+  ```
 - For dependency changes, run `cargo audit` and
   `cargo deny check bans licenses sources`. Commit the resulting `Cargo.lock`
   changes and do not update only one workspace manifest when versions or the

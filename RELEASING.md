@@ -39,6 +39,12 @@ creating the release tag that should publish it.
    compatible with the declared MSRV and repository policies. Update manifest
    constraints where needed, regenerate `Cargo.lock`, and run `cargo audit`,
    `cargo deny check bans licenses sources`, and the required workspace checks.
+   The MSRV check must cover every workspace target:
+
+   ```bash
+   cargo +1.88 check --workspace --all-targets --all-features --locked
+   ```
+
    Do not defer a blocked dependency update until after the release.
 3. Update the client manifest version to the next release number.
 4. Reconcile generated resource code and commit any reviewed changes:
