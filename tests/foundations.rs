@@ -592,9 +592,41 @@ fn assert_invalid_page_limit(error: ApiError, value: usize) {
         ApiError::InvalidPageLimit {
             value: rejected,
             min: 1,
-            max: 250,
+            max: usize::MAX,
         } if rejected == value
     ));
+}
+
+fn enqueue_server_configured_limit_responses(transport: &MockTransport) {
+    transport.push_response(TransportResponse::json(StatusCode::OK, &json!([])).unwrap());
+    transport.push_response(
+        TransportResponse::json(
+            StatusCode::OK,
+            &json!({
+                "query": "needle",
+                "results": {
+                    "collections": [],
+                    "classes": [],
+                    "objects": []
+                },
+                "next": {
+                    "collections": null,
+                    "classes": null,
+                    "objects": null
+                }
+            }),
+        )
+        .unwrap(),
+    );
+}
+
+fn assert_server_configured_limits_reach_transport(transport: &MockTransport) {
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[0].url.path(), "/api/v1/classes");
+    assert_eq!(requests[0].url.query(), Some("limit=500"));
+    assert_eq!(requests[1].url.path(), "/api/v1/search");
+    assert_eq!(requests[1].url.query(), Some("limit_per_kind=500&q=needle"));
 }
 
 fn exact_name_class_json(name: &str) -> serde_json::Value {
@@ -1225,28 +1257,38 @@ fn mock_transport_enforces_body_limits_and_raw_path_boundaries() {
 }
 
 #[test]
-fn blocking_typed_requests_reject_invalid_page_limits_before_transport() {
+fn blocking_typed_requests_reject_zero_page_limits_before_transport() {
     let transport = MockTransport::default();
     let client = blocking_mock_client(transport.clone(), 4096);
 
-    for value in [0, 251] {
-        let error = client
-            .classes()
-            .query()
-            .limit(value)
-            .list()
-            .expect_err("resource page limit should be rejected");
-        assert_invalid_page_limit(error, value);
+    let error = client
+        .classes()
+        .query()
+        .limit(0)
+        .list()
+        .expect_err("resource page limit should be rejected");
+    assert_invalid_page_limit(error, 0);
 
-        let error = client
-            .search("needle")
-            .limit_per_kind(value)
-            .send()
-            .expect_err("unified-search page limit should be rejected");
-        assert_invalid_page_limit(error, value);
-    }
+    let error = client
+        .search("needle")
+        .limit_per_kind(0)
+        .send()
+        .expect_err("unified-search page limit should be rejected");
+    assert_invalid_page_limit(error, 0);
 
     assert!(transport.requests().is_empty());
+}
+
+#[test]
+fn blocking_typed_requests_forward_server_configured_page_limits() {
+    let transport = MockTransport::default();
+    enqueue_server_configured_limit_responses(&transport);
+    let client = blocking_mock_client(transport.clone(), 4096);
+
+    client.classes().query().limit(500).list().unwrap();
+    client.search("needle").limit_per_kind(500).send().unwrap();
+
+    assert_server_configured_limits_reach_transport(&transport);
 }
 
 #[test]
@@ -1311,7 +1353,7 @@ fn blocking_exports_reject_nonpositive_scope_ids_before_transport() {
 }
 
 #[tokio::test]
-async fn async_typed_requests_reject_invalid_page_limits_before_transport() {
+async fn async_typed_requests_reject_zero_page_limits_before_transport() {
     let transport = MockTransport::default();
     let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
         .with_transport(Arc::new(transport.clone()))
@@ -1319,26 +1361,45 @@ async fn async_typed_requests_reject_invalid_page_limits_before_transport() {
         .unwrap()
         .authenticate(Token::new("consumer-secret"));
 
-    for value in [0, 251] {
-        let error = client
-            .classes()
-            .query()
-            .limit(value)
-            .list()
-            .await
-            .expect_err("resource page limit should be rejected");
-        assert_invalid_page_limit(error, value);
+    let error = client
+        .classes()
+        .query()
+        .limit(0)
+        .list()
+        .await
+        .expect_err("resource page limit should be rejected");
+    assert_invalid_page_limit(error, 0);
 
-        let error = client
-            .search("needle")
-            .limit_per_kind(value)
-            .send()
-            .await
-            .expect_err("unified-search page limit should be rejected");
-        assert_invalid_page_limit(error, value);
-    }
+    let error = client
+        .search("needle")
+        .limit_per_kind(0)
+        .send()
+        .await
+        .expect_err("unified-search page limit should be rejected");
+    assert_invalid_page_limit(error, 0);
 
     assert!(transport.requests().is_empty());
+}
+
+#[tokio::test]
+async fn async_typed_requests_forward_server_configured_page_limits() {
+    let transport = MockTransport::default();
+    enqueue_server_configured_limit_responses(&transport);
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+
+    client.classes().query().limit(500).list().await.unwrap();
+    client
+        .search("needle")
+        .limit_per_kind(500)
+        .send()
+        .await
+        .unwrap();
+
+    assert_server_configured_limits_reach_transport(&transport);
 }
 
 #[tokio::test]
