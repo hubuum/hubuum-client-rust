@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -21,6 +22,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Fetch Protected Main
+        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+
+      - name: Verify Release Commit Provenance
+        run: ./scripts/check-release-provenance.sh "$GITHUB_SHA" origin/main
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -43,16 +52,26 @@ jobs:
       - name: Check Release Metadata
         run: ./scripts/check-release.sh "${{ steps.release.outputs.release_tag }}"
 
-      - name: Check Workspace
-        run: cargo check --workspace --locked
-
       - name: List hubuum_client Package Contents
         run: cargo package --list -p hubuum_client
+
+  required-checks:
+    name: Required Release Checks
+    needs: verify
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      run_semver: true
+    secrets: inherit
 
   publish-hubuum-client:
     name: Publish hubuum_client
     runs-on: ubuntu-latest
-    needs: verify
+    needs:
+      - verify
+      - required-checks
     if: github.event_name == 'push'
     environment: release
     permissions:

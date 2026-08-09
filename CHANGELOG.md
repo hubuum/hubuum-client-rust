@@ -6,6 +6,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Security
+
+- Require release tags to point at the exact protected `main` head and pass the
+  complete required CI suite for that commit before trusted publishing starts.
+
 ### Fixed
 
 - Forward positive page and unified-search per-kind limits to the server instead

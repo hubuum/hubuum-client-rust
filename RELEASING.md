@@ -68,10 +68,26 @@ creating the release tag that should publish it.
    ./scripts/check-release.sh vX.Y.Z
    ```
 
-11. Push a tag like `vX.Y.Z`.
+11. Fetch the protected branch and confirm the release commit is its exact
+    current head:
 
-The `Release` GitHub Actions workflow validates the release metadata and
-generated resource code, checks the workspace, lists the packaged files, and
-publishes `hubuum_client` to crates.io through trusted publishing. The publish
-job first checks the registry, so the workflow can be rerun safely after a
-partial release or manual bootstrap.
+    ```bash
+    git fetch origin main
+    ./scripts/check-release-provenance.sh HEAD origin/main
+    ```
+
+12. Push a tag like `vX.Y.Z` from that verified commit. Do not merge another
+    commit to `main` until the release workflow has accepted the tag.
+
+The `Release` GitHub Actions workflow fetches `origin/main` and rejects a tag
+unless its commit is exactly the protected branch head. It validates release
+metadata and package contents, then invokes the repository's reusable CI
+workflow for the exact tagged commit. Formatting, lint, documentation, unit and
+compile tests, every feature combination, MSRV, OpenAPI drift, supply-chain,
+public API compatibility, and pinned library plus `e2e_client` integration
+checks must all succeed before trusted publishing can start.
+
+The publish job first checks the registry, so the workflow can be rerun safely
+after a partial release or manual bootstrap. A rerun still repeats provenance
+and required-check evidence before treating an existing crates.io version as a
+successful no-op.
