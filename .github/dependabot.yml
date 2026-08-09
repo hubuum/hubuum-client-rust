@@ -21,3 +21,12 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  - package-ecosystem: docker
+    directory: /tests/container_integration/fixtures/postgres
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: postgres
+        update-types:
+          - version-update:semver-major
