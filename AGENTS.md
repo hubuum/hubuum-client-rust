@@ -76,7 +76,7 @@ cargo check -p hubuum_client --locked --no-default-features --features blocking,
   This is the canonical complete test setup. It must run both
   `tests/container_integration.rs` and the standalone `e2e_client` suite.
 
-- The wrapper provisions PostgreSQL, Hubuum, and the pinned LDAP fixture. It
+- The wrapper provisions the pinned PostgreSQL, Hubuum, and LDAP fixtures. It
   generates temporary LDAPS certificates and tears the stack down unless keep
   mode is explicitly enabled.
 - The `e2e_client` crate is a real downstream consumer of the public crate API.

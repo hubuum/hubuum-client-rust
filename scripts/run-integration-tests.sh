@@ -31,10 +31,15 @@ read_target_server_image() {
     ' Cargo.toml
 }
 
+read_postgres_image() {
+    awk '$1 == "FROM" { print $2; exit }' \
+        tests/container_integration/fixtures/postgres/Dockerfile
+}
+
 DB_USER="${HUBUUM_INTEGRATION_DB_USER:-hubuum}"
 DB_PASSWORD="${HUBUUM_INTEGRATION_DB_PASSWORD:-hubuum_password}"
 DB_NAME="${HUBUUM_INTEGRATION_DB_NAME:-hubuum}"
-DB_IMAGE="${HUBUUM_INTEGRATION_DB_IMAGE:-postgres:18}"
+DB_IMAGE="${HUBUUM_INTEGRATION_DB_IMAGE:-$(read_postgres_image)}"
 SERVER_IMAGE="${HUBUUM_INTEGRATION_SERVER_IMAGE:-$(read_target_server_image)}"
 LDAP_IMAGE="${HUBUUM_INTEGRATION_LDAP_IMAGE:-ghcr.io/rroemhild/docker-test-openldap@sha256:3470e15c60119a1c0392cc162cdce71edfb42b55affdc69da574012f956317cd}"
 AUTH_CONFIG="${HUBUUM_INTEGRATION_AUTH_CONFIG:-tests/container_integration/fixtures/auth-providers.toml}"
@@ -46,6 +51,11 @@ CONTAINER_RUNTIME="${HUBUUM_INTEGRATION_CONTAINER_RUNTIME:-}"
 
 if [[ -z "${SERVER_IMAGE}" ]]; then
     echo "Cargo.toml is missing [package.metadata.hubuum].server-image" >&2
+    exit 1
+fi
+
+if [[ -z "${DB_IMAGE}" ]]; then
+    echo "PostgreSQL fixture Dockerfile is missing its FROM image" >&2
     exit 1
 fi
 
@@ -345,8 +355,12 @@ apply_seed_if_requested() {
 }
 
 echo "Using container runtime: ${CONTAINER_RUNTIME}"
-echo "Refreshing server image: ${SERVER_IMAGE}"
+echo "Refreshing PostgreSQL image: ${DB_IMAGE}"
+container pull "${DB_IMAGE}"
+echo "Refreshing Hubuum server image: ${SERVER_IMAGE}"
 container pull "${SERVER_IMAGE}"
+echo "Refreshing LDAP fixture image: ${LDAP_IMAGE}"
+container pull "${LDAP_IMAGE}"
 
 echo "Creating integration container network: ${NETWORK_NAME}"
 container network create "${NETWORK_NAME}" >/dev/null
@@ -428,7 +442,7 @@ if [[ "${E2E_ONLY}" != "1" ]]; then
         cargo test
         --locked
         --no-default-features
-        --features async,blocking,integration-tests
+        --features "async,blocking,integration-tests"
         --test container_integration
         --
         --ignored

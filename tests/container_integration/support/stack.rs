@@ -10,7 +10,7 @@ use crate::support::naming::unique_suffix;
 const DB_USER: &str = "hubuum";
 const DB_PASSWORD: &str = "hubuum_password";
 const DB_NAME: &str = "hubuum";
-const DB_IMAGE_DEFAULT: &str = "postgres:18";
+const DB_IMAGE_DOCKERFILE: &str = include_str!("../fixtures/postgres/Dockerfile");
 const SERVER_IMAGE_DEFAULT: &str = "ghcr.io/hubuum/hubuum-server:main";
 const LDAP_IMAGE_DEFAULT: &str = "ghcr.io/rroemhild/docker-test-openldap@sha256:3470e15c60119a1c0392cc162cdce71edfb42b55affdc69da574012f956317cd";
 const AUTH_CONFIG_DEFAULT: &str = "tests/container_integration/fixtures/auth-providers.toml";
@@ -93,7 +93,15 @@ fn server_image() -> String {
 }
 
 fn db_image() -> String {
-    std::env::var("HUBUUM_INTEGRATION_DB_IMAGE").unwrap_or_else(|_| DB_IMAGE_DEFAULT.into())
+    std::env::var("HUBUUM_INTEGRATION_DB_IMAGE")
+        .unwrap_or_else(|_| postgres_image_from_fixture().into())
+}
+
+fn postgres_image_from_fixture() -> &'static str {
+    DB_IMAGE_DOCKERFILE
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("FROM "))
+        .expect("PostgreSQL fixture Dockerfile must contain a FROM image")
 }
 
 fn ldap_image() -> String {
@@ -760,6 +768,16 @@ impl IntegrationStack {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn postgres_fixture_uses_an_immutable_versioned_image() {
+        let image = postgres_image_from_fixture();
+        let digest = image.trim_start_matches("postgres:18@sha256:");
+
+        assert!(image.starts_with("postgres:18@sha256:"));
+        assert_eq!(digest.len(), 64);
+        assert!(digest.bytes().all(|byte| byte.is_ascii_hexdigit()));
+    }
 
     #[test]
     fn extracts_admin_password_from_bootstrap_json_logs() {

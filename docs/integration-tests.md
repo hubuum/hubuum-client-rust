@@ -22,7 +22,12 @@ Run only the consumer e2e client suite. This still provisions the complete test 
 ./scripts/run-integration-tests.sh --e2e-only
 ```
 
-The script starts PostgreSQL, Hubuum, and a pinned LDAP fixture. It generates a short-lived test CA and hostname-verified LDAPS certificate, configures the server with the scoped `planet-express` provider, waits for readiness, optionally applies SQL seed data, and tears everything down in a shell `trap` unless keep mode is enabled.
+The script pulls and reports the selected PostgreSQL, Hubuum, and LDAP images
+before starting the stack. Their defaults are immutable multi-platform image
+digests. It generates a short-lived test CA and hostname-verified LDAPS
+certificate, configures the server with the scoped `planet-express` provider,
+waits for readiness, optionally applies SQL seed data, and tears everything
+down in a shell `trap` unless keep mode is enabled.
 
 Provider coverage discovers the unauthenticated provider list, rejects invalid LDAP credentials, logs in real directory users through both async and blocking clients, verifies synchronized user and group metadata, and exercises settings replace, merge-patch, get, and reset operations as an external user. The fixture configuration lives at `tests/container_integration/fixtures/auth-providers.toml`.
 
@@ -49,7 +54,10 @@ An external stack must expose the same `planet-express` provider and fixture use
 - `HUBUUM_INTEGRATION_SERVER_IMAGE` overrides the server image. By default the
   wrapper reads the immutable `[package.metadata.hubuum].server-image` value
   from `Cargo.toml`.
-- `HUBUUM_INTEGRATION_DB_IMAGE` overrides the database image.
+- `HUBUUM_INTEGRATION_DB_IMAGE` overrides the database image. By default the
+  wrapper and the self-provisioning Rust test stack read the immutable
+  PostgreSQL 18 reference from
+  `tests/container_integration/fixtures/postgres/Dockerfile`.
 - `HUBUUM_INTEGRATION_LDAP_IMAGE` overrides the LDAP fixture image.
 - `HUBUUM_INTEGRATION_AUTH_CONFIG` overrides the server auth-provider configuration file.
 - `HUBUUM_INTEGRATION_CONTAINER_RUNTIME` forces `docker` or `podman`.
@@ -63,6 +71,12 @@ For client 0.9.0, that image is Hubuum server v0.0.9 at
 A scheduled compatibility workflow separately runs against
 `ghcr.io/hubuum/hubuum-server:main`, so upstream movement is visible without
 making otherwise unrelated pull requests nondeterministic.
+
+Dependabot checks the PostgreSQL fixture Dockerfile weekly. Review proposed
+digest updates for supported `linux/amd64` and `linux/arm64` manifests and run
+the canonical combined integration command before merging them. Intentional
+experiments can still select another tag or digest with
+`HUBUUM_INTEGRATION_DB_IMAGE` without changing the repository default.
 
 See [the compatibility history](../COMPATIBILITY.md) for earlier releases and
 the precise meaning of a declared server target.
