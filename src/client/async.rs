@@ -120,12 +120,99 @@ impl ExportOutputStream {
         Ok(written)
     }
 
+    /// Downloads into a temporary sibling file and atomically replaces the
+    /// destination only after the complete response has been flushed.
+    ///
+    /// This does not synchronize the file or its containing directory to
+    /// durable storage.
     pub async fn download_to_path(
         self,
         path: impl AsRef<std::path::Path>,
     ) -> Result<u64, ApiError> {
-        let mut file = tokio::fs::File::create(path).await?;
-        self.download_to(&mut file).await
+        let path = path.as_ref().to_owned();
+        let temporary_path = path.clone();
+        let (temporary, file) = tokio::task::spawn_blocking(move || {
+            let temporary = shared::temporary_download_file(&temporary_path)?;
+            let file = temporary.reopen()?;
+            Ok::<_, std::io::Error>((temporary, file))
+        })
+        .await
+        .map_err(std::io::Error::other)??;
+        let mut file = tokio::fs::File::from_std(file);
+
+        let written = self.download_to(&mut file).await?;
+        drop(file.into_std().await);
+
+        tokio::task::spawn_blocking(move || shared::persist_download_file(temporary, &path))
+            .await
+            .map_err(std::io::Error::other)??;
+        Ok(written)
+    }
+}
+
+#[cfg(test)]
+mod download_tests {
+    use super::ExportOutputStream;
+    use crate::{ApiError, ExportContentType};
+    use bytes::Bytes;
+
+    fn output(chunks: Vec<Result<Bytes, ApiError>>) -> ExportOutputStream {
+        ExportOutputStream {
+            content_type: ExportContentType::default(),
+            content_length: None,
+            body: Box::pin(futures_util::stream::iter(chunks)),
+        }
+    }
+
+    fn assert_only_destination_remains(directory: &std::path::Path, destination: &std::path::Path) {
+        let entries = std::fs::read_dir(directory)
+            .expect("temporary directory should remain readable")
+            .map(|entry| entry.expect("directory entry should be readable").path())
+            .collect::<Vec<_>>();
+        assert_eq!(entries, [destination]);
+    }
+
+    #[tokio::test]
+    async fn failed_path_download_preserves_destination_and_removes_temporary_file() {
+        let directory = tempfile::tempdir().expect("temporary directory should be created");
+        let destination = directory.path().join("export.json");
+        std::fs::write(&destination, b"existing").expect("fixture should be written");
+        let stream = output(vec![
+            Ok(Bytes::from_static(b"partial")),
+            Err(ApiError::Transport("stream interrupted".into())),
+        ]);
+
+        let error = stream
+            .download_to_path(&destination)
+            .await
+            .expect_err("interrupted download should fail");
+
+        assert!(matches!(error, ApiError::Transport(_)));
+        assert_eq!(std::fs::read(&destination).unwrap(), b"existing");
+        assert_only_destination_remains(directory.path(), &destination);
+    }
+
+    #[tokio::test]
+    async fn successful_path_download_atomically_replaces_destination() {
+        let directory = tempfile::tempdir().expect("temporary directory should be created");
+        let destination = directory.path().join("export.json");
+        std::fs::write(&destination, b"existing").expect("fixture should be written");
+        let stream = output(vec![
+            Ok(Bytes::from_static(b"replacement ")),
+            Ok(Bytes::from_static(b"contents")),
+        ]);
+
+        let written = stream
+            .download_to_path(&destination)
+            .await
+            .expect("download should succeed");
+
+        assert_eq!(written, 20);
+        assert_eq!(
+            std::fs::read(&destination).unwrap(),
+            b"replacement contents"
+        );
+        assert_only_destination_remains(directory.path(), &destination);
     }
 }
 

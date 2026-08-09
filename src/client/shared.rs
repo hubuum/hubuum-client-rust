@@ -11,6 +11,7 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::path::Path;
 
 use super::{GetID, UrlParams};
 use crate::QueryFilter;
@@ -28,6 +29,29 @@ pub(crate) const PAGE_LIMIT_HEADER: &str = "X-Page-Limit";
 
 pub const DEFAULT_MAX_RESPONSE_BODY_BYTES: usize = 16 * 1024 * 1024;
 pub const DEFAULT_MAX_ERROR_BODY_BYTES: usize = 64 * 1024;
+
+pub(crate) fn temporary_download_file(
+    destination: &Path,
+) -> std::io::Result<tempfile::NamedTempFile> {
+    let parent = destination
+        .parent()
+        .filter(|path| !path.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+
+    tempfile::Builder::new()
+        .prefix(".hubuum-download-")
+        .tempfile_in(parent)
+}
+
+pub(crate) fn persist_download_file(
+    temporary: tempfile::NamedTempFile,
+    destination: &Path,
+) -> std::io::Result<()> {
+    temporary
+        .persist(destination)
+        .map(drop)
+        .map_err(|error| error.error)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct TaskWaitOptions {
@@ -1450,6 +1474,26 @@ mod test {
     use reqwest::header::HeaderValue;
     use std::borrow::Cow;
     use std::str::FromStr;
+
+    #[test]
+    fn failed_download_publication_removes_temporary_file() {
+        let directory = tempfile::tempdir().expect("temporary directory should be created");
+        let destination = directory.path().join("existing-directory");
+        std::fs::create_dir(&destination).expect("destination fixture should be created");
+        let mut temporary = temporary_download_file(&destination)
+            .expect("sibling temporary file should be created");
+        std::io::Write::write_all(&mut temporary, b"download")
+            .expect("temporary file should be writable");
+
+        persist_download_file(temporary, &destination)
+            .expect_err("a file cannot replace a directory");
+
+        let entries = std::fs::read_dir(directory.path())
+            .expect("temporary directory should remain readable")
+            .map(|entry| entry.expect("directory entry should be readable").path())
+            .collect::<Vec<_>>();
+        assert_eq!(entries, [destination]);
+    }
 
     #[test]
     fn task_wait_options_have_shared_defaults_and_builder_updates() {

@@ -11,6 +11,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Forward positive page and unified-search per-kind limits to the server instead
   of rejecting values above 250, allowing deployments to apply their advertised
   pagination maximum while the client continues to reject zero locally.
+- Make async and blocking export path downloads publish atomically after a
+  successful flush, preserving existing destination files and removing partial
+  temporary files when a download fails.
 
 ## [0.9.0] - 2026-08-07
 
