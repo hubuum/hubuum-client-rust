@@ -113,7 +113,7 @@ jobs:
           key: msrv
 
       - name: Check Workspace at MSRV
-        run: cargo check --workspace --all-features --locked
+        run: cargo check --workspace --all-targets --all-features --locked
 
   server-contract:
     # Keep this check name stable because the main-branch ruleset requires it.
