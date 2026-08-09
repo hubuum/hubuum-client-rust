@@ -87,12 +87,105 @@ impl std::io::Read for ExportOutputReader {
 
 impl ExportOutputReader {
     pub fn download_to<W: std::io::Write>(mut self, writer: &mut W) -> Result<u64, ApiError> {
-        Ok(std::io::copy(&mut self, writer)?)
+        let written = std::io::copy(&mut self, writer)?;
+        writer.flush()?;
+        Ok(written)
     }
 
+    /// Downloads into a temporary sibling file and atomically replaces the
+    /// destination only after the complete response has been flushed.
+    ///
+    /// This does not synchronize the file or its containing directory to
+    /// durable storage.
     pub fn download_to_path(self, path: impl AsRef<std::path::Path>) -> Result<u64, ApiError> {
-        let mut file = std::fs::File::create(path)?;
-        self.download_to(&mut file)
+        let path = path.as_ref();
+        let mut temporary = shared::temporary_download_file(path)?;
+        let written = self.download_to(temporary.as_file_mut())?;
+        shared::persist_download_file(temporary, path)?;
+        Ok(written)
+    }
+}
+
+#[cfg(test)]
+mod download_tests {
+    use super::{ExportOutputReader, StreamingResponse};
+    use crate::{ApiError, ExportContentType};
+
+    struct InterruptedReader {
+        returned_partial_chunk: bool,
+    }
+
+    impl std::io::Read for InterruptedReader {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            if self.returned_partial_chunk {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::ConnectionReset,
+                    "stream interrupted",
+                ));
+            }
+
+            self.returned_partial_chunk = true;
+            let chunk = b"partial";
+            buffer[..chunk.len()].copy_from_slice(chunk);
+            Ok(chunk.len())
+        }
+    }
+
+    fn output(body: impl std::io::Read + Send + Sync + 'static) -> ExportOutputReader {
+        ExportOutputReader {
+            content_type: ExportContentType::default(),
+            content_length: None,
+            body: StreamingResponse {
+                headers: reqwest::header::HeaderMap::new(),
+                content_length: None,
+                body: Box::new(body),
+            },
+        }
+    }
+
+    fn assert_only_destination_remains(directory: &std::path::Path, destination: &std::path::Path) {
+        let entries = std::fs::read_dir(directory)
+            .expect("temporary directory should remain readable")
+            .map(|entry| entry.expect("directory entry should be readable").path())
+            .collect::<Vec<_>>();
+        assert_eq!(entries, [destination]);
+    }
+
+    #[test]
+    fn failed_path_download_preserves_destination_and_removes_temporary_file() {
+        let directory = tempfile::tempdir().expect("temporary directory should be created");
+        let destination = directory.path().join("export.json");
+        std::fs::write(&destination, b"existing").expect("fixture should be written");
+        let reader = output(InterruptedReader {
+            returned_partial_chunk: false,
+        });
+
+        let error = reader
+            .download_to_path(&destination)
+            .expect_err("interrupted download should fail");
+
+        assert!(matches!(error, ApiError::Io(_)));
+        assert_eq!(std::fs::read(&destination).unwrap(), b"existing");
+        assert_only_destination_remains(directory.path(), &destination);
+    }
+
+    #[test]
+    fn successful_path_download_atomically_replaces_destination() {
+        let directory = tempfile::tempdir().expect("temporary directory should be created");
+        let destination = directory.path().join("export.json");
+        std::fs::write(&destination, b"existing").expect("fixture should be written");
+        let reader = output(std::io::Cursor::new(b"replacement contents"));
+
+        let written = reader
+            .download_to_path(&destination)
+            .expect("download should succeed");
+
+        assert_eq!(written, 20);
+        assert_eq!(
+            std::fs::read(&destination).unwrap(),
+            b"replacement contents"
+        );
+        assert_only_destination_remains(directory.path(), &destination);
     }
 }
 

@@ -86,6 +86,12 @@ other because they are aliases. Resource queries use `raw_param()` to append
 repeated raw keys and `set_raw_param()` to replace a scalar key. Cursor and graph
 requests provide the equivalent `query_param()` and `set_query_param()` methods.
 
+Page limits and unified-search per-kind limits must be positive. The client
+forwards every positive requested value unchanged; the server clamps it to the
+effective `max_page_limit` advertised by the public client-config endpoint.
+This keeps typed requests compatible with deployments whose configured maximum
+is higher or lower than the server default.
+
 Use `list()` for an unfiltered collection request:
 
 ```rust
