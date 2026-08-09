@@ -55,7 +55,7 @@ percent-encoding = "2"
 secrecy = { version = "0.10", features = ["serde"] }
 serde_path_to_error = "0.1"
 strum = { version = "0.28", features = ["derive", "strum_macros"] }
-tokio = { version = "1", features = ["fs", "io-util", "time"], optional = true }
+tokio = { version = "1", features = ["fs", "io-util", "rt", "time"], optional = true }
 async-stream = { version = "0.3", optional = true }
 bytes = { version = "1", optional = true }
 fastrand = "2"
@@ -63,6 +63,7 @@ futures-core = { version = "0.3", optional = true }
 futures-util = { version = "0.3", optional = true }
 httpdate = "1"
 schemars = { version = "1", features = ["chrono04"], optional = true }
+tempfile = "3"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

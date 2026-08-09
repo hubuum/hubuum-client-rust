@@ -171,3 +171,10 @@ Cursor-paged endpoints return `hubuum_client::Page<T>` with `items` and `next_cu
 Large rendered outputs can bypass in-memory buffering. Blocking clients expose a
 `Read` implementation through `output_stream(task_id)`, while async clients
 return a byte stream and support `download_output(task_id, path)`.
+Path downloads are written to a uniquely named sibling temporary file and only
+replace the destination after the complete response has been written and
+flushed. This publication step is atomic on supported platforms, so a failed
+download leaves an existing destination unchanged and removes the partial
+temporary file. The helper does not call `fsync`/`sync_all`; successful return
+does not guarantee that the file or containing directory has reached durable
+storage after a system failure.
