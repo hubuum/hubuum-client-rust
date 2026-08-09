@@ -60,6 +60,9 @@ jobs:
       - name: Validate Pinned OpenAPI Contract
         run: python3 scripts/openapi-contract.py validate
 
+      - name: Test GitHub Release Helpers
+        run: ./scripts/test-github-release.sh
+
   test:
     name: Unit, Behavior, and Compile Tests
     runs-on: ubuntu-latest

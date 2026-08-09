@@ -87,7 +87,15 @@ compile tests, every feature combination, MSRV, OpenAPI drift, supply-chain,
 public API compatibility, and pinned library plus `e2e_client` integration
 checks must all succeed before trusted publishing can start.
 
-The publish job first checks the registry, so the workflow can be rerun safely
-after a partial release or manual bootstrap. A rerun still repeats provenance
-and required-check evidence before treating an existing crates.io version as a
-successful no-op.
+The publish job first checks the registry. After a successful or
+already-completed crate publish, the workflow creates or updates the GitHub
+Release for the exact tag, uses only that version's dated `CHANGELOG.md` section
+as the release notes, and marks it as `Latest`. Both publication steps are
+idempotent, so a rerun still repeats provenance and required-check evidence
+before treating existing crates.io and GitHub releases as successful no-ops.
+
+To repair historical release metadata, manually dispatch the `Release`
+workflow from `main` with `backfill_github_releases` enabled. The backfill
+creates or updates every stable tagged release from its matching changelog
+section and leaves the newest stable tag marked as `Latest`. This mode does not
+publish crates.

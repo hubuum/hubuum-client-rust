@@ -6,10 +6,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
-### Security
+### Added
 
-- Require release tags to point at the exact protected `main` head and pass the
-  complete required CI suite for that commit before trusted publishing starts.
+- Create or update a GitHub Release from the matching dated changelog section
+  after crate publication, with an idempotent backfill for existing stable tags
+  and the newest stable release marked as `Latest`.
 
 ### Fixed
 
@@ -19,6 +20,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Make async and blocking export path downloads publish atomically after a
   successful flush, preserving existing destination files and removing partial
   temporary files when a download fails.
+
+### Security
+
+- Require release tags to point at the exact protected `main` head and pass the
+  complete required CI suite for that commit before trusted publishing starts.
 
 ## [0.9.0] - 2026-08-07
 
