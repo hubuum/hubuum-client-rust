@@ -23,6 +23,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Security
 
+- Update `h2` to 0.4.16 to address RUSTSEC-2026-0258, which could allow an
+  HTTP/2 peer to cause unbounded processing of empty DATA frames.
 - Require release tags to point at the exact protected `main` head and pass the
   complete required CI suite for that commit before trusted publishing starts.
 
