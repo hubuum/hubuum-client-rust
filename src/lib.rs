@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.9.0 targets Hubuum server v0.0.9. See the repository's
+//! Version 0.9.1 targets Hubuum server v0.0.9. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:

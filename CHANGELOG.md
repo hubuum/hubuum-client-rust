@@ -6,8 +6,13 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-08-29
+
 ### Added
 
+- This release explicitly targets Hubuum server v0.0.9, with its 202-operation
+  OpenAPI contract and immutable multi-platform image
+  `sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db`.
 - Add machine-checked property-level reconciliation between pinned OpenAPI
   schemas and 34 generated or handwritten Rust wire models, including explicit
   point/list projection exceptions and regressions for relation cardinalities,
