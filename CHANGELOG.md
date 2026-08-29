@@ -18,6 +18,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Changed
 
+- Update all locked Rust dependencies to their latest Rust 1.88-compatible
+  releases and refresh the pinned PostgreSQL 18 integration-fixture image.
+  Notable updates include Futures 0.3.34, `h2` 0.4.19, Hyper 1.11.1, ICU 2.3,
+  `log` 0.4.34, `syn` 3.0.4, and `thiserror` 2.0.20.
 - Validate JSON query paths while preserving the existing
   `.json_schema().path(["key"]).eq(value)` builder shape. Invalid or missing
   paths now return `ApiError::InvalidJsonPath` from the terminal query operation
@@ -38,7 +42,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Security
 
-- Update `h2` to 0.4.16 to address RUSTSEC-2026-0258, which could allow an
+- Update `h2` to 0.4.19 (including the fix released in 0.4.16) to address
+  RUSTSEC-2026-0258, which could allow an
   HTTP/2 peer to cause unbounded processing of empty DATA frames.
 - Require release tags to point at the exact protected `main` head and pass the
   complete required CI suite for that commit before trusted publishing starts.
