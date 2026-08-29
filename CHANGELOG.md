@@ -42,6 +42,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Security
 
+- Pass release tags to workflow shell steps through environment variables instead
+  of interpolating expressions into generated shell commands.
 - Update `h2` to 0.4.19 (including the fix released in 0.4.16) to address
   RUSTSEC-2026-0258, which could allow an
   HTTP/2 peer to cause unbounded processing of empty DATA frames.
