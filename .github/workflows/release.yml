@@ -56,7 +56,9 @@ jobs:
           fi
 
       - name: Check Release Metadata
-        run: ./scripts/check-release.sh "${{ steps.release.outputs.release_tag }}"
+        run: ./scripts/check-release.sh "${RELEASE_TAG}"
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
 
       - name: List hubuum_client Package Contents
         run: cargo package --list -p hubuum_client
@@ -158,9 +160,10 @@ jobs:
 
       - name: Create or Update GitHub Release
         if: github.event_name == 'push'
-        run: ./scripts/publish-github-release.sh "${{ needs.verify.outputs.release_tag }}" --latest
+        run: ./scripts/publish-github-release.sh "${RELEASE_TAG}" --latest
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.verify.outputs.release_tag }}
 
       - name: Create or Update Stable GitHub Releases
         if: github.event_name == 'workflow_dispatch'
