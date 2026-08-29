@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.9.1 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; JSON-path validation, advertised pagination limits, atomic export downloads, property-level OpenAPI model reconciliation, dependency and release-workflow security updates, with pinned Docker-backed library plus downstream-consumer integration coverage |
 | 0.9.0 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; revision and ETag concurrency, import v2, settings JSON Patch, revision-owned permission and membership responses, computed-field points, token lifecycle state and renewal, with pinned Docker-backed library plus downstream-consumer integration coverage |
 | 0.8.0 | 0.0.8 | `ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6` | Declared target; property-complete v0.0.8 cardinality, core-import timestamp, and export-timing models with pinned Docker-backed library plus downstream-consumer integration coverage |
 | 0.7.3 | 0.0.8 | `ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6` | Declared target; pinned OpenAPI and complete Docker-backed library plus downstream-consumer integration suites |
