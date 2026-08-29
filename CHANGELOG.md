@@ -8,6 +8,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Add machine-checked property-level reconciliation between pinned OpenAPI
+  schemas and 34 generated or handwritten Rust wire models, including explicit
+  point/list projection exceptions and regressions for relation cardinalities,
+  import timestamps, and export timings.
 - Create or update a GitHub Release from the matching dated changelog section
   after crate publication, with an idempotent backfill for existing stable tags
   and the newest stable release marked as `Latest`.

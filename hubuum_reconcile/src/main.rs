@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod generate;
+mod openapi_contract;
 
 use std::{
     env, fs, io,
@@ -34,6 +35,7 @@ fn main() -> Result<(), DynError> {
 
 fn reconcile(mode: Mode) -> Result<(), DynError> {
     let root = repository_root()?;
+    openapi_contract::check(&root)?;
     let mut stale = Vec::new();
     let mut updated = 0;
 

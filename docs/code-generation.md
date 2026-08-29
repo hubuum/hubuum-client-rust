@@ -13,6 +13,12 @@ do not run a procedural macro or a build script.
   reconciliation behavior.
 - `hubuum_reconcile/src/generate.rs` contains the specification model,
   validation, and rendering rules.
+- `openapi/operations.json` is the normalized operation and structural schema
+  inventory generated from the pinned server specification.
+- `openapi/model-contract.json` maps relevant OpenAPI schemas to generated and
+  handwritten Rust wire structs. The reconciler parses the actual Rust source
+  and verifies field names, Serde behavior, requiredness, and documented
+  exceptions.
 - `src/resources/generated/*.rs` is generated, reviewed, and committed.
 - The handwritten files under `src/resources` include the generated output and
   continue to own resource-specific behavior.
@@ -60,6 +66,9 @@ CI and the release preflight run `check`, which fails when committed output is
 missing or stale. Generation uses the repository's `rustfmt`; it performs no
 network access and is not part of `hubuum_client`'s crates.io package.
 
-OpenAPI operation reconciliation remains a separate contract check in
-`scripts/openapi-contract.py`. The normalized OpenAPI snapshot does not contain
-enough property-level detail to generate these resource models directly.
+When the pinned server target changes, update `openapi/operations.json`, update
+the affected Rust models and `openapi/model-contract.json`, and document every
+intentional omission or projection difference in `openapi/known-gaps.md`. Run
+`cargo run -p hubuum_reconcile --locked -- check` to verify both generated
+resource files and property-level model reconciliation. Matching endpoint paths
+alone is not sufficient evidence that the wire models still match the server.

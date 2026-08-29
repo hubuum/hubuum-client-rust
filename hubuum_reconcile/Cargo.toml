@@ -10,4 +10,6 @@ description = "Repository-local generator for hubuum_client resource code."
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 syn = { version = "3", features = ["full"] }

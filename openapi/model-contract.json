@@ -1,0 +1,277 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "openapi_schema": "Collection",
+      "rust_file": "src/resources/generated/collection.rs",
+      "rust_type": "Collection",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "NewCollectionWithAssignee",
+      "rust_file": "src/resources/generated/collection.rs",
+      "rust_type": "CollectionPost",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "UpdateCollection",
+      "rust_file": "src/resources/generated/collection.rs",
+      "rust_type": "CollectionPatch",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "HubuumClass",
+      "rust_file": "src/resources/generated/class.rs",
+      "rust_type": "Class",
+      "direction": "response",
+      "rust_only_fields": {
+        "collection": "The shared class response model is the union of compact point and expanded list projections."
+      },
+      "requiredness_exceptions": {
+        "collection_id": "The compact projection requires collection_id, while expanded responses provide collection instead.",
+        "validate_schema": "The shared model remains tolerant of legacy responses that omitted this server-defaulted field."
+      }
+    },
+    {
+      "openapi_schema": "HubuumClassExpanded",
+      "rust_file": "src/resources/generated/class.rs",
+      "rust_type": "Class",
+      "direction": "response",
+      "rust_only_fields": {
+        "collection_id": "The shared class response model is the union of compact point and expanded list projections."
+      },
+      "requiredness_exceptions": {
+        "collection": "The expanded projection requires collection, while compact responses provide collection_id instead.",
+        "validate_schema": "The shared model remains tolerant of legacy responses that omitted this server-defaulted field."
+      }
+    },
+    {
+      "openapi_schema": "NewHubuumClass",
+      "rust_file": "src/resources/generated/class.rs",
+      "rust_type": "ClassPost",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "UpdateHubuumClass",
+      "rust_file": "src/resources/generated/class.rs",
+      "rust_type": "ClassPatch",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "HubuumClassRelation",
+      "rust_file": "src/resources/generated/class.rs",
+      "rust_type": "ClassRelation",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "NewHubuumClassRelation",
+      "rust_file": "src/resources/generated/class.rs",
+      "rust_type": "ClassRelationPost",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "HubuumObject",
+      "rust_file": "src/resources/generated/object.rs",
+      "rust_type": "Object",
+      "direction": "response",
+      "requiredness_exceptions": {
+        "data": "The shared object model preserves compatibility with responses that omit or null the JSON payload."
+      }
+    },
+    {
+      "openapi_schema": "NewHubuumObjectRequest",
+      "rust_file": "src/resources/generated/object.rs",
+      "rust_type": "ObjectPost",
+      "direction": "request",
+      "requiredness_exceptions": {
+        "data": "ObjectPost retains legacy optional construction and serializes an unset value as JSON null."
+      }
+    },
+    {
+      "openapi_schema": "UpdateHubuumObjectRequest",
+      "rust_file": "src/resources/generated/object.rs",
+      "rust_type": "ObjectPatch",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "GroupResponse",
+      "rust_file": "src/resources/generated/group.rs",
+      "rust_type": "Group",
+      "direction": "response",
+      "requiredness_exceptions": {
+        "identity_scope": "The client defaults legacy group responses to the local identity scope.",
+        "managed_by": "The client defaults legacy group responses to local management."
+      }
+    },
+    {
+      "openapi_schema": "GroupPointResponse",
+      "rust_file": "src/resources/generated/group.rs",
+      "rust_type": "Group",
+      "direction": "response",
+      "rust_only_fields": {
+        "last_sync_attempted_at": "The shared group model also represents the richer list projection.",
+        "last_sync_success_at": "The shared group model also represents the richer list projection."
+      },
+      "requiredness_exceptions": {
+        "identity_scope": "The client defaults legacy group responses to the local identity scope.",
+        "managed_by": "The client defaults legacy group responses to local management."
+      }
+    },
+    {
+      "openapi_schema": "NewGroup",
+      "rust_file": "src/resources/generated/group.rs",
+      "rust_type": "GroupPost",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "UpdateGroup",
+      "rust_file": "src/resources/generated/group.rs",
+      "rust_type": "GroupPatch",
+      "direction": "request",
+      "rust_only_fields": {
+        "description": "The runtime PATCH route accepts group descriptions, but v0.0.9 omits this field from UpdateGroup."
+      }
+    },
+    {
+      "openapi_schema": "UserResponse",
+      "rust_file": "src/resources/generated/user.rs",
+      "rust_type": "User",
+      "direction": "response",
+      "rust_only_fields": {
+        "identity_scope_id": "The shared user model also represents the point projection."
+      },
+      "requiredness_exceptions": {
+        "identity_scope": "The list projection field is optional in the shared point/list model.",
+        "provider_kind": "The list projection field is optional in the shared point/list model.",
+        "provider_managed": "The client defaults legacy responses that predate provider management metadata."
+      }
+    },
+    {
+      "openapi_schema": "UserPointResponse",
+      "rust_file": "src/resources/generated/user.rs",
+      "rust_type": "User",
+      "direction": "response",
+      "rust_only_fields": {
+        "identity_scope": "The shared user model also represents the list projection.",
+        "last_sync_attempted_at": "The shared user model also represents the list projection.",
+        "last_sync_success_at": "The shared user model also represents the list projection.",
+        "provider_kind": "The shared user model also represents the list projection."
+      },
+      "requiredness_exceptions": {
+        "identity_scope_id": "The point projection field is optional in the shared point/list model.",
+        "provider_managed": "The client defaults legacy responses that predate provider management metadata."
+      }
+    },
+    {
+      "openapi_schema": "NewUser",
+      "rust_file": "src/resources/generated/user.rs",
+      "rust_type": "UserPost",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "UpdateUser",
+      "rust_file": "src/resources/generated/user.rs",
+      "rust_type": "UserPatch",
+      "direction": "request",
+      "openapi_only_fields": {
+        "password": "Password updates use the dedicated redacted set_password helper instead of UserPatch."
+      }
+    },
+    {
+      "openapi_schema": "ServiceAccountResponse",
+      "rust_file": "src/resources/generated/service_account.rs",
+      "rust_type": "ServiceAccount",
+      "direction": "response",
+      "rust_only_fields": {
+        "identity_scope_id": "The shared service-account model also represents the point projection."
+      },
+      "requiredness_exceptions": {
+        "identity_scope": "The list projection field is optional in the shared point/list model."
+      }
+    },
+    {
+      "openapi_schema": "ServiceAccountPointResponse",
+      "rust_file": "src/resources/generated/service_account.rs",
+      "rust_type": "ServiceAccount",
+      "direction": "response",
+      "rust_only_fields": {
+        "identity_scope": "The shared service-account model also represents the list projection."
+      },
+      "requiredness_exceptions": {
+        "identity_scope_id": "The point projection field is optional in the shared point/list model."
+      }
+    },
+    {
+      "openapi_schema": "NewServiceAccount",
+      "rust_file": "src/resources/generated/service_account.rs",
+      "rust_type": "ServiceAccountPost",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "UpdateServiceAccount",
+      "rust_file": "src/resources/generated/service_account.rs",
+      "rust_type": "ServiceAccountPatch",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "ExportTemplate",
+      "rust_file": "src/resources/generated/export_template.rs",
+      "rust_type": "ExportTemplate",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "NewExportTemplate",
+      "rust_file": "src/resources/generated/export_template.rs",
+      "rust_type": "ExportTemplatePost",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "UpdateExportTemplate",
+      "rust_file": "src/resources/generated/export_template.rs",
+      "rust_type": "ExportTemplatePatch",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "ImportIdentityScopeInput",
+      "rust_file": "src/types/import.rs",
+      "rust_type": "ImportIdentityScopeInput",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "ImportGroupInput",
+      "rust_file": "src/types/import.rs",
+      "rust_type": "ImportGroupInput",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "ImportCollectionInput",
+      "rust_file": "src/types/import.rs",
+      "rust_type": "ImportCollectionInput",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "ImportClassInput",
+      "rust_file": "src/types/import.rs",
+      "rust_type": "ImportClassInput",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "ImportObjectInput",
+      "rust_file": "src/types/import.rs",
+      "rust_type": "ImportObjectInput",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "RestoreTimestamps",
+      "rust_file": "src/types/import.rs",
+      "rust_type": "RestoreTimestamps",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "ExportTaskDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "ExportTaskDetails",
+      "direction": "response"
+    }
+  ]
+}
