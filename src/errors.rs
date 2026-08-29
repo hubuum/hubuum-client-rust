@@ -132,6 +132,11 @@ pub enum ApiError {
     )]
     InvalidTokenScopes,
 
+    #[error("Invalid JSON path: {reason}")]
+    InvalidJsonPath { reason: &'static str },
+
+    // Retained because `ApiError` is public. New JSON-path validation uses
+    // `InvalidJsonPath` for both filters and aggregate fields.
     #[error("Invalid object aggregate JSON path: {reason}")]
     InvalidObjectAggregateJsonPath { reason: &'static str },
 
@@ -280,6 +285,10 @@ impl std::fmt::Debug for ApiError {
                 .field("items", items)
                 .finish(),
             Self::InvalidTokenScopes => f.write_str("InvalidTokenScopes"),
+            Self::InvalidJsonPath { reason } => f
+                .debug_struct("InvalidJsonPath")
+                .field("reason", reason)
+                .finish(),
             Self::InvalidObjectAggregateJsonPath { reason } => f
                 .debug_struct("InvalidObjectAggregateJsonPath")
                 .field("reason", reason)

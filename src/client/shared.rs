@@ -18,10 +18,10 @@ use crate::QueryFilter;
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::ApiResource;
-use crate::types::FilterOperator;
 use crate::types::{
     BaseUrl, EntityTag, ExportContentType, IntoQueryTuples, Revisioned, TaskResponse,
 };
+use crate::types::{FilterOperator, JsonPath};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";
@@ -750,6 +750,7 @@ pub(crate) fn build_request_url(
     reject_url_dot_segments(&url)?;
 
     if *method == reqwest::Method::GET {
+        validate_json_paths(&query_params)?;
         validate_page_limits(&query_params)?;
         let query = query_params.into_query_string()?;
         if query.is_empty() {
@@ -773,6 +774,19 @@ pub(crate) fn build_request_url(
 }
 
 const MIN_PAGE_LIMIT: usize = 1;
+const INVALID_JSON_PATH_QUERY_KEY: &str = "\0hubuum-invalid-json-path";
+
+fn validate_json_paths(query_params: &[QueryFilter]) -> Result<(), ApiError> {
+    if query_params
+        .iter()
+        .any(|parameter| parameter.key == INVALID_JSON_PATH_QUERY_KEY)
+    {
+        return Err(ApiError::InvalidJsonPath {
+            reason: "JSON filter operators require a non-empty path whose segments contain only ASCII letters, digits, `_`, or `$`",
+        });
+    }
+    Ok(())
+}
 
 fn validate_page_limits(query_params: &[QueryFilter]) -> Result<(), ApiError> {
     for parameter in query_params.iter().filter(|parameter| {
@@ -1281,11 +1295,16 @@ impl<Q: QueryFilterTarget> QueryBoolField<Q> {
     }
 }
 
+/// An unselected JSON-backed query field.
+///
+/// Select a validated, non-empty path before applying an operator. Hubuum
+/// v0.0.9 does not define root-JSON filter syntax, so applying an operator
+/// without a path records a local error returned by the terminal query method.
 #[derive(Debug, Clone)]
 pub struct QueryJsonField<Q> {
     query: Q,
     field: &'static str,
-    path: Vec<String>,
+    path: Option<Result<JsonPath, ()>>,
 }
 
 impl<Q> QueryJsonField<Q> {
@@ -1293,30 +1312,97 @@ impl<Q> QueryJsonField<Q> {
         Self {
             query,
             field,
-            path: Vec::new(),
+            path: None,
         }
     }
-}
 
-impl<Q: QueryFilterTarget> QueryJsonField<Q> {
+    /// Select a JSON path, preserving the original fluent builder shape.
+    ///
+    /// The path is validated immediately and any error is returned by the
+    /// terminal query operation before transport. Use [`Self::try_path`] when
+    /// the caller needs the validation result at path-selection time.
     pub fn path<I, S>(mut self, path: I) -> Self
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
-        self.path = path
-            .into_iter()
-            .map(|segment| segment.as_ref().to_string())
-            .collect();
+        self.path = Some(JsonPath::new(path).map_err(|_| ()));
         self
     }
 
-    fn encoded_value<V: ToString>(&self, value: V) -> String {
-        if self.path.is_empty() {
-            value.to_string()
-        } else {
-            format!("{}={}", self.path.join(","), value.to_string())
+    /// Validate and select a JSON path eagerly.
+    pub fn try_path<I, S>(self, path: I) -> Result<QueryJsonPathField<Q>, ApiError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        Ok(self.with_path(JsonPath::new(path)?))
+    }
+
+    /// Select an already validated JSON path.
+    pub fn with_path(self, path: JsonPath) -> QueryJsonPathField<Q> {
+        QueryJsonPathField {
+            query: self.query,
+            field: self.field,
+            path,
         }
+    }
+}
+
+impl<Q: QueryFilterTarget> QueryJsonField<Q> {
+    fn push<V: ToString>(self, operator: FilterOperator, value: V) -> Q {
+        let Self { query, field, path } = self;
+        match path {
+            Some(Ok(path)) => {
+                query.push_filter(field, operator, format!("{path}={}", value.to_string()))
+            }
+            None | Some(Err(())) => query.push_raw_param(INVALID_JSON_PATH_QUERY_KEY, ""),
+        }
+    }
+
+    pub fn eq<V: ToString>(self, value: V) -> Q {
+        self.push(FilterOperator::Equals { is_negated: false }, value)
+    }
+
+    pub fn ne<V: ToString>(self, value: V) -> Q {
+        self.push(FilterOperator::Equals { is_negated: true }, value)
+    }
+
+    pub fn gt<V: ToString>(self, value: V) -> Q {
+        self.push(FilterOperator::Gt { is_negated: false }, value)
+    }
+
+    pub fn gte<V: ToString>(self, value: V) -> Q {
+        self.push(FilterOperator::Gte { is_negated: false }, value)
+    }
+
+    pub fn lt<V: ToString>(self, value: V) -> Q {
+        self.push(FilterOperator::Lt { is_negated: false }, value)
+    }
+
+    pub fn lte<V: ToString>(self, value: V) -> Q {
+        self.push(FilterOperator::Lte { is_negated: false }, value)
+    }
+
+    pub fn between<V: ToString>(self, start: V, end: V) -> Q {
+        self.push(
+            FilterOperator::Between { is_negated: false },
+            format!("{},{}", start.to_string(), end.to_string()),
+        )
+    }
+}
+
+/// A JSON-backed query field with a validated path selected.
+#[derive(Debug, Clone)]
+pub struct QueryJsonPathField<Q> {
+    query: Q,
+    field: &'static str,
+    path: JsonPath,
+}
+
+impl<Q: QueryFilterTarget> QueryJsonPathField<Q> {
+    fn encoded_value<V: ToString>(&self, value: V) -> String {
+        format!("{}={}", self.path, value.to_string())
     }
 
     pub fn eq<V: ToString>(self, value: V) -> Q {

@@ -1,6 +1,6 @@
 use hubuum_client::{
     Authenticated, BaseUrl, ClassId, CollectionId, Credentials, ExportTemplateId, GroupId,
-    HubuumDateTime, ObjectId, RemoteTargetId, UserId, blocking,
+    HubuumDateTime, JsonPath, ObjectId, RemoteTargetId, UserId, blocking,
 };
 use std::str::FromStr;
 
@@ -17,12 +17,13 @@ fn query_contract(client: &blocking::Client<Authenticated>, since: HubuumDateTim
         .path(["properties", "hostname", "type"])
         .eq("string");
 
+    let owner_path = JsonPath::new(["owner"]).expect("JSON path should be valid");
     let _ = client
         .objects(42)
         .hubuum_class_id()
         .eq(42.into())
         .data()
-        .path(["owner"])
+        .with_path(owner_path)
         .ne("legacy");
 }
 

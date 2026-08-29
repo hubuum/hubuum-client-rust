@@ -17,8 +17,8 @@ pub use self::r#async::{
     ObjectNameScope, PageStream, PrincipalSettingsScope, TypedClass,
 };
 pub use self::shared::{
-    Page, QueryBoolField, QueryJsonField, QueryNumericField, QueryTextField, QueryValueField,
-    RetryPolicy,
+    Page, QueryBoolField, QueryJsonField, QueryJsonPathField, QueryNumericField, QueryTextField,
+    QueryValueField, RetryPolicy,
 };
 pub(crate) use self::shared::{
     decode_json_body, decode_revisioned, if_match_headers, redact_reqwest_error,

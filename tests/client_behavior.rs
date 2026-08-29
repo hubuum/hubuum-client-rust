@@ -2044,6 +2044,92 @@ async fn async_class_query_builder_supports_typed_json_path_operator() {
     assert_eq!(class.name, "geo-class");
 }
 
+#[tokio::test]
+async fn async_json_query_paths_reject_invalid_segments_before_transport() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let classes = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/classes");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([]));
+    });
+    let client = async_client(&server).await;
+
+    for invalid in [
+        Vec::<&str>::new(),
+        vec![""],
+        vec!["comma,segment"],
+        vec!["punctuation!"],
+        vec!["métric"],
+    ] {
+        let error = client
+            .classes()
+            .query()
+            .json_schema()
+            .path(invalid)
+            .eq("string")
+            .list()
+            .await
+            .expect_err("invalid JSON path should be rejected");
+        assert!(matches!(error, ApiError::InvalidJsonPath { .. }));
+    }
+
+    let error = client
+        .classes()
+        .query()
+        .json_schema()
+        .eq("string")
+        .list()
+        .await
+        .expect_err("a missing JSON path should be rejected");
+    assert!(matches!(error, ApiError::InvalidJsonPath { .. }));
+
+    classes.assert_calls(0);
+}
+
+#[test]
+fn sync_json_query_paths_reject_invalid_segments_before_transport() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let classes = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/classes");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!([]));
+    });
+    let client = sync_client(&server);
+
+    for invalid in [
+        Vec::<&str>::new(),
+        vec![""],
+        vec!["comma,segment"],
+        vec!["punctuation!"],
+        vec!["métric"],
+    ] {
+        let error = client
+            .classes()
+            .query()
+            .json_schema()
+            .path(invalid)
+            .eq("string")
+            .list()
+            .expect_err("invalid JSON path should be rejected");
+        assert!(matches!(error, ApiError::InvalidJsonPath { .. }));
+    }
+
+    let error = client
+        .classes()
+        .query()
+        .json_schema()
+        .eq("string")
+        .list()
+        .expect_err("a missing JSON path should be rejected");
+    assert!(matches!(error, ApiError::InvalidJsonPath { .. }));
+
+    classes.assert_calls(0);
+}
+
 #[test]
 fn sync_class_query_builder_supports_sort_and_limit() {
     let server = MockServer::start();
