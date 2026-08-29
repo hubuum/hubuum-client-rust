@@ -12,8 +12,19 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   after crate publication, with an idempotent backfill for existing stable tags
   and the newest stable release marked as `Latest`.
 
+### Changed
+
+- Validate JSON query paths while preserving the existing
+  `.json_schema().path(["key"]).eq(value)` builder shape. Invalid or missing
+  paths now return `ApiError::InvalidJsonPath` from the terminal query operation
+  before transport; `try_path` provides eager validation and `with_path` accepts
+  a reusable validated `JsonPath`. `ObjectAggregateJsonPath` remains as a
+  compatibility alias for the shared `JsonPath` type.
+
 ### Fixed
 
+- Reject empty JSON query paths, empty segments, and segments containing
+  characters outside ASCII alphanumeric, `_`, or `$` before transport.
 - Forward positive page and unified-search per-kind limits to the server instead
   of rejecting values above 250, allowing deployments to apply their advertised
   pagination maximum while the client continues to reject zero locally.

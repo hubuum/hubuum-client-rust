@@ -11,6 +11,7 @@ mod history;
 mod id;
 mod identity;
 mod import;
+mod json_path;
 mod meta;
 mod params;
 mod provenance;
@@ -88,6 +89,7 @@ pub use import::{
     ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportRunResult,
     ImportWriteCondition, ObjectKey, PrincipalKey, RestoreTimestamps,
 };
+pub use json_path::JsonPath;
 pub use meta::{
     ClearRateLimitResponse, CountsResponse, DbStateResponse, FullDbStateResponse,
     LoginRateLimitConfig, LoginRateLimitEntry, LoginRateLimitState, ObjectsByClass, ProbeResponse,

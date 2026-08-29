@@ -135,56 +135,9 @@ impl TryFrom<Vec<ObjectDataPatchOperation>> for ObjectDataPatchDocument {
     }
 }
 
-/// A validated JSON-data path used by object aggregate dimensions and measures.
-///
-/// Paths contain at least one segment. Every segment is non-empty and contains
-/// only ASCII letters, digits, `_`, or `$`, matching the Hubuum query contract.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ObjectAggregateJsonPath(Vec<String>);
-
-impl ObjectAggregateJsonPath {
-    pub fn new<I, S>(segments: I) -> Result<Self, ApiError>
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<String>,
-    {
-        let segments: Vec<String> = segments.into_iter().map(Into::into).collect();
-        if segments.is_empty() {
-            return Err(ApiError::InvalidObjectAggregateJsonPath {
-                reason: "the path must contain at least one segment",
-            });
-        }
-        if segments.iter().any(|segment| {
-            segment.is_empty()
-                || !segment
-                    .bytes()
-                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$'))
-        }) {
-            return Err(ApiError::InvalidObjectAggregateJsonPath {
-                reason: "segments must contain only ASCII letters, digits, `_`, or `$`",
-            });
-        }
-        Ok(Self(segments))
-    }
-
-    pub fn segments(&self) -> &[String] {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for ObjectAggregateJsonPath {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut segments = self.0.iter();
-        if let Some(segment) = segments.next() {
-            formatter.write_str(segment)?;
-        }
-        for segment in segments {
-            formatter.write_str(",")?;
-            formatter.write_str(segment)?;
-        }
-        Ok(())
-    }
-}
+/// Backward-compatible name for a validated JSON path used by object
+/// aggregate dimensions and measures.
+pub type ObjectAggregateJsonPath = crate::types::JsonPath;
 
 /// One ordered dimension in an object aggregate query.
 #[non_exhaustive]
@@ -932,7 +885,7 @@ mod v003_tests {
         ] {
             assert!(matches!(
                 ObjectAggregateJsonPath::new(invalid),
-                Err(ApiError::InvalidObjectAggregateJsonPath { .. })
+                Err(ApiError::InvalidJsonPath { .. })
             ));
         }
 

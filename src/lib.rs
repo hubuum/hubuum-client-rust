@@ -54,8 +54,8 @@ pub use client::AsyncTransport;
 pub use client::BlockingTransport;
 pub use client::{
     Authenticated, IntoQueryFilters, MockTransport, Page, QueryBoolField, QueryJsonField,
-    QueryNumericField, QueryTextField, QueryValueField, RequestPlan, RetryPolicy,
-    TransportResponse, Unauthenticated,
+    QueryJsonPathField, QueryNumericField, QueryTextField, QueryValueField, RequestPlan,
+    RetryPolicy, TransportResponse, Unauthenticated,
 };
 #[cfg(feature = "async")]
 pub use client::{
@@ -95,7 +95,7 @@ pub use types::{
     ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode, ImportObjectInput,
     ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
     ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportResultId,
-    ImportRunResult, ImportTaskDetails, ImportTaskResultResponse, ImportWriteCondition,
+    ImportRunResult, ImportTaskDetails, ImportTaskResultResponse, ImportWriteCondition, JsonPath,
     LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, LoginRateLimitConfig,
     LoginRateLimitEntry, LoginRateLimitState, LogoutTokenRequest, NetworkConfig, NewEventSink,
     NewEventSubscription, ObjectHistory, ObjectKey, ObjectRelationLimit, PaginationConfig,
