@@ -17,6 +17,16 @@ fn e2e_admin_config_backup_and_restore_staging() {
         .admin_config()
         .expect("v0.0.2 admin config should decode");
     assert!(config.backups.max_output_bytes > 0);
+    assert_eq!(config.database.backend, "postgresql");
+    assert_eq!(config.database.role_mode, "single");
+    assert!(config.pagination.max_traversal_work_rows > 0);
+    assert_eq!(
+        config.exports.storage_query_budget_ms,
+        config.exports.database_statement_timeout_ms
+    );
+    assert!(!config.secrets.provider.is_empty());
+    assert!(!config.tracing.enabled);
+    assert!(!config.authentication.token_hash_key_mode.is_empty());
     assert!(config.restores.max_upload_bytes > 0);
     assert!(!config.permissions.backend.is_empty());
 
@@ -28,6 +38,7 @@ fn e2e_admin_config_backup_and_restore_staging() {
         .timeout(Some(Duration::from_secs(60)))
         .send()
         .expect("backup should complete");
+    assert!(document.has_supported_version());
     let staged = harness
         .client
         .restores()

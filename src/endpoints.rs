@@ -389,7 +389,7 @@ mod test {
             .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(client_paths, spec_paths);
-        assert_eq!(contract["operation_count"], 202);
+        assert_eq!(contract["operation_count"], 204);
     }
     use std::str::FromStr;
     use yare::parameterized;

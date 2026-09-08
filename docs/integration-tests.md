@@ -26,8 +26,9 @@ The script pulls and reports the selected PostgreSQL, Hubuum, and LDAP images
 before starting the stack. Their defaults are immutable multi-platform image
 digests. It generates a short-lived test CA and hostname-verified LDAPS
 certificate, configures the server with the scoped `planet-express` provider,
-waits for readiness, optionally applies SQL seed data, and tears everything
-down in a shell `trap` unless keep mode is enabled.
+runs `hubuum-admin --migrate` before starting the server, starts a separate
+`hubuum-admin --restore-executor`, waits for readiness, optionally applies SQL seed
+data, and tears everything down in a shell `trap` unless keep mode is enabled.
 
 Provider coverage discovers the unauthenticated provider list, rejects invalid LDAP credentials, logs in real directory users through both async and blocking clients, verifies synchronized user and group metadata, and exercises settings replace, merge-patch, get, and reset operations as an external user. The fixture configuration lives at `tests/container_integration/fixtures/auth-providers.toml`.
 
@@ -66,8 +67,8 @@ An external stack must expose the same `planet-express` provider and fixture use
 - `HUBUUM_INTEGRATION_SEED_SQL` overrides the default seed SQL file.
 
 Required CI runs integration tests against an immutable server image digest.
-For client 0.9.0, that image is Hubuum server v0.0.9 at
-`sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db`.
+For client 0.10.0, that image is Hubuum server v0.0.12 at
+`sha256:6441ccbe2906d80d0e6ef5e8a9b8e4a7e1afc9c39c8d43d93ac62a5cd0e6e865`.
 A scheduled compatibility workflow separately runs against
 `ghcr.io/hubuum/hubuum-server:main`, so upstream movement is visible without
 making otherwise unrelated pull requests nondeterministic.
@@ -86,3 +87,19 @@ If the server image is private in your environment, authenticate first:
 ```bash
 docker login ghcr.io
 ```
+
+## Full restore coverage
+
+With `--with-e2e-client` or `--e2e-only`, the wrapper runs both blocking and async
+full restore scenarios after all ordinary suites finish. Each scenario creates
+and downloads a format 5 backup, deletes an object, stages and confirms the
+restore, polls with its capability until completion, verifies bearer-token
+invalidation, and checks that the deleted object was restored after a new login.
+Because format 5 excludes password hashes, the wrapper resets the disposable
+administrator password after each restore before running the recovery assertion.
+
+The separate `e2e_client` restore test target requires `restore-tests` and the
+wrapper-owned `HUBUUM_INTEGRATION_DISPOSABLE_BASE_URL` marker. It is never part
+of ordinary tests against an externally managed stack; full restore replaces
+all data and invalidates tokens. The complete non-container workspace suite
+compiles these tests but leaves them ignored.

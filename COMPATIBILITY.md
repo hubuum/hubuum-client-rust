@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.10.0 (unreleased) | 0.0.12 | `ghcr.io/hubuum/hubuum-server@sha256:6441ccbe2906d80d0e6ef5e8a9b8e4a7e1afc9c39c8d43d93ac62a5cd0e6e865` | Candidate target; 89 library and 24 consumer integration tests pass; full restore completion is blocked by the v0.0.12 server drain-state race described below |
 | 0.9.1 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; JSON-path validation, advertised pagination limits, atomic export downloads, property-level OpenAPI model reconciliation, dependency and release-workflow security updates, with pinned Docker-backed library plus downstream-consumer integration coverage |
 | 0.9.0 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; revision and ETag concurrency, import v2, settings JSON Patch, revision-owned permission and membership responses, computed-field points, token lifecycle state and renewal, with pinned Docker-backed library plus downstream-consumer integration coverage |
 | 0.8.0 | 0.0.8 | `ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6` | Declared target; property-complete v0.0.8 cardinality, core-import timestamp, and export-timing models with pinned Docker-backed library plus downstream-consumer integration coverage |
@@ -41,3 +42,20 @@ Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
+
+## Pending v0.0.12 target
+
+The 0.10.0 development change remains a candidate until full restore execution
+passes against the pinned server. Backup creation, upload/staging, and the
+existing library and consumer workflows pass. The new restore executor tests
+expose a server race: a live instance that has not yet acknowledged the current
+maintenance generation is rejected as invalid drain state before the server's
+waiting loop can wait for it. Confirmation returns 202, but capability polling
+then reports `Failed` with `PostgreSQL persisted restore drain state failed
+contract validation`.
+
+This is reproducible with the released v0.0.12 image. The complete integration
+command keeps the success assertion and fails on this condition; it does not
+turn the failure into a compatibility pass. See the server's
+[`StorageRestoreDrainState::try_new`](https://github.com/hubuum/hubuum/blob/v0.0.12/crates/hubuum-storage-core/src/restore.rs)
+and [`wait_for_instances_drained`](https://github.com/hubuum/hubuum/blob/v0.0.12/src/restores/mod.rs).

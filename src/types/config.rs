@@ -1,4 +1,6 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de};
+
+use crate::ApiError;
 
 /// Default path of the Hubuum Prometheus scrape endpoint.
 pub const DEFAULT_METRICS_PATH: &str = "/metrics";
@@ -46,6 +48,8 @@ pub struct RunningConfig {
     pub permissions: PermissionConfig,
     pub pagination: PaginationConfig,
     pub network: NetworkConfig,
+    pub secrets: SecretSourceConfig,
+    pub tracing: TracingConfig,
 }
 
 #[non_exhaustive]
@@ -81,6 +85,12 @@ pub struct SecretStatus {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DatabaseConfig {
+    pub backend: String,
+    pub role_mode: String,
+    pub privilege_mode: String,
+    pub owner_role: String,
+    pub migrator_role: String,
+    pub runtime_role: String,
     pub url: SecretStatus,
     pub pool_size: u32,
     pub pool_acquire_timeout_ms: u64,
@@ -136,6 +146,7 @@ pub struct ExportConfig {
     pub max_output_bytes: u64,
     pub stage_timeout_ms: u64,
     pub database_statement_timeout_ms: u64,
+    pub storage_query_budget_ms: u64,
 }
 
 #[non_exhaustive]
@@ -171,6 +182,11 @@ pub struct AuthenticationConfig {
     pub token_retention_purge_interval_seconds: u64,
     pub token_retention_purge_batch_size: u64,
     pub stable_token_hash_key_configured: bool,
+    pub require_stable_token_hash_key: bool,
+    pub token_hash_key_mode: String,
+    pub active_token_hash_key_id: String,
+    pub previous_token_hash_key_ids: Vec<String>,
+    pub token_hash_key_ring_identity: String,
     pub admin_groupname: String,
     pub admin_identity_scope: Option<String>,
     pub provider_config_path: SecretStatus,
@@ -213,6 +229,7 @@ pub struct PaginationConfig {
     pub default_page_limit: u64,
     pub max_page_limit: u64,
     pub max_transitive_depth: i32,
+    pub max_traversal_work_rows: i32,
 }
 
 #[non_exhaustive]
@@ -229,4 +246,100 @@ pub struct NetworkConfig {
 pub struct ClientAllowlistStatus {
     pub allows_any: bool,
     pub network_count: u64,
+}
+
+/// Effective secret-provider policy; secret values and paths are not exposed.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SecretSourceConfig {
+    pub provider: String,
+    pub file_root_configured: bool,
+    pub cache_ttl_seconds: u64,
+    pub cache_capacity_per_consumer: u64,
+    pub cache_total_bytes_per_consumer: u64,
+    pub stale_values_allowed: bool,
+    pub projected_symlinks_confined_to_root: bool,
+}
+
+/// A finite tracing sampling probability between zero and one, inclusive.
+#[derive(Debug, Clone, Copy, Serialize, PartialEq)]
+#[serde(transparent)]
+pub struct SamplingRatio(f64);
+
+impl SamplingRatio {
+    pub fn new(value: f64) -> Result<Self, ApiError> {
+        if value.is_finite() && (0.0..=1.0).contains(&value) {
+            Ok(Self(value))
+        } else {
+            Err(ApiError::InvalidSamplingRatio)
+        }
+    }
+
+    pub const fn get(self) -> f64 {
+        self.0
+    }
+}
+
+// Construction and deserialization exclude NaN, so equality is reflexive.
+impl Eq for SamplingRatio {}
+
+impl<'de> Deserialize<'de> for SamplingRatio {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Self::new(f64::deserialize(deserializer)?).map_err(de::Error::custom)
+    }
+}
+
+/// Redacted OpenTelemetry configuration advertised by the server.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TracingConfig {
+    pub enabled: bool,
+    pub protocol: String,
+    pub endpoint: SecretStatus,
+    pub static_headers: SecretStatus,
+    pub ca_certificate_configured: bool,
+    pub client_certificate_configured: bool,
+    pub client_private_key: SecretStatus,
+    pub service_name: String,
+    pub service_namespace: String,
+    pub deployment_environment: String,
+    pub sampling_mode: String,
+    pub sampling_ratio: SamplingRatio,
+    pub trust_incoming_sampling: bool,
+    pub propagate_outbound: bool,
+    pub queue_capacity: u64,
+    pub batch_size: u64,
+    pub connect_timeout_ms: u64,
+    pub export_timeout_ms: u64,
+    pub flush_timeout_ms: u64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SamplingRatio;
+
+    #[rstest::rstest]
+    #[case(0.0)]
+    #[case(0.125)]
+    #[case(1.0)]
+    fn sampling_ratio_roundtrips(#[case] value: f64) {
+        let ratio = SamplingRatio::new(value).unwrap();
+        let encoded = serde_json::to_string(&ratio).unwrap();
+        assert_eq!(ratio.get(), value);
+        assert_eq!(
+            serde_json::from_str::<SamplingRatio>(&encoded).unwrap(),
+            ratio
+        );
+    }
+
+    #[rstest::rstest]
+    #[case(-0.1)]
+    #[case(1.1)]
+    #[case(f64::NAN)]
+    #[case(f64::INFINITY)]
+    #[case(f64::NEG_INFINITY)]
+    fn sampling_ratio_rejects_invalid_values(#[case] value: f64) {
+        assert!(SamplingRatio::new(value).is_err());
+        assert!(serde_json::from_str::<SamplingRatio>(&value.to_string()).is_err());
+    }
 }

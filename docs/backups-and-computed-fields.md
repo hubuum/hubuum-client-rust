@@ -9,7 +9,9 @@ blocking equivalents.
 
 Backups are administrator-only task operations. `run()` submits the task, waits
 for a successful terminal state, and decodes the resulting versioned backup
-document.
+document. Hubuum v0.0.12 uses backup format 5; format 4 artifacts must be
+restored with a compatible older server. Preserve the server-assigned `created_at`
+instant when saving or staging a backup; the client serializes it as RFC 3339 UTC.
 
 ```rust
 use hubuum_client::BackupRequest;
@@ -25,8 +27,9 @@ assert!(document.has_supported_version());
 ```
 
 Use `submit()`, `get()`, and `output()` separately when an application needs to
-persist task IDs or control polling. Backup documents contain privileged rows,
-including credential material. Their debug output is redacted, but applications
+persist task IDs or control polling. Format 5 backups contain privileged integration configuration but exclude
+password hashes, bearer tokens, and token scopes. Their debug output is redacted,
+but applications
 must still protect serialized documents at rest and in transit. Large documents
 may also require increasing the client's `max_response_body_bytes` setting.
 
@@ -38,7 +41,8 @@ capability, the staged SHA-256, and the server-defined destructive confirmation
 phrase. `RestoreConfirmRequest::new` supplies the exact phrase.
 
 ```rust
-use hubuum_client::RestoreConfirmRequest;
+use std::time::{Duration, Instant};
+use hubuum_client::{RestoreConfirmRequest, RestoreJobStatus};
 
 let staged = client.restores().stage(&document).await?;
 let capability = staged
@@ -50,18 +54,39 @@ let inspected = client.restore_status(staged.id, &capability).await?;
 assert_eq!(inspected.sha256, staged.sha256);
 
 // Destructive: replaces all Hubuum data and invalidates existing bearer tokens.
-let restored = client
+let accepted = client
     .restores()
     .confirm(
         staged.id,
-        RestoreConfirmRequest::new(capability, staged.sha256.clone()),
+        RestoreConfirmRequest::new(capability.clone(), staged.sha256.clone()),
     )
     .await?;
+assert_eq!(accepted.status, RestoreJobStatus::Confirmed);
+
+// Confirmation queues the restore; the separate server restore executor runs it.
+let deadline = Instant::now() + Duration::from_secs(300);
+loop {
+    let status = client.restore_status(staged.id, &capability).await?;
+    if status.status.is_terminal() {
+        assert_eq!(status.status, RestoreJobStatus::Succeeded);
+        break;
+    }
+    assert!(Instant::now() < deadline, "restore did not finish in time");
+    tokio::time::sleep(Duration::from_millis(250)).await;
+}
 ```
+
+Hubuum v0.0.12 returns `202 Accepted` from confirmation. Deploy the matching
+`hubuum-admin --restore-executor` before allowing web restores. For blocking
+applications, remove `.await` and use `std::thread::sleep` in the polling loop.
+Inspect failed or expired terminal states and handle polling timeouts in the
+application; a successful confirmation alone does not prove completion.
 
 `restore_status()` is available on authenticated and unauthenticated clients and
 sends no bearer token. This matters because a successful restore invalidates the
-token that staged it. Capabilities and confirmation requests redact the secret
+token that staged it. After completion, use `hubuum-admin --reset-password` to
+recover a local administrator password and issue fresh tokens. Capabilities and
+confirmation requests redact the secret
 from debug output.
 
 ## Shared Computed Fields

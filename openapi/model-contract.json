@@ -129,7 +129,7 @@
       "rust_type": "GroupPatch",
       "direction": "request",
       "rust_only_fields": {
-        "description": "The runtime PATCH route accepts group descriptions, but v0.0.9 omits this field from UpdateGroup."
+        "description": "The runtime PATCH route accepts group descriptions, but v0.0.12 omits this field from UpdateGroup."
       }
     },
     {
@@ -271,6 +271,48 @@
       "openapi_schema": "ExportTaskDetails",
       "rust_file": "src/types/task.rs",
       "rust_type": "ExportTaskDetails",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RunningConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "RunningConfig",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "DatabaseConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "DatabaseConfig",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "ExportConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "ExportConfig",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "AuthenticationConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "AuthenticationConfig",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "PaginationConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "PaginationConfig",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SecretSourceConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "SecretSourceConfig",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "TracingConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "TracingConfig",
       "direction": "response"
     }
   ]

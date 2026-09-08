@@ -46,8 +46,8 @@ pub use config::{
     AuthenticationConfig, BackupConfig, ClientAllowlistStatus, ClientAuthenticationConfig,
     ClientConfig, ClientPaginationConfig, DEFAULT_METRICS_PATH, DatabaseConfig, EventConfig,
     ExportConfig, NetworkConfig, PaginationConfig, PermissionConfig, RemoteCallConfig,
-    RestoreConfig, RunningConfig, RunningLoginRateLimitConfig, SecretStatus, ServerConfig,
-    TaskConfig, TlsConfig,
+    RestoreConfig, RunningConfig, RunningLoginRateLimitConfig, SamplingRatio, SecretSourceConfig,
+    SecretStatus, ServerConfig, TaskConfig, TlsConfig, TracingConfig,
 };
 pub use datetime::HubuumDateTime;
 pub use event::{

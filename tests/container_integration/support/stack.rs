@@ -11,7 +11,7 @@ const DB_USER: &str = "hubuum";
 const DB_PASSWORD: &str = "hubuum_password";
 const DB_NAME: &str = "hubuum";
 const DB_IMAGE_DOCKERFILE: &str = include_str!("../fixtures/postgres/Dockerfile");
-const SERVER_IMAGE_DEFAULT: &str = "ghcr.io/hubuum/hubuum-server:main";
+const CLIENT_MANIFEST: &str = include_str!("../../../Cargo.toml");
 const LDAP_IMAGE_DEFAULT: &str = "ghcr.io/rroemhild/docker-test-openldap@sha256:3470e15c60119a1c0392cc162cdce71edfb42b55affdc69da574012f956317cd";
 const AUTH_CONFIG_DEFAULT: &str = "tests/container_integration/fixtures/auth-providers.toml";
 const LDAP_CERTIFICATE_SCRIPT: &str =
@@ -89,7 +89,14 @@ where
 }
 
 fn server_image() -> String {
-    std::env::var("HUBUUM_INTEGRATION_SERVER_IMAGE").unwrap_or_else(|_| SERVER_IMAGE_DEFAULT.into())
+    std::env::var("HUBUUM_INTEGRATION_SERVER_IMAGE").unwrap_or_else(|_| {
+        CLIENT_MANIFEST
+            .lines()
+            .find_map(|line| line.strip_prefix("server-image = "))
+            .expect("client manifest must pin its server image")
+            .trim_matches('"')
+            .to_string()
+    })
 }
 
 fn db_image() -> String {
@@ -546,6 +553,28 @@ impl StackInner {
                 &ldap_cert_volume_name,
             );
             return Err(format!("{err}\n{diagnostics}"));
+        }
+
+        if let Err(err) = container(&[
+            "run".to_string(),
+            "--rm".to_string(),
+            "--network".to_string(),
+            network_name.clone(),
+            "-e".to_string(),
+            format!("HUBUUM_DATABASE_URL={database_url}"),
+            "--entrypoint".to_string(),
+            "hubuum-admin".to_string(),
+            server_image(),
+            "--migrate".to_string(),
+        ]) {
+            cleanup_stack_resources(
+                &network_name,
+                &db_container_name,
+                &server_container_name,
+                &ldap_container_name,
+                &ldap_cert_volume_name,
+            );
+            return Err(format!("failed to migrate integration database: {err}"));
         }
 
         if let Err(err) = container(&[

@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.9",
+  "api_version": "0.0.12",
   "openapi": "3.1.0",
-  "operation_count": 202,
+  "operation_count": 204,
   "operations": [
     {
       "method": "POST",
@@ -405,6 +405,11 @@
             "$ref": "#/components/schemas/ApiErrorResponse"
           }
         },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
         "500": {
           "application/json": {
             "$ref": "#/components/schemas/ApiErrorResponse"
@@ -416,6 +421,9 @@
           "application/json"
         ],
         "401": [
+          "application/json"
+        ],
+        "404": [
           "application/json"
         ],
         "500": [
@@ -683,10 +691,12 @@
         "RemoteCallConfig",
         "RestoreConfig",
         "RunningConfig",
+        "SecretSourceConfig",
         "SecretStatus",
         "ServerConfig",
         "TaskConfig",
-        "TlsConfig"
+        "TlsConfig",
+        "TracingConfig"
       ],
       "response_schemas": {
         "200": {
@@ -1321,6 +1331,9 @@
         "query:include",
         "query:include_total",
         "query:limit",
+        "query:related.<alias>.class.name",
+        "query:related.<alias>.depth__lte",
+        "query:related.<alias>.object.<field>__<operator>",
         "query:sort"
       ],
       "path": "/api/v1/classes/by-name/{class_name}/objects",
@@ -2392,6 +2405,9 @@
         "query:include",
         "query:include_total",
         "query:limit",
+        "query:related.<alias>.class.name",
+        "query:related.<alias>.depth__lte",
+        "query:related.<alias>.object.<field>__<operator>",
         "query:sort"
       ],
       "path": "/api/v1/classes/{class_id}/",
@@ -2920,10 +2936,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "EventResponse",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -2979,10 +2997,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_HubuumClassHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -3043,10 +3063,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_HubuumClassHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -4269,10 +4291,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "EventResponse",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -4337,10 +4361,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_HubuumObjectHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -4402,10 +4428,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_HubuumObjectHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -4857,8 +4885,11 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "CollectionID",
+        "EventEntityId",
         "EventSubscription",
         "EventSubscriptionFilter",
+        "PrincipalID",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -4917,9 +4948,12 @@
         "application/json"
       ],
       "request_schema_refs": [
+        "CollectionID",
+        "EventEntityId",
         "EventSinkID",
         "EventSubscriptionFilter",
-        "NewEventSubscription"
+        "NewEventSubscription",
+        "PrincipalID"
       ],
       "request_schemas": {
         "application/json": {
@@ -4928,8 +4962,11 @@
       },
       "response_schema_refs": [
         "ApiErrorResponse",
+        "CollectionID",
+        "EventEntityId",
         "EventSubscription",
         "EventSubscriptionFilter",
+        "PrincipalID",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -5056,8 +5093,11 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "CollectionID",
+        "EventEntityId",
         "EventSubscription",
         "EventSubscriptionFilter",
+        "PrincipalID",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -5115,8 +5155,11 @@
         "application/json"
       ],
       "request_schema_refs": [
+        "CollectionID",
+        "EventEntityId",
         "EventSinkID",
         "EventSubscriptionFilter",
+        "PrincipalID",
         "UpdateEventSubscription"
       ],
       "request_schemas": {
@@ -5126,8 +5169,11 @@
       },
       "response_schema_refs": [
         "ApiErrorResponse",
+        "CollectionID",
+        "EventEntityId",
         "EventSubscription",
         "EventSubscriptionFilter",
+        "PrincipalID",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -5213,10 +5259,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "EventResponse",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -5329,10 +5377,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_CollectionHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -5393,10 +5443,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_CollectionHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -6841,10 +6893,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "EventResponse",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -7285,10 +7339,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "EventResponse",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -7442,10 +7498,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_ExportTemplateHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -7506,10 +7564,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_ExportTemplateHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -8112,10 +8172,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "EventResponse",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -8171,6 +8233,7 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "MembershipPrincipalResponse",
+        "PrincipalKind",
         "PrincipalMemberResponse",
         "ResourceRevision"
       ],
@@ -8270,6 +8333,7 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "MembershipPrincipalResponse",
+        "PrincipalKind",
         "PrincipalMemberResponse",
         "ResourceRevision"
       ],
@@ -8322,6 +8386,7 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "MembershipPrincipalResponse",
+        "PrincipalKind",
         "PrincipalMemberResponse",
         "ResourceRevision"
       ],
@@ -8378,6 +8443,7 @@
         "MeResponse",
         "MembershipPrincipalResponse",
         "Permissions",
+        "PrincipalKind",
         "ResourceRevision",
         "TokenID",
         "TokenResourceScope",
@@ -10570,10 +10636,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "EventResponse",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -11456,10 +11524,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_RemoteTargetHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -11520,10 +11590,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "HistoryResponse_RemoteTargetHistory",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -11802,10 +11874,12 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "EventResponse",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -12040,7 +12114,7 @@
         "RestoreValidationSummary"
       ],
       "response_schemas": {
-        "200": {
+        "202": {
           "application/json": {
             "$ref": "#/components/schemas/RestoreStageResponse"
           }
@@ -12072,7 +12146,7 @@
         }
       },
       "responses": {
-        "200": [
+        "202": [
           "application/json"
         ],
         "400": [
@@ -12209,6 +12283,117 @@
       ]
     },
     {
+      "method": "POST",
+      "operation_id": "postApiV1Search",
+      "parameters": [],
+      "path": "/api/v1/search",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "HubuumClassID",
+        "StructuredClassSelector",
+        "StructuredRelatedPredicate",
+        "StructuredSearchExpression",
+        "StructuredSearchField",
+        "StructuredSearchFieldPredicate",
+        "StructuredSearchOperator",
+        "StructuredSearchRequest",
+        "StructuredSearchSort",
+        "StructuredSearchSortDirection",
+        "StructuredSearchTarget"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/StructuredSearchRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "Collection",
+        "EventResponse",
+        "GroupResponse",
+        "HubuumClassExpanded",
+        "HubuumObject",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "ResourceRevision",
+        "ServiceAccountResponse",
+        "StructuredSearchResourceKind",
+        "StructuredSearchResponse",
+        "StructuredSearchResult",
+        "TaskID",
+        "UserResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/StructuredSearchResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "413": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "415": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "413": [
+          "application/json"
+        ],
+        "415": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
       "method": "GET",
       "operation_id": "getApiV1SearchStream",
       "parameters": [
@@ -12229,7 +12414,9 @@
         "ApiErrorResponse"
       ],
       "response_schemas": {
-        "200": {},
+        "200": {
+          "text/event-stream": {}
+        },
         "400": {
           "application/json": {
             "$ref": "#/components/schemas/ApiErrorResponse"
@@ -12242,11 +12429,90 @@
         }
       },
       "responses": {
-        "200": [],
+        "200": [
+          "text/event-stream"
+        ],
         "400": [
           "application/json"
         ],
         "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1SearchStream",
+      "parameters": [],
+      "path": "/api/v1/search/stream",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "HubuumClassID",
+        "StructuredClassSelector",
+        "StructuredRelatedPredicate",
+        "StructuredSearchExpression",
+        "StructuredSearchField",
+        "StructuredSearchFieldPredicate",
+        "StructuredSearchOperator",
+        "StructuredSearchRequest",
+        "StructuredSearchSort",
+        "StructuredSearchSortDirection",
+        "StructuredSearchTarget"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/StructuredSearchRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "text/event-stream": {}
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "413": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "415": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "text/event-stream"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "413": [
+          "application/json"
+        ],
+        "415": [
           "application/json"
         ]
       },
@@ -12401,10 +12667,12 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "PrincipalID",
         "Provenance",
         "ProvenanceActor",
         "ProvenancePrincipal",
-        "TaskEventResponse"
+        "TaskEventResponse",
+        "TaskID"
       ],
       "response_schemas": {
         "200": {
@@ -12512,7 +12780,7 @@
     }
   ],
   "path_count": 139,
-  "schema_count": 259,
+  "schema_count": 280,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -12562,6 +12830,7 @@
     "EventDeliveryStatus",
     "EventDeliveryStatusCounts",
     "EventDeliveryUpdateResponse",
+    "EventEntityId",
     "EventFanoutHealth",
     "EventResponse",
     "EventSink",
@@ -12695,6 +12964,7 @@
     "PrincipalCollectionPermissions",
     "PrincipalID",
     "PrincipalKey",
+    "PrincipalKind",
     "PrincipalMemberResponse",
     "PrincipalSettings",
     "PrincipalSettingsPatchDocument",
@@ -12731,14 +13001,32 @@
     "RestoreTimestamps",
     "RestoreValidationSummary",
     "RunningConfig",
+    "SecretSourceConfig",
     "SecretStatus",
     "ServerConfig",
     "ServiceAccountPointResponse",
     "ServiceAccountResponse",
     "SharedComputedScopeResponse",
+    "StructuredClassSelector",
+    "StructuredRelatedPredicate",
+    "StructuredSearchDoneEvent",
+    "StructuredSearchErrorEvent",
+    "StructuredSearchExpression",
+    "StructuredSearchField",
+    "StructuredSearchFieldPredicate",
+    "StructuredSearchOperator",
+    "StructuredSearchRequest",
+    "StructuredSearchResourceKind",
+    "StructuredSearchResponse",
+    "StructuredSearchResult",
+    "StructuredSearchSort",
+    "StructuredSearchSortDirection",
+    "StructuredSearchStartedEvent",
+    "StructuredSearchTarget",
     "TaskConfig",
     "TaskDetails",
     "TaskEventResponse",
+    "TaskID",
     "TaskKind",
     "TaskLinks",
     "TaskProgress",
@@ -12751,6 +13039,7 @@
     "TokenListState",
     "TokenResourceScope",
     "TokenScopeDetails",
+    "TracingConfig",
     "UnifiedSearchBatchResponse",
     "UnifiedSearchDoneEvent",
     "UnifiedSearchErrorEvent",
@@ -12819,6 +13108,9 @@
     },
     "AuthenticationConfig": {
       "properties": {
+        "active_token_hash_key_id": {
+          "type": "string"
+        },
         "admin_groupname": {
           "type": "string"
         },
@@ -12835,11 +13127,26 @@
           "format": "int64",
           "type": "integer"
         },
+        "previous_token_hash_key_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "provider_config_path": {
           "$ref": "#/components/schemas/SecretStatus"
         },
+        "require_stable_token_hash_key": {
+          "type": "boolean"
+        },
         "stable_token_hash_key_configured": {
           "type": "boolean"
+        },
+        "token_hash_key_mode": {
+          "type": "string"
+        },
+        "token_hash_key_ring_identity": {
+          "type": "string"
         },
         "token_lifetime_hours": {
           "format": "int64",
@@ -12863,11 +13170,16 @@
         }
       },
       "required": [
+        "active_token_hash_key_id",
         "admin_groupname",
         "login_rate_limit",
         "max_token_lifetime_hours",
+        "previous_token_hash_key_ids",
         "provider_config_path",
+        "require_stable_token_hash_key",
         "stable_token_hash_key_configured",
+        "token_hash_key_mode",
+        "token_hash_key_ring_identity",
         "token_lifetime_hours",
         "token_retention_days",
         "token_retention_purge_batch_size",
@@ -12939,6 +13251,7 @@
       "type": "object"
     },
     "BackupHistory": {
+      "additionalProperties": false,
       "properties": {
         "sections": {
           "type": "object"
@@ -12977,6 +13290,7 @@
       "type": "object"
     },
     "BackupState": {
+      "additionalProperties": false,
       "properties": {
         "sections": {
           "type": "object"
@@ -13308,6 +13622,7 @@
     },
     "CollectionID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "CollectionKey": {
@@ -13788,6 +14103,15 @@
     },
     "DatabaseConfig": {
       "properties": {
+        "backend": {
+          "type": "string"
+        },
+        "migrator_role": {
+          "type": "string"
+        },
+        "owner_role": {
+          "type": "string"
+        },
         "pool_acquire_timeout_ms": {
           "format": "int64",
           "minimum": 0,
@@ -13797,6 +14121,15 @@
           "format": "int32",
           "minimum": 0,
           "type": "integer"
+        },
+        "privilege_mode": {
+          "type": "string"
+        },
+        "role_mode": {
+          "type": "string"
+        },
+        "runtime_role": {
+          "type": "string"
         },
         "statement_timeout_ms": {
           "format": "int64",
@@ -13808,8 +14141,14 @@
         }
       },
       "required": [
+        "backend",
+        "migrator_role",
+        "owner_role",
         "pool_acquire_timeout_ms",
         "pool_size",
+        "privilege_mode",
+        "role_mode",
+        "runtime_role",
         "statement_timeout_ms",
         "url"
       ],
@@ -14251,6 +14590,11 @@
       ],
       "type": "object"
     },
+    "EventEntityId": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
     "EventFanoutHealth": {
       "properties": {
         "in_flight_events": {
@@ -14488,6 +14832,7 @@
     },
     "EventSinkID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "EventSinkKey": {
@@ -14645,15 +14990,13 @@
         },
         "actor_user_ids": {
           "items": {
-            "format": "int32",
-            "type": "integer"
+            "$ref": "#/components/schemas/PrincipalID"
           },
           "type": "array"
         },
         "collection_ids": {
           "items": {
-            "format": "int32",
-            "type": "integer"
+            "$ref": "#/components/schemas/CollectionID"
           },
           "type": "array"
         },
@@ -14665,8 +15008,7 @@
         },
         "entity_ids": {
           "items": {
-            "format": "int32",
-            "type": "integer"
+            "$ref": "#/components/schemas/EventEntityId"
           },
           "type": "array"
         },
@@ -14678,15 +15020,13 @@
         },
         "initiator_user_ids": {
           "items": {
-            "format": "int32",
-            "type": "integer"
+            "$ref": "#/components/schemas/PrincipalID"
           },
           "type": "array"
         },
         "related_collection_ids": {
           "items": {
-            "format": "int32",
-            "type": "integer"
+            "$ref": "#/components/schemas/CollectionID"
           },
           "type": "array"
         },
@@ -14783,6 +15123,11 @@
           "minimum": 0,
           "type": "integer"
         },
+        "storage_query_budget_ms": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
         "template_fuel": {
           "format": "int64",
           "minimum": 0,
@@ -14803,6 +15148,7 @@
         "output_cleanup_interval_seconds",
         "output_retention_hours",
         "stage_timeout_ms",
+        "storage_query_budget_ms",
         "template_fuel",
         "template_max_objects",
         "template_recursion_limit"
@@ -15405,6 +15751,7 @@
     },
     "ExportTemplateID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "ExportTemplateKind": {
@@ -16513,6 +16860,7 @@
     },
     "HubuumClassID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "HubuumClassRelation": {
@@ -16585,6 +16933,7 @@
     },
     "HubuumClassRelationID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "HubuumClassWithPath": {
@@ -16799,6 +17148,7 @@
     },
     "HubuumObjectID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "HubuumObjectReadResponse": {
@@ -16854,6 +17204,7 @@
     },
     "HubuumObjectRelationID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "HubuumObjectWithPath": {
@@ -18822,7 +19173,7 @@
           "type": "string"
         },
         "kind": {
-          "type": "string"
+          "$ref": "#/components/schemas/PrincipalKind"
         },
         "name": {
           "type": "string"
@@ -19764,12 +20115,17 @@
         "max_transitive_depth": {
           "format": "int32",
           "type": "integer"
+        },
+        "max_traversal_work_rows": {
+          "format": "int32",
+          "type": "integer"
         }
       },
       "required": [
         "default_page_limit",
         "max_page_limit",
-        "max_transitive_depth"
+        "max_transitive_depth",
+        "max_traversal_work_rows"
       ],
       "type": "object"
     },
@@ -20174,6 +20530,7 @@
     },
     "PrincipalID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "PrincipalKey": {
@@ -20192,6 +20549,13 @@
         "name"
       ],
       "type": "object"
+    },
+    "PrincipalKind": {
+      "enum": [
+        "human",
+        "service_account"
+      ],
+      "type": "string"
     },
     "PrincipalMemberResponse": {
       "properties": {
@@ -20548,10 +20912,13 @@
           ]
         },
         "task_id": {
-          "format": "int32",
-          "type": [
-            "integer",
-            "null"
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/TaskID"
+            }
           ]
         }
       },
@@ -20590,8 +20957,7 @@
           ]
         },
         "principal_id": {
-          "format": "int32",
-          "type": "integer"
+          "$ref": "#/components/schemas/PrincipalID"
         }
       },
       "required": [
@@ -21145,6 +21511,7 @@
     },
     "RemoteTargetID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "RemoteTargetInvokeRequest": {
@@ -21429,11 +21796,17 @@
         "restores": {
           "$ref": "#/components/schemas/RestoreConfig"
         },
+        "secrets": {
+          "$ref": "#/components/schemas/SecretSourceConfig"
+        },
         "server": {
           "$ref": "#/components/schemas/ServerConfig"
         },
         "tasks": {
           "$ref": "#/components/schemas/TaskConfig"
+        },
+        "tracing": {
+          "$ref": "#/components/schemas/TracingConfig"
         }
       },
       "required": [
@@ -21447,8 +21820,49 @@
         "permissions",
         "remote_calls",
         "restores",
+        "secrets",
         "server",
-        "tasks"
+        "tasks",
+        "tracing"
+      ],
+      "type": "object"
+    },
+    "SecretSourceConfig": {
+      "properties": {
+        "cache_capacity_per_consumer": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cache_total_bytes_per_consumer": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cache_ttl_seconds": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "file_root_configured": {
+          "type": "boolean"
+        },
+        "projected_symlinks_confined_to_root": {
+          "type": "boolean"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "stale_values_allowed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cache_capacity_per_consumer",
+        "cache_total_bytes_per_consumer",
+        "cache_ttl_seconds",
+        "file_root_configured",
+        "projected_symlinks_confined_to_root",
+        "provider",
+        "stale_values_allowed"
       ],
       "type": "object"
     },
@@ -21648,6 +22062,695 @@
       ],
       "type": "object"
     },
+    "StructuredClassSelector": {
+      "oneOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/components/schemas/HubuumClassID"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "StructuredRelatedPredicate": {
+      "additionalProperties": false,
+      "properties": {
+        "class": {
+          "$ref": "#/components/schemas/StructuredClassSelector"
+        },
+        "depth": {
+          "format": "int32",
+          "maximum": 10,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "filters": {
+          "items": {
+            "$ref": "#/components/schemas/StructuredSearchFieldPredicate"
+          },
+          "maxItems": 16,
+          "type": "array"
+        }
+      },
+      "required": [
+        "class"
+      ],
+      "type": "object"
+    },
+    "StructuredSearchDoneEvent": {
+      "properties": {
+        "kind": {
+          "$ref": "#/components/schemas/StructuredSearchResourceKind"
+        },
+        "next": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page_limit": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "version": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "page_limit",
+        "version"
+      ],
+      "type": "object"
+    },
+    "StructuredSearchErrorEvent": {
+      "properties": {
+        "kind": {
+          "$ref": "#/components/schemas/StructuredSearchResourceKind"
+        },
+        "message": {
+          "type": "string"
+        },
+        "version": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "message",
+        "version"
+      ],
+      "type": "object"
+    },
+    "StructuredSearchExpression": {
+      "oneOf": [
+        {
+          "maxProperties": 2,
+          "properties": {
+            "args": {
+              "items": {
+                "$ref": "#/components/schemas/StructuredSearchExpression"
+              },
+              "maxItems": 64,
+              "minItems": 2,
+              "type": "array"
+            },
+            "op": {
+              "enum": [
+                "and"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "args",
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "maxProperties": 2,
+          "properties": {
+            "args": {
+              "items": {
+                "$ref": "#/components/schemas/StructuredSearchExpression"
+              },
+              "maxItems": 64,
+              "minItems": 2,
+              "type": "array"
+            },
+            "op": {
+              "enum": [
+                "or"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "args",
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "maxProperties": 2,
+          "properties": {
+            "arg": {
+              "$ref": "#/components/schemas/StructuredSearchExpression"
+            },
+            "op": {
+              "enum": [
+                "not"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "arg",
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "maxProperties": 2,
+          "properties": {
+            "op": {
+              "enum": [
+                "field"
+              ],
+              "type": "string"
+            },
+            "predicate": {
+              "$ref": "#/components/schemas/StructuredSearchFieldPredicate"
+            }
+          },
+          "required": [
+            "op",
+            "predicate"
+          ],
+          "type": "object"
+        },
+        {
+          "maxProperties": 2,
+          "properties": {
+            "op": {
+              "enum": [
+                "related"
+              ],
+              "type": "string"
+            },
+            "predicate": {
+              "$ref": "#/components/schemas/StructuredRelatedPredicate"
+            }
+          },
+          "required": [
+            "op",
+            "predicate"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "StructuredSearchField": {
+      "enum": [
+        "id",
+        "name",
+        "description",
+        "collection_id",
+        "created_at",
+        "updated_at",
+        "revision",
+        "json_data",
+        "validate_schema",
+        "json_schema",
+        "identity_scope",
+        "proper_name",
+        "email",
+        "occurred_at",
+        "entity_type",
+        "entity_id",
+        "entity_name",
+        "action",
+        "actor_kind",
+        "actor_user_id",
+        "initiator_user_id",
+        "summary",
+        "metadata",
+        "managed_by",
+        "external_key",
+        "last_sync_attempted_at",
+        "last_sync_success_at",
+        "owner_group_id",
+        "created_by",
+        "disabled_at"
+      ],
+      "type": "string"
+    },
+    "StructuredSearchFieldPredicate": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "$ref": "#/components/schemas/StructuredSearchField"
+        },
+        "operator": {
+          "$ref": "#/components/schemas/StructuredSearchOperator"
+        },
+        "path": {
+          "minLength": 1,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {}
+      },
+      "required": [
+        "field",
+        "operator"
+      ],
+      "type": "object"
+    },
+    "StructuredSearchOperator": {
+      "enum": [
+        "equals",
+        "iequals",
+        "contains",
+        "icontains",
+        "startswith",
+        "istartswith",
+        "endswith",
+        "iendswith",
+        "like",
+        "regex",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "between",
+        "within_network",
+        "contains_network",
+        "contains_ip",
+        "overlaps_network",
+        "inet_equals",
+        "in",
+        "all",
+        "array_length",
+        "has_key",
+        "is_null"
+      ],
+      "type": "string"
+    },
+    "StructuredSearchRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "minLength": 1,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "filter": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/StructuredSearchExpression"
+            }
+          ]
+        },
+        "include_total": {
+          "type": "boolean"
+        },
+        "limit": {
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sort": {
+          "items": {
+            "$ref": "#/components/schemas/StructuredSearchSort"
+          },
+          "maxItems": 8,
+          "type": "array"
+        },
+        "target": {
+          "$ref": "#/components/schemas/StructuredSearchTarget"
+        },
+        "version": {
+          "format": "int32",
+          "maximum": 1,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "target",
+        "version"
+      ],
+      "type": "object"
+    },
+    "StructuredSearchResourceKind": {
+      "enum": [
+        "collection",
+        "class",
+        "object",
+        "audit_event",
+        "user",
+        "group",
+        "service_account"
+      ],
+      "type": "string"
+    },
+    "StructuredSearchResponse": {
+      "properties": {
+        "kind": {
+          "$ref": "#/components/schemas/StructuredSearchResourceKind"
+        },
+        "next": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "results": {
+          "items": {
+            "$ref": "#/components/schemas/StructuredSearchResult"
+          },
+          "type": "array"
+        },
+        "total": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "version": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "results",
+        "version"
+      ],
+      "type": "object"
+    },
+    "StructuredSearchResult": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "collection"
+              ],
+              "type": "string"
+            },
+            "resource": {
+              "$ref": "#/components/schemas/Collection"
+            }
+          },
+          "required": [
+            "kind",
+            "resource"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "class"
+              ],
+              "type": "string"
+            },
+            "resource": {
+              "$ref": "#/components/schemas/HubuumClassExpanded"
+            }
+          },
+          "required": [
+            "kind",
+            "resource"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "object"
+              ],
+              "type": "string"
+            },
+            "resource": {
+              "$ref": "#/components/schemas/HubuumObject"
+            }
+          },
+          "required": [
+            "kind",
+            "resource"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "audit_event"
+              ],
+              "type": "string"
+            },
+            "resource": {
+              "$ref": "#/components/schemas/EventResponse"
+            }
+          },
+          "required": [
+            "kind",
+            "resource"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "user"
+              ],
+              "type": "string"
+            },
+            "resource": {
+              "$ref": "#/components/schemas/UserResponse"
+            }
+          },
+          "required": [
+            "kind",
+            "resource"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "group"
+              ],
+              "type": "string"
+            },
+            "resource": {
+              "$ref": "#/components/schemas/GroupResponse"
+            }
+          },
+          "required": [
+            "kind",
+            "resource"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "service_account"
+              ],
+              "type": "string"
+            },
+            "resource": {
+              "$ref": "#/components/schemas/ServiceAccountResponse"
+            }
+          },
+          "required": [
+            "kind",
+            "resource"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "StructuredSearchSort": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "$ref": "#/components/schemas/StructuredSearchSortDirection"
+        },
+        "field": {
+          "$ref": "#/components/schemas/StructuredSearchField"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "type": "object"
+    },
+    "StructuredSearchSortDirection": {
+      "enum": [
+        "asc",
+        "desc"
+      ],
+      "type": "string"
+    },
+    "StructuredSearchStartedEvent": {
+      "properties": {
+        "kind": {
+          "$ref": "#/components/schemas/StructuredSearchResourceKind"
+        },
+        "version": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "version"
+      ],
+      "type": "object"
+    },
+    "StructuredSearchTarget": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "collection"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "class"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "class": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/StructuredClassSelector"
+                }
+              ]
+            },
+            "kind": {
+              "enum": [
+                "object"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "audit_event"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "user"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "group"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "service_account"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
     "TaskConfig": {
       "properties": {
         "computed_reindex_batch_size": {
@@ -21773,6 +22876,11 @@
         "task_id"
       ],
       "type": "object"
+    },
+    "TaskID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
     },
     "TaskKind": {
       "enum": [
@@ -22100,6 +23208,7 @@
     },
     "TokenID": {
       "format": "int32",
+      "minimum": 1,
       "type": "integer"
     },
     "TokenListState": {
@@ -22192,6 +23301,98 @@
           ]
         }
       },
+      "type": "object"
+    },
+    "TracingConfig": {
+      "properties": {
+        "batch_size": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ca_certificate_configured": {
+          "type": "boolean"
+        },
+        "client_certificate_configured": {
+          "type": "boolean"
+        },
+        "client_private_key": {
+          "$ref": "#/components/schemas/SecretStatus"
+        },
+        "connect_timeout_ms": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "deployment_environment": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "endpoint": {
+          "$ref": "#/components/schemas/SecretStatus"
+        },
+        "export_timeout_ms": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "flush_timeout_ms": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "propagate_outbound": {
+          "type": "boolean"
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "queue_capacity": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sampling_mode": {
+          "type": "string"
+        },
+        "sampling_ratio": {
+          "format": "double",
+          "type": "number"
+        },
+        "service_name": {
+          "type": "string"
+        },
+        "service_namespace": {
+          "type": "string"
+        },
+        "static_headers": {
+          "$ref": "#/components/schemas/SecretStatus"
+        },
+        "trust_incoming_sampling": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "batch_size",
+        "ca_certificate_configured",
+        "client_certificate_configured",
+        "client_private_key",
+        "connect_timeout_ms",
+        "deployment_environment",
+        "enabled",
+        "endpoint",
+        "export_timeout_ms",
+        "flush_timeout_ms",
+        "propagate_outbound",
+        "protocol",
+        "queue_capacity",
+        "sampling_mode",
+        "sampling_ratio",
+        "service_name",
+        "service_namespace",
+        "static_headers",
+        "trust_incoming_sampling"
+      ],
       "type": "object"
     },
     "UnifiedSearchBatchResponse": {
@@ -22926,5 +24127,5 @@
       "type": "object"
     }
   },
-  "spec_sha256": "0a77a9c04ea80a904410c393a98a2988f96e1c6b2c37f7785acfd50ef2737a54"
+  "spec_sha256": "9c532b87aa4046b00efdec9c0014d6dd5abd30671e21660631588891e57f280a"
 }

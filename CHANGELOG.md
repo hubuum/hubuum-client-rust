@@ -6,6 +6,43 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Prepare `hubuum_client` 0.10.0 for Hubuum server v0.0.12, pinning its
+  204-operation OpenAPI contract and immutable multi-platform image
+  `sha256:6441ccbe2906d80d0e6ef5e8a9b8e4a7e1afc9c39c8d43d93ac62a5cd0e6e865`.
+- Expose administrative storage and database-role settings, secret-source policy,
+  redacted tracing settings, token-hash key-ring state, export query budgets,
+  and traversal work limits. `SamplingRatio` validates finite probabilities in
+  the inclusive range 0..=1 while preserving `RunningConfig`'s `Eq` contract.
+
+### Changed
+
+- **Breaking (backup compatibility):** `CURRENT_BACKUP_VERSION` is now 5.
+  Version 4 artifacts must be restored with a compatible older server. Create
+  new format 5 backups after upgrading the server; changing the version field
+  on an old artifact does not convert it. Format 5 excludes password hashes and
+  tokens; reset a local administrator password and issue fresh tokens after restore.
+- **Breaking (restore completion):** Hubuum v0.0.12 confirmation returns a queued
+  `Confirmed` response rather than completing synchronously. Callers must retain
+  the capability and poll `restore_status()` until success or failure. Deploy
+  `hubuum-admin --restore-executor` and run `hubuum-admin --migrate` separately
+  before starting the new server. See `docs/backups-and-computed-fields.md`.
+- Integration startup now performs the required migration and provisions the
+  restore executor. Complete downstream coverage includes blocking and async
+  full restore completion on the wrapper's disposable database. These new
+  success checks currently expose a v0.0.12 server drain-state race and block
+  final compatibility certification; see `COMPATIBILITY.md`.
+- Document the new POST structured-search endpoints and related-object filter
+  groups as raw API extensions until dedicated typed builders are available.
+  Public client features, dependencies, and the Rust 1.88 MSRV are unchanged.
+
+### Fixed
+
+- Preserve the server's backup creation instant as RFC 3339 UTC on upload.
+  Removing the old timezone-free serializer fixes HTTP 400 responses when
+  staging a downloaded format 5 backup through either client mode.
+
 ## [0.9.1] - 2026-08-29
 
 ### Added
