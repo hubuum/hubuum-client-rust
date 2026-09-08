@@ -73,3 +73,17 @@ Neither restore completed, so token invalidation and recovery of the deleted
 object could not be verified. The complete integration command retains its
 success assertions and fails on these conditions; neither failure counts as
 a compatibility pass.
+
+The fixes in [server PR #379](https://github.com/hubuum/hubuum/pull/379), commit
+`90a28ecd`, passed the canonical combined client integration command using a
+local build of the production Dockerfile, image ID
+`3664605ff19fc8ebd87badd7de98ad4c5cfab0f040d9c973a29710969159b828`.
+All 89 library and 24 ordinary consumer tests passed, followed by blocking and
+async full restore completion and recovery after each restore. Both paths
+verified token invalidation and recovery of the deleted object after a new
+login. Eight objects with JSON `null` data survived the restores.
+
+This evidence applies to the proposed server fix. The declared immutable
+v0.0.12 image still has both bugs; final compatibility certification requires
+a released server image containing the fixes and a passing run against that
+new pin.
