@@ -31,8 +31,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Integration startup now performs the required migration and provisions the
   restore executor. Complete downstream coverage includes blocking and async
   full restore completion on the wrapper's disposable database. These new
-  success checks currently expose a v0.0.12 server drain-state race and block
-  final compatibility certification; see `COMPATIBILITY.md`.
+  success checks currently expose a v0.0.12 server drain-state race and a
+  failure to restore JSON `null` object data. Both block final compatibility
+  certification; see `COMPATIBILITY.md`.
 - Document the new POST structured-search endpoints and related-object filter
   groups as raw API extensions until dedicated typed builders are available.
   Public client features, dependencies, and the Rust 1.88 MSRV are unchanged.

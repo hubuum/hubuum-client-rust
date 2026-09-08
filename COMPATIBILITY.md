@@ -13,7 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
-| 0.10.0 (unreleased) | 0.0.12 | `ghcr.io/hubuum/hubuum-server@sha256:6441ccbe2906d80d0e6ef5e8a9b8e4a7e1afc9c39c8d43d93ac62a5cd0e6e865` | Candidate target; 89 library and 24 consumer integration tests pass; full restore completion is blocked by the v0.0.12 server drain-state race described below |
+| 0.10.0 (unreleased) | 0.0.12 | `ghcr.io/hubuum/hubuum-server@sha256:6441ccbe2906d80d0e6ef5e8a9b8e4a7e1afc9c39c8d43d93ac62a5cd0e6e865` | Candidate target; 89 library and 24 consumer integration tests pass; full restore completion is blocked by the v0.0.12 server drain-state race and JSON-null restore failure described below |
 | 0.9.1 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; JSON-path validation, advertised pagination limits, atomic export downloads, property-level OpenAPI model reconciliation, dependency and release-workflow security updates, with pinned Docker-backed library plus downstream-consumer integration coverage |
 | 0.9.0 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; revision and ETag concurrency, import v2, settings JSON Patch, revision-owned permission and membership responses, computed-field points, token lifecycle state and renewal, with pinned Docker-backed library plus downstream-consumer integration coverage |
 | 0.8.0 | 0.0.8 | `ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6` | Declared target; property-complete v0.0.8 cardinality, core-import timestamp, and export-timing models with pinned Docker-backed library plus downstream-consumer integration coverage |
@@ -54,8 +54,22 @@ waiting loop can wait for it. Confirmation returns 202, but capability polling
 then reports `Failed` with `PostgreSQL persisted restore drain state failed
 contract validation`.
 
-This is reproducible with the released v0.0.12 image. The complete integration
-command keeps the success assertion and fails on this condition; it does not
-turn the failure into a compatibility pass. See the server's
+This is reproducible with the released v0.0.12 image. See the server's
 [`StorageRestoreDrainState::try_new`](https://github.com/hubuum/hubuum/blob/v0.0.12/crates/hubuum-storage-core/src/restore.rs)
 and [`wait_for_instances_drained`](https://github.com/hubuum/hubuum/blob/v0.0.12/src/restores/mod.rs).
+
+A fresh pinned run on 2026-09-08 passed all 89 library and 24 ordinary consumer
+tests, then reached restore execution beyond the drain race. Both blocking and
+async full restore jobs failed with a PostgreSQL not-null violation on
+`hubuumobject.data`. The server-produced backups contained eight objects with
+JSON `null` data. The server's
+[`insert_restore_rows`](https://github.com/hubuum/hubuum/blob/v0.0.12/crates/hubuum-storage-postgres/src/operations/restore_lifecycle.rs)
+uses `jsonb_populate_recordset`, which converts these values into SQL `NULL`.
+Read-only database probes confirmed that conversion and that the retained
+client-staged backups preserved the server's state, history, and creation
+instant.
+
+Neither restore completed, so token invalidation and recovery of the deleted
+object could not be verified. The complete integration command retains its
+success assertions and fails on these conditions; neither failure counts as
+a compatibility pass.
