@@ -9,7 +9,7 @@ blocking equivalents.
 
 Backups are administrator-only task operations. `run()` submits the task, waits
 for a successful terminal state, and decodes the resulting versioned backup
-document. Hubuum v0.0.12 uses backup format 5; format 4 artifacts must be
+document. Hubuum v0.0.13 uses backup format 5; format 4 artifacts must be
 restored with a compatible older server. Preserve the server-assigned `created_at`
 instant when saving or staging a backup; the client serializes it as RFC 3339 UTC.
 
@@ -76,8 +76,10 @@ loop {
 }
 ```
 
-Hubuum v0.0.12 returns `202 Accepted` from confirmation. Deploy the matching
-`hubuum-admin --restore-executor` before allowing web restores. For blocking
+Hubuum v0.0.13 returns `202 Accepted` from confirmation. Deploy the matching
+`hubuum-admin --restore-executor` before allowing web restores. Upgrade server,
+administrator, and template-worker binaries together, including any separately
+deployed restore executor, so the v0.0.13 restore fixes apply. For blocking
 applications, remove `.await` and use `std::thread::sleep` in the polling loop.
 Inspect failed or expired terminal states and handle polling timeouts in the
 application; a successful confirmation alone does not prove completion.

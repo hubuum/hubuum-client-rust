@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{HubuumDateTime, PrincipalId, RestoreId};
 
-/// Backup document version produced and accepted by Hubuum server v0.0.12.
+/// Backup document version produced and accepted by Hubuum server v0.0.13.
 pub const CURRENT_BACKUP_VERSION: i32 = 5;
 
 /// Exact phrase required to confirm a destructive full-system restore.
@@ -308,7 +308,7 @@ mod tests {
         let document: BackupDocument = serde_json::from_value(serde_json::json!({
             "backup_version": CURRENT_BACKUP_VERSION,
             "created_at": "2024-01-01T01:02:03.456789Z",
-            "source_version": "0.0.12",
+            "source_version": "0.0.13",
             "state": { "sections": {} },
             "history": null,
             "manifest": { "item_counts": {}, "exclusions": [] }

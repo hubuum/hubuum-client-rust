@@ -8,9 +8,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
-- Prepare `hubuum_client` 0.10.0 for Hubuum server v0.0.12, pinning its
+- This release explicitly targets Hubuum server v0.0.13, pinning its
   204-operation OpenAPI contract and immutable multi-platform image
-  `sha256:6441ccbe2906d80d0e6ef5e8a9b8e4a7e1afc9c39c8d43d93ac62a5cd0e6e865`.
+  `sha256:512562e789d6430875c5075faf832a9669a4f266f7fe9fbf8c1524b49a6476c5`.
 - Expose administrative storage and database-role settings, secret-source policy,
   redacted tracing settings, token-hash key-ring state, export query budgets,
   and traversal work limits. `SamplingRatio` validates finite probabilities in
@@ -23,17 +23,19 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   new format 5 backups after upgrading the server; changing the version field
   on an old artifact does not convert it. Format 5 excludes password hashes and
   tokens; reset a local administrator password and issue fresh tokens after restore.
-- **Breaking (restore completion):** Hubuum v0.0.12 confirmation returns a queued
+- **Breaking (restore completion):** Hubuum v0.0.13 confirmation returns a queued
   `Confirmed` response rather than completing synchronously. Callers must retain
   the capability and poll `restore_status()` until success or failure. Deploy
-  `hubuum-admin --restore-executor` and run `hubuum-admin --migrate` separately
-  before starting the new server. See `docs/backups-and-computed-fields.md`.
+  the matching v0.0.13 `hubuum-admin --restore-executor` and run
+  `hubuum-admin --migrate` separately before starting the new server. Upgrade
+  server, administrator, and template-worker binaries together so the restore
+  fixes apply. See `docs/backups-and-computed-fields.md`.
 - Integration startup now performs the required migration and provisions the
   restore executor. Complete downstream coverage includes blocking and async
-  full restore completion on the wrapper's disposable database. These new
-  success checks currently expose a v0.0.12 server drain-state race and a
-  failure to restore JSON `null` object data. Both block final compatibility
-  certification; see `COMPATIBILITY.md`.
+  full restore completion on the wrapper's disposable database, token
+  invalidation, and recovery of a deleted object after administrator password
+  reset. Server v0.0.13 fixes the drain-state race and JSON `null` insertion
+  failure found during v0.0.12 verification; see `COMPATIBILITY.md`.
 - Document the new POST structured-search endpoints and related-object filter
   groups as raw API extensions until dedicated typed builders are available.
   Public client features, dependencies, and the Rust 1.88 MSRV are unchanged.

@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.12 OpenAPI gaps
+# Known Hubuum server v0.0.13 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.12
+The pinned client contract records these limitations in the server v0.0.13
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not
@@ -49,9 +49,3 @@ Rust wire models:
 - Server traversal, export, and template batch resource limits may reject work
   that previously fit older limits. The client preserves the server error;
   callers must narrow queries or reduce traversal depth and template workloads.
-
-- **Runtime blocker in v0.0.12:** the restore executor can reject a live server
-  instance that has not yet acknowledged the new drain generation, turning a
-  queued restore into a failed terminal status. The client preserves this
-  failure and does not retry the destructive operation. Full restore success
-  remains asserted in the integration suite; see `COMPATIBILITY.md`.

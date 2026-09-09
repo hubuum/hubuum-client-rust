@@ -534,7 +534,7 @@ fn backup_document_json() -> serde_json::Value {
     json!({
         "backup_version": 5,
         "created_at": "2024-01-01T01:02:03.456789+00:00",
-        "source_version": "0.0.12",
+        "source_version": "0.0.13",
         "state": { "sections": {} },
         "history": { "sections": {} },
         "manifest": { "item_counts": { "principals": 1 }, "exclusions": [] }
@@ -590,7 +590,7 @@ fn restore_stage_json(status: &str, include_capability: bool) -> serde_json::Val
         "updated_at": ts(),
         "validation": {
             "backup_version": 5,
-            "source_version": "0.0.12",
+            "source_version": "0.0.13",
             "includes_history": true,
             "total_items": 1
         },
