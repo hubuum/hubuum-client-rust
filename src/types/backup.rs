@@ -1,12 +1,12 @@
 use std::collections::BTreeMap;
 
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 use super::{HubuumDateTime, PrincipalId, RestoreId};
 
-/// Backup document version produced and accepted by Hubuum server v0.0.9.
-pub const CURRENT_BACKUP_VERSION: i32 = 4;
+/// Backup document version produced and accepted by Hubuum server v0.0.13.
+pub const CURRENT_BACKUP_VERSION: i32 = 5;
 
 /// Exact phrase required to confirm a destructive full-system restore.
 pub const RESTORE_CONFIRMATION_PHRASE: &str = "REPLACE ALL HUBUUM DATA";
@@ -90,19 +90,12 @@ pub struct BackupManifest {
 #[serde(deny_unknown_fields)]
 pub struct BackupDocument {
     pub backup_version: i32,
-    #[serde(serialize_with = "serialize_backup_datetime")]
+    /// Server-assigned creation instant, preserved as RFC 3339 UTC during restore.
     pub created_at: HubuumDateTime,
     pub source_version: String,
     pub state: BackupState,
     pub history: Option<BackupHistory>,
     pub manifest: BackupManifest,
-}
-
-fn serialize_backup_datetime<S>(value: &HubuumDateTime, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.collect_str(&value.0.naive_utc().format("%Y-%m-%dT%H:%M:%S%.f"))
 }
 
 impl std::fmt::Debug for BackupDocument {
@@ -311,11 +304,11 @@ mod tests {
     }
 
     #[test]
-    fn backup_document_serializes_a_restore_compatible_naive_timestamp() {
+    fn backup_document_preserves_the_server_creation_instant() {
         let document: BackupDocument = serde_json::from_value(serde_json::json!({
             "backup_version": CURRENT_BACKUP_VERSION,
-            "created_at": "2024-01-01T01:02:03.456789",
-            "source_version": "0.0.2",
+            "created_at": "2024-01-01T01:02:03.456789Z",
+            "source_version": "0.0.13",
             "state": { "sections": {} },
             "history": null,
             "manifest": { "item_counts": {}, "exclusions": [] }
@@ -324,7 +317,7 @@ mod tests {
 
         assert_eq!(
             serde_json::to_value(document).unwrap()["created_at"],
-            "2024-01-01T01:02:03.456789"
+            "2024-01-01T01:02:03.456789+00:00"
         );
     }
 }

@@ -7,6 +7,11 @@ publish = false
 
 [features]
 integration-tests = []
+restore-tests = ["integration-tests"]
+
+[[test]]
+name = "restore"
+required-features = ["restore-tests"]
 
 [dependencies]
 hubuum_client = { path = "..", features = ["async", "blocking"] }

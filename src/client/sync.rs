@@ -3638,6 +3638,8 @@ impl Restores {
             .ok_or_else(|| ApiError::EmptyResult("Restore stage returned empty result".into()))
     }
 
+    /// Queue a validated restore. Acceptance does not mean the restore is complete.
+    /// Poll [`Self::status`] with the capability until its status is terminal.
     pub fn confirm(
         &self,
         restore_id: impl Into<RestoreId>,

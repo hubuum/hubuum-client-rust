@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.9.1 targets Hubuum server v0.0.9. See the repository's
+//! Version 0.10.0 targets Hubuum server v0.0.13. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -45,7 +45,7 @@ pub mod types;
 mod endpoints;
 
 /// Hubuum server release targeted by this client release.
-pub const TARGET_SERVER_VERSION: &str = "0.0.9";
+pub const TARGET_SERVER_VERSION: &str = "0.0.13";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
@@ -106,13 +106,14 @@ pub use types::{
     RemoteCallConfig, RemoteCallResultId, RemoteTargetHistory, ResourceRevision, RestoreCapability,
     RestoreConfig, RestoreConfirmRequest, RestoreId, RestoreJobStatus, RestoreStageResponse,
     RestoreTimestamps, RestoreValidationSummary, Revisioned, RunningConfig,
-    RunningLoginRateLimitConfig, SecretStatus, ServerConfig, SharedComputedScope, TaskConfig,
-    TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks, TaskProgress,
-    TaskQueueStateResponse, TaskResponse, TaskStatus, TlsConfig, Token, TokenId, TokenListState,
-    TokenResourceScope, TokenScopeDetails, TypedObject, UnifiedSearchBatchResponse,
-    UnifiedSearchDoneEvent, UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind,
-    UnifiedSearchNext, UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent,
-    UpdateEventSink, UpdateEventSubscription, UserParams, ValidatedExportScope,
+    RunningLoginRateLimitConfig, SamplingRatio, SecretSourceConfig, SecretStatus, ServerConfig,
+    SharedComputedScope, TaskConfig, TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind,
+    TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, TlsConfig, Token,
+    TokenId, TokenListState, TokenResourceScope, TokenScopeDetails, TracingConfig, TypedObject,
+    UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
+    UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
+    UserParams, ValidatedExportScope,
 };
 
 #[cfg(feature = "blocking")]

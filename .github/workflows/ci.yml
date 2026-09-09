@@ -21,8 +21,8 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  HUBUUM_TARGET_SERVER_VERSION: "0.0.9"
-  HUBUUM_TARGET_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db
+  HUBUUM_TARGET_SERVER_VERSION: "0.0.13"
+  HUBUUM_TARGET_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server@sha256:512562e789d6430875c5075faf832a9669a4f266f7fe9fbf8c1524b49a6476c5
 
 jobs:
   quality:

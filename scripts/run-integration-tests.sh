@@ -159,6 +159,7 @@ suffix="$(date +%s)-$$-${RANDOM}"
 NETWORK_NAME="hubuum-it-net-${suffix}"
 DB_CONTAINER="hubuum-it-db-${suffix}"
 SERVER_CONTAINER="hubuum-it-server-${suffix}"
+RESTORE_EXECUTOR_CONTAINER="hubuum-it-restore-executor-${suffix}"
 LDAP_CONTAINER="hubuum-it-ldap-${suffix}"
 LDAP_CERT_VOLUME="hubuum-it-ldap-certs-${suffix}"
 
@@ -182,9 +183,13 @@ print_server_diagnostics() {
 }
 
 cleanup() {
+    if [[ -n "${RESTORE_PROBE_FILE:-}" ]]; then
+        rm -f -- "${RESTORE_PROBE_FILE}"
+    fi
     if is_true "${KEEP_CONTAINERS}"; then
         echo "Keeping integration containers/network:"
         echo "  server=${SERVER_CONTAINER}"
+        echo "  restore_executor=${RESTORE_EXECUTOR_CONTAINER}"
         echo "  db=${DB_CONTAINER}"
         echo "  ldap=${LDAP_CONTAINER}"
         echo "  ldap_certs=${LDAP_CERT_VOLUME}"
@@ -192,7 +197,7 @@ cleanup() {
         return
     fi
 
-    container rm -f "${SERVER_CONTAINER}" "${DB_CONTAINER}" "${LDAP_CONTAINER}" >/dev/null 2>&1 || true
+    container rm -f "${RESTORE_EXECUTOR_CONTAINER}" "${SERVER_CONTAINER}" "${DB_CONTAINER}" "${LDAP_CONTAINER}" >/dev/null 2>&1 || true
     container volume rm "${LDAP_CERT_VOLUME}" >/dev/null 2>&1 || true
     container network rm "${NETWORK_NAME}" >/dev/null 2>&1 || true
 }
@@ -206,7 +211,7 @@ wait_for_db() {
         status="$(container inspect -f '{{.State.Status}}' "${DB_CONTAINER}" 2>/dev/null || true)"
         health="$(container inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${DB_CONTAINER}" 2>/dev/null || true)"
 
-        if [[ "${health}" == "healthy" ]]; then
+        if container exec "${DB_CONTAINER}" pg_isready -h 127.0.0.1 -U "${DB_USER}" -d "${DB_NAME}" >/dev/null 2>&1; then
             return 0
         fi
 
@@ -403,6 +408,13 @@ wait_for_db
 
 DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_CONTAINER}/${DB_NAME}"
 
+echo "Applying Hubuum schema migrations with the target server image"
+container run --rm \
+    --network "${NETWORK_NAME}" \
+    -e "HUBUUM_DATABASE_URL=${DATABASE_URL}" \
+    --entrypoint hubuum-admin \
+    "${SERVER_IMAGE}" --migrate
+
 echo "Starting server container: ${SERVER_CONTAINER} (${SERVER_IMAGE})"
 container run -d \
     --name "${SERVER_CONTAINER}" \
@@ -431,6 +443,14 @@ BASE_URL="http://127.0.0.1:${MAPPED_PORT}"
 wait_for_server_readiness "${BASE_URL}"
 ADMIN_PASSWORD="$(resolve_admin_password)"
 apply_seed_if_requested
+
+echo "Starting restore executor: ${RESTORE_EXECUTOR_CONTAINER}"
+container run -d \
+    --name "${RESTORE_EXECUTOR_CONTAINER}" \
+    --network "${NETWORK_NAME}" \
+    -e "HUBUUM_DATABASE_URL=${DATABASE_URL}" \
+    --entrypoint hubuum-admin \
+    "${SERVER_IMAGE}" --restore-executor >/dev/null
 
 export HUBUUM_INTEGRATION_BASE_URL="${BASE_URL}"
 export HUBUUM_INTEGRATION_ADMIN_PASSWORD="${ADMIN_PASSWORD}"
@@ -470,4 +490,23 @@ if [[ "${RUN_E2E_CLIENT}" == "1" ]]; then
     fi
 
     "${E2E_CMD[@]}"
+
+    # These tests replace the entire database. Run them only after all ordinary
+    # suites finish, and only against the disposable stack created above.
+    export HUBUUM_INTEGRATION_DISPOSABLE_BASE_URL="${BASE_URL}"
+    RESTORE_PROBE_FILE="$(mktemp)"
+    export HUBUUM_INTEGRATION_RESTORE_PROBE_FILE="${RESTORE_PROBE_FILE}"
+    for restore_case in blocking_restore_confirmation async_restore_confirmation; do
+        ADMIN_PASSWORD="$(reset_admin_password)"
+        export HUBUUM_INTEGRATION_ADMIN_PASSWORD="${ADMIN_PASSWORD}"
+        cargo test --locked -p e2e_client \
+            --features integration-tests,restore-tests --test restore \
+            -- --ignored --exact "${restore_case}" --test-threads=1
+        # Format 5 deliberately excludes password hashes and bearer tokens.
+        ADMIN_PASSWORD="$(reset_admin_password)"
+        export HUBUUM_INTEGRATION_ADMIN_PASSWORD="${ADMIN_PASSWORD}"
+        cargo test --locked -p e2e_client \
+            --features integration-tests,restore-tests --test restore \
+            -- --ignored --exact restore_recovery --test-threads=1
+    done
 fi

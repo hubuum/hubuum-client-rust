@@ -11,7 +11,8 @@ use hubuum_client::types::{
     ExportTemplateRunRequest, FilterOperator, FullImportGraph, FullImportRequest, HubuumDateTime,
     ImportGraph, ImportIdentityScopeInput, ImportRequest, NewEventSink, NewEventSubscription,
     Permissions, PersonalComputedFieldDefinitionRequest, RestoreCapability, RestoreConfirmRequest,
-    SortDirection, UnifiedSearchEvent, UnifiedSearchKind, UpdateEventSubscription,
+    RestoreJobStatus, SortDirection, UnifiedSearchEvent, UnifiedSearchKind,
+    UpdateEventSubscription,
 };
 use hubuum_client::{
     ApiError, BaseUrl, ClassGet, ClassPatch, ClassRelationCreateOptions, Client,
@@ -352,7 +353,13 @@ fn running_config_json() -> serde_json::Value {
             "url": { "configured": true },
             "pool_size": 20,
             "pool_acquire_timeout_ms": 5000,
-            "statement_timeout_ms": 30000
+            "statement_timeout_ms": 30000,
+            "backend": "postgresql",
+            "role_mode": "single",
+            "privilege_mode": "warn",
+            "owner_role": "hubuum_owner",
+            "migrator_role": "hubuum_migrator",
+            "runtime_role": "hubuum_runtime"
         },
         "tasks": {
             "workers": 4,
@@ -394,7 +401,8 @@ fn running_config_json() -> serde_json::Value {
             "template_max_objects": 10000,
             "max_output_bytes": 16777216,
             "stage_timeout_ms": 30000,
-            "database_statement_timeout_ms": 30000
+            "database_statement_timeout_ms": 30000,
+            "storage_query_budget_ms": 30000
         },
         "backups": {
             "output_retention_hours": 24,
@@ -435,7 +443,12 @@ fn running_config_json() -> serde_json::Value {
                 "valkey_url": { "configured": false },
                 "valkey_prefix": "hubuum:login-rate-limit:",
                 "valkey_io_timeout_ms": 1000
-            }
+            },
+            "require_stable_token_hash_key": false,
+            "token_hash_key_mode": "ring",
+            "active_token_hash_key_id": "current",
+            "previous_token_hash_key_ids": ["previous"],
+            "token_hash_key_ring_identity": "redacted-ring-identity"
         },
         "permissions": {
             "backend": "database",
@@ -448,7 +461,8 @@ fn running_config_json() -> serde_json::Value {
         "pagination": {
             "default_page_limit": 100,
             "max_page_limit": 1000,
-            "max_transitive_depth": 10
+            "max_transitive_depth": 10,
+            "max_traversal_work_rows": 100000
         },
         "network": {
             "trust_ip_headers": false,
@@ -458,6 +472,36 @@ fn running_config_json() -> serde_json::Value {
                 "allows_any": true,
                 "network_count": 0
             }
+        },
+        "secrets": {
+            "provider": "environment",
+            "file_root_configured": false,
+            "cache_ttl_seconds": 60,
+            "cache_capacity_per_consumer": 256,
+            "cache_total_bytes_per_consumer": 1048576,
+            "stale_values_allowed": false,
+            "projected_symlinks_confined_to_root": true
+        },
+        "tracing": {
+            "enabled": false,
+            "protocol": "http/protobuf",
+            "endpoint": { "configured": false },
+            "static_headers": { "configured": false },
+            "ca_certificate_configured": false,
+            "client_certificate_configured": false,
+            "client_private_key": { "configured": false },
+            "service_name": "hubuum",
+            "service_namespace": "hubuum",
+            "deployment_environment": "test",
+            "sampling_mode": "ratio",
+            "sampling_ratio": 0.125,
+            "trust_incoming_sampling": false,
+            "propagate_outbound": true,
+            "queue_capacity": 2048,
+            "batch_size": 512,
+            "connect_timeout_ms": 1000,
+            "export_timeout_ms": 5000,
+            "flush_timeout_ms": 1000
         }
     })
 }
@@ -488,9 +532,9 @@ fn db_state_json() -> serde_json::Value {
 
 fn backup_document_json() -> serde_json::Value {
     json!({
-        "backup_version": 4,
-        "created_at": ts(),
-        "source_version": "0.0.2",
+        "backup_version": 5,
+        "created_at": "2024-01-01T01:02:03.456789+00:00",
+        "source_version": "0.0.13",
         "state": { "sections": {} },
         "history": { "sections": {} },
         "manifest": { "item_counts": { "principals": 1 }, "exclusions": [] }
@@ -545,8 +589,8 @@ fn restore_stage_json(status: &str, include_capability: bool) -> serde_json::Val
         "created_at": ts(),
         "updated_at": ts(),
         "validation": {
-            "backup_version": 4,
-            "source_version": "0.0.2",
+            "backup_version": 5,
+            "source_version": "0.0.13",
             "includes_history": true,
             "total_items": 1
         },
@@ -2430,6 +2474,15 @@ fn sync_supports_meta_endpoints() {
         .admin_config()
         .expect("admin_config request should succeed");
     assert_eq!(config.server.bind_port, 8080);
+    assert_eq!(config.database.backend, "postgresql");
+    assert_eq!(
+        config.authentication.previous_token_hash_key_ids,
+        ["previous"]
+    );
+    assert_eq!(config.exports.storage_query_budget_ms, 30000);
+    assert_eq!(config.pagination.max_traversal_work_rows, 100000);
+    assert_eq!(config.tracing.sampling_ratio.get(), 0.125);
+    assert_eq!(config.secrets.provider, "environment");
     assert!(config.database.url.configured);
     assert_eq!(config.backups.output_retention_hours, 24);
     assert!(config.authentication.token_retention_purge_enabled);
@@ -2530,6 +2583,15 @@ async fn async_supports_meta_endpoints() {
         .await
         .expect("admin_config request should succeed");
     assert_eq!(config.server.bind_port, 8080);
+    assert_eq!(config.database.backend, "postgresql");
+    assert_eq!(
+        config.authentication.previous_token_hash_key_ids,
+        ["previous"]
+    );
+    assert_eq!(config.exports.storage_query_budget_ms, 30000);
+    assert_eq!(config.pagination.max_traversal_work_rows, 100000);
+    assert_eq!(config.tracing.sampling_ratio.get(), 0.125);
+    assert_eq!(config.secrets.provider, "environment");
     assert!(config.authentication.stable_token_hash_key_configured);
     assert!(config.authentication.token_retention_purge_enabled);
     assert_eq!(config.authentication.token_retention_days, 30);
@@ -6111,9 +6173,9 @@ fn sync_backups_and_restores_cover_privileged_and_capability_routes() {
                 "sha256": "abc123",
                 "confirmation": "REPLACE ALL HUBUUM DATA"
             }));
-        then.status(200)
+        then.status(202)
             .header("content-type", "application/json")
-            .json_body(restore_stage_json("succeeded", false));
+            .json_body(restore_stage_json("confirmed", false));
     });
 
     let client = sync_client(&server);
@@ -6149,7 +6211,111 @@ fn sync_backups_and_restores_cover_privileged_and_capability_routes() {
             RestoreConfirmRequest::new(capability, staged.sha256),
         )
         .expect("restore confirm should succeed");
-    assert!(restored.status.is_terminal());
+    assert_eq!(restored.status, RestoreJobStatus::Confirmed);
+    assert!(!restored.status.is_terminal());
+
+    submit.assert_calls(1);
+    output.assert_calls(1);
+    stage.assert_calls(1);
+    status.assert_calls(1);
+    confirm.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_backups_and_restores_cover_privileged_and_capability_routes() {
+    let server = MockServer::start();
+    mock_login(&server);
+
+    let submit = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/backups")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .header("idempotency-key", "backup-once")
+            .json_body(json!({"include_history": true}));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(backup_task_json());
+    });
+    let output = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/backups/44/output")
+            .header("authorization", format!("Bearer {}", TOKEN));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(backup_document_json());
+    });
+    let stage = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/restores")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .json_body(backup_document_json());
+        then.status(201)
+            .header("content-type", "application/json")
+            .json_body(restore_stage_json("validated", true));
+    });
+    let status = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1/restores/9/status")
+            .header("x-hubuum-restore-capability", "restore-secret")
+            .header_missing("authorization");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(restore_stage_json("validated", false));
+    });
+    let confirm = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/restores/9/confirm")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .json_body(json!({
+                "restore_capability": "restore-secret",
+                "sha256": "abc123",
+                "confirmation": "REPLACE ALL HUBUUM DATA"
+            }));
+        then.status(202)
+            .header("content-type", "application/json")
+            .json_body(restore_stage_json("confirmed", false));
+    });
+
+    let client = async_client(&server).await;
+    let task = client
+        .backups()
+        .submit(BackupRequest::default())
+        .idempotency_key("backup-once")
+        .send()
+        .await
+        .expect("backup submit should succeed");
+    let document = client
+        .backups()
+        .output(task.id)
+        .await
+        .expect("backup output should decode");
+    assert!(document.has_supported_version());
+
+    let staged = client
+        .restores()
+        .stage(&document)
+        .await
+        .expect("restore stage should succeed");
+    let capability = staged
+        .restore_capability
+        .clone()
+        .expect("stage should return the one-time capability");
+    let inspected = client
+        .restore_status(staged.id, &capability)
+        .await
+        .expect("capability-only status should succeed");
+    assert_eq!(inspected.sha256, "abc123");
+
+    let restored = client
+        .restores()
+        .confirm(
+            staged.id,
+            RestoreConfirmRequest::new(capability, staged.sha256),
+        )
+        .await
+        .expect("restore confirm should succeed");
+    assert_eq!(restored.status, RestoreJobStatus::Confirmed);
+    assert!(!restored.status.is_terminal());
 
     submit.assert_calls(1);
     output.assert_calls(1);

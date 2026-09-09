@@ -52,6 +52,9 @@ pub enum ApiError {
     #[error("Principal settings must be a JSON object")]
     InvalidPrincipalSettings,
 
+    #[error("Tracing sampling ratio must be finite and between zero and one")]
+    InvalidSamplingRatio,
+
     #[error("Resource revision must be a positive 64-bit integer, got {0}")]
     InvalidResourceRevision(i64),
 
@@ -190,6 +193,7 @@ impl std::fmt::Debug for ApiError {
             Self::UrlSerialize(error) => f.debug_tuple("UrlSerialize").field(error).finish(),
             Self::QueryEncoding(message) => f.debug_tuple("QueryEncoding").field(message).finish(),
             Self::InvalidPrincipalSettings => f.write_str("InvalidPrincipalSettings"),
+            Self::InvalidSamplingRatio => f.write_str("InvalidSamplingRatio"),
             Self::InvalidResourceRevision(value) => f
                 .debug_tuple("InvalidResourceRevision")
                 .field(value)
