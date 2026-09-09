@@ -69,5 +69,5 @@ tempfile = "3"
 tokio = { version = "1", features = ["full"] }
 yare = "3"
 httpmock = "0.8"
-rstest = "0.26"
+rstest = "0.27"
 trybuild = "1"
