@@ -6,6 +6,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-09
+
 ### Added
 
 - This release explicitly targets Hubuum server v0.0.13, pinning its
@@ -18,6 +20,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Changed
 
+- Refresh all locked dependencies to their latest Rust 1.88-compatible versions,
+  including Reqwest 0.13.5, Rustls 0.23.44, `aws-lc-rs` 1.18.1,
+  `aws-lc-sys` 0.45.0, `syn` 3.0.5, and Trybuild 1.0.121. Update the Rstest
+  development dependency constraint to 0.27.
 - **Breaking (backup compatibility):** `CURRENT_BACKUP_VERSION` is now 5.
   Version 4 artifacts must be restored with a compatible older server. Create
   new format 5 backups after upgrading the server; changing the version field
@@ -38,7 +44,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   failure found during v0.0.12 verification; see `COMPATIBILITY.md`.
 - Document the new POST structured-search endpoints and related-object filter
   groups as raw API extensions until dedicated typed builders are available.
-  Public client features, dependencies, and the Rust 1.88 MSRV are unchanged.
+  Public client features and the Rust 1.88 MSRV are unchanged.
 
 ### Fixed
 
