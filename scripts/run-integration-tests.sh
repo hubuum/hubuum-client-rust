@@ -496,7 +496,11 @@ if [[ "${RUN_E2E_CLIENT}" == "1" ]]; then
     export HUBUUM_INTEGRATION_DISPOSABLE_BASE_URL="${BASE_URL}"
     RESTORE_PROBE_FILE="$(mktemp)"
     export HUBUUM_INTEGRATION_RESTORE_PROBE_FILE="${RESTORE_PROBE_FILE}"
-    for restore_case in blocking_restore_confirmation async_restore_confirmation; do
+    for restore_case in \
+        blocking_restore_confirmation::with_history \
+        blocking_restore_confirmation::without_history \
+        async_restore_confirmation::with_history \
+        async_restore_confirmation::without_history; do
         ADMIN_PASSWORD="$(reset_admin_password)"
         export HUBUUM_INTEGRATION_ADMIN_PASSWORD="${ADMIN_PASSWORD}"
         cargo test --locked -p e2e_client \

@@ -129,7 +129,7 @@
       "rust_type": "GroupPatch",
       "direction": "request",
       "rust_only_fields": {
-        "description": "The runtime PATCH route accepts group descriptions, but v0.0.13 omits this field from UpdateGroup."
+        "description": "The runtime PATCH route accepts group descriptions, but v0.0.14 omits this field from UpdateGroup."
       }
     },
     {

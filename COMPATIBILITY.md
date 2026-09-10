@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.10.1 | 0.0.14 | `ghcr.io/hubuum/hubuum-server@sha256:6c1c8d7316a1f60a02e4505611a44e21030ba678b5b451f5b293a12f2bd87594` | Declared target; unchanged 204-operation OpenAPI contract, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus four async/blocking full restores with and without history and revision-preserving recovery with subsequent backup validation (2026-09-10) |
 | 0.10.0 | 0.0.13 | `ghcr.io/hubuum/hubuum-server@sha256:512562e789d6430875c5075faf832a9669a4f266f7fe9fbf8c1524b49a6476c5` | Declared target; pinned OpenAPI, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus blocking and async full restore completion, token invalidation, and recovery after each restore (2026-09-09) |
 | 0.9.1 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; JSON-path validation, advertised pagination limits, atomic export downloads, property-level OpenAPI model reconciliation, dependency and release-workflow security updates, with pinned Docker-backed library plus downstream-consumer integration coverage |
 | 0.9.0 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; revision and ETag concurrency, import v2, settings JSON Patch, revision-owned permission and membership responses, computed-field points, token lifecycle state and renewal, with pinned Docker-backed library plus downstream-consumer integration coverage |
@@ -65,5 +66,36 @@ password reset and a fresh login.
 
 The published image identifies source revision
 `8ecefbf3e3147714014221598d9873ba92e0fdce`, matching the v0.0.13 release tag.
+The manifest pins the multi-platform image index; this live run verifies its
+Linux amd64 image.
+
+## v0.0.14 target
+
+The 0.10.1 patch release targets server v0.0.14. Its 204-operation OpenAPI
+contract is unchanged from v0.0.13 apart from the server version. Public client
+APIs, features, the Rust 1.88 MSRV, and backup format 5 are unchanged.
+
+The server fixes backup and restore consistency, including preserving revisions
+and establishing current temporal snapshots after history-free restores so later
+backups remain restorable. Install matching server, administrator, and
+template-worker binaries, including any separately deployed
+`hubuum-admin --restore-executor`. Existing history-free format 5 artifacts can
+be restored directly with the fixed executor. No database migration is added;
+the server's certified upgrade and application rollback path is v0.0.13 to
+v0.0.14. See the
+[server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.14)
+and the [backup and restore guide](docs/backups-and-computed-fields.md).
+
+The canonical combined integration command passed on 2026-09-10 against the
+released immutable image above (Linux amd64). All 89 library and 24 ordinary
+consumer tests passed, followed by all four combinations of blocking/async full
+restore and history included/omitted. Every restore reached `Succeeded`, rejected
+the pre-restore bearer token, and recovered the deleted object with its original
+revision after administrator password reset and a fresh login. Recovery also
+created and successfully staged default backups both before and after another
+mutation, covering the history-free restore fix.
+
+The published image identifies source revision
+`0b0aa17f278496a32cc018cfcac56f34a408ccd6`, matching the v0.0.14 release tag.
 The manifest pins the multi-platform image index; this live run verifies its
 Linux amd64 image.

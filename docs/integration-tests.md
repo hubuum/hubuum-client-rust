@@ -67,8 +67,8 @@ An external stack must expose the same `planet-express` provider and fixture use
 - `HUBUUM_INTEGRATION_SEED_SQL` overrides the default seed SQL file.
 
 Required CI runs integration tests against an immutable server image digest.
-For client 0.10.0, that image is Hubuum server v0.0.13 at
-`sha256:512562e789d6430875c5075faf832a9669a4f266f7fe9fbf8c1524b49a6476c5`.
+For client 0.10.1, that image is Hubuum server v0.0.14 at
+`sha256:6c1c8d7316a1f60a02e4505611a44e21030ba678b5b451f5b293a12f2bd87594`.
 A scheduled compatibility workflow separately runs against
 `ghcr.io/hubuum/hubuum-server:main`, so upstream movement is visible without
 making otherwise unrelated pull requests nondeterministic.
@@ -91,10 +91,12 @@ docker login ghcr.io
 ## Full restore coverage
 
 With `--with-e2e-client` or `--e2e-only`, the wrapper runs both blocking and async
-full restore scenarios after all ordinary suites finish. Each scenario creates
-and downloads a format 5 backup, deletes an object, stages and confirms the
-restore, polls with its capability until completion, verifies bearer-token
-invalidation, and checks that the deleted object was restored after a new login.
+full restore scenarios with and without history after all ordinary suites finish.
+Each scenario creates and downloads a format 5 backup, deletes an object, stages
+and confirms the restore, polls with its capability until completion, verifies bearer-token
+invalidation, and checks that the deleted object and its revision were restored
+after a new login. Recovery also creates and stages default backups before and
+after another mutation, covering the server v0.0.14 history-free recovery fix.
 Because format 5 excludes password hashes, the wrapper resets the disposable
 administrator password after each restore before running the recovery assertion.
 
