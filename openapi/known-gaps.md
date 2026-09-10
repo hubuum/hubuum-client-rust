@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.13 OpenAPI gaps
+# Known Hubuum server v0.0.14 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.13
+The pinned client contract records these limitations in the server v0.0.14
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not

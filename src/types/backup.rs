@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{HubuumDateTime, PrincipalId, RestoreId};
 
-/// Backup document version produced and accepted by Hubuum server v0.0.13.
+/// Backup document version produced and accepted by Hubuum server v0.0.14.
 pub const CURRENT_BACKUP_VERSION: i32 = 5;
 
 /// Exact phrase required to confirm a destructive full-system restore.

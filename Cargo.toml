@@ -4,11 +4,11 @@ resolver = "3"
 
 [package]
 name = "hubuum_client"
-version = "0.10.0"
+version = "0.10.1"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
-description = "Rust client library targeting Hubuum server v0.0.13 with synchronous and asynchronous interfaces."
+description = "Rust client library targeting Hubuum server v0.0.14 with synchronous and asynchronous interfaces."
 repository = "https://github.com/hubuum/hubuum-client-rust"
 documentation = "https://docs.rs/hubuum_client"
 readme = "README.md"
@@ -23,8 +23,8 @@ exclude = [
 ]
 
 [package.metadata.hubuum]
-server-version = "0.0.13"
-server-image = "ghcr.io/hubuum/hubuum-server@sha256:512562e789d6430875c5075faf832a9669a4f266f7fe9fbf8c1524b49a6476c5"
+server-version = "0.0.14"
+server-image = "ghcr.io/hubuum/hubuum-server@sha256:6c1c8d7316a1f60a02e4505611a44e21030ba678b5b451f5b293a12f2bd87594"
 
 [features]
 default = ["async"]

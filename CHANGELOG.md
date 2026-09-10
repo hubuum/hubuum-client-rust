@@ -6,6 +6,24 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-09-10
+
+### Changed
+
+- This release explicitly targets Hubuum server v0.0.14, pinning its
+  204-operation OpenAPI contract and immutable multi-platform image
+  `sha256:6c1c8d7316a1f60a02e4505611a44e21030ba678b5b451f5b293a12f2bd87594`.
+  The contract is unchanged from v0.0.13 apart from the server version; public
+  client APIs, features, backup format 5, and the Rust 1.88 MSRV are unchanged.
+- Upgrade matching server, administrator, template-worker, and separately
+  deployed `hubuum-admin --restore-executor` binaries together to apply the
+  server's backup/restore fixes. History-free restores preserve revisions and
+  establish current temporal snapshots so subsequent backups remain restorable.
+  The server adds no database migration. See `COMPATIBILITY.md` and the
+  backup and restore guide for upgrade details.
+- Refresh all locked dependencies to their latest Rust 1.88-compatible versions,
+  updating `bitflags` to 2.13.2.
+
 ## [0.10.0] - 2026-09-09
 
 ### Added
