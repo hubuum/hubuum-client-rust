@@ -2,10 +2,53 @@ use std::time::{Duration, Instant};
 
 use e2e_client::harness::{AsyncE2EHarness, E2EHarness, admin_context, async_admin_context};
 use hubuum_client::{
-    BackupRequest, BaseUrl, ClassId, Client, ObjectId, ResourceRevision, RestoreConfirmRequest,
-    RestoreJobStatus, blocking,
+    BackupRequest, BaseUrl, ClassId, Client, ComplianceStatus, ObjectId, ResourceRevision,
+    RestoreConfirmRequest, RestoreJobStatus, SchemaActivationPolicy, SchemaActivationRequest,
+    SchemaPageOptions, SchemaRevision, SchemaStageRequest, blocking,
 };
 use yare::parameterized;
+
+macro_rules! prepare_schema {
+    ($client:expr, $class_id:ident, $send:ident) => {{
+        let schema = $client.class_schema($class_id);
+        let active = $send!(schema.get()).unwrap().active;
+        let staged = $send!(schema.stage(SchemaStageRequest {
+                json_schema:Some(serde_json::json!({"type":"object","properties":{"source":{"type":"string"}},"required":["source"]})),
+                validate_schema:true,
+            })).unwrap();
+        let impact = $send!(schema.impact(staged.revision)).unwrap();
+        $send!(
+            $client
+                .tasks()
+                .wait(impact.task_id)
+                .poll_interval(Duration::from_millis(100))
+                .timeout(Some(Duration::from_secs(60)))
+                .send(),
+        )
+        .unwrap();
+        let activation = $send!(schema.activate(
+            staged.revision,
+            SchemaActivationRequest {
+                expected_active_revision: active.revision,
+                policy: SchemaActivationPolicy::RejectIncompatible,
+                impact_task_id: Some(impact.task_id),
+            },
+        ))
+        .unwrap();
+        if let Some(task_id) = activation.task_id {
+            $send!(
+                $client
+                    .tasks()
+                    .wait(task_id)
+                    .poll_interval(Duration::from_millis(100))
+                    .timeout(Some(Duration::from_secs(60)))
+                    .send(),
+            )
+            .unwrap();
+        }
+        staged.revision
+    }};
+}
 
 fn require_disposable_stack(base_url: &BaseUrl) {
     let disposable: BaseUrl = std::env::var("HUBUUM_INTEGRATION_DISPOSABLE_BASE_URL")
@@ -35,6 +78,12 @@ fn blocking_restore_confirmation(include_history: bool) {
         .send()
         .unwrap();
     let revision = object.revision;
+    macro_rules! send {
+        ($value:expr $(,)?) => {
+            $value
+        };
+    }
+    let schema_revision = prepare_schema!(harness.client, class_id, send);
     let document = harness
         .client
         .backups()
@@ -85,7 +134,7 @@ fn blocking_restore_confirmation(include_history: bool) {
             .as_u16(),
         401
     );
-    record_restored_object(class_id, object_id, revision);
+    record_restored_object(class_id, object_id, revision, schema_revision);
 }
 
 #[parameterized(with_history = { true }, without_history = { false })]
@@ -108,6 +157,12 @@ async fn async_restore_confirmation(include_history: bool) {
         .await
         .unwrap();
     let revision = object.revision;
+    macro_rules! send {
+        ($value:expr $(,)?) => {
+            $value.await
+        };
+    }
+    let schema_revision = prepare_schema!(harness.client, class_id, send);
     let document = harness
         .client
         .backups()
@@ -167,15 +222,20 @@ async fn async_restore_confirmation(include_history: bool) {
             .as_u16(),
         401
     );
-    record_restored_object(class_id, object_id, revision);
+    record_restored_object(class_id, object_id, revision, schema_revision);
 }
 
-fn record_restored_object(class_id: ClassId, object_id: ObjectId, revision: ResourceRevision) {
+fn record_restored_object(
+    class_id: ClassId,
+    object_id: ObjectId,
+    revision: ResourceRevision,
+    schema_revision: SchemaRevision,
+) {
     let path = std::env::var("HUBUUM_INTEGRATION_RESTORE_PROBE_FILE")
         .expect("wrapper must provide a temporary recovery probe file");
     std::fs::write(
         path,
-        serde_json::to_vec(&(class_id, object_id, revision)).unwrap(),
+        serde_json::to_vec(&(class_id, object_id, revision, schema_revision)).unwrap(),
     )
     .unwrap();
 }
@@ -187,11 +247,28 @@ fn restore_recovery() {
         E2EHarness::from_env().expect("administrator should log in after password reset");
     require_disposable_stack(&recovered.base_url);
     let path = std::env::var("HUBUUM_INTEGRATION_RESTORE_PROBE_FILE").unwrap();
-    let (class_id, object_id, revision): (ClassId, ObjectId, ResourceRevision) =
-        serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let (class_id, object_id, revision, schema_revision): (
+        ClassId,
+        ObjectId,
+        ResourceRevision,
+        SchemaRevision,
+    ) = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
     let object = recovered.client.objects(class_id).get(object_id).unwrap();
     assert_eq!(object.id(), object_id);
     assert_eq!(object.revision, revision);
+    let schema = recovered.client.class_schema(class_id);
+    assert_eq!(schema.get().unwrap().active.revision, schema_revision);
+    let compliance = schema
+        .objects(&SchemaPageOptions::default(), Some(ComplianceStatus::Valid))
+        .unwrap();
+    let restored = compliance
+        .items
+        .iter()
+        .find(|item| item.object_id == object_id)
+        .unwrap();
+    let evidence = restored.evidence.as_ref().unwrap();
+    assert_eq!(evidence.object_revision, revision);
+    assert_eq!(evidence.schema.revision, schema_revision);
 
     // A history-free restore must establish current temporal snapshots so a
     // subsequent default backup passes server restore validation.

@@ -6,6 +6,48 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Target Hubuum server v0.0.15 with its 218-operation OpenAPI contract and
+  immutable multi-platform image
+  `sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821`.
+- Add equivalent async and blocking `class_schema()` and class-handle `schema()`
+  helpers for revisions, staging, impact analysis, activation, compliance pages,
+  revalidation, cancellation, and retained HTML repair reports. Schema revisions,
+  report URLs, and page bounds are validated; diagnostic debug output is redacted.
+- Add `tasks().cancel()`, validated cancellation reasons, the `SchemaValidation`
+  task kind, and cancellation, deadline, unattempted-item, and remote-side-effect
+  metadata. Cancellation may require polling before executor cleanup completes.
+- Expose schema validation budgets, backup capture row limits, and execution
+  timeouts for every task kind in the administrative configuration.
+
+### Changed
+
+- **Breaking (Rust API):** `ImportClassInput` now includes `schema_activation`.
+  Add `schema_activation: None` to existing struct literals, or provide
+  `ImportSchemaActivation` to activate an exact staged policy during import.
+  The development client version advances to 0.11.0; Rust 1.88 and public
+  feature availability are unchanged.
+- **Breaking (server behavior):** policy changes on nonempty classes now require
+  staging, impact analysis, and explicit activation; direct schema PATCH and
+  legacy import overwrites can return HTTP 409. Restart string-sorted pagination
+  after upgrading locale-collated databases. Review the server's stricter schema,
+  report, backup, and external-authorization traversal limits; see the schema
+  guide and `COMPATIBILITY.md` for migration steps.
+- **Breaking (backup compatibility):** `CURRENT_BACKUP_VERSION` is now 6, including
+  schema revisions, state, evidence, and history. Restore format 5 artifacts with
+  their matching older server before migrating and creating new format 6 backups.
+  No artifact conversion is available. Drain old workers, run migrations, and
+  upgrade API, worker, administrator, and restore-executor binaries together.
+- Refresh all compatible locked dependencies, including `cc` 1.4.6,
+  `lru-slab` 0.1.3, Quinn 0.11.12, `quinn-proto` 0.11.18, SmallVec 1.16.1,
+  TinyVec 1.13.3, TOML 1.1.6, and `toml_edit` 0.25.15. Direct dependency
+  constraints already select their latest compatible releases.
+
+### Security
+
+- Update Rustls to 0.23.45, addressing RUSTSEC-2026-0285.
+
 ## [0.10.1] - 2026-09-10
 
 ### Changed

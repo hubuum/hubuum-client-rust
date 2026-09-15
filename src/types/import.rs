@@ -382,6 +382,9 @@ pub struct ImportClassInput {
     pub description: String,
     pub json_schema: Option<serde_json::Value>,
     pub validate_schema: Option<bool>,
+    /// Explicit activation of a staged policy; the class policy must match it exactly.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schema_activation: Option<super::ImportSchemaActivation>,
     pub collection_ref: Option<String>,
     pub collection_key: Option<CollectionKey>,
     pub condition: Option<ImportWriteCondition>,
@@ -400,6 +403,7 @@ impl std::fmt::Debug for ImportClassInput {
                 &self.json_schema.as_ref().map(|_| "[REDACTED]"),
             )
             .field("validate_schema", &self.validate_schema)
+            .field("schema_activation", &self.schema_activation)
             .field("collection_ref", &self.collection_ref)
             .field("collection_key", &self.collection_key)
             .field("condition", &self.condition)
@@ -1126,6 +1130,7 @@ mod tests {
     #[test]
     fn import_diagnostics_redact_schema_and_object_payloads() {
         let class = ImportClassInput {
+            schema_activation: None,
             ref_: Some("class-ref".into()),
             name: "server".into(),
             description: "server schema".into(),
@@ -1247,6 +1252,7 @@ mod tests {
                 timestamps: Some(timestamps.clone()),
             }],
             classes: vec![ImportClassInput {
+                schema_activation: None,
                 ref_: Some("class-a".into()),
                 name: "server".into(),
                 description: "Server".into(),

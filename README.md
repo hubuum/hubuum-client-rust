@@ -2,7 +2,7 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.10.1 targets Hubuum server v0.0.14. The pinned image,
+The development version `hubuum_client` 0.11.0 targets Hubuum server v0.0.15. The pinned image,
 verification evidence, and history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
@@ -19,6 +19,8 @@ verification evidence, and history for earlier client releases are recorded in
 - **Exports, complete graph imports, and full-system backups**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
 - **Administrative recovery**: inspect redacted runtime configuration and stage, confirm, or inspect destructive restores with explicit capability handling.
 - **Computed fields**: manage shared class definitions and personal definitions, preview expressions, request rebuilds, and read enriched objects.
+- **Schema evolution**: stage immutable policies, inspect impact diagnostics and retained HTML reports, activate policies explicitly, and revalidate objects. See [the schema guide](docs/schema-evolution.md).
+- **Task cancellation**: request durable cancellation and inspect deadlines, unattempted items, and possible remote side effects.
 - **Natural-key routing**: address classes and objects by exact names, including numeric-looking names, across CRUD, permissions, relations, and graph operations.
 - **Object aggregates and patching**: group permission-visible objects by typed dimensions, filter or sort by computed fields, and atomically patch object data with RFC 6902 documents.
 - **Effective public configuration**: discover pagination limits and the default token lifetime, and inspect the server-applied page limit alongside cursors and optional totals.
@@ -36,14 +38,14 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.10.1"
+hubuum_client = "0.11.0"
 ```
 
 Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.10.1", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.11.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:

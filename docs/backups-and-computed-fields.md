@@ -9,15 +9,16 @@ blocking equivalents.
 
 Backups are administrator-only task operations. `run()` submits the task, waits
 for a successful terminal state, and decodes the resulting versioned backup
-document. Hubuum v0.0.14 uses backup format 5; format 4 artifacts must be
-restored with a compatible older server. Preserve the server-assigned `created_at`
+document. Hubuum v0.0.15 uses backup format 6; format 5 and earlier artifacts must be
+restored with their matching older server before database migration and creation
+of a new format 6 backup. No artifact converter is provided. Preserve the server-assigned `created_at`
 instant when saving or staging a backup; the client serializes it as RFC 3339 UTC.
 
-Server v0.0.14 fixes history-free restores so they preserve resource revisions
-and establish current temporal snapshots. Later default backups remain
-restorable, including after further changes. Existing history-free format 5
-artifacts can be restored directly with the matching v0.0.14 restore executor;
-this server release adds no database migration.
+Format 6 adds schema revisions, class schema state, object validation evidence,
+and schema history. Both history-preserving and history-free restores retain
+the active policy and resource revisions. Backup capture enforces the configured
+byte ceiling and `HUBUUM_BACKUP_MAX_CAPTURE_ROWS` (default 1,000,000 rows).
+Deploy consistent limits across the API, workers, and administrator tools.
 
 ```rust
 use hubuum_client::BackupRequest;
@@ -33,7 +34,7 @@ assert!(document.has_supported_version());
 ```
 
 Use `submit()`, `get()`, and `output()` separately when an application needs to
-persist task IDs or control polling. Format 5 backups contain privileged integration configuration but exclude
+persist task IDs or control polling. Format 6 backups contain privileged integration configuration but exclude
 password hashes, bearer tokens, and token scopes. Their debug output is redacted,
 but applications
 must still protect serialized documents at rest and in transit. Large documents
@@ -82,10 +83,11 @@ loop {
 }
 ```
 
-Hubuum v0.0.14 returns `202 Accepted` from confirmation. Deploy the matching
+Hubuum v0.0.15 returns `202 Accepted` from confirmation. Deploy the matching
 `hubuum-admin --restore-executor` before allowing web restores. Upgrade server,
 administrator, and template-worker binaries together, including any separately
-deployed restore executor, so the v0.0.14 restore fixes apply. For blocking
+deployed restore executor. Drain old workers and apply migrations before starting
+the upgraded processes. For blocking
 applications, remove `.await` and use `std::thread::sleep` in the polling loop.
 Inspect failed or expired terminal states and handle polling timeouts in the
 application; a successful confirmation alone does not prove completion.

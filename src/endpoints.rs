@@ -119,6 +119,16 @@ pub enum Endpoint {
     Tasks,
     TasksById,
     TaskEvents,
+    ClassSchema,
+    ClassSchemaObjects,
+    ClassSchemaRevisions,
+    ClassSchemaRevision,
+    ClassSchemaActivate,
+    ClassSchemaImpact,
+    ClassSchemaRevalidate,
+    ClassSchemaTask,
+    ClassSchemaReport,
+    TaskCancel,
     Events,
     EventSinks,
     EventSinksById,
@@ -326,6 +336,26 @@ impl Endpoint {
             Endpoint::Tasks => "/api/v1/tasks",
             Endpoint::TasksById => "/api/v1/tasks/{task_id}",
             Endpoint::TaskEvents => "/api/v1/tasks/{task_id}/events",
+            Endpoint::ClassSchema => "/api/v1/classes/{class_id}/schema",
+            Endpoint::ClassSchemaObjects => "/api/v1/classes/{class_id}/schema/objects",
+            Endpoint::ClassSchemaRevisions => "/api/v1/classes/{class_id}/schema/revisions",
+            Endpoint::ClassSchemaRevision => {
+                "/api/v1/classes/{class_id}/schema/revisions/{revision}"
+            }
+            Endpoint::ClassSchemaActivate => {
+                "/api/v1/classes/{class_id}/schema/revisions/{revision}/activate"
+            }
+            Endpoint::ClassSchemaImpact => {
+                "/api/v1/classes/{class_id}/schema/revisions/{revision}/impact"
+            }
+            Endpoint::ClassSchemaRevalidate => {
+                "/api/v1/classes/{class_id}/schema/revisions/{revision}/revalidate"
+            }
+            Endpoint::ClassSchemaTask => "/api/v1/classes/{class_id}/schema/tasks/{task_id}",
+            Endpoint::ClassSchemaReport => {
+                "/api/v1/classes/{class_id}/schema/tasks/{task_id}/report"
+            }
+            Endpoint::TaskCancel => "/api/v1/tasks/{task_id}/cancel",
             Endpoint::Events => "/api/v1/events",
             Endpoint::EventSinks => "/api/v1/event-sinks",
             Endpoint::EventSinksById => "/api/v1/event-sinks/{sink_id}",
@@ -389,7 +419,7 @@ mod test {
             .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(client_paths, spec_paths);
-        assert_eq!(contract["operation_count"], 204);
+        assert_eq!(contract["operation_count"], 218);
     }
     use std::str::FromStr;
     use yare::parameterized;

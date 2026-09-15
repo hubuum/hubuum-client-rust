@@ -129,7 +129,7 @@
       "rust_type": "GroupPatch",
       "direction": "request",
       "rust_only_fields": {
-        "description": "The runtime PATCH route accepts group descriptions, but v0.0.14 omits this field from UpdateGroup."
+        "description": "The runtime PATCH route accepts group descriptions, but v0.0.15 omits this field from UpdateGroup."
       }
     },
     {
@@ -314,6 +314,165 @@
       "rust_file": "src/types/config.rs",
       "rust_type": "TracingConfig",
       "direction": "response"
+    },
+    {
+      "openapi_schema": "ClassSchemaResponse",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "ClassSchemaResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "ImportSchemaActivation",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "ImportSchemaActivation",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "ObjectComplianceResponse",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "ObjectComplianceResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "ObjectSchemaEvidence",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "ObjectSchemaEvidence",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaActivationRequest",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaActivationRequest",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "SchemaActivationResponse",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaActivationResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaComplianceCounts",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaComplianceCounts",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaCompliancePage",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaCompliancePage",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaDiagnosticSnapshotResponse",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaDiagnosticSnapshotResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaDiagnostics",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaDiagnostics",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaFailure",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaFailure",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaFailureGroup",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaFailureGroup",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaImpactCounts",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaImpactCounts",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaImpactFindingResponse",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaImpactFindingResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaImpactResponse",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaImpactResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaIssue",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaIssue",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaReference",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaReference",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaRepairReportRequest",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaRepairReportRequest",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "SchemaRevisionResponse",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaRevisionResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaStageRequest",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaStageRequest",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "SchemaWorkResponse",
+      "rust_file": "src/types/schema.rs",
+      "rust_type": "SchemaWorkResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaValidationConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "SchemaValidationConfig",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "TaskConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "TaskConfig",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "BackupConfig",
+      "rust_file": "src/types/config.rs",
+      "rust_type": "BackupConfig",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "TaskResponse",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "TaskResponse",
+      "direction": "response",
+      "requiredness_exceptions": {
+        "unattempted_items": "Defaults to zero when reading responses from servers that predate task cancellation accounting."
+      }
+    },
+    {
+      "openapi_schema": "TaskCancelRequest",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "TaskCancelRequest",
+      "direction": "request"
     }
   ]
 }

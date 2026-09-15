@@ -3,6 +3,8 @@
 #[test]
 fn typed_query_operator_contract() {
     let tests = trybuild::TestCases::new();
+    tests.pass("tests/trybuild/schema_types_pass.rs");
+    tests.compile_fail("tests/trybuild/schema_revision_fail_resource_revision.rs");
     tests.pass("tests/trybuild/checked_create_pass.rs");
     tests.compile_fail("tests/trybuild/checked_create_fail_missing_required.rs");
     tests.pass("tests/trybuild/typed_query_pass.rs");

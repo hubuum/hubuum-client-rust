@@ -25,24 +25,26 @@ use crate::resources::{
 };
 use crate::types::{
     AuthProvidersResponse, BackupDocument, BackupRequest, BaseUrl, ClassComputationState,
-    ClassHistory, ClearRateLimitResponse, ClientConfig, CollectionHistory, ComputedFieldDefinition,
-    ComputedFieldDefinitionId, ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest,
-    ComputedFieldDeleteResponse, ComputedFieldListResponse, ComputedFieldMutationResponse,
-    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedFieldSelector,
-    ComputedObject, CountsResponse, Credentials, DbStateResponse, EventDelivery,
-    EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryUpdateResponse, EventResponse,
-    EventSubscription, EventSubscriptionId, ExportContentType, ExportJsonResponse, ExportRequest,
-    ExportResult, ExportTemplateHistory, ExportTemplateRunRequest, FilterOperator,
-    FullCollectionHistory, FullDbStateResponse, FullImportRequest, HubuumDateTime, ImportRequest,
-    ImportRequestPayload, ImportRunResult, ImportTaskResultResponse, LoginRateLimitState,
-    LogoutTokenRequest, NewEventSubscription, ObjectHistory,
-    PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings,
+    ClassHistory, ClassSchemaResponse, ClearRateLimitResponse, ClientConfig, CollectionHistory,
+    ComplianceStatus, ComputedFieldDefinition, ComputedFieldDefinitionId,
+    ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest, ComputedFieldDeleteResponse,
+    ComputedFieldListResponse, ComputedFieldMutationResponse, ComputedFieldPreviewRequest,
+    ComputedFieldPreviewResponse, ComputedFieldSelector, ComputedObject, CountsResponse,
+    Credentials, DbStateResponse, EventDelivery, EventDeliveryHealthResponse, EventDeliveryId,
+    EventDeliveryUpdateResponse, EventResponse, EventSubscription, EventSubscriptionId,
+    ExportContentType, ExportJsonResponse, ExportRequest, ExportResult, ExportTemplateHistory,
+    ExportTemplateRunRequest, FilterOperator, FullCollectionHistory, FullDbStateResponse,
+    FullImportRequest, HubuumDateTime, ImportRequest, ImportRequestPayload, ImportRunResult,
+    ImportTaskResultResponse, LoginRateLimitState, LogoutTokenRequest, NewEventSubscription,
+    ObjectHistory, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalSettings,
     PrincipalSettingsPatchDocument, PrincipalSettingsResponse, ProbeResponse,
     ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability, RestoreConfirmRequest,
-    RestoreId, RestoreStageResponse, Revisioned, RunningConfig, SortDirection, TaskEventResponse,
-    TaskId, TaskKind, TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse, UnifiedSearchSseDecoder,
-    UpdateEventSubscription,
+    RestoreId, RestoreStageResponse, Revisioned, RunningConfig, SchemaActivationRequest,
+    SchemaActivationResponse, SchemaCompliancePage, SchemaPageOptions, SchemaRepairReportRequest,
+    SchemaRevision, SchemaRevisionResponse, SchemaStageRequest, SchemaWorkResponse, SortDirection,
+    TaskCancelRequest, TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse,
+    TaskStatus, Token, TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
+    UnifiedSearchSseDecoder, UpdateEventSubscription,
 };
 
 #[derive(Deserialize, Debug)]
@@ -1982,6 +1984,14 @@ impl Client<Authenticated> {
 
     pub fn imports(&self) -> Imports {
         Imports::new(self.clone())
+    }
+
+    /// Access immutable schema revisions, impact reports, and compliance.
+    pub fn class_schema(&self, class_id: impl Into<ClassId>) -> ClassSchema {
+        ClassSchema {
+            client: self.clone(),
+            class_id: class_id.into(),
+        }
     }
 
     pub fn tasks(&self) -> Tasks {
@@ -4163,11 +4173,209 @@ impl MetaLoginRateLimitOp {
     }
 }
 
+/// Schema policy lifecycle and compliance for one class.
+#[derive(Debug, Clone)]
+pub struct ClassSchema {
+    client: Client<Authenticated>,
+    class_id: ClassId,
+}
+
+impl ClassSchema {
+    /// Inspect active policy and aggregate compliance; requires an unscoped administrator.
+    pub fn get(&self) -> Result<ClassSchemaResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassSchema,
+            shared::schema_url_params(self.class_id, None, None),
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// List bounded immutable revisions. Resume after the last returned revision.
+    pub fn revisions(
+        &self,
+        options: &SchemaPageOptions,
+    ) -> Result<Vec<SchemaRevisionResponse>, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassSchemaRevisions,
+            shared::schema_url_params(self.class_id, None, None),
+            shared::schema_page_filters(options, None),
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Read authorized compliance. Follow next_after even when a page has no visible items.
+    pub fn objects(
+        &self,
+        options: &SchemaPageOptions,
+        status: Option<ComplianceStatus>,
+    ) -> Result<SchemaCompliancePage, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassSchemaObjects,
+            shared::schema_url_params(self.class_id, None, None),
+            shared::schema_page_filters(options, status),
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Stage an immutable policy without activating it.
+    pub fn stage(&self, request: SchemaStageRequest) -> Result<SchemaRevisionResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::ClassSchemaRevisions,
+            shared::schema_url_params(self.class_id, None, None),
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Read one immutable schema revision.
+    pub fn revision(&self, revision: SchemaRevision) -> Result<SchemaRevisionResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassSchemaRevision,
+            shared::schema_url_params(self.class_id, Some(revision), None),
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Abandon a staged revision; active revisions cannot be abandoned.
+    pub fn abandon(&self, revision: SchemaRevision) -> Result<SchemaRevisionResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::DELETE,
+            &Endpoint::ClassSchemaRevision,
+            shared::schema_url_params(self.class_id, Some(revision), None),
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Activate against the expected active revision. Pending activation requires administrator authority.
+    pub fn activate(
+        &self,
+        revision: SchemaRevision,
+        request: SchemaActivationRequest,
+    ) -> Result<SchemaActivationResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::ClassSchemaActivate,
+            shared::schema_url_params(self.class_id, Some(revision), None),
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Queue impact analysis; poll work() for completion and current readiness.
+    pub fn impact(&self, revision: SchemaRevision) -> Result<SchemaWorkResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::ClassSchemaImpact,
+            shared::schema_url_params(self.class_id, Some(revision), None),
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Queue revalidation of the active revision; requires an unscoped administrator.
+    pub fn revalidate(&self, revision: SchemaRevision) -> Result<SchemaWorkResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::ClassSchemaRevalidate,
+            shared::schema_url_params(self.class_id, Some(revision), None),
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Read retained diagnostics and progress; requires an unscoped administrator. Large reports can return HTTP 413.
+    pub fn work(&self, task_id: impl Into<TaskId>) -> Result<SchemaWorkResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassSchemaTask,
+            shared::schema_url_params(self.class_id, None, Some(task_id.into())),
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Cancel schema work while retaining completed batches; requires an unscoped administrator.
+    pub fn cancel_work(&self, task_id: impl Into<TaskId>) -> Result<SchemaWorkResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::DELETE,
+            &Endpoint::ClassSchemaTask,
+            shared::schema_url_params(self.class_id, None, Some(task_id.into())),
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Generate and retain HTML from saved impact findings. The bounded response contains the complete report.
+    pub fn generate_report(
+        &self,
+        task_id: impl Into<TaskId>,
+        request: SchemaRepairReportRequest,
+    ) -> Result<String, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::ClassSchemaReport,
+            shared::schema_url_params(self.class_id, None, Some(task_id.into())),
+            vec![],
+            request,
+        )?;
+        Ok(raw.body)
+    }
+
+    /// Fetch retained HTML without rerunning analysis. download selects attachment disposition.
+    pub fn report(&self, task_id: impl Into<TaskId>, download: bool) -> Result<String, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassSchemaReport,
+            shared::schema_url_params(self.class_id, None, Some(task_id.into())),
+            vec![QueryFilter::raw("download", download.to_string())],
+            EmptyPostParams,
+        )?;
+        Ok(raw.body)
+    }
+}
+
 pub struct Tasks {
     client: Client<Authenticated>,
 }
 
 impl Tasks {
+    /// Request durable cancellation. A returned running task still needs executor
+    /// cleanup; use wait() to observe its terminal state. Remote side effects may
+    /// already have occurred; inspect remote_side_effect_state and item counts.
+    pub fn cancel(
+        &self,
+        task_id: impl Into<TaskId>,
+        request: TaskCancelRequest,
+    ) -> Result<TaskResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::TaskCancel,
+            vec![(Cow::Borrowed("task_id"), task_id.into().to_string().into())],
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
     fn new(client: Client<Authenticated>) -> Self {
         Self { client }
     }

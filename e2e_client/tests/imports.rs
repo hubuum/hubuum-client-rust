@@ -50,6 +50,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
                 }],
                 classes: vec![
                     ImportClassInput {
+                        schema_activation: None,
                         ref_: Some("class".to_string()),
                         name: class_name.clone(),
                         description: "e2e imported class".to_string(),
@@ -61,6 +62,7 @@ fn e2e_import_creates_graph_and_exposes_results() {
                         timestamps: Some(timestamps.clone()),
                     },
                     ImportClassInput {
+                        schema_activation: None,
                         ref_: Some("target-class".to_string()),
                         name: target_class_name.clone(),
                         description: "e2e imported target class".to_string(),

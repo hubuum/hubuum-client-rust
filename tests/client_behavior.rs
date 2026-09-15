@@ -362,6 +362,12 @@ fn running_config_json() -> serde_json::Value {
             "runtime_role": "hubuum_runtime"
         },
         "tasks": {
+            "import_execution_timeout_seconds": 3600,
+            "export_execution_timeout_seconds": 600,
+            "backup_execution_timeout_seconds": 3600,
+            "reindex_execution_timeout_seconds": 3600,
+            "remote_call_execution_timeout_seconds": 300,
+            "schema_validation_execution_timeout_seconds": 3600,
             "workers": 4,
             "poll_interval_ms": 250,
             "lease_seconds": 120,
@@ -405,6 +411,7 @@ fn running_config_json() -> serde_json::Value {
             "storage_query_budget_ms": 30000
         },
         "backups": {
+            "max_capture_rows": 1000000,
             "output_retention_hours": 24,
             "max_active_tasks_per_user": 1,
             "max_output_bytes": 134217728
@@ -502,6 +509,12 @@ fn running_config_json() -> serde_json::Value {
             "connect_timeout_ms": 1000,
             "export_timeout_ms": 5000,
             "flush_timeout_ms": 1000
+        },
+        "schema_validation": {
+            "max_schema_bytes": 262144,
+            "max_expanded_work": 1000000,
+            "max_instance_bytes": 2097152,
+            "max_instance_work": 268435456
         }
     })
 }
@@ -532,9 +545,9 @@ fn db_state_json() -> serde_json::Value {
 
 fn backup_document_json() -> serde_json::Value {
     json!({
-        "backup_version": 5,
+        "backup_version": 6,
         "created_at": "2024-01-01T01:02:03.456789+00:00",
-        "source_version": "0.0.13",
+        "source_version": "0.0.15",
         "state": { "sections": {} },
         "history": { "sections": {} },
         "manifest": { "item_counts": { "principals": 1 }, "exclusions": [] }
@@ -589,7 +602,7 @@ fn restore_stage_json(status: &str, include_capability: bool) -> serde_json::Val
         "created_at": ts(),
         "updated_at": ts(),
         "validation": {
-            "backup_version": 5,
+            "backup_version": 6,
             "source_version": "0.0.13",
             "includes_history": true,
             "total_items": 1
@@ -7047,4 +7060,391 @@ fn sync_v004_object_aggregates_support_global_numeric_measures() {
     assert!(rows[0].dimensions.is_empty());
     assert_eq!(rows[0].measures[0].value_count, 4);
     aggregate.assert_calls(1);
+}
+
+mod schema_v015 {
+    use std::sync::Arc;
+
+    use hubuum_client::{
+        ApiError, BaseUrl, Client, ComplianceStatus, MockTransport, SchemaActivationPolicy,
+        SchemaActivationRequest, SchemaObjectUrlTemplate, SchemaPageOptions,
+        SchemaRepairReportRequest, SchemaRevision, SchemaRevisionStatus, SchemaStageRequest,
+        TaskCancelRequest, TaskCancellationReason, TaskKind, TaskRemoteSideEffectState, TaskStatus,
+        Token, TransportResponse, blocking,
+    };
+    use reqwest::{Method, StatusCode};
+    use rstest::rstest;
+    use serde_json::{Value, json};
+
+    #[derive(Clone, Copy, Debug)]
+    enum Operation {
+        Get,
+        Revisions,
+        Objects,
+        Stage,
+        Revision,
+        Abandon,
+        Activate,
+        Impact,
+        Revalidate,
+        Work,
+        CancelWork,
+        GenerateReport,
+        Report,
+        CancelTask,
+    }
+
+    fn revision() -> Value {
+        json!({"class_id":42,"revision":2,"json_schema":{"type":"object"},
+            "validate_schema":true,"status":"staged","created_at":"2026-09-15T00:00:00Z"})
+    }
+
+    fn work() -> Value {
+        json!({"task_id":71,"target":{"class_id":42,"revision":2},"kind":"impact",
+            "status":"running","start_epoch":1,"upper_bound":9,"cursor":0,
+            "examined":0,"valid":0,"invalid":0,"not_required":0,"uninspectable":0,
+            "stale":0,"invalid_samples":[],"elapsed_millis":0,"batches":0,
+            "created_at":"2026-09-15T00:00:00Z"})
+    }
+
+    impl Operation {
+        fn expected(self) -> (Method, String, Option<Value>, Value, StatusCode) {
+            let base = "/api/v1/classes/42/schema";
+            let (method, suffix, body, response, status) = match self {
+                Self::Get => (
+                    Method::GET,
+                    "",
+                    None,
+                    json!({"active":revision(),
+                    "counts":{"valid":1,"invalid":0,"pending":0,"not_required":0},"object_epoch":3}),
+                    StatusCode::OK,
+                ),
+                Self::Revisions => (
+                    Method::GET,
+                    "/revisions?after=7&limit=10",
+                    None,
+                    json!([revision()]),
+                    StatusCode::OK,
+                ),
+                // Empty visible pages can still have a continuation over hidden candidates.
+                Self::Objects => (
+                    Method::GET,
+                    "/objects?after=7&limit=10&status=pending",
+                    None,
+                    json!({"items":[],"next_after":17}),
+                    StatusCode::OK,
+                ),
+                Self::Stage => (
+                    Method::POST,
+                    "/revisions",
+                    Some(json!({"json_schema":{"type":"object"},"validate_schema":true})),
+                    revision(),
+                    StatusCode::CREATED,
+                ),
+                Self::Revision => (
+                    Method::GET,
+                    "/revisions/2",
+                    None,
+                    revision(),
+                    StatusCode::OK,
+                ),
+                Self::Abandon => (
+                    Method::DELETE,
+                    "/revisions/2",
+                    None,
+                    revision(),
+                    StatusCode::OK,
+                ),
+                Self::Activate => (
+                    Method::POST,
+                    "/revisions/2/activate",
+                    Some(json!({
+                    "expected_active_revision":1,"policy":"reject_incompatible","impact_task_id":71})),
+                    json!({"active":revision(),"task_id":72,"dependent_rebuild_task_id":73}),
+                    StatusCode::OK,
+                ),
+                Self::Impact => (
+                    Method::POST,
+                    "/revisions/2/impact",
+                    Some(Value::Null),
+                    work(),
+                    StatusCode::ACCEPTED,
+                ),
+                Self::Revalidate => (
+                    Method::POST,
+                    "/revisions/2/revalidate",
+                    Some(Value::Null),
+                    work(),
+                    StatusCode::ACCEPTED,
+                ),
+                Self::Work => (Method::GET, "/tasks/71", None, work(), StatusCode::OK),
+                Self::CancelWork => (Method::DELETE, "/tasks/71", None, work(), StatusCode::OK),
+                Self::GenerateReport => (
+                    Method::POST,
+                    "/tasks/71/report",
+                    Some(json!({
+                    "object_url_template":"https://frontend.test/#/objects/{object_id}","template_id":5})),
+                    Value::Null,
+                    StatusCode::OK,
+                ),
+                Self::Report => (
+                    Method::GET,
+                    "/tasks/71/report?download=true",
+                    None,
+                    Value::Null,
+                    StatusCode::OK,
+                ),
+                Self::CancelTask => {
+                    let mut response = super::task_response_json(71, "running");
+                    response["kind"] = json!("schema_validation");
+                    response["cancel_reason"] = json!("private cancellation reason");
+                    response["cancel_requested_by"] = json!(5);
+                    response["cancel_requested_at"] = json!("2026-09-15T00:00:00Z");
+                    response["unattempted_items"] = json!(3);
+                    response["remote_side_effect_state"] = json!("not_sent");
+                    return (
+                        Method::POST,
+                        "/api/v1/tasks/71/cancel".into(),
+                        Some(json!({
+                        "expected_status":"queued","reason":"private cancellation reason"})),
+                        response,
+                        StatusCode::ACCEPTED,
+                    );
+                }
+            };
+            (method, format!("{base}{suffix}"), body, response, status)
+        }
+    }
+
+    fn transport(operation: Operation) -> MockTransport {
+        let transport = MockTransport::default();
+        let (_, _, _, response, status) = operation.expected();
+        if matches!(operation, Operation::GenerateReport | Operation::Report) {
+            transport.push_response(TransportResponse {
+                status,
+                headers: reqwest::header::HeaderMap::new(),
+                body: b"<html>retained report</html>".to_vec(),
+            });
+        } else {
+            transport.push_response(TransportResponse::json(status, &response).unwrap());
+        }
+        transport
+    }
+
+    fn assert_request(transport: MockTransport, operation: Operation) {
+        let requests = transport.requests();
+        assert_eq!(requests.len(), 1);
+        let request = &requests[0];
+        let (method, path, body, _, _) = operation.expected();
+        assert_eq!(request.method, method);
+        assert_eq!(
+            request.url.as_str(),
+            format!("https://example.test/prefix{path}")
+        );
+        assert_eq!(request.headers["authorization"], "Bearer private-token");
+        assert!(request.headers["authorization"].is_sensitive());
+        if let Some(body) = body {
+            assert_eq!(
+                serde_json::from_slice::<Value>(request.body()).unwrap(),
+                body
+            );
+        } else {
+            assert!(request.body().is_empty());
+        }
+        assert!(!format!("{request:?}").contains("private-token"));
+        assert!(!format!("{request:?}").contains("private cancellation reason"));
+    }
+
+    macro_rules! exercise {
+        ($client:ident, $operation:ident, $send:ident) => {{
+            let schema = $client.class_schema(42);
+            let revision = SchemaRevision::new(2).unwrap();
+            let page = SchemaPageOptions::default().after(7).unwrap().limit(10).unwrap();
+            match $operation {
+                Operation::Get => assert_eq!($send!(schema.get()).unwrap().counts.valid, 1),
+                Operation::Revisions => assert_eq!($send!(schema.revisions(&page)).unwrap()[0].revision, revision),
+                Operation::Objects => assert_eq!($send!(schema.objects(&page, Some(ComplianceStatus::Pending))).unwrap().next_after, Some(17)),
+                Operation::Stage => assert_eq!($send!(schema.stage(SchemaStageRequest {
+                    json_schema:Some(json!({"type":"object"})), validate_schema:true
+                })).unwrap().status, SchemaRevisionStatus::Staged),
+                Operation::Revision => assert_eq!($send!(schema.revision(revision)).unwrap().revision, revision),
+                Operation::Abandon => assert_eq!($send!(schema.abandon(revision)).unwrap().revision, revision),
+                Operation::Activate => assert_eq!($send!(schema.activate(revision, SchemaActivationRequest {
+                    expected_active_revision:SchemaRevision::INITIAL, policy:SchemaActivationPolicy::RejectIncompatible,
+                    impact_task_id:Some(71.into()),
+                })).unwrap().dependent_rebuild_task_id, Some(73.into())),
+                Operation::Impact => assert_eq!($send!(schema.impact(revision)).unwrap().task_id, 71),
+                Operation::Revalidate => assert_eq!($send!(schema.revalidate(revision)).unwrap().task_id, 71),
+                Operation::Work => assert_eq!($send!(schema.work(71)).unwrap().task_id, 71),
+                Operation::CancelWork => assert_eq!($send!(schema.cancel_work(71)).unwrap().task_id, 71),
+                Operation::GenerateReport => assert_eq!($send!(schema.generate_report(71, SchemaRepairReportRequest {
+                    object_url_template:SchemaObjectUrlTemplate::new("https://frontend.test/#/objects/{object_id}").unwrap(),
+                    template_id:Some(5.into()),
+                })).unwrap(), "<html>retained report</html>"),
+                Operation::Report => assert_eq!($send!(schema.report(71, true)).unwrap(), "<html>retained report</html>"),
+                Operation::CancelTask => {
+                    let task = $send!($client.tasks().cancel(71, TaskCancelRequest {
+                        expected_status:Some(TaskStatus::Queued), reason:Some(TaskCancellationReason::new("private cancellation reason").unwrap())
+                    })).unwrap();
+                    assert_eq!(task.kind, TaskKind::SchemaValidation);
+                    assert!(!task.status.is_terminal());
+                    assert_eq!(task.unattempted_items, 3);
+                    assert_eq!(task.remote_side_effect_state, Some(TaskRemoteSideEffectState::NotSent));
+                }
+            }
+        }};
+    }
+
+    #[rstest]
+    fn blocking_schema_requests(
+        #[values(
+            Operation::Get,
+            Operation::Revisions,
+            Operation::Objects,
+            Operation::Stage,
+            Operation::Revision,
+            Operation::Abandon,
+            Operation::Activate,
+            Operation::Impact,
+            Operation::Revalidate,
+            Operation::Work,
+            Operation::CancelWork,
+            Operation::GenerateReport,
+            Operation::Report,
+            Operation::CancelTask
+        )]
+        operation: Operation,
+    ) {
+        let transport = transport(operation);
+        let client =
+            blocking::Client::builder(BaseUrl::new("https://example.test/prefix/").unwrap())
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("private-token"));
+        macro_rules! send {
+            ($value:expr) => {
+                $value
+            };
+        }
+        exercise!(client, operation, send);
+        assert_request(transport, operation);
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn async_schema_requests(
+        #[values(
+            Operation::Get,
+            Operation::Revisions,
+            Operation::Objects,
+            Operation::Stage,
+            Operation::Revision,
+            Operation::Abandon,
+            Operation::Activate,
+            Operation::Impact,
+            Operation::Revalidate,
+            Operation::Work,
+            Operation::CancelWork,
+            Operation::GenerateReport,
+            Operation::Report,
+            Operation::CancelTask
+        )]
+        operation: Operation,
+    ) {
+        let transport = transport(operation);
+        let client = Client::builder(BaseUrl::new("https://example.test/prefix/").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("private-token"));
+        macro_rules! send {
+            ($value:expr) => {
+                $value.await
+            };
+        }
+        exercise!(client, operation, send);
+        assert_request(transport, operation);
+    }
+
+    fn error_transport() -> MockTransport {
+        let transport = MockTransport::default();
+        transport.push_response(
+            TransportResponse::json(
+                StatusCode::CONFLICT,
+                &json!({
+                    "error":"Conflict", "message":"expected status no longer matches"
+                }),
+            )
+            .unwrap(),
+        );
+        transport.push_response(
+            TransportResponse::json(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                &json!({
+                    "error":"InputTooLarge", "message":"report assembly budget exceeded"
+                }),
+            )
+            .unwrap(),
+        );
+        transport.push_response(TransportResponse {
+            status: StatusCode::OK,
+            headers: Default::default(),
+            body: vec![b'x'; 257],
+        });
+        transport
+    }
+
+    #[test]
+    fn blocking_schema_errors_preserve_server_status_and_bound_html() {
+        let client = blocking::Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(error_transport()))
+            .max_response_body_bytes(256)
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        assert_eq!(
+            client
+                .tasks()
+                .cancel(71, TaskCancelRequest::default())
+                .unwrap_err()
+                .status(),
+            Some(StatusCode::CONFLICT)
+        );
+        assert_eq!(
+            client.class_schema(42).work(71).unwrap_err().status(),
+            Some(StatusCode::PAYLOAD_TOO_LARGE)
+        );
+        assert!(matches!(
+            client.class_schema(42).report(71, true),
+            Err(ApiError::ResponseTooLarge { limit: 256, .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn async_schema_errors_preserve_server_status_and_bound_html() {
+        let client = Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(error_transport()))
+            .max_response_body_bytes(256)
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        assert_eq!(
+            client
+                .tasks()
+                .cancel(71, TaskCancelRequest::default())
+                .await
+                .unwrap_err()
+                .status(),
+            Some(StatusCode::CONFLICT)
+        );
+        assert_eq!(
+            client.class_schema(42).work(71).await.unwrap_err().status(),
+            Some(StatusCode::PAYLOAD_TOO_LARGE)
+        );
+        assert!(matches!(
+            client.class_schema(42).report(71, true).await,
+            Err(ApiError::ResponseTooLarge { limit: 256, .. })
+        ));
+    }
 }

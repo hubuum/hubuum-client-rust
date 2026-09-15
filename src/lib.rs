@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.10.1 targets Hubuum server v0.0.14. See the repository's
+//! Version 0.11.0 targets Hubuum server v0.0.15. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -45,7 +45,7 @@ pub mod types;
 mod endpoints;
 
 /// Hubuum server release targeted by this client release.
-pub const TARGET_SERVER_VERSION: &str = "0.0.14";
+pub const TARGET_SERVER_VERSION: &str = "0.0.15";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
@@ -59,8 +59,8 @@ pub use client::{
 };
 #[cfg(feature = "async")]
 pub use client::{
-    ClassNameObjects, ClassNameScope, Client, CollectionScope, ExportOutputStream, ItemStream,
-    ObjectNameScope, PageStream, TypedClass,
+    ClassNameObjects, ClassNameScope, ClassSchema, Client, CollectionScope, ExportOutputStream,
+    ItemStream, ObjectNameScope, PageStream, TypedClass,
 };
 pub use errors::{ApiError, ApiErrorResponse};
 pub use resources::*;
@@ -68,52 +68,60 @@ pub use types::{
     AuthProvidersResponse, AuthenticationConfig, BackupConfig, BackupDocument, BackupHistory,
     BackupManifest, BackupRequest, BackupState, BackupTaskDetails, BaseUrl, CURRENT_BACKUP_VERSION,
     CURRENT_IMPORT_VERSION, ClassComputationState, ClassHistory, ClassKey, ClassParams,
-    ClearRateLimitResponse, ClientAllowlistStatus, ClientAuthenticationConfig, ClientConfig,
-    ClientPaginationConfig, CollectionHistory, CollectionKey, ComputedFieldDefinition,
-    ComputedFieldDefinitionId, ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest,
-    ComputedFieldDeleteResponse, ComputedFieldError, ComputedFieldListResponse,
-    ComputedFieldMutationResponse, ComputedFieldOperation, ComputedFieldPreviewRequest,
-    ComputedFieldPreviewResponse, ComputedFieldQueryScope, ComputedFieldSelector,
-    ComputedFieldVisibility, ComputedObject, ComputedObjectScopes, ComputedResultType,
-    ComputedScope, CountsResponse, Credentials, DEFAULT_METRICS_PATH, DatabaseConfig,
-    DbStateResponse, EntityTag, EventConfig, EventDelivery, EventDeliveryHealthResponse,
-    EventDeliveryId, EventDeliveryQueueHealth, EventDeliveryStatus, EventDeliveryStatusCounts,
-    EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse, EventSink,
-    EventSinkDeliveryHealth, EventSinkGet, EventSinkKey, EventSinkKind, EventSubscription,
-    EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventSubscriptionId,
-    EventWorkerHealth, EventWorkerWakeupStats, ExportConfig, ExportContentType, ExportInclude,
-    ExportIncludeRelatedDirection, ExportIncludeRelatedObject, ExportIncludeRelatedSort,
-    ExportJsonResponse, ExportLimits, ExportMeta, ExportMissingDataPolicy, ExportRelationContext,
-    ExportRequest, ExportResult, ExportScope, ExportScopeKind, ExportTaskDetails,
-    ExportTemplateHistory, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning,
-    FullCollectionHistory, FullDbStateResponse, FullImportClassRelationInput, FullImportGraph,
-    FullImportRequest, GroupKey, HistoryId, HistoryMetadata, IdentityScopeKey, ImportAtomicity,
-    ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
-    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportComputedFieldInput,
-    ImportComputedFieldVisibility, ImportEventSinkInput, ImportEventSubscriptionInput,
-    ImportExportTemplateInput, ImportGraph, ImportGroupInput, ImportGroupMembershipInput,
-    ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode, ImportObjectInput,
-    ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
+    ClassSchemaResponse, ClearRateLimitResponse, ClientAllowlistStatus, ClientAuthenticationConfig,
+    ClientConfig, ClientPaginationConfig, CollectionHistory, CollectionKey, ComplianceStatus,
+    ComputedFieldDefinition, ComputedFieldDefinitionId, ComputedFieldDefinitionPatch,
+    ComputedFieldDefinitionRequest, ComputedFieldDeleteResponse, ComputedFieldError,
+    ComputedFieldListResponse, ComputedFieldMutationResponse, ComputedFieldOperation,
+    ComputedFieldPreviewRequest, ComputedFieldPreviewResponse, ComputedFieldQueryScope,
+    ComputedFieldSelector, ComputedFieldVisibility, ComputedObject, ComputedObjectScopes,
+    ComputedResultType, ComputedScope, CountsResponse, Credentials, DEFAULT_METRICS_PATH,
+    DatabaseConfig, DbStateResponse, EntityTag, EventConfig, EventDelivery,
+    EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryQueueHealth, EventDeliveryStatus,
+    EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
+    EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKey, EventSinkKind,
+    EventSubscription, EventSubscriptionDeliveryHealth, EventSubscriptionFilter,
+    EventSubscriptionId, EventWorkerHealth, EventWorkerWakeupStats, ExportConfig,
+    ExportContentType, ExportInclude, ExportIncludeRelatedDirection, ExportIncludeRelatedObject,
+    ExportIncludeRelatedSort, ExportJsonResponse, ExportLimits, ExportMeta,
+    ExportMissingDataPolicy, ExportRelationContext, ExportRequest, ExportResult, ExportScope,
+    ExportScopeKind, ExportTaskDetails, ExportTemplateHistory, ExportTemplateKind,
+    ExportTemplateRunRequest, ExportWarning, FullCollectionHistory, FullDbStateResponse,
+    FullImportClassRelationInput, FullImportGraph, FullImportRequest, GroupKey, HistoryId,
+    HistoryMetadata, IdentityScopeKey, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
+    ImportCollectionInput, ImportCollectionPermissionInput, ImportCollisionPolicy,
+    ImportComputedFieldInput, ImportComputedFieldVisibility, ImportEventSinkInput,
+    ImportEventSubscriptionInput, ImportExportTemplateInput, ImportGraph, ImportGroupInput,
+    ImportGroupMembershipInput, ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode,
+    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
     ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportResultId,
-    ImportRunResult, ImportTaskDetails, ImportTaskResultResponse, ImportWriteCondition, JsonPath,
-    LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, LoginRateLimitConfig,
-    LoginRateLimitEntry, LoginRateLimitState, LogoutTokenRequest, NetworkConfig, NewEventSink,
-    NewEventSubscription, ObjectHistory, ObjectKey, ObjectRelationLimit, PaginationConfig,
-    PermissionConfig, PermissionId, Permissions, PersonalComputedFieldDefinitionRequest,
-    PrincipalId, PrincipalKey, PrincipalSettings, PrincipalSettingsPatchDocument,
-    PrincipalSettingsPatchOperation, PrincipalSettingsResponse, ProbeResponse, Provenance,
-    ProvenanceActor, ProvenancePrincipal, RESTORE_CONFIRMATION_PHRASE, ReleaseRateLimitResponse,
-    RemoteCallConfig, RemoteCallResultId, RemoteTargetHistory, ResourceRevision, RestoreCapability,
-    RestoreConfig, RestoreConfirmRequest, RestoreId, RestoreJobStatus, RestoreStageResponse,
-    RestoreTimestamps, RestoreValidationSummary, Revisioned, RunningConfig,
-    RunningLoginRateLimitConfig, SamplingRatio, SecretSourceConfig, SecretStatus, ServerConfig,
-    SharedComputedScope, TaskConfig, TaskDetails, TaskEventId, TaskEventResponse, TaskId, TaskKind,
-    TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse, TaskStatus, TlsConfig, Token,
-    TokenId, TokenListState, TokenResourceScope, TokenScopeDetails, TracingConfig, TypedObject,
-    UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
-    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
-    UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
-    UserParams, ValidatedExportScope,
+    ImportRunResult, ImportSchemaActivation, ImportTaskDetails, ImportTaskResultResponse,
+    ImportWriteCondition, JsonPath, LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND,
+    LoginRateLimitConfig, LoginRateLimitEntry, LoginRateLimitState, LogoutTokenRequest,
+    NetworkConfig, NewEventSink, NewEventSubscription, ObjectComplianceResponse, ObjectHistory,
+    ObjectKey, ObjectRelationLimit, ObjectSchemaEvidence, PaginationConfig, PermissionConfig,
+    PermissionId, Permissions, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalKey,
+    PrincipalSettings, PrincipalSettingsPatchDocument, PrincipalSettingsPatchOperation,
+    PrincipalSettingsResponse, ProbeResponse, Provenance, ProvenanceActor, ProvenancePrincipal,
+    RESTORE_CONFIRMATION_PHRASE, ReleaseRateLimitResponse, RemoteCallConfig, RemoteCallResultId,
+    RemoteTargetHistory, ResourceRevision, RestoreCapability, RestoreConfig, RestoreConfirmRequest,
+    RestoreId, RestoreJobStatus, RestoreStageResponse, RestoreTimestamps, RestoreValidationSummary,
+    Revisioned, RunningConfig, RunningLoginRateLimitConfig, SamplingRatio, SchemaActivationPolicy,
+    SchemaActivationRequest, SchemaActivationResponse, SchemaActualValue, SchemaComplianceCounts,
+    SchemaCompliancePage, SchemaDiagnosticOmission, SchemaDiagnosticSnapshotResponse,
+    SchemaDiagnostics, SchemaExpectedValue, SchemaFailure, SchemaFailureGroup, SchemaImpactCounts,
+    SchemaImpactFindingResponse, SchemaImpactReadiness, SchemaImpactResponse, SchemaIssue,
+    SchemaObjectUrlTemplate, SchemaPageOptions, SchemaReference, SchemaRepairReportRequest,
+    SchemaRevision, SchemaRevisionResponse, SchemaRevisionStatus, SchemaStageRequest,
+    SchemaValidationConfig, SchemaWorkKind, SchemaWorkResponse, SchemaWorkStatus,
+    SecretSourceConfig, SecretStatus, ServerConfig, SharedComputedScope, TaskCancelRequest,
+    TaskCancellationReason, TaskConfig, TaskDetails, TaskEventId, TaskEventResponse, TaskId,
+    TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskRemoteSideEffectState,
+    TaskResponse, TaskStatus, TlsConfig, Token, TokenId, TokenListState, TokenResourceScope,
+    TokenScopeDetails, TracingConfig, TypedObject, UnifiedSearchBatchResponse,
+    UnifiedSearchDoneEvent, UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind,
+    UnifiedSearchNext, UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent,
+    UpdateEventSink, UpdateEventSubscription, UserParams, ValidatedExportScope,
 };
 
 #[cfg(feature = "blocking")]

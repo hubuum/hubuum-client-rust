@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.14 OpenAPI gaps
+# Known Hubuum server v0.0.15 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.14
+The pinned client contract records these limitations in the server v0.0.15
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not
@@ -10,6 +10,9 @@ specification explicitly:
 - `UpdateGroup` omits the runtime-supported `description` field. The typed
   `GroupPatch` exposes it, with live integration coverage, so callers do not
   need to fall back to `raw()`.
+- `TaskCancelRequest.reason` declares a 512-character limit, but runtime admission
+  enforces 512 UTF-8 bytes, rejects blank reasons, and forbids control characters.
+  `TaskCancellationReason` follows the runtime rules.
 
 The scheduled drift job remains strict about changes on the server's `main`
 branch. These gaps can be removed when a targeted server specification corrects
@@ -29,6 +32,8 @@ Rust wire models:
   older server responses.
 - `Object.data` remains optional for compatibility and serializes an explicit
   null when absent.
+- `TaskResponse.unattempted_items` defaults to zero for older responses that
+  predate cancellation accounting.
 - `UpdateUser.password` is intentionally absent from `UserPatch`; the async and
   blocking clients provide dedicated `set_password` helpers. Future unmapped
   properties can still be reached through the constrained `raw()` extension

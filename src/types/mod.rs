@@ -18,6 +18,7 @@ mod provenance;
 mod relation;
 mod remote;
 mod revision;
+mod schema;
 mod search;
 mod settings;
 mod task;
@@ -46,8 +47,9 @@ pub use config::{
     AuthenticationConfig, BackupConfig, ClientAllowlistStatus, ClientAuthenticationConfig,
     ClientConfig, ClientPaginationConfig, DEFAULT_METRICS_PATH, DatabaseConfig, EventConfig,
     ExportConfig, NetworkConfig, PaginationConfig, PermissionConfig, RemoteCallConfig,
-    RestoreConfig, RunningConfig, RunningLoginRateLimitConfig, SamplingRatio, SecretSourceConfig,
-    SecretStatus, ServerConfig, TaskConfig, TlsConfig, TracingConfig,
+    RestoreConfig, RunningConfig, RunningLoginRateLimitConfig, SamplingRatio,
+    SchemaValidationConfig, SecretSourceConfig, SecretStatus, ServerConfig, TaskConfig, TlsConfig,
+    TracingConfig,
 };
 pub use datetime::HubuumDateTime;
 pub use event::{
@@ -104,6 +106,17 @@ pub use remote::{
     UpdateRemoteTarget,
 };
 pub use revision::{EntityTag, ResourceRevision, Revisioned};
+pub use schema::{
+    ClassSchemaResponse, ComplianceStatus, ImportSchemaActivation, ObjectComplianceResponse,
+    ObjectSchemaEvidence, SchemaActivationPolicy, SchemaActivationRequest,
+    SchemaActivationResponse, SchemaActualValue, SchemaComplianceCounts, SchemaCompliancePage,
+    SchemaDiagnosticOmission, SchemaDiagnosticSnapshotResponse, SchemaDiagnostics,
+    SchemaExpectedValue, SchemaFailure, SchemaFailureGroup, SchemaImpactCounts,
+    SchemaImpactFindingResponse, SchemaImpactReadiness, SchemaImpactResponse, SchemaIssue,
+    SchemaObjectUrlTemplate, SchemaPageOptions, SchemaReference, SchemaRepairReportRequest,
+    SchemaRevision, SchemaRevisionResponse, SchemaRevisionStatus, SchemaStageRequest,
+    SchemaWorkKind, SchemaWorkResponse, SchemaWorkStatus,
+};
 #[cfg(any(feature = "async", feature = "blocking"))]
 pub(crate) use search::UnifiedSearchSseDecoder;
 pub use search::{
@@ -116,9 +129,9 @@ pub use settings::{
     PrincipalSettingsResponse,
 };
 pub use task::{
-    BackupTaskDetails, ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse, TaskDetails,
-    TaskEventResponse, TaskKind, TaskLinks, TaskProgress, TaskQueueStateResponse, TaskResponse,
-    TaskStatus,
+    BackupTaskDetails, ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse,
+    TaskCancelRequest, TaskCancellationReason, TaskDetails, TaskEventResponse, TaskKind, TaskLinks,
+    TaskProgress, TaskQueueStateResponse, TaskRemoteSideEffectState, TaskResponse, TaskStatus,
 };
 pub use token::{MAX_TOKEN_RESOURCE_SCOPES, TokenListState, TokenResourceScope, TokenScopeDetails};
 pub use typed_object::TypedObject;

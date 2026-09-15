@@ -1,0 +1,7 @@
+error[E0308]: mismatched types
+ --> tests/trybuild/schema_revision_fail_resource_revision.rs:4:29
+  |
+4 |     let _: SchemaRevision = ResourceRevision::INITIAL;
+  |            --------------   ^^^^^^^^^^^^^^^^^^^^^^^^^ expected `SchemaRevision`, found `ResourceRevision`
+  |            |
+  |            expected due to this
