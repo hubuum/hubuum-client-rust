@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.14",
+  "api_version": "0.0.15",
   "openapi": "3.1.0",
-  "operation_count": 204,
+  "operation_count": 218,
   "operations": [
     {
       "method": "POST",
@@ -691,6 +691,7 @@
         "RemoteCallConfig",
         "RestoreConfig",
         "RunningConfig",
+        "SchemaValidationConfig",
         "SecretSourceConfig",
         "SecretStatus",
         "ServerConfig",
@@ -757,6 +758,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -837,6 +839,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -3796,6 +3799,978 @@
           "application/json"
         ],
         "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdSchema",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "ClassSchemaResponse",
+        "HubuumClassID",
+        "SchemaActivationPolicy",
+        "SchemaComplianceCounts",
+        "SchemaRevision",
+        "SchemaRevisionResponse",
+        "SchemaRevisionStatus"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/ClassSchemaResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdSchemaObjects",
+      "parameters": [
+        "path:class_id",
+        "query:after",
+        "query:limit",
+        "query:status"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/objects",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "ComplianceStatus",
+        "HubuumClassID",
+        "ObjectComplianceResponse",
+        "ObjectSchemaEvidence",
+        "ResourceRevision",
+        "SchemaCompliancePage",
+        "SchemaReference",
+        "SchemaRevision"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaCompliancePage"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdSchemaRevisions",
+      "parameters": [
+        "path:class_id",
+        "query:after",
+        "query:limit"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/revisions",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "SchemaActivationPolicy",
+        "SchemaRevision",
+        "SchemaRevisionResponse",
+        "SchemaRevisionStatus"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaRevisionResponse"
+            },
+            "type": "array"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdSchemaRevisions",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/revisions",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "SchemaStageRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SchemaStageRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "SchemaActivationPolicy",
+        "SchemaRevision",
+        "SchemaRevisionResponse",
+        "SchemaRevisionStatus"
+      ],
+      "response_schemas": {
+        "201": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaRevisionResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByClassIdSchemaRevisionsByRevision",
+      "parameters": [
+        "path:class_id",
+        "path:revision"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/revisions/{revision}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "SchemaActivationPolicy",
+        "SchemaRevision",
+        "SchemaRevisionResponse",
+        "SchemaRevisionStatus"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaRevisionResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdSchemaRevisionsByRevision",
+      "parameters": [
+        "path:class_id",
+        "path:revision"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/revisions/{revision}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "SchemaActivationPolicy",
+        "SchemaRevision",
+        "SchemaRevisionResponse",
+        "SchemaRevisionStatus"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaRevisionResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdSchemaRevisionsByRevisionActivate",
+      "parameters": [
+        "path:class_id",
+        "path:revision"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/revisions/{revision}/activate",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "SchemaActivationPolicy",
+        "SchemaActivationRequest",
+        "SchemaRevision",
+        "TaskID"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SchemaActivationRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "SchemaActivationPolicy",
+        "SchemaActivationResponse",
+        "SchemaRevision",
+        "SchemaRevisionResponse",
+        "SchemaRevisionStatus",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaActivationResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdSchemaRevisionsByRevisionImpact",
+      "parameters": [
+        "path:class_id",
+        "path:revision"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/revisions/{revision}/impact",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "ResourceRevision",
+        "SchemaActualValue",
+        "SchemaDiagnosticOmission",
+        "SchemaDiagnosticSnapshotResponse",
+        "SchemaDiagnostics",
+        "SchemaExpectedValue",
+        "SchemaFailure",
+        "SchemaFailureGroup",
+        "SchemaImpactCounts",
+        "SchemaImpactFindingResponse",
+        "SchemaImpactReadiness",
+        "SchemaImpactResponse",
+        "SchemaIssue",
+        "SchemaReference",
+        "SchemaRevision",
+        "SchemaWorkKind",
+        "SchemaWorkResponse",
+        "SchemaWorkStatus",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "202": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaWorkResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "413": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "413": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdSchemaRevisionsByRevisionRevalidate",
+      "parameters": [
+        "path:class_id",
+        "path:revision"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/revisions/{revision}/revalidate",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "ResourceRevision",
+        "SchemaActualValue",
+        "SchemaDiagnosticOmission",
+        "SchemaDiagnosticSnapshotResponse",
+        "SchemaDiagnostics",
+        "SchemaExpectedValue",
+        "SchemaFailure",
+        "SchemaFailureGroup",
+        "SchemaImpactCounts",
+        "SchemaImpactFindingResponse",
+        "SchemaImpactReadiness",
+        "SchemaImpactResponse",
+        "SchemaIssue",
+        "SchemaReference",
+        "SchemaRevision",
+        "SchemaWorkKind",
+        "SchemaWorkResponse",
+        "SchemaWorkStatus",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "202": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaWorkResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByClassIdSchemaTasksByTaskId",
+      "parameters": [
+        "path:class_id",
+        "path:task_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/tasks/{task_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "ResourceRevision",
+        "SchemaActualValue",
+        "SchemaDiagnosticOmission",
+        "SchemaDiagnosticSnapshotResponse",
+        "SchemaDiagnostics",
+        "SchemaExpectedValue",
+        "SchemaFailure",
+        "SchemaFailureGroup",
+        "SchemaImpactCounts",
+        "SchemaImpactFindingResponse",
+        "SchemaImpactReadiness",
+        "SchemaImpactResponse",
+        "SchemaIssue",
+        "SchemaReference",
+        "SchemaRevision",
+        "SchemaWorkKind",
+        "SchemaWorkResponse",
+        "SchemaWorkStatus",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaWorkResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "413": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "413": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdSchemaTasksByTaskId",
+      "parameters": [
+        "path:class_id",
+        "path:task_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/tasks/{task_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "ResourceRevision",
+        "SchemaActualValue",
+        "SchemaDiagnosticOmission",
+        "SchemaDiagnosticSnapshotResponse",
+        "SchemaDiagnostics",
+        "SchemaExpectedValue",
+        "SchemaFailure",
+        "SchemaFailureGroup",
+        "SchemaImpactCounts",
+        "SchemaImpactFindingResponse",
+        "SchemaImpactReadiness",
+        "SchemaImpactResponse",
+        "SchemaIssue",
+        "SchemaReference",
+        "SchemaRevision",
+        "SchemaWorkKind",
+        "SchemaWorkResponse",
+        "SchemaWorkStatus",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaWorkResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "413": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "413": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdSchemaTasksByTaskIdReport",
+      "parameters": [
+        "path:class_id",
+        "path:task_id",
+        "query:download"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/tasks/{task_id}/report",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "text/html": {
+            "type": "string"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "text/html"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdSchemaTasksByTaskIdReport",
+      "parameters": [
+        "path:class_id",
+        "path:task_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/tasks/{task_id}/report",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "ExportTemplateID",
+        "SchemaObjectUrlTemplate",
+        "SchemaRepairReportRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SchemaRepairReportRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "text/html": {
+            "type": "string"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "413": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "text/html"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "413": [
           "application/json"
         ]
       },
@@ -7412,6 +8387,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -7655,6 +8631,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -7735,6 +8712,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -10730,6 +11708,7 @@
         "ImportPrincipalSubtype",
         "ImportRemoteTargetInput",
         "ImportRequest",
+        "ImportSchemaActivation",
         "ImportWriteCondition",
         "ObjectKey",
         "ObjectRelationLimit",
@@ -10739,7 +11718,10 @@
         "RemoteHttpMethod",
         "RemoteTargetSubjectType",
         "ResourceRevision",
-        "RestoreTimestamps"
+        "RestoreTimestamps",
+        "SchemaActivationPolicy",
+        "SchemaRevision",
+        "TaskID"
       ],
       "request_schemas": {
         "application/json": {
@@ -10755,6 +11737,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -10835,6 +11818,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -11953,6 +12937,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -12547,6 +13532,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -12606,6 +13592,7 @@
         "TaskKind",
         "TaskLinks",
         "TaskProgress",
+        "TaskRemoteSideEffectState",
         "TaskResponse",
         "TaskStatus"
       ],
@@ -12642,6 +13629,104 @@
           "application/json"
         ],
         "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1TasksByTaskIdCancel",
+      "parameters": [
+        "path:task_id"
+      ],
+      "path": "/api/v1/tasks/{task_id}/cancel",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "TaskCancelRequest",
+        "TaskStatus"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/TaskCancelRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "BackupTaskDetails",
+        "ExportTaskDetails",
+        "ImportTaskDetails",
+        "TaskDetails",
+        "TaskKind",
+        "TaskLinks",
+        "TaskProgress",
+        "TaskRemoteSideEffectState",
+        "TaskResponse",
+        "TaskStatus"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/TaskResponse"
+          }
+        },
+        "202": {
+          "application/json": {
+            "$ref": "#/components/schemas/TaskResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
           "application/json"
         ]
       },
@@ -12779,8 +13864,8 @@
       "security": []
     }
   ],
-  "path_count": 139,
-  "schema_count": 280,
+  "path_count": 149,
+  "schema_count": 315,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -12795,6 +13880,7 @@
     "BackupTaskDetails",
     "ClassComputationState",
     "ClassKey",
+    "ClassSchemaResponse",
     "ClearRateLimitResponse",
     "ClientAllowlistStatus",
     "ClientAuthenticationConfig",
@@ -12805,6 +13891,7 @@
     "CollectionID",
     "CollectionKey",
     "CollectionPermissionSet",
+    "ComplianceStatus",
     "ComputedFieldDefinition",
     "ComputedFieldDefinitionPatch",
     "ComputedFieldDefinitionRequest",
@@ -12915,6 +14002,7 @@
     "ImportPrincipalSubtype",
     "ImportRemoteTargetInput",
     "ImportRequest",
+    "ImportSchemaActivation",
     "ImportTaskDetails",
     "ImportTaskResultResponse",
     "ImportWriteCondition",
@@ -12951,9 +14039,11 @@
     "ObjectAggregateMeasureValue",
     "ObjectAggregateRow",
     "ObjectAggregateValueState",
+    "ObjectComplianceResponse",
     "ObjectDataPatchDocument",
     "ObjectKey",
     "ObjectRelationLimit",
+    "ObjectSchemaEvidence",
     "ObjectsByClass",
     "PaginationConfig",
     "PatchOperation",
@@ -13001,6 +14091,34 @@
     "RestoreTimestamps",
     "RestoreValidationSummary",
     "RunningConfig",
+    "SchemaActivationPolicy",
+    "SchemaActivationRequest",
+    "SchemaActivationResponse",
+    "SchemaActualValue",
+    "SchemaComplianceCounts",
+    "SchemaCompliancePage",
+    "SchemaDiagnosticOmission",
+    "SchemaDiagnosticSnapshotResponse",
+    "SchemaDiagnostics",
+    "SchemaExpectedValue",
+    "SchemaFailure",
+    "SchemaFailureGroup",
+    "SchemaImpactCounts",
+    "SchemaImpactFindingResponse",
+    "SchemaImpactReadiness",
+    "SchemaImpactResponse",
+    "SchemaIssue",
+    "SchemaObjectUrlTemplate",
+    "SchemaReference",
+    "SchemaRepairReportRequest",
+    "SchemaRevision",
+    "SchemaRevisionResponse",
+    "SchemaRevisionStatus",
+    "SchemaStageRequest",
+    "SchemaValidationConfig",
+    "SchemaWorkKind",
+    "SchemaWorkResponse",
+    "SchemaWorkStatus",
     "SecretSourceConfig",
     "SecretStatus",
     "ServerConfig",
@@ -13023,6 +14141,7 @@
     "StructuredSearchSortDirection",
     "StructuredSearchStartedEvent",
     "StructuredSearchTarget",
+    "TaskCancelRequest",
     "TaskConfig",
     "TaskDetails",
     "TaskEventResponse",
@@ -13031,6 +14150,7 @@
     "TaskLinks",
     "TaskProgress",
     "TaskQueueStateResponse",
+    "TaskRemoteSideEffectState",
     "TaskResponse",
     "TaskStatus",
     "TestOperation",
@@ -13194,6 +14314,10 @@
           "minimum": 0,
           "type": "integer"
         },
+        "max_capture_rows": {
+          "minimum": 0,
+          "type": "integer"
+        },
         "max_output_bytes": {
           "minimum": 0,
           "type": "integer"
@@ -13205,6 +14329,7 @@
       },
       "required": [
         "max_active_tasks_per_user",
+        "max_capture_rows",
         "max_output_bytes",
         "output_retention_hours"
       ],
@@ -13408,6 +14533,27 @@
       },
       "required": [
         "name"
+      ],
+      "type": "object"
+    },
+    "ClassSchemaResponse": {
+      "properties": {
+        "active": {
+          "$ref": "#/components/schemas/SchemaRevisionResponse"
+        },
+        "counts": {
+          "$ref": "#/components/schemas/SchemaComplianceCounts"
+        },
+        "object_epoch": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "active",
+        "counts",
+        "object_epoch"
       ],
       "type": "object"
     },
@@ -13667,6 +14813,15 @@
         "revision"
       ],
       "type": "object"
+    },
+    "ComplianceStatus": {
+      "enum": [
+        "valid",
+        "invalid",
+        "pending",
+        "not_required"
+      ],
+      "type": "string"
     },
     "ComputedFieldDefinition": {
       "properties": {
@@ -17320,6 +18475,16 @@
             "null"
           ]
         },
+        "schema_activation": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/ImportSchemaActivation"
+            }
+          ]
+        },
         "timestamps": {
           "oneOf": [
             {
@@ -18764,6 +19929,36 @@
       ],
       "type": "object"
     },
+    "ImportSchemaActivation": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_active_revision": {
+          "$ref": "#/components/schemas/SchemaRevision"
+        },
+        "impact_task_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/TaskID"
+            }
+          ]
+        },
+        "policy": {
+          "$ref": "#/components/schemas/SchemaActivationPolicy"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/SchemaRevision"
+        }
+      },
+      "required": [
+        "expected_active_revision",
+        "policy",
+        "revision"
+      ],
+      "type": "object"
+    },
     "ImportTaskDetails": {
       "properties": {
         "results_url": {
@@ -19919,6 +21114,40 @@
       ],
       "type": "string"
     },
+    "ObjectComplianceResponse": {
+      "properties": {
+        "active_schema": {
+          "$ref": "#/components/schemas/SchemaReference"
+        },
+        "evidence": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/ObjectSchemaEvidence"
+            }
+          ]
+        },
+        "object_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "object_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "status": {
+          "$ref": "#/components/schemas/ComplianceStatus"
+        }
+      },
+      "required": [
+        "active_schema",
+        "object_id",
+        "object_revision",
+        "status"
+      ],
+      "type": "object"
+    },
     "ObjectDataPatchDocument": {
       "items": {
         "oneOf": [
@@ -20084,6 +21313,30 @@
       "format": "int32",
       "minimum": 1,
       "type": "integer"
+    },
+    "ObjectSchemaEvidence": {
+      "properties": {
+        "object_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "schema": {
+          "$ref": "#/components/schemas/SchemaReference"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "validated_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "object_revision",
+        "schema",
+        "valid",
+        "validated_at"
+      ],
+      "type": "object"
     },
     "ObjectsByClass": {
       "properties": {
@@ -21796,6 +23049,9 @@
         "restores": {
           "$ref": "#/components/schemas/RestoreConfig"
         },
+        "schema_validation": {
+          "$ref": "#/components/schemas/SchemaValidationConfig"
+        },
         "secrets": {
           "$ref": "#/components/schemas/SecretSourceConfig"
         },
@@ -21820,12 +23076,812 @@
         "permissions",
         "remote_calls",
         "restores",
+        "schema_validation",
         "secrets",
         "server",
         "tasks",
         "tracing"
       ],
       "type": "object"
+    },
+    "SchemaActivationPolicy": {
+      "enum": [
+        "reject_incompatible",
+        "allow_pending"
+      ],
+      "type": "string"
+    },
+    "SchemaActivationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_active_revision": {
+          "$ref": "#/components/schemas/SchemaRevision"
+        },
+        "impact_task_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/TaskID"
+            }
+          ]
+        },
+        "policy": {
+          "$ref": "#/components/schemas/SchemaActivationPolicy"
+        }
+      },
+      "required": [
+        "expected_active_revision",
+        "policy"
+      ],
+      "type": "object"
+    },
+    "SchemaActivationResponse": {
+      "properties": {
+        "active": {
+          "$ref": "#/components/schemas/SchemaRevisionResponse"
+        },
+        "dependent_rebuild_task_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/TaskID"
+            }
+          ]
+        },
+        "task_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/TaskID"
+            }
+          ]
+        }
+      },
+      "required": [
+        "active"
+      ],
+      "type": "object"
+    },
+    "SchemaActualValue": {
+      "oneOf": [
+        {
+          "enum": [
+            "null"
+          ],
+          "type": "string"
+        },
+        {
+          "enum": [
+            "boolean"
+          ],
+          "type": "string"
+        },
+        {
+          "enum": [
+            "number"
+          ],
+          "type": "string"
+        },
+        {
+          "properties": {
+            "string": {
+              "properties": {
+                "characters": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "characters"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "string"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "array": {
+              "properties": {
+                "items": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "items"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "array"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "object": {
+              "properties": {
+                "properties": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "properties"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "object"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SchemaComplianceCounts": {
+      "properties": {
+        "invalid": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "not_required": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pending": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "valid": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "invalid",
+        "not_required",
+        "pending",
+        "valid"
+      ],
+      "type": "object"
+    },
+    "SchemaCompliancePage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/components/schemas/ObjectComplianceResponse"
+          },
+          "type": "array"
+        },
+        "next_after": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "type": "object"
+    },
+    "SchemaDiagnosticOmission": {
+      "enum": [
+        "actual_value_redacted",
+        "instance_path_redacted_or_too_long",
+        "schema_constraint_unavailable_or_too_large"
+      ],
+      "type": "string"
+    },
+    "SchemaDiagnosticSnapshotResponse": {
+      "properties": {
+        "diagnostics": {
+          "$ref": "#/components/schemas/SchemaDiagnostics"
+        },
+        "inspected_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "object_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        }
+      },
+      "required": [
+        "diagnostics",
+        "inspected_at",
+        "object_revision"
+      ],
+      "type": "object"
+    },
+    "SchemaDiagnostics": {
+      "properties": {
+        "issues": {
+          "items": {
+            "$ref": "#/components/schemas/SchemaIssue"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "issues",
+        "truncated"
+      ],
+      "type": "object"
+    },
+    "SchemaExpectedValue": {
+      "oneOf": [
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "available"
+              ],
+              "type": "string"
+            },
+            "value": {}
+          },
+          "required": [
+            "status",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "omitted"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SchemaFailure": {
+      "properties": {
+        "keyword": {
+          "type": "string"
+        },
+        "missing_property": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schema_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "keyword"
+      ],
+      "type": "object"
+    },
+    "SchemaFailureGroup": {
+      "properties": {
+        "objects": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "reason": {
+          "$ref": "#/components/schemas/SchemaFailure"
+        },
+        "samples": {
+          "items": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "objects",
+        "reason",
+        "samples"
+      ],
+      "type": "object"
+    },
+    "SchemaImpactCounts": {
+      "properties": {
+        "newly_invalid": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "newly_required_valid": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "newly_valid": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "no_longer_required": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "still_invalid": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "still_valid": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unchanged_not_required": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "uninspectable": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "newly_invalid",
+        "newly_required_valid",
+        "newly_valid",
+        "no_longer_required",
+        "still_invalid",
+        "still_valid",
+        "unchanged_not_required",
+        "uninspectable"
+      ],
+      "type": "object"
+    },
+    "SchemaImpactFindingResponse": {
+      "properties": {
+        "object_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "reason": {
+          "$ref": "#/components/schemas/SchemaFailure"
+        },
+        "snapshot": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/SchemaDiagnosticSnapshotResponse"
+            }
+          ]
+        }
+      },
+      "required": [
+        "object_id",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "SchemaImpactReadiness": {
+      "enum": [
+        "compatible",
+        "incompatible",
+        "inconclusive"
+      ],
+      "type": "string"
+    },
+    "SchemaImpactResponse": {
+      "properties": {
+        "baseline": {
+          "$ref": "#/components/schemas/SchemaReference"
+        },
+        "counts": {
+          "$ref": "#/components/schemas/SchemaImpactCounts"
+        },
+        "failures": {
+          "items": {
+            "$ref": "#/components/schemas/SchemaFailureGroup"
+          },
+          "type": "array"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/components/schemas/SchemaImpactFindingResponse"
+          },
+          "type": "array"
+        },
+        "ungrouped_failures": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "baseline",
+        "counts",
+        "failures",
+        "ungrouped_failures"
+      ],
+      "type": "object"
+    },
+    "SchemaIssue": {
+      "properties": {
+        "actual": {
+          "$ref": "#/components/schemas/SchemaActualValue"
+        },
+        "alternative": {
+          "type": "boolean"
+        },
+        "expected": {
+          "$ref": "#/components/schemas/SchemaExpectedValue"
+        },
+        "instance_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "omissions": {
+          "items": {
+            "$ref": "#/components/schemas/SchemaDiagnosticOmission"
+          },
+          "type": "array"
+        },
+        "reason": {
+          "$ref": "#/components/schemas/SchemaFailure"
+        }
+      },
+      "required": [
+        "actual",
+        "alternative",
+        "expected",
+        "message",
+        "omissions",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "SchemaObjectUrlTemplate": {
+      "type": "string"
+    },
+    "SchemaReference": {
+      "properties": {
+        "class_id": {
+          "$ref": "#/components/schemas/HubuumClassID"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/SchemaRevision"
+        }
+      },
+      "required": [
+        "class_id",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "SchemaRepairReportRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "object_url_template": {
+          "$ref": "#/components/schemas/SchemaObjectUrlTemplate"
+        },
+        "template_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/ExportTemplateID"
+            }
+          ]
+        }
+      },
+      "required": [
+        "object_url_template"
+      ],
+      "type": "object"
+    },
+    "SchemaRevision": {
+      "format": "int64",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "SchemaRevisionResponse": {
+      "properties": {
+        "activated_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "activation_policy": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/SchemaActivationPolicy"
+            }
+          ]
+        },
+        "class_id": {
+          "$ref": "#/components/schemas/HubuumClassID"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "created_by": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "json_schema": {},
+        "revision": {
+          "$ref": "#/components/schemas/SchemaRevision"
+        },
+        "status": {
+          "$ref": "#/components/schemas/SchemaRevisionStatus"
+        },
+        "validate_schema": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "class_id",
+        "created_at",
+        "revision",
+        "status",
+        "validate_schema"
+      ],
+      "type": "object"
+    },
+    "SchemaRevisionStatus": {
+      "enum": [
+        "staged",
+        "active",
+        "retired",
+        "abandoned"
+      ],
+      "type": "string"
+    },
+    "SchemaStageRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "json_schema": {},
+        "validate_schema": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "validate_schema"
+      ],
+      "type": "object"
+    },
+    "SchemaValidationConfig": {
+      "properties": {
+        "max_expanded_work": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_instance_bytes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_instance_work": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_schema_bytes": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_expanded_work",
+        "max_instance_bytes",
+        "max_instance_work",
+        "max_schema_bytes"
+      ],
+      "type": "object"
+    },
+    "SchemaWorkKind": {
+      "enum": [
+        "impact",
+        "revalidation"
+      ],
+      "type": "string"
+    },
+    "SchemaWorkResponse": {
+      "properties": {
+        "batches": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "current_active_schema": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/SchemaReference"
+            }
+          ]
+        },
+        "current_epoch": {
+          "format": "int64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "cursor": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "elapsed_millis": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "end_epoch": {
+          "format": "int64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "examined": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "impact": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/SchemaImpactResponse"
+            }
+          ]
+        },
+        "invalid": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "invalid_samples": {
+          "items": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/components/schemas/SchemaWorkKind"
+        },
+        "not_required": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "readiness": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/SchemaImpactReadiness"
+            }
+          ]
+        },
+        "stale": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start_epoch": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/components/schemas/SchemaWorkStatus"
+        },
+        "target": {
+          "$ref": "#/components/schemas/SchemaReference"
+        },
+        "task_id": {
+          "$ref": "#/components/schemas/TaskID"
+        },
+        "uninspectable": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "upper_bound": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "valid": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "batches",
+        "created_at",
+        "cursor",
+        "elapsed_millis",
+        "examined",
+        "invalid",
+        "invalid_samples",
+        "kind",
+        "not_required",
+        "stale",
+        "start_epoch",
+        "status",
+        "target",
+        "task_id",
+        "uninspectable",
+        "upper_bound",
+        "valid"
+      ],
+      "type": "object"
+    },
+    "SchemaWorkStatus": {
+      "enum": [
+        "running",
+        "failed",
+        "complete",
+        "cancelled",
+        "superseded"
+      ],
+      "type": "string"
     },
     "SecretSourceConfig": {
       "properties": {
@@ -22751,9 +24807,42 @@
         }
       ]
     },
+    "TaskCancelRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_status": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/TaskStatus"
+            }
+          ]
+        },
+        "reason": {
+          "maxLength": 512,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
     "TaskConfig": {
       "properties": {
+        "backup_execution_timeout_seconds": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
         "computed_reindex_batch_size": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "export_execution_timeout_seconds": {
+          "format": "int64",
           "minimum": 0,
           "type": "integer"
         },
@@ -22762,6 +24851,11 @@
           "type": "integer"
         },
         "heartbeat_seconds": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "import_execution_timeout_seconds": {
           "format": "int64",
           "minimum": 0,
           "type": "integer"
@@ -22785,7 +24879,22 @@
           "minimum": 0,
           "type": "integer"
         },
+        "reindex_execution_timeout_seconds": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "remote_call_execution_timeout_seconds": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
         "remote_call_max_active_per_user": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "schema_validation_execution_timeout_seconds": {
+          "format": "int64",
           "minimum": 0,
           "type": "integer"
         },
@@ -22795,14 +24904,20 @@
         }
       },
       "required": [
+        "backup_execution_timeout_seconds",
         "computed_reindex_batch_size",
+        "export_execution_timeout_seconds",
         "export_max_active_per_user",
         "heartbeat_seconds",
+        "import_execution_timeout_seconds",
         "import_max_active_per_user",
         "lease_seconds",
         "poll_interval_ms",
         "recovery_interval_seconds",
+        "reindex_execution_timeout_seconds",
+        "remote_call_execution_timeout_seconds",
         "remote_call_max_active_per_user",
+        "schema_validation_execution_timeout_seconds",
         "workers"
       ],
       "type": "object"
@@ -22888,7 +25003,8 @@
         "export",
         "backup",
         "reindex",
-        "remote_call"
+        "remote_call",
+        "schema_validation"
       ],
       "type": "string"
     },
@@ -23075,8 +25191,36 @@
       ],
       "type": "object"
     },
+    "TaskRemoteSideEffectState": {
+      "enum": [
+        "not_sent",
+        "possibly_sent",
+        "legacy_unknown"
+      ],
+      "type": "string"
+    },
     "TaskResponse": {
       "properties": {
+        "cancel_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cancel_requested_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cancel_requested_by": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "created_at": {
           "format": "date-time",
           "type": "string"
@@ -23089,6 +25233,13 @@
             {
               "$ref": "#/components/schemas/TaskDetails"
             }
+          ]
+        },
+        "execution_deadline_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
           ]
         },
         "finished_at": {
@@ -23110,6 +25261,16 @@
         },
         "progress": {
           "$ref": "#/components/schemas/TaskProgress"
+        },
+        "remote_side_effect_state": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/TaskRemoteSideEffectState"
+            }
+          ]
         },
         "request_redacted_at": {
           "format": "date-time",
@@ -23140,6 +25301,16 @@
             "string",
             "null"
           ]
+        },
+        "terminal_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unattempted_items": {
+          "format": "int32",
+          "type": "integer"
         }
       },
       "required": [
@@ -23148,7 +25319,8 @@
         "kind",
         "links",
         "progress",
-        "status"
+        "status",
+        "unattempted_items"
       ],
       "type": "object"
     },
@@ -24127,5 +26299,5 @@
       "type": "object"
     }
   },
-  "spec_sha256": "b3a262cb7ff6f7caf0b8ae1d6338c203c67f0e8841fab37ea13d662c62350f86"
+  "spec_sha256": "85b8a0ee6f40fc93474579e5f443014b9acc0c8203a73f9c2720c600960279f3"
 }

@@ -506,7 +506,7 @@ if [[ "${RUN_E2E_CLIENT}" == "1" ]]; then
         cargo test --locked -p e2e_client \
             --features integration-tests,restore-tests --test restore \
             -- --ignored --exact "${restore_case}" --test-threads=1
-        # Format 5 deliberately excludes password hashes and bearer tokens.
+        # Format 6 deliberately excludes password hashes and bearer tokens.
         ADMIN_PASSWORD="$(reset_admin_password)"
         export HUBUUM_INTEGRATION_ADMIN_PASSWORD="${ADMIN_PASSWORD}"
         cargo test --locked -p e2e_client \

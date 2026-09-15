@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{HubuumDateTime, PrincipalId, RestoreId};
 
-/// Backup document version produced and accepted by Hubuum server v0.0.14.
-pub const CURRENT_BACKUP_VERSION: i32 = 5;
+/// Backup document version produced and accepted by Hubuum server v0.0.15.
+pub const CURRENT_BACKUP_VERSION: i32 = 6;
 
 /// Exact phrase required to confirm a destructive full-system restore.
 pub const RESTORE_CONFIRMATION_PHRASE: &str = "REPLACE ALL HUBUUM DATA";
@@ -319,5 +319,28 @@ mod tests {
             serde_json::to_value(document).unwrap()["created_at"],
             "2024-01-01T01:02:03.456789+00:00"
         );
+    }
+
+    #[test]
+    fn backup_format_six_preserves_schema_sections_and_rejects_old_versions() {
+        let mut document: BackupDocument = serde_json::from_value(serde_json::json!({
+            "backup_version": 6,
+            "created_at": "2026-09-15T00:00:00Z",
+            "source_version": "0.0.15",
+            "state": { "sections": {
+                "class_schema_revisions": [{"class_id":1,"revision":2}],
+                "class_schema_state": [{"class_id":1,"active_revision":2}],
+                "object_schema_evidence": [{"object_id":3,"valid":true}]
+            } },
+            "history": {"sections":{"class_schema_history":[{"revision":1}]}},
+            "manifest": {"item_counts":{},"exclusions":[]}
+        }))
+        .unwrap();
+        assert!(document.has_supported_version());
+        let round_trip: BackupDocument =
+            serde_json::from_str(&serde_json::to_string(&document).unwrap()).unwrap();
+        assert_eq!(round_trip, document);
+        document.backup_version = 5;
+        assert!(!document.has_supported_version());
     }
 }

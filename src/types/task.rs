@@ -1,3 +1,4 @@
+use crate::ApiError;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
@@ -13,8 +14,10 @@ pub enum TaskKind {
     Backup,
     Reindex,
     RemoteCall,
+    // Keep the existing fallback's numeric discriminant stable.
+    SchemaValidation = 6,
     #[serde(other)]
-    Unknown,
+    Unknown = 5,
 }
 
 #[non_exhaustive]
@@ -185,6 +188,15 @@ pub struct TaskResponse {
     pub request_redacted_at: Option<HubuumDateTime>,
     pub links: TaskLinks,
     pub details: Option<TaskDetails>,
+    pub cancel_requested_at: Option<HubuumDateTime>,
+    pub cancel_requested_by: Option<PrincipalId>,
+    pub cancel_reason: Option<String>,
+    pub execution_deadline_at: Option<HubuumDateTime>,
+    pub terminal_reason: Option<String>,
+    /// Items never attempted, including after cancellation or deadline expiry.
+    #[serde(default)]
+    pub unattempted_items: i32,
+    pub remote_side_effect_state: Option<TaskRemoteSideEffectState>,
 }
 
 impl std::fmt::Debug for TaskResponse {
@@ -202,8 +214,79 @@ impl std::fmt::Debug for TaskResponse {
             .field("request_redacted_at", &self.request_redacted_at)
             .field("links", &self.links)
             .field("details", &self.details)
+            .field("cancel_requested_at", &self.cancel_requested_at)
+            .field("cancel_requested_by", &self.cancel_requested_by)
+            .field("cancel_reason", &redacted_if_present(&self.cancel_reason))
+            .field("execution_deadline_at", &self.execution_deadline_at)
+            .field(
+                "terminal_reason",
+                &redacted_if_present(&self.terminal_reason),
+            )
+            .field("unattempted_items", &self.unattempted_items)
+            .field("remote_side_effect_state", &self.remote_side_effect_state)
             .finish()
     }
+}
+
+/// Whether cancellation can rule out a remote side effect.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskRemoteSideEffectState {
+    NotSent,
+    PossiblySent,
+    LegacyUnknown,
+    #[serde(other)]
+    Unknown,
+}
+
+/// A nonblank, single-line cancellation explanation of at most 512 UTF-8 bytes.
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(try_from = "String", into = "String")]
+pub struct TaskCancellationReason(String);
+
+impl TaskCancellationReason {
+    pub fn new(value: impl Into<String>) -> Result<Self, ApiError> {
+        let value = value.into();
+        if value.trim().is_empty() || value.len() > 512 || value.chars().any(char::is_control) {
+            return Err(ApiError::InvalidTaskCancellationReason);
+        }
+        Ok(Self(value))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for TaskCancellationReason {
+    type Error = ApiError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl From<TaskCancellationReason> for String {
+    fn from(value: TaskCancellationReason) -> Self {
+        value.0
+    }
+}
+
+impl std::fmt::Debug for TaskCancellationReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("TaskCancellationReason([REDACTED])")
+    }
+}
+
+/// Durable cancellation intent. Poll the task until it reaches a terminal state.
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct TaskCancelRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<TaskCancellationReason>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_status: Option<TaskStatus>,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
@@ -294,6 +377,40 @@ pub struct TaskQueueStateResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("")]
+    #[case("  ")]
+    #[case("reason\nforged entry")]
+    #[case("reason\0")]
+    fn cancellation_reasons_validate_construction_and_deserialization(#[case] value: &str) {
+        assert!(TaskCancellationReason::new(value).is_err());
+        assert!(
+            serde_json::from_value::<TaskCancellationReason>(serde_json::json!(value)).is_err()
+        );
+    }
+
+    #[test]
+    fn cancellation_reason_limit_counts_utf8_bytes_and_debug_redacts() {
+        assert!(TaskCancellationReason::new("é".repeat(257)).is_err());
+        assert!(TaskCancellationReason::new("é".repeat(256)).is_ok());
+        let request = TaskCancelRequest {
+            reason: Some(TaskCancellationReason::new("private explanation").unwrap()),
+            expected_status: Some(TaskStatus::Queued),
+        };
+        assert!(!format!("{request:?}").contains("private explanation"));
+        assert_eq!(
+            serde_json::to_value(request).unwrap(),
+            serde_json::json!({
+                "reason":"private explanation", "expected_status":"queued"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(TaskCancelRequest::default()).unwrap(),
+            serde_json::json!({})
+        );
+    }
 
     #[test]
     fn task_status_terminality() {
@@ -367,6 +484,13 @@ mod tests {
                 "failed_items": 1
             },
             "summary": "task-summary-secret",
+            "cancel_reason": "cancellation-secret",
+            "terminal_reason": "terminal-secret",
+            "cancel_requested_at": "2026-07-23T08:00:01Z",
+            "cancel_requested_by": 1,
+            "execution_deadline_at": "2026-07-23T09:00:01Z",
+            "unattempted_items": 3,
+            "remote_side_effect_state": "possibly_sent",
             "request_redacted_at": null,
             "links": {
                 "task": "/api/v1/tasks/5?capability=task-link-secret",
@@ -407,6 +531,8 @@ mod tests {
         let diagnostic = format!("{task:?} {event:?} {result:?}");
         for secret in [
             "task-summary-secret",
+            "cancellation-secret",
+            "terminal-secret",
             "task-link-secret",
             "details-secret",
             "event-message-secret",
@@ -420,6 +546,11 @@ mod tests {
         }
 
         assert_eq!(task.summary.as_deref(), Some("task-summary-secret"));
+        assert_eq!(task.unattempted_items, 3);
+        assert_eq!(
+            task.remote_side_effect_state,
+            Some(TaskRemoteSideEffectState::PossiblySent)
+        );
         assert_eq!(event.message, "event-message-secret");
         assert_eq!(result.error.as_deref(), Some("result-error-secret"));
     }

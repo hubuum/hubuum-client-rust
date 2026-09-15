@@ -50,6 +50,7 @@ pub struct RunningConfig {
     pub network: NetworkConfig,
     pub secrets: SecretSourceConfig,
     pub tracing: TracingConfig,
+    pub schema_validation: SchemaValidationConfig,
 }
 
 #[non_exhaustive]
@@ -109,6 +110,12 @@ pub struct TaskConfig {
     pub import_max_active_per_user: u64,
     pub export_max_active_per_user: u64,
     pub remote_call_max_active_per_user: u64,
+    pub import_execution_timeout_seconds: u64,
+    pub export_execution_timeout_seconds: u64,
+    pub backup_execution_timeout_seconds: u64,
+    pub reindex_execution_timeout_seconds: u64,
+    pub remote_call_execution_timeout_seconds: u64,
+    pub schema_validation_execution_timeout_seconds: u64,
 }
 
 #[non_exhaustive]
@@ -155,6 +162,17 @@ pub struct BackupConfig {
     pub output_retention_hours: i64,
     pub max_active_tasks_per_user: u64,
     pub max_output_bytes: u64,
+    pub max_capture_rows: u64,
+}
+
+/// Effective JSON Schema admission and validation work budgets.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SchemaValidationConfig {
+    pub max_schema_bytes: u64,
+    pub max_expanded_work: u64,
+    pub max_instance_bytes: u64,
+    pub max_instance_work: u64,
 }
 
 #[non_exhaustive]

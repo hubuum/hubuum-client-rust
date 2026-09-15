@@ -17,9 +17,10 @@ use super::{GetID, UrlParams};
 use crate::QueryFilter;
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
-use crate::resources::ApiResource;
+use crate::resources::{ApiResource, ClassId};
 use crate::types::{
-    BaseUrl, EntityTag, ExportContentType, IntoQueryTuples, Revisioned, TaskResponse,
+    BaseUrl, ComplianceStatus, EntityTag, ExportContentType, IntoQueryTuples, Revisioned,
+    SchemaPageOptions, SchemaRevision, TaskId, TaskResponse,
 };
 use crate::types::{FilterOperator, JsonPath};
 
@@ -29,6 +30,35 @@ pub(crate) const PAGE_LIMIT_HEADER: &str = "X-Page-Limit";
 
 pub const DEFAULT_MAX_RESPONSE_BODY_BYTES: usize = 16 * 1024 * 1024;
 pub const DEFAULT_MAX_ERROR_BODY_BYTES: usize = 64 * 1024;
+
+pub(crate) fn schema_url_params(
+    class_id: ClassId,
+    revision: Option<SchemaRevision>,
+    task_id: Option<TaskId>,
+) -> UrlParams {
+    let mut params = vec![(Cow::Borrowed("class_id"), class_id.to_string().into())];
+    if let Some(revision) = revision {
+        params.push((Cow::Borrowed("revision"), revision.to_string().into()));
+    }
+    if let Some(task_id) = task_id {
+        params.push((Cow::Borrowed("task_id"), task_id.to_string().into()));
+    }
+    params
+}
+
+pub(crate) fn schema_page_filters(
+    options: &SchemaPageOptions,
+    status: Option<ComplianceStatus>,
+) -> Vec<QueryFilter> {
+    let mut filters = vec![
+        QueryFilter::raw("after", options.after_value().to_string()),
+        QueryFilter::raw("limit", options.limit_value().to_string()),
+    ];
+    if let Some(status) = status {
+        filters.push(QueryFilter::raw("status", status.to_string()));
+    }
+    filters
+}
 
 pub(crate) fn temporary_download_file(
     destination: &Path,

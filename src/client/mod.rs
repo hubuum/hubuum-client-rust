@@ -13,8 +13,8 @@ pub mod transport;
 
 #[cfg(feature = "async")]
 pub use self::r#async::{
-    ClassNameObjects, ClassNameScope, Client, CollectionScope, ExportOutputStream, ItemStream,
-    ObjectNameScope, PageStream, PrincipalSettingsScope, TypedClass,
+    ClassNameObjects, ClassNameScope, ClassSchema, Client, CollectionScope, ExportOutputStream,
+    ItemStream, ObjectNameScope, PageStream, PrincipalSettingsScope, TypedClass,
 };
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryJsonPathField, QueryNumericField, QueryTextField,
@@ -182,6 +182,26 @@ mod parity_contract {
                 $module::Client::<Authenticated>::computed_objects;
             let _ = $module::Client::<Authenticated>::imports;
             let _ = $module::Client::<Authenticated>::tasks;
+            let _: fn(&$module::Client<Authenticated>, ClassId) -> $module::ClassSchema =
+                $module::Client::<Authenticated>::class_schema;
+            let _ = $module::ClassSchema::get;
+            let _ = $module::ClassSchema::revisions;
+            let _ = $module::ClassSchema::objects;
+            let _ = $module::ClassSchema::stage;
+            let _ = $module::ClassSchema::revision;
+            let _ = $module::ClassSchema::abandon;
+            let _ = $module::ClassSchema::activate;
+            let _ = $module::ClassSchema::impact;
+            let _ = $module::ClassSchema::revalidate;
+            let _ = |schema: &$module::ClassSchema, request: crate::SchemaRepairReportRequest| {
+                std::mem::drop(schema.work(1));
+                std::mem::drop(schema.cancel_work(1));
+                std::mem::drop(schema.generate_report(1, request));
+                std::mem::drop(schema.report(1, true));
+            };
+            let _ = |tasks: &$module::Tasks, request: crate::TaskCancelRequest| {
+                std::mem::drop(tasks.cancel(1, request));
+            };
         };
     }
 
@@ -413,6 +433,7 @@ mod parity_contract {
     macro_rules! assert_handle_extension_surface {
         ($module:ident) => {
             let _ = $module::Handle::<Class>::objects;
+            let _ = $module::Handle::<Class>::schema;
             let _ = $module::Handle::<Class>::objects_query;
             let _ = $module::Handle::<Class>::object_by_name;
             let _ = $module::Handle::<Class>::delete;

@@ -17,6 +17,17 @@ fn e2e_admin_config_backup_and_restore_staging() {
         .admin_config()
         .expect("v0.0.2 admin config should decode");
     assert!(config.backups.max_output_bytes > 0);
+    assert!(config.backups.max_capture_rows > 0);
+    assert!(config.schema_validation.max_instance_bytes >= 2 * 1024 * 1024);
+    assert!(config.schema_validation.max_instance_work > 0);
+    assert!(config.schema_validation.max_expanded_work > 0);
+    assert!(config.schema_validation.max_schema_bytes > 0);
+    assert!(config.tasks.schema_validation_execution_timeout_seconds > 0);
+    assert!(config.tasks.import_execution_timeout_seconds > 0);
+    assert!(config.tasks.export_execution_timeout_seconds > 0);
+    assert!(config.tasks.backup_execution_timeout_seconds > 0);
+    assert!(config.tasks.reindex_execution_timeout_seconds > 0);
+    assert!(config.tasks.remote_call_execution_timeout_seconds > 0);
     assert_eq!(config.database.backend, "postgresql");
     assert_eq!(config.database.role_mode, "single");
     assert!(config.pagination.max_traversal_work_rows > 0);

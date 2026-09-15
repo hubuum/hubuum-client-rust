@@ -58,6 +58,22 @@ pub enum ApiError {
     #[error("Resource revision must be a positive 64-bit integer, got {0}")]
     InvalidResourceRevision(i64),
 
+    #[error("Schema revision must be a positive 64-bit integer, got {0}")]
+    InvalidSchemaRevision(i64),
+
+    #[error("Schema page continuation must be nonnegative")]
+    InvalidSchemaContinuation,
+
+    #[error(
+        "Schema report URL must be absolute HTTP(S), without credentials or whitespace, at most 2048 bytes, and contain exactly one {{object_id}} placeholder"
+    )]
+    InvalidSchemaObjectUrlTemplate,
+
+    #[error(
+        "Task cancellation reason must be nonblank, contain no control characters, and fit within 512 UTF-8 bytes"
+    )]
+    InvalidTaskCancellationReason,
+
     #[error("Entity tag must be an opaque, quoted strong validator")]
     InvalidEntityTag,
 
@@ -194,6 +210,12 @@ impl std::fmt::Debug for ApiError {
             Self::QueryEncoding(message) => f.debug_tuple("QueryEncoding").field(message).finish(),
             Self::InvalidPrincipalSettings => f.write_str("InvalidPrincipalSettings"),
             Self::InvalidSamplingRatio => f.write_str("InvalidSamplingRatio"),
+            Self::InvalidSchemaRevision(value) => {
+                f.debug_tuple("InvalidSchemaRevision").field(value).finish()
+            }
+            Self::InvalidSchemaContinuation => f.write_str("InvalidSchemaContinuation"),
+            Self::InvalidSchemaObjectUrlTemplate => f.write_str("InvalidSchemaObjectUrlTemplate"),
+            Self::InvalidTaskCancellationReason => f.write_str("InvalidTaskCancellationReason"),
             Self::InvalidResourceRevision(value) => f
                 .debug_tuple("InvalidResourceRevision")
                 .field(value)
