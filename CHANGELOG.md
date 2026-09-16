@@ -6,10 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-16
+
 ### Added
 
-- Target Hubuum server v0.0.15 with its 218-operation OpenAPI contract and
-  immutable multi-platform image
+- This release explicitly targets Hubuum server v0.0.15, pinning its
+  218-operation OpenAPI contract and immutable multi-platform image
   `sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821`.
 - Add equivalent async and blocking `class_schema()` and class-handle `schema()`
   helpers for revisions, staging, impact analysis, activation, compliance pages,
@@ -26,8 +28,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - **Breaking (Rust API):** `ImportClassInput` now includes `schema_activation`.
   Add `schema_activation: None` to existing struct literals, or provide
   `ImportSchemaActivation` to activate an exact staged policy during import.
-  The development client version advances to 0.11.0; Rust 1.88 and public
-  feature availability are unchanged.
+  The client version advances to 0.11.0; Rust 1.88 and public feature
+  availability are unchanged.
 - **Breaking (server behavior):** policy changes on nonempty classes now require
   staging, impact analysis, and explicit activation; direct schema PATCH and
   legacy import overwrites can return HTTP 409. Restart string-sorted pagination
@@ -41,7 +43,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   upgrade API, worker, administrator, and restore-executor binaries together.
 - Refresh all compatible locked dependencies, including `cc` 1.4.6,
   `lru-slab` 0.1.3, Quinn 0.11.12, `quinn-proto` 0.11.18, SmallVec 1.16.1,
-  TinyVec 1.13.3, TOML 1.1.6, and `toml_edit` 0.25.15. Direct dependency
+  TinyVec 1.13.3, TOML 1.1.6, `toml_edit` 0.25.15, `synstructure` 0.14.0,
+  `yoke-derive` 0.8.3, and `zerofrom-derive` 0.1.8. Direct dependency
   constraints already select their latest compatible releases.
 
 ### Security
