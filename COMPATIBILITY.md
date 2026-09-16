@@ -13,7 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
-| 0.11.0 (unreleased) | 0.0.15 | `ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821` | Development target; 218-operation pinned contract, 67 wire-model mappings, schema evolution, cancellation, format 6 backups, and refreshed Rust 1.88-compatible dependencies. 91 library and 26 consumer integration tests, plus four async/blocking full restores with and without history and schema-evidence-preserving recovery (2026-09-15). |
+| 0.11.0 | 0.0.15 | `ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821` | Declared target; 218-operation pinned contract, 67 wire-model mappings, schema evolution, cancellation, format 6 backups, and refreshed Rust 1.88-compatible dependencies. 91 library and 26 consumer integration tests, plus four async/blocking full restores with and without history and schema-evidence-preserving recovery (2026-09-16). |
 | 0.10.1 | 0.0.14 | `ghcr.io/hubuum/hubuum-server@sha256:6c1c8d7316a1f60a02e4505611a44e21030ba678b5b451f5b293a12f2bd87594` | Declared target; unchanged 204-operation OpenAPI contract, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus four async/blocking full restores with and without history and revision-preserving recovery with subsequent backup validation (2026-09-10) |
 | 0.10.0 | 0.0.13 | `ghcr.io/hubuum/hubuum-server@sha256:512562e789d6430875c5075faf832a9669a4f266f7fe9fbf8c1524b49a6476c5` | Declared target; pinned OpenAPI, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus blocking and async full restore completion, token invalidation, and recovery after each restore (2026-09-09) |
 | 0.9.1 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; JSON-path validation, advertised pagination limits, atomic export downloads, property-level OpenAPI model reconciliation, dependency and release-workflow security updates, with pinned Docker-backed library plus downstream-consumer integration coverage |
@@ -101,9 +101,9 @@ The published image identifies source revision
 The manifest pins the multi-platform image index; this live run verifies its
 Linux amd64 image.
 
-## v0.0.15 development target
+## v0.0.15 target
 
-The unreleased 0.11.0 client targets server v0.0.15. The contract grows from
+The 0.11.0 release targets server v0.0.15. The contract grows from
 204 to 218 operations and from 280 to 315 schemas. All 14 new operations have
 typed async and blocking helpers, covering the class schema lifecycle, retained
 HTML repair reports, and task cancellation. Feature availability and Rust 1.88
@@ -132,14 +132,14 @@ and backup limits across processes. Report assembly can return HTTP 413, and
 external-authorization traversal is bounded at 10,000 candidates.
 
 All direct dependencies already use constraints that select the latest
-compatible releases. The lockfile refresh updates nine packages, including
+compatible releases. The lockfile refresh updates twelve packages, including
 Rustls 0.23.45 for RUSTSEC-2026-0285. `generic-array` remains at 0.14.7 because
 the current `crypto-common` 0.1.7 dependency requires that exact version.
 
 The pinned multi-platform image identifies source revision
 `4bb889c66a5e2a1dfc86d1b6beac7495912fd02e`, matching the annotated v0.0.15 tag.
 
-The canonical combined integration command passed on 2026-09-15 against this
+The canonical combined integration command passed on 2026-09-16 against this
 image's Linux amd64 build. All 91 library and 26 ordinary consumer tests passed,
 including both modes of the schema lifecycle, diagnostic HTML, import activation,
 and task cancellation. All four combinations of blocking/async full restore and

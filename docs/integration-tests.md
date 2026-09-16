@@ -67,7 +67,7 @@ An external stack must expose the same `planet-express` provider and fixture use
 - `HUBUUM_INTEGRATION_SEED_SQL` overrides the default seed SQL file.
 
 Required CI runs integration tests against an immutable server image digest.
-For development client 0.11.0, that image is Hubuum server v0.0.15 at
+For client 0.11.0, that image is Hubuum server v0.0.15 at
 `sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821`.
 A scheduled compatibility workflow separately runs against
 `ghcr.io/hubuum/hubuum-server:main`, so upstream movement is visible without

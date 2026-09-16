@@ -2,7 +2,7 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-The development version `hubuum_client` 0.11.0 targets Hubuum server v0.0.15. The pinned image,
+`hubuum_client` 0.11.0 targets Hubuum server v0.0.15. The pinned image,
 verification evidence, and history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
