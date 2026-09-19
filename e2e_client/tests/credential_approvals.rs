@@ -12,9 +12,11 @@ use serde_json::json;
 fn credential_approvals_user_password_workflow() {
     let harness = E2EHarness::from_env().unwrap();
     let name = unique_case_prefix("approval-user");
+    let initial_password = format!("{name}-Initial-passw0rd!");
+    let replacement_password = format!("{name}-Replacement-passw0rd!");
     let user = UserPost {
         name: name.clone(),
-        password: "Initial-passw0rd!".into(),
+        password: initial_password.clone(),
         ..Default::default()
     };
     let (created, approvals_required) = match harness.client.users().create_raw(user.clone()) {
@@ -48,14 +50,14 @@ fn credential_approvals_user_password_workflow() {
     }
     let user_session = blocking::Client::try_new(harness.base_url.clone())
         .unwrap()
-        .login(Credentials::new(&name, "Initial-passw0rd!"))
+        .login(Credentials::new(&name, initial_password))
         .unwrap();
     let change = harness
         .client
         .users()
         .get(created.id)
         .unwrap()
-        .set_password("Replacement-passw0rd!");
+        .set_password(&replacement_password);
     if approvals_required {
         assert!(change.unwrap_err().is_reauthentication_required());
         let revisioned = harness.client.users().get(created.id).unwrap();
@@ -64,7 +66,7 @@ fn credential_approvals_user_password_workflow() {
             .credential_approvals()
             .approve(
                 harness.admin_password.clone(),
-                CredentialOperation::set_password(created.id, "Replacement-passw0rd!"),
+                CredentialOperation::set_password(created.id, &replacement_password),
             )
             .unwrap();
         approved
@@ -80,7 +82,7 @@ fn credential_approvals_user_password_workflow() {
     );
     let new_session = blocking::Client::try_new(harness.base_url.clone())
         .unwrap()
-        .login(Credentials::new(&name, "Replacement-passw0rd!"))
+        .login(Credentials::new(&name, replacement_password))
         .unwrap();
     assert_eq!(
         new_session.me().unwrap().principal.principal_id.get(),
@@ -93,9 +95,11 @@ fn credential_approvals_user_password_workflow() {
 #[ignore = "requires Docker and hubuum server image"]
 fn credential_approvals_import_dry_run() {
     let harness = E2EHarness::from_env().unwrap();
+    let name = unique_case_prefix("approval-import");
+    let password = format!("{name}-Imported-passw0rd!");
     let principal: ImportPrincipalInput = serde_json::from_value(json!({
-        "name": unique_case_prefix("approval-import"), "kind": "human",
-        "password": "Imported-passw0rd!", "provider_managed": false,
+        "name": name, "kind": "human",
+        "password": password, "provider_managed": false,
         "identity_scope_key": {"name": "local"}
     }))
     .unwrap();

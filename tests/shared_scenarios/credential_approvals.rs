@@ -10,6 +10,20 @@ use serde_json::{Value, json};
 
 const EXPIRY: &str = "2026-09-20T12:00:00.123456";
 
+struct TestPasswords {
+    actor: String,
+    user: String,
+}
+
+impl TestPasswords {
+    fn new() -> Self {
+        Self {
+            actor: format!("actor-{:032x}", fastrand::u128(..)),
+            user: format!("user-{:032x}", fastrand::u128(..)),
+        }
+    }
+}
+
 fn approval_secret() -> String {
     format!("hca1.{}", "a".repeat(64))
 }
@@ -47,7 +61,13 @@ fn token_request(explicit_expiry: bool) -> NewTokenRequest {
     }
 }
 
-fn assert_wire(transport: &MockTransport, path: &str, operation: Value, body: Value) {
+fn assert_wire(
+    transport: &MockTransport,
+    path: &str,
+    operation: Value,
+    body: Value,
+    passwords: &TestPasswords,
+) {
     let requests = transport.requests();
     let approval_index = requests
         .iter()
@@ -59,7 +79,7 @@ fn assert_wire(transport: &MockTransport, path: &str, operation: Value, body: Va
     assert_eq!(
         serde_json::from_slice::<Value>(pair[0].body()).unwrap(),
         json!({
-            "password": "actor-password", "operation": operation
+            "password": passwords.actor, "operation": operation
         })
     );
     assert!(!pair[0].headers.contains_key("X-Hubuum-Credential-Approval"));
@@ -78,8 +98,8 @@ fn assert_wire(transport: &MockTransport, path: &str, operation: Value, body: Va
         let debug = format!("{request:?}");
         for secret in [
             "original-bearer",
-            "actor-password",
-            "new-password",
+            &passwords.actor,
+            &passwords.user,
             "restore-secret",
             &approval_secret(),
         ] {
@@ -91,6 +111,7 @@ fn assert_wire(transport: &MockTransport, path: &str, operation: Value, body: Va
 // The same public workflows exercise both clients, including real response decoding.
 macro_rules! approval_scenarios {
     ($client:ident, $transport:ident, $finish:ident, $scenario:expr) => {{
+        let passwords = TestPasswords::new();
         match $scenario {
             "create_token" => {
         for explicit in [false, true] {
@@ -101,13 +122,13 @@ macro_rules! approval_scenarios {
             push(&$transport, StatusCode::CREATED, approval_response("create_token"));
             push(&$transport, StatusCode::CREATED, json!({"token":"minted-secret", "expires_at":EXPIRY}));
             let operation = CredentialOperation::create_token(42, request);
-            let approved = $finish!($client.credential_approvals().approve("actor-password", operation)).unwrap();
+            let approved = $finish!($client.credential_approvals().approve(&passwords.actor, operation)).unwrap();
             assert_eq!(approved.record().id, 11);
             assert_eq!(approved.token_expires_at().unwrap().0.timestamp_subsec_nanos(), 123456000);
             assert!(!format!("{approved:?}").contains(&approval_secret()));
             let token = $finish!(approved.send()).unwrap();
             assert_eq!(token.as_str(), "minted-secret");
-            assert_wire(&$transport, "/api/v1/iam/principals/42/tokens", operation_wire, final_body);
+            assert_wire(&$transport, "/api/v1/iam/principals/42/tokens", operation_wire, final_body, &passwords);
         }
             },
             "renew_token" => {
@@ -116,35 +137,35 @@ macro_rules! approval_scenarios {
             let operation_wire = json!({"kind":"renew_token", "principal_id":42,"token_id":99,"token":request});
             push(&$transport, StatusCode::CREATED, approval_response("renew_token"));
             push(&$transport, StatusCode::CREATED, json!({"token":"renewed-secret", "expires_at":EXPIRY}));
-            let approved = $finish!($client.credential_approvals().approve("actor-password",
+            let approved = $finish!($client.credential_approvals().approve(&passwords.actor,
                 CredentialOperation::renew_token(42, 99, request))).unwrap();
             assert_eq!($finish!(approved.send()).unwrap().as_str(), "renewed-secret");
-            assert_wire(&$transport, "/api/v1/iam/principals/42/tokens/99/renew", operation_wire, json!({"expires_at":EXPIRY}));
+            assert_wire(&$transport, "/api/v1/iam/principals/42/tokens/99/renew", operation_wire, json!({"expires_at":EXPIRY}), &passwords);
         }
 
             },
             "create_user" => {
-        let user = UserPost { name: "new-user".into(), password: "new-password".into(), ..Default::default() };
+        let user = UserPost { name: "new-user".into(), password: passwords.user.clone(), ..Default::default() };
         let user_body = serde_json::to_value(&user).unwrap();
         let operation = CredentialOperation::create_user(user);
-        assert!(!format!("{operation:?}").contains("new-password"));
+        assert!(!format!("{operation:?}").contains(&passwords.user));
         push(&$transport, StatusCode::CREATED, approval_response("create_user"));
         push(&$transport, StatusCode::CONFLICT, error_body(None));
-        let approved = $finish!($client.credential_approvals().approve("actor-password", operation)).unwrap();
+        let approved = $finish!($client.credential_approvals().approve(&passwords.actor, operation)).unwrap();
         assert!($finish!(approved.send()).unwrap_err().is_status(StatusCode::CONFLICT));
-        assert_wire(&$transport, "/api/v1/iam/users", json!({"kind":"create_user","user":user_body}), user_body);
+        assert_wire(&$transport, "/api/v1/iam/users", json!({"kind":"create_user","user":user_body}), user_body, &passwords);
 
             },
             "update_user" => {
         let profile = UserPatch { email: Some("new@example.test".into()), proper_name: None };
-        let user_body = json!({"email":"new@example.test", "proper_name":null, "password":"new-password"});
+        let user_body = json!({"email":"new@example.test", "proper_name":null, "password":passwords.user});
         push(&$transport, StatusCode::CREATED, approval_response("update_user"));
         push(&$transport, StatusCode::PRECONDITION_FAILED, error_body(None));
-        let approved = $finish!($client.credential_approvals().approve("actor-password",
-            CredentialOperation::update_user(42, profile, "new-password"))).unwrap()
+        let approved = $finish!($client.credential_approvals().approve(&passwords.actor,
+            CredentialOperation::update_user(42, profile, &passwords.user))).unwrap()
             .if_match(EntityTag::new("\"rev-2\"").unwrap());
         assert!($finish!(approved.send()).unwrap_err().is_status(StatusCode::PRECONDITION_FAILED));
-        assert_wire(&$transport, "/api/v1/iam/users/42", json!({"kind":"update_user","user_id":42,"user":user_body}), user_body);
+        assert_wire(&$transport, "/api/v1/iam/users/42", json!({"kind":"update_user","user_id":42,"user":user_body}), user_body, &passwords);
         let last = $transport.requests().pop().unwrap();
         assert_eq!(last.method, Method::PATCH);
         assert_eq!(last.headers["If-Match"], "\"rev-2\"");
@@ -152,7 +173,7 @@ macro_rules! approval_scenarios {
             },
             "import_credentials" => {
         let mut graph = FullImportGraph::default();
-        for (name, credential) in [("first", json!({"password":"import-password"})), ("second", json!({"password_hash":"import-hash"}))] {
+        for (name, credential) in [("first", json!({"password":passwords.user})), ("second", json!({"password_hash":"import-hash"}))] {
             let mut principal = json!({"name":name, "kind":"human", "provider_managed":false});
             principal.as_object_mut().unwrap().extend(credential.as_object().unwrap().clone());
             graph.principals.push(serde_json::from_value(principal).unwrap());
@@ -162,10 +183,10 @@ macro_rules! approval_scenarios {
         push(&$transport, StatusCode::CREATED, approval_response("import_credentials"));
         push(&$transport, StatusCode::SERVICE_UNAVAILABLE, error_body(None));
         push(&$transport, StatusCode::CONFLICT, error_body(None));
-        let approved = $finish!($client.credential_approvals().approve("actor-password",
+        let approved = $finish!($client.credential_approvals().approve(&passwords.actor,
             CredentialOperation::import_credentials(import))).unwrap().idempotency_key("import-key");
         assert!($finish!(approved.send()).unwrap_err().is_status(StatusCode::CONFLICT));
-        assert_wire(&$transport, "/api/v1/imports", json!({"kind":"import_credentials","import":import_body}), import_body);
+        assert_wire(&$transport, "/api/v1/imports", json!({"kind":"import_credentials","import":import_body}), import_body, &passwords);
         assert_eq!($transport.requests().last().unwrap().headers["Idempotency-Key"], "import-key");
         let requests = $transport.requests();
         assert_eq!(requests.len(), 3);
@@ -178,10 +199,10 @@ macro_rules! approval_scenarios {
         let body = serde_json::to_value(&confirmation).unwrap();
         push(&$transport, StatusCode::CREATED, approval_response("confirm_restore"));
         push(&$transport, StatusCode::CONFLICT, error_body(None));
-        let approved = $finish!($client.credential_approvals().approve("actor-password",
+        let approved = $finish!($client.credential_approvals().approve(&passwords.actor,
             CredentialOperation::confirm_restore(73, confirmation))).unwrap();
         assert!($finish!(approved.send()).unwrap_err().is_status(StatusCode::CONFLICT));
-        assert_wire(&$transport, "/api/v1/restores/73/confirm", json!({"kind":"confirm_restore","restore_id":73,"confirmation":body}), body);
+        assert_wire(&$transport, "/api/v1/restores/73/confirm", json!({"kind":"confirm_restore","restore_id":73,"confirmation":body}), body, &passwords);
 
             },
             "retained_evidence" => {
@@ -213,7 +234,7 @@ macro_rules! approval_scenarios {
         for status in [StatusCode::NOT_FOUND, StatusCode::UNAUTHORIZED, StatusCode::FORBIDDEN, StatusCode::TOO_MANY_REQUESTS, StatusCode::SERVICE_UNAVAILABLE] {
             let before = $transport.requests().len();
             push(&$transport, status, error_body(None));
-            let error = $finish!($client.credential_approvals().approve("actor-password",
+            let error = $finish!($client.credential_approvals().approve(&passwords.actor,
                 CredentialOperation::create_token(42, NewTokenRequest::new()))).unwrap_err();
             assert!(error.is_status(status));
             assert_eq!($transport.requests().len(), before + 1);
@@ -223,7 +244,7 @@ macro_rules! approval_scenarios {
         // An approved mutation rejection also never retries or drops its approval.
         push(&$transport, StatusCode::CREATED, approval_response("create_token"));
         push(&$transport, StatusCode::FORBIDDEN, error_body(Some("reauthentication_required")));
-        let approved = $finish!($client.credential_approvals().approve("actor-password",
+        let approved = $finish!($client.credential_approvals().approve(&passwords.actor,
             CredentialOperation::create_token(42, NewTokenRequest::new()))).unwrap();
         let before = $transport.requests().len();
         let error = $finish!(approved.send()).unwrap_err();
@@ -238,7 +259,7 @@ macro_rules! approval_scenarios {
             response["approval"] = json!(secret);
             response["token_expires_at"] = expiry;
             push(&$transport, StatusCode::CREATED, response);
-            let error = $finish!($client.credential_approvals().approve("actor-password",
+            let error = $finish!($client.credential_approvals().approve(&passwords.actor,
                 CredentialOperation::create_token(42, NewTokenRequest::new()))).unwrap_err();
             assert!(!format!("{error:?}").contains(&secret));
             assert_eq!($transport.requests().len(), before + 1);
@@ -246,7 +267,7 @@ macro_rules! approval_scenarios {
             },
             "invalid_operation" => {
                 let operation = CredentialOperation::create_token(42, NewTokenRequest::new().scopes(vec![]));
-                let error = $finish!($client.credential_approvals().approve("actor-password", operation)).unwrap_err();
+                let error = $finish!($client.credential_approvals().approve(&passwords.actor, operation)).unwrap_err();
                 assert!(matches!(error, ApiError::InvalidTokenScopes));
                 assert!($transport.requests().is_empty());
             },
