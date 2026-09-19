@@ -52,15 +52,16 @@ pub const TARGET_SERVER_VERSION: &str = "0.0.15";
 pub use client::AsyncTransport;
 #[cfg(feature = "blocking")]
 pub use client::BlockingTransport;
+#[cfg(feature = "async")]
+pub use client::{
+    ApprovedCredentialOperation, ClassNameObjects, ClassNameScope, ClassSchema, Client,
+    CollectionScope, CredentialApprovals, ExportOutputStream, ItemStream, ObjectNameScope,
+    PageStream, TypedClass,
+};
 pub use client::{
     Authenticated, IntoQueryFilters, MockTransport, Page, QueryBoolField, QueryJsonField,
     QueryJsonPathField, QueryNumericField, QueryTextField, QueryValueField, RequestPlan,
     RetryPolicy, TransportResponse, Unauthenticated,
-};
-#[cfg(feature = "async")]
-pub use client::{
-    ClassNameObjects, ClassNameScope, ClassSchema, Client, CollectionScope, ExportOutputStream,
-    ItemStream, ObjectNameScope, PageStream, TypedClass,
 };
 pub use errors::{ApiError, ApiErrorResponse};
 pub use resources::*;
@@ -123,6 +124,7 @@ pub use types::{
     UnifiedSearchNext, UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent,
     UpdateEventSink, UpdateEventSubscription, UserParams, ValidatedExportScope,
 };
+pub use types::{CredentialApprovalId, CredentialApprovalRecord, CredentialOperation};
 
 #[cfg(feature = "blocking")]
 pub mod blocking {

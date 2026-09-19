@@ -254,6 +254,10 @@ let config = admin_client.admin_config().await?;
 let configured_metrics = client.metrics_at(&config.server.metrics_path).await?;
 ```
 
+Credential management on newer servers can require [fresh password approvals](docs/credential-approvals.md).
+The optional async and blocking approval APIs preserve compatibility with the
+v0.0.15 target and do not probe approval endpoints during ordinary operations.
+
 ## More Documentation
 
 - [Client setup](docs/client-setup.md): async and blocking initialization, token login, and builder options.
@@ -262,6 +266,7 @@ let configured_metrics = client.metrics_at(&config.server.metrics_path).await?;
 - [Backups, restores, and computed fields](docs/backups-and-computed-fields.md): administrative recovery, capability handling, definition lifecycles, previews, rebuilds, and enriched reads.
 - [Advanced usage](docs/advanced.md): lazy streams, retries, body limits, typed payloads, scoped navigation, mock transports, and raw requests.
 - [Principal settings](docs/principal-settings.md): current-principal and administrative preference management with JSON Merge Patch.
+- [Credential approvals](docs/credential-approvals.md): async and blocking examples, human authentication requirements, and handling servers with either credential policy.
 - [Scoped authentication](docs/scoped-auth.md): provider-scoped login, identity
   metadata, queries, and import references.
 - [Integration tests](docs/integration-tests.md): Docker-backed real-server tests, e2e client tests, seed data, and environment variables.

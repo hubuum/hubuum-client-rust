@@ -13,8 +13,9 @@ pub mod transport;
 
 #[cfg(feature = "async")]
 pub use self::r#async::{
-    ClassNameObjects, ClassNameScope, ClassSchema, Client, CollectionScope, ExportOutputStream,
-    ItemStream, ObjectNameScope, PageStream, PrincipalSettingsScope, TypedClass,
+    ApprovedCredentialOperation, ClassNameObjects, ClassNameScope, ClassSchema, Client,
+    CollectionScope, CredentialApprovals, ExportOutputStream, ItemStream, ObjectNameScope,
+    PageStream, PrincipalSettingsScope, TypedClass,
 };
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryJsonPathField, QueryNumericField, QueryTextField,
@@ -207,6 +208,23 @@ mod parity_contract {
 
     macro_rules! assert_authenticated_client_auth_surface {
         ($module:ident) => {
+            let _ = $module::Client::<Authenticated>::credential_approvals;
+            let _ = |scope: &$module::CredentialApprovals,
+                     operation: crate::CredentialOperation<crate::Token>| {
+                std::mem::drop(scope.approve("password", operation));
+            };
+            let _ = |scope: &$module::CredentialApprovals| {
+                std::mem::drop(scope.get(crate::CredentialApprovalId::new(1)));
+            };
+            let _ = $module::ApprovedCredentialOperation::<crate::Token>::record;
+            let _ = $module::ApprovedCredentialOperation::<crate::Token>::token_expires_at;
+            let _ = $module::ApprovedCredentialOperation::<crate::Token>::send;
+            let _ = |op: $module::ApprovedCredentialOperation<User>, etag: crate::EntityTag| {
+                std::mem::drop(op.if_match(etag));
+            };
+            let _ = |op: $module::ApprovedCredentialOperation<crate::TaskResponse>| {
+                std::mem::drop(op.idempotency_key("key"));
+            };
             let _ = $module::Client::<Authenticated>::token;
             let _ = $module::Client::<Authenticated>::token_expires_at;
             let _ = $module::Client::<Authenticated>::logout;

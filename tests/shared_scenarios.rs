@@ -369,3 +369,7 @@ async fn shared_scenario_runs_with_async_client() {
         .await
         .expect("async scenario should succeed");
 }
+
+mod shared_scenarios {
+    mod credential_approvals;
+}

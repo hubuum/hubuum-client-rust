@@ -5,6 +5,8 @@ use strum::EnumIter;
 pub enum Endpoint {
     Login,
     AuthProviders,
+    CredentialApprovals,
+    CredentialApprovalById,
     LoginWithToken,
     Logout,
     LogoutToken,
@@ -160,6 +162,8 @@ impl Endpoint {
         match self {
             Endpoint::Login => "/api/v0/auth/login",
             Endpoint::AuthProviders => "/api/v0/auth/providers",
+            Endpoint::CredentialApprovals => "/api/v1/iam/credential-approvals",
+            Endpoint::CredentialApprovalById => "/api/v1/iam/credential-approvals/{approval_id}",
             Endpoint::LoginWithToken => "/api/v0/auth/validate",
             Endpoint::Logout => "/api/v0/auth/logout",
             Endpoint::LogoutToken => "/api/v0/auth/logout/token",
@@ -418,7 +422,18 @@ mod test {
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();
 
-        assert_eq!(client_paths, spec_paths);
+        // Optional forward support for server PR 423 does not change the
+        // declared v0.0.15 snapshot. Keep this list exact and documented in
+        // openapi/known-gaps.md; all pinned paths must still be present.
+        let optional_paths = std::collections::BTreeSet::from([
+            "/api/v1/iam/credential-approvals",
+            "/api/v1/iam/credential-approvals/{approval_id}",
+        ]);
+        assert!(spec_paths.is_disjoint(&optional_paths));
+        assert_eq!(
+            client_paths,
+            spec_paths.union(&optional_paths).copied().collect()
+        );
         assert_eq!(contract["operation_count"], 218);
     }
     use std::str::FromStr;

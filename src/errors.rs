@@ -8,6 +8,9 @@ use thiserror::Error;
 pub struct ApiErrorResponse {
     pub error: String,
     pub message: String,
+    /// Stable machine-readable reason, when supplied by the server.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
 }
 
 #[non_exhaustive]
@@ -394,6 +397,15 @@ impl ApiError {
         self.status() == Some(status)
     }
 
+    /// The server requires a fresh, operation-bound password approval.
+    /// Other authorization errors must not trigger a password prompt or retry.
+    pub fn is_reauthentication_required(&self) -> bool {
+        self.is_status(StatusCode::FORBIDDEN)
+            && self.api_response().is_some_and(|response| {
+                response.reason.as_deref() == Some("reauthentication_required")
+            })
+    }
+
     /// Request method associated with a detailed API response error.
     pub fn request_method(&self) -> Option<&reqwest::Method> {
         match self {
@@ -498,6 +510,7 @@ mod tests {
             Some(ApiErrorResponse {
                 error: "Unauthorized".to_string(),
                 message: "Authentication failure".to_string(),
+                reason: None,
             })
         );
     }

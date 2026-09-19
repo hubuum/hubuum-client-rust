@@ -60,6 +60,13 @@ An external stack must expose the same `planet-express` provider and fixture use
   PostgreSQL 18 reference from
   `tests/container_integration/fixtures/postgres/Dockerfile`.
 - `HUBUUM_INTEGRATION_LDAP_IMAGE` overrides the LDAP fixture image.
+- `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1` makes credential approval
+  scenarios assert that the selected server enforces fresh authentication.
+  Use this with a server image containing PR 423 and the `credential_approvals`
+  test filter for focused forward compatibility coverage. Without it, those
+  scenarios also verify ordinary credential operations on the pinned older
+  server. Full restore scenarios adapt to either policy. The focused run does
+  not replace the complete pinned library plus consumer suite.
 - `HUBUUM_INTEGRATION_AUTH_CONFIG` overrides the server auth-provider configuration file.
 - `HUBUUM_INTEGRATION_CONTAINER_RUNTIME` forces `docker` or `podman`.
 - `HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS` overrides startup timeout. The default is `300`.

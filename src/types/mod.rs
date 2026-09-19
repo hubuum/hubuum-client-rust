@@ -3,6 +3,7 @@ mod backup;
 mod baseurl;
 mod computed;
 mod config;
+mod credential_approval;
 mod datetime;
 mod event;
 mod export;
@@ -51,6 +52,10 @@ pub use config::{
     SchemaValidationConfig, SecretSourceConfig, SecretStatus, ServerConfig, TaskConfig, TlsConfig,
     TracingConfig,
 };
+pub use credential_approval::{CredentialApprovalRecord, CredentialOperation};
+pub(crate) use credential_approval::{
+    CredentialApprovalRequest, CredentialApprovalResponse, CredentialOperationPayload,
+};
 pub use datetime::HubuumDateTime;
 pub use event::{
     EventDelivery, EventDeliveryHealthResponse, EventDeliveryQueueHealth, EventDeliveryStatus,
@@ -73,8 +78,9 @@ pub use history::{
     ObjectHistory, RemoteTargetHistory,
 };
 pub use id::{
-    ComputedFieldDefinitionId, EventDeliveryId, EventSubscriptionId, HistoryId, ImportResultId,
-    PermissionId, PrincipalId, RemoteCallResultId, RestoreId, TaskEventId, TaskId, TokenId,
+    ComputedFieldDefinitionId, CredentialApprovalId, EventDeliveryId, EventSubscriptionId,
+    HistoryId, ImportResultId, PermissionId, PrincipalId, RemoteCallResultId, RestoreId,
+    TaskEventId, TaskId, TokenId,
 };
 pub(crate) use identity::default_local_identity_value;
 pub use identity::{LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND};

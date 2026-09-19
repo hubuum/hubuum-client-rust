@@ -6,6 +6,18 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Add optional async and blocking fresh credential approval workflows for servers
+  incorporating Hubuum PR 423: token creation/renewal, user creation/password
+  changes, credential imports, and restore confirmation. Approved operations
+  retain the exact request and bearer, copy the server-resolved token expiry,
+  support revision/idempotency headers, and expose retained consumption evidence.
+- Expose structured API error reasons and `is_reauthentication_required()` so
+  applications can request fresh authentication when the server requires it.
+  Existing calls and the v0.0.15 target remain unchanged; older servers need not
+  implement approvals. See [the approval guide](docs/credential-approvals.md).
+
 ### Changed
 
 - Refresh the pinned PostgreSQL 18 integration fixture image.
