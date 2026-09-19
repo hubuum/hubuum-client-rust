@@ -7,13 +7,19 @@ use hubuum_client::{
 };
 use serde_json::json;
 
+fn test_password() -> String {
+    let mut bytes = [0; 16];
+    getrandom::fill(&mut bytes).expect("OS randomness must be available for test passwords");
+    format!("Approval-{:032x}!", u128::from_ne_bytes(bytes))
+}
+
 #[test]
 #[ignore = "requires Docker and hubuum server image"]
 fn credential_approvals_user_password_workflow() {
     let harness = E2EHarness::from_env().unwrap();
     let name = unique_case_prefix("approval-user");
-    let initial_password = format!("{name}-Initial-passw0rd!");
-    let replacement_password = format!("{name}-Replacement-passw0rd!");
+    let initial_password = test_password();
+    let replacement_password = test_password();
     let user = UserPost {
         name: name.clone(),
         password: initial_password.clone(),
@@ -96,7 +102,7 @@ fn credential_approvals_user_password_workflow() {
 fn credential_approvals_import_dry_run() {
     let harness = E2EHarness::from_env().unwrap();
     let name = unique_case_prefix("approval-import");
-    let password = format!("{name}-Imported-passw0rd!");
+    let password = test_password();
     let principal: ImportPrincipalInput = serde_json::from_value(json!({
         "name": name, "kind": "human",
         "password": password, "provider_managed": false,
