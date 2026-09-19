@@ -8,6 +8,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Changed
 
+- Refresh the pinned PostgreSQL 18 integration fixture image.
+
 - Refresh locked Rust dependencies and pin GitHub Actions to verified current
   revisions. Rust 1.88 and the Hubuum v0.0.15 target remain unchanged.
 
