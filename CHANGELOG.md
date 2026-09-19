@@ -6,6 +6,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- Refresh locked Rust dependencies and pin GitHub Actions to verified current
+  revisions. Rust 1.88 and the Hubuum v0.0.15 target remain unchanged.
+
 ## [0.11.0] - 2026-09-16
 
 ### Added
