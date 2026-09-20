@@ -86,3 +86,10 @@ unauthenticated client, preventing accidental reuse of a revoked session at
 compile time. `authenticate(token)` attaches a token without a validation call;
 it is intended for custom transports and environments where the first API call
 is the validation boundary.
+
+Credential creation and renewal on newer servers can additionally require
+[fresh password approval](credential-approvals.md). Use an unscoped human session
+and collect that human's current password when a mutation error's
+`is_reauthentication_required()` method returns `true`. Token login alone does not satisfy
+fresh authentication. The guide includes async and blocking flows that also
+work with older servers.

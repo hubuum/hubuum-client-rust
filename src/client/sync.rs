@@ -1,5 +1,6 @@
 use log::{debug, trace};
 use reqwest::blocking::Response;
+use secrecy::SecretString;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -45,6 +46,10 @@ use crate::types::{
     TaskCancelRequest, TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse,
     TaskStatus, Token, TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
     UnifiedSearchSseDecoder, UpdateEventSubscription,
+};
+use crate::types::{
+    CredentialApprovalId, CredentialApprovalRecord, CredentialApprovalRequest, CredentialOperation,
+    EntityTag,
 };
 
 #[derive(Deserialize, Debug)]
@@ -837,6 +842,13 @@ impl Client<Unauthenticated> {
 }
 
 impl Client<Authenticated> {
+    /// Access optional fresh password approvals for credential management.
+    pub fn credential_approvals(&self) -> CredentialApprovals {
+        CredentialApprovals {
+            client: self.clone(),
+        }
+    }
+
     /// Bearer token held by this authenticated client.
     pub fn token(&self) -> &str {
         self.state.token()
@@ -3624,6 +3636,145 @@ impl BackupRunOp {
         } else {
             Err(shared::task_unsuccessful_error(&task))
         }
+    }
+}
+
+/// Explicit support for servers that require fresh credential approvals.
+/// Calling ordinary mutation methods never probes this endpoint.
+#[derive(Debug)]
+pub struct CredentialApprovals {
+    client: Client<Authenticated>,
+}
+
+impl CredentialApprovals {
+    /// Reauthenticate the acting human and bind approval to this exact operation.
+    ///
+    /// Requires an unscoped human bearer token and that human's current password,
+    /// verified through their existing identity provider. A service-account token
+    /// or a human token with scope restrictions cannot obtain approval. Existing
+    /// permissions still apply, including when managing another principal.
+    /// See [`CredentialOperation`] for the consumer guide and supported operations.
+    ///
+    /// The password is discarded after this request. Errors are never downgraded
+    /// to an unapproved mutation, including an unsupported endpoint on old servers.
+    pub fn approve<T: DeserializeOwned>(
+        &self,
+        password: impl Into<String>,
+        operation: CredentialOperation<T>,
+    ) -> Result<ApprovedCredentialOperation<T>, ApiError> {
+        operation.validate()?;
+        let request = CredentialApprovalRequest {
+            password: SecretString::from(password.into()),
+            operation: &operation,
+        };
+        let response = self
+            .client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::CredentialApprovals,
+                UrlParams::default(),
+                vec![],
+                request,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Credential approval returned empty result".into())
+            })?;
+        Ok(ApprovedCredentialOperation {
+            client: self.client.clone(),
+            request: shared::ApprovedCredentialRequest::new(operation, response)?,
+            output: PhantomData,
+        })
+    }
+
+    /// Inspect retained evidence after success or an ambiguous submission failure.
+    pub fn get(
+        &self,
+        approval_id: impl Into<CredentialApprovalId>,
+    ) -> Result<CredentialApprovalRecord, ApiError> {
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::GET,
+                &Endpoint::CredentialApprovalById,
+                vec![(
+                    Cow::Borrowed("approval_id"),
+                    approval_id.into().to_string().into(),
+                )],
+                vec![],
+                EmptyPostParams,
+            )?
+            .ok_or_else(|| {
+                ApiError::EmptyResult("Credential approval record returned empty result".into())
+            })
+    }
+}
+
+/// A single-use approval retaining its original client, target, and exact request.
+///
+/// Sending consumes the handle. Token expiry is copied from the approval response
+/// at full server precision, even when the original request specified an expiry.
+/// Save `record().id` before sending to inspect consumption after an ambiguous error.
+#[must_use = "an approved operation must be sent to perform the mutation"]
+pub struct ApprovedCredentialOperation<T> {
+    client: Client<Authenticated>,
+    request: shared::ApprovedCredentialRequest,
+    output: PhantomData<fn() -> T>,
+}
+
+impl<T> std::fmt::Debug for ApprovedCredentialOperation<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ApprovedCredentialOperation")
+            .field("request", &self.request)
+            .finish()
+    }
+}
+
+impl<T> ApprovedCredentialOperation<T> {
+    pub fn record(&self) -> &CredentialApprovalRecord {
+        &self.request.response.record
+    }
+
+    /// Exact normalized token expiry selected by the server, in UTC.
+    pub fn token_expires_at(&self) -> Option<HubuumDateTime> {
+        self.request
+            .response
+            .token_expires_at
+            .map(|expiry| HubuumDateTime(expiry.and_utc()))
+    }
+}
+
+impl<T: DeserializeOwned> ApprovedCredentialOperation<T> {
+    /// Submit once using the original bearer and approved body.
+    /// Only imports with an idempotency key participate in automatic write retries.
+    pub fn send(self) -> Result<T, ApiError> {
+        let headers = self.request.headers();
+        let raw = self.client.request_with_endpoint_raw_with_headers(
+            self.request.method.clone(),
+            &self.request.endpoint,
+            self.request.url_params,
+            vec![],
+            self.request.body,
+            &headers,
+        )?;
+        shared::parse_response(&self.request.method, raw.status, raw.body)?.ok_or_else(|| {
+            ApiError::EmptyResult("Approved credential operation returned empty result".into())
+        })
+    }
+}
+
+impl ApprovedCredentialOperation<User> {
+    /// Preserve the normal revision precondition when changing a user's password.
+    pub fn if_match(mut self, etag: impl Into<EntityTag>) -> Self {
+        self.request.headers = shared::if_match_headers(&etag.into()).into();
+        self
+    }
+}
+
+impl ApprovedCredentialOperation<TaskResponse> {
+    /// Use the same key for retries of this exact import. A new payload requires
+    /// a new approval and key. Poll the admitted task to resolve ambiguous results.
+    pub fn idempotency_key(mut self, key: impl Into<String>) -> Self {
+        self.request.headers = vec![("Idempotency-Key", key.into())];
+        self
     }
 }
 

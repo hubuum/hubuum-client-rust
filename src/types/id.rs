@@ -73,6 +73,7 @@ macro_rules! define_id {
 }
 
 define_id!(PrincipalId, i32);
+define_id!(CredentialApprovalId, i32);
 define_id!(TokenId, i32);
 define_id!(TaskId, i32);
 define_id!(TaskEventId, i32);

@@ -2,9 +2,9 @@ use std::time::{Duration, Instant};
 
 use e2e_client::harness::{AsyncE2EHarness, E2EHarness, admin_context, async_admin_context};
 use hubuum_client::{
-    BackupRequest, BaseUrl, ClassId, Client, ComplianceStatus, ObjectId, ResourceRevision,
-    RestoreConfirmRequest, RestoreJobStatus, SchemaActivationPolicy, SchemaActivationRequest,
-    SchemaPageOptions, SchemaRevision, SchemaStageRequest, blocking,
+    BackupRequest, BaseUrl, ClassId, Client, ComplianceStatus, CredentialOperation, ObjectId,
+    ResourceRevision, RestoreConfirmRequest, RestoreJobStatus, SchemaActivationPolicy,
+    SchemaActivationRequest, SchemaPageOptions, SchemaRevision, SchemaStageRequest, blocking,
 };
 use yare::parameterized;
 
@@ -97,14 +97,30 @@ fn blocking_restore_confirmation(include_history: bool) {
     harness.client.objects(class_id).delete(object_id).unwrap();
     let staged = harness.client.restores().stage(&document).unwrap();
     let capability = staged.restore_capability.clone().unwrap();
-    let accepted = harness
+    let confirmation = RestoreConfirmRequest::new(capability.clone(), staged.sha256.clone());
+    let accepted = match harness
         .client
         .restores()
-        .confirm(
-            staged.id,
-            RestoreConfirmRequest::new(capability.clone(), staged.sha256.clone()),
-        )
-        .unwrap();
+        .confirm(staged.id, confirmation.clone())
+    {
+        Ok(accepted) => {
+            assert!(std::env::var_os("HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS").is_none());
+            accepted
+        }
+        Err(error) => {
+            assert!(error.is_reauthentication_required(), "{error:?}");
+            harness
+                .client
+                .credential_approvals()
+                .approve(
+                    harness.admin_password.clone(),
+                    CredentialOperation::confirm_restore(staged.id, confirmation),
+                )
+                .unwrap()
+                .send()
+                .unwrap()
+        }
+    };
     assert_eq!(accepted.status, RestoreJobStatus::Confirmed);
     assert!(!accepted.status.is_terminal());
 
@@ -182,15 +198,33 @@ async fn async_restore_confirmation(include_history: bool) {
         .unwrap();
     let staged = harness.client.restores().stage(&document).await.unwrap();
     let capability = staged.restore_capability.clone().unwrap();
-    let accepted = harness
+    let confirmation = RestoreConfirmRequest::new(capability.clone(), staged.sha256.clone());
+    let accepted = match harness
         .client
         .restores()
-        .confirm(
-            staged.id,
-            RestoreConfirmRequest::new(capability.clone(), staged.sha256.clone()),
-        )
+        .confirm(staged.id, confirmation.clone())
         .await
-        .unwrap();
+    {
+        Ok(accepted) => {
+            assert!(std::env::var_os("HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS").is_none());
+            accepted
+        }
+        Err(error) => {
+            assert!(error.is_reauthentication_required(), "{error:?}");
+            harness
+                .client
+                .credential_approvals()
+                .approve(
+                    std::env::var("HUBUUM_INTEGRATION_ADMIN_PASSWORD").unwrap(),
+                    CredentialOperation::confirm_restore(staged.id, confirmation),
+                )
+                .await
+                .unwrap()
+                .send()
+                .await
+                .unwrap()
+        }
+    };
     assert_eq!(accepted.status, RestoreJobStatus::Confirmed);
     assert!(!accepted.status.is_terminal());
 

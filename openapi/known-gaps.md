@@ -54,3 +54,11 @@ Rust wire models:
 - Server traversal, export, and template batch resource limits may reject work
   that previously fit older limits. The client preserves the server error;
   callers must narrow queries or reduce traversal depth and template workloads.
+
+## Optional forward compatibility
+
+The typed `credential_approvals()` API supports the two approval endpoints and
+six protected operations introduced by [server PR 423](https://github.com/hubuum/hubuum/pull/423).
+These endpoints are absent from the declared v0.0.15 target, so they are not added
+to its normalized snapshot. Existing mutation calls remain unchanged; explicit
+approval calls require a supporting server. See the [approval guide](../docs/credential-approvals.md).

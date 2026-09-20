@@ -56,6 +56,13 @@ let client = Client::from_url("https://hubuum.example")?
 `Credentials::new(...).in_scope(...)` is equivalent when credentials are built
 incrementally. Passwords remain redacted from `Debug` output.
 
+Some servers also require [fresh credential approvals](credential-approvals.md)
+for credential management. Approval uses the logged-in human's current password
+and existing identity provider. It requires an unscoped bearer token, meaning a
+token without permission/resource restrictions; provider-scoped login remains
+supported. The approval guide covers both server policies and async/blocking
+examples.
+
 Provider configuration, TLS, synchronization intervals, and directory mapping
 belong to the Hubuum server. The client does not configure or enumerate identity
 providers.

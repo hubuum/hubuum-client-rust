@@ -40,6 +40,28 @@ versioned Hubuum server v0.0.2 release.
 
 ## Forward compatibility
 
+The optional fresh credential approval API supports servers incorporating
+[PR 423](https://github.com/hubuum/hubuum/pull/423). This addition does not change
+the declared v0.0.15 target, pinned image, or OpenAPI snapshot. Existing calls do
+not require the approval endpoints. On an enforcing server, credential mutations
+return `reauthentication_required` until the caller uses the explicit
+[approval workflow](docs/credential-approvals.md).
+
+Focused live verification on 2026-09-19 used the PR's merged source revision
+`3a1c44c938cc9d06d665229612c0fb1b4f3c98c8` and immutable Linux amd64 image
+`ghcr.io/hubuum/hubuum-server@sha256:62438f2473ee15f9699ccc904e79c4c20c27e06a1219986c04493d269127f3e0`.
+With `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`, async and blocking token
+creation/renewal preserved approved expirations, and downstream user/password and
+credential-import dry runs passed. Blocking and async full restore confirmation
+and recovery passed with and without history. These focused checks supplement
+the required complete pinned-server run; they do not declare compatibility with
+all other changes on server `main`.
+
+The canonical complete pinned-server command also passed on 2026-09-19 against
+the v0.0.15 image declared in `Cargo.toml`, including library and downstream
+consumer tests and all four restore/recovery scenarios. The new credential
+scenarios passed through the original APIs without requiring approval support.
+
 Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
