@@ -78,7 +78,10 @@ For client 0.11.0, that image is Hubuum server v0.0.15 at
 `sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821`.
 A scheduled compatibility workflow separately runs against
 `ghcr.io/hubuum/hubuum-server:main`, so upstream movement is visible without
-making otherwise unrelated pull requests nondeterministic.
+making otherwise unrelated pull requests nondeterministic. The forward suite
+requires credential approval enforcement. User fixtures obtain operation-bound
+approval only after `reauthentication_required`; other failures propagate without
+retry. The same fixtures retain their original calls on the pinned server.
 
 Dependabot checks the PostgreSQL fixture Dockerfile weekly. Review proposed
 digest updates for supported `linux/amd64` and `linux/arm64` manifests and run

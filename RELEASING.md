@@ -64,9 +64,9 @@ creating the release tag that should publish it.
 9. Update the crates.io version and compatibility statements in `README.md`.
 10. Run:
 
-   ```bash
-   ./scripts/check-release.sh vX.Y.Z
-   ```
+    ```bash
+    ./scripts/check-release.sh vX.Y.Z
+    ```
 
 11. Fetch the protected branch and confirm the release commit is its exact
     current head:
