@@ -363,6 +363,12 @@ fn parse_fields(item: ItemStruct) -> Result<Vec<RustField>, DynError> {
                     } else if meta.path.is_ident("skip_serializing_if") {
                         parsed.skip_serializing_if = true;
                         let _ = meta.value()?.parse::<syn::Expr>()?;
+                    } else if meta.path.is_ident("serialize_with")
+                        || meta.path.is_ident("deserialize_with")
+                        || meta.path.is_ident("with")
+                    {
+                        // Custom codecs preserve the field's name and presence.
+                        let _ = meta.value()?.parse::<syn::LitStr>()?;
                     } else if meta.path.is_ident("flatten") {
                         parsed.flatten = true;
                     }
@@ -423,6 +429,28 @@ mod tests {
         assert!(!fields[1].required_in(Direction::Response));
         assert!(!fields[2].visible_in(Direction::Request));
         assert!(fields[2].visible_in(Direction::Response));
+    }
+
+    #[test]
+    fn parses_custom_codecs_without_changing_field_presence() {
+        let item = syn::parse_quote! {
+            struct Example {
+                #[serde(serialize_with = "serialize_secret", rename = "password")]
+                secret: String,
+                #[serde(deserialize_with = "deserialize_value")]
+                value: String,
+                #[serde(with = "optional_codec", skip_serializing_if = "Option::is_none")]
+                optional: Option<String>,
+            }
+        };
+        let fields = parse_fields(item).unwrap();
+        assert_eq!(fields[0].wire_name, "password");
+        for field in &fields[..2] {
+            assert!(field.required_in(Direction::Request));
+            assert!(field.required_in(Direction::Response));
+        }
+        assert!(!fields[2].required_in(Direction::Request));
+        assert!(!fields[2].required_in(Direction::Response));
     }
 
     #[test]

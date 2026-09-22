@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.15",
+  "api_version": "0.0.16",
   "openapi": "3.1.0",
-  "operation_count": 218,
+  "operation_count": 220,
   "operations": [
     {
       "method": "POST",
@@ -752,11 +752,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -833,11 +856,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -8381,11 +8427,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -8625,11 +8694,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -8706,11 +8798,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -8814,6 +8929,210 @@
           "application/json"
         ],
         "410": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamCredentialApprovals",
+      "parameters": [],
+      "path": "/api/v1/iam/credential-approvals",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "ClassKey",
+        "CollectionID",
+        "CollectionKey",
+        "ComputedResultType",
+        "CredentialApprovalRequest",
+        "CredentialOperation",
+        "EventSinkKey",
+        "EventSinkKind",
+        "ExportContentType",
+        "ExportInclude",
+        "ExportIncludeRelatedDirection",
+        "ExportIncludeRelatedObject",
+        "ExportIncludeRelatedSort",
+        "ExportLimits",
+        "ExportMissingDataPolicy",
+        "ExportRelationContext",
+        "ExportScopeKind",
+        "ExportTemplateKind",
+        "GroupKey",
+        "HubuumClassID",
+        "HubuumObjectID",
+        "IdentityScopeKey",
+        "ImportAtomicity",
+        "ImportClassInput",
+        "ImportClassRelationInput",
+        "ImportCollectionInput",
+        "ImportCollectionPermissionInput",
+        "ImportCollisionPolicy",
+        "ImportComputedFieldInput",
+        "ImportComputedFieldVisibility",
+        "ImportEventSinkInput",
+        "ImportEventSubscriptionInput",
+        "ImportExportTemplateInput",
+        "ImportGraph",
+        "ImportGroupInput",
+        "ImportGroupMembershipInput",
+        "ImportIdentityScopeInput",
+        "ImportMembershipSourceInput",
+        "ImportMode",
+        "ImportObjectInput",
+        "ImportObjectRelationInput",
+        "ImportPermissionPolicy",
+        "ImportPrincipalInput",
+        "ImportPrincipalSubtype",
+        "ImportRemoteTargetInput",
+        "ImportRequest",
+        "ImportSchemaActivation",
+        "ImportWriteCondition",
+        "NewTokenRequest",
+        "NewUser",
+        "ObjectKey",
+        "ObjectRelationLimit",
+        "Permissions",
+        "PrincipalID",
+        "PrincipalKey",
+        "RemoteAuthConfig",
+        "RemoteHttpMethod",
+        "RemoteTargetSubjectType",
+        "RenewTokenRequest",
+        "ResourceRevision",
+        "RestoreConfirmRequest",
+        "RestoreJobID",
+        "RestoreTimestamps",
+        "SchemaActivationPolicy",
+        "SchemaRevision",
+        "TaskID",
+        "TokenID",
+        "TokenResourceScope",
+        "TokenScopeDetails",
+        "UpdateUser",
+        "UserID"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/CredentialApprovalRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CredentialApprovalRecord",
+        "CredentialApprovalResponse",
+        "CredentialApprovalSecret",
+        "PrincipalID",
+        "RestoreJobID",
+        "TokenID"
+      ],
+      "response_schemas": {
+        "201": {
+          "application/json": {
+            "$ref": "#/components/schemas/CredentialApprovalResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "503": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamCredentialApprovalsByApprovalId",
+      "parameters": [
+        "path:approval_id"
+      ],
+      "path": "/api/v1/iam/credential-approvals/{approval_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CredentialApprovalRecord",
+        "PrincipalID",
+        "RestoreJobID",
+        "TokenID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/CredentialApprovalRecord"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
           "application/json"
         ]
       },
@@ -10598,6 +10917,7 @@
       "method": "POST",
       "operation_id": "postApiV1IamPrincipalsByPrincipalIdTokens",
       "parameters": [
+        "header:X-Hubuum-Credential-Approval",
         "path:principal_id"
       ],
       "path": "/api/v1/iam/principals/{principal_id}/tokens",
@@ -10742,6 +11062,7 @@
       "method": "POST",
       "operation_id": "postApiV1IamPrincipalsByPrincipalIdTokensByTokenIdRenew",
       "parameters": [
+        "header:X-Hubuum-Credential-Approval",
         "path:principal_id",
         "path:token_id"
       ],
@@ -11293,7 +11614,9 @@
     {
       "method": "POST",
       "operation_id": "postApiV1IamUsers",
-      "parameters": [],
+      "parameters": [
+        "header:X-Hubuum-Credential-Approval"
+      ],
       "path": "/api/v1/iam/users",
       "request_content": [
         "application/json"
@@ -11327,6 +11650,11 @@
             "$ref": "#/components/schemas/ApiErrorResponse"
           }
         },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
         "409": {
           "application/json": {
             "$ref": "#/components/schemas/ApiErrorResponse"
@@ -11341,6 +11669,9 @@
           "application/json"
         ],
         "401": [
+          "application/json"
+        ],
+        "403": [
           "application/json"
         ],
         "409": [
@@ -11467,6 +11798,7 @@
       "operation_id": "patchApiV1IamUsersByUserId",
       "parameters": [
         "header:If-Match",
+        "header:X-Hubuum-Credential-Approval",
         "path:user_id"
       ],
       "path": "/api/v1/iam/users/{user_id}",
@@ -11661,7 +11993,9 @@
     {
       "method": "POST",
       "operation_id": "postApiV1Imports",
-      "parameters": [],
+      "parameters": [
+        "header:X-Hubuum-Credential-Approval"
+      ],
       "path": "/api/v1/imports",
       "request_content": [
         "application/json"
@@ -11731,11 +12065,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -11812,11 +12169,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -12931,11 +13311,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -13078,6 +13481,7 @@
       "method": "POST",
       "operation_id": "postApiV1RestoresByRestoreIdConfirm",
       "parameters": [
+        "header:X-Hubuum-Credential-Approval",
         "path:restore_id"
       ],
       "path": "/api/v1/restores/{restore_id}/confirm",
@@ -13511,13 +13915,45 @@
       "method": "GET",
       "operation_id": "getApiV1Tasks",
       "parameters": [
+        "query:backup_include_history",
+        "query:cancel_requested",
+        "query:class_id",
+        "query:collection_id",
+        "query:computation_revision",
+        "query:created_after",
+        "query:created_before",
         "query:cursor",
+        "query:export_has_warnings",
+        "query:export_scope_kind",
+        "query:export_template_id",
+        "query:export_truncated",
+        "query:finished_after",
+        "query:finished_before",
+        "query:import_atomicity",
+        "query:import_collision_policy",
+        "query:import_dry_run",
+        "query:import_has_failed_items",
+        "query:import_permission_policy",
         "query:include_total",
         "query:kind",
         "query:limit",
+        "query:object_id",
+        "query:output_state",
+        "query:relation_id",
+        "query:relation_type",
+        "query:remote_side_effect_state",
+        "query:remote_target_id",
+        "query:schema_revision",
+        "query:schema_work_kind",
+        "query:schema_work_status",
         "query:sort",
+        "query:started_after",
+        "query:started_before",
         "query:status",
-        "query:submitted_by"
+        "query:submitted_by",
+        "query:terminal",
+        "query:terminal_reason",
+        "query:trace_id"
       ],
       "path": "/api/v1/tasks",
       "request_content": [],
@@ -13526,11 +13962,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -13586,11 +14045,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -13660,11 +14142,34 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
         "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
         "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
         "TaskDetails",
+        "TaskDiscoveryTarget",
         "TaskKind",
         "TaskLinks",
+        "TaskOutputDiscoveryState",
         "TaskProgress",
         "TaskRemoteSideEffectState",
         "TaskResponse",
@@ -13864,8 +14369,8 @@
       "security": []
     }
   ],
-  "path_count": 149,
-  "schema_count": 315,
+  "path_count": 151,
+  "schema_count": 330,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -13906,6 +14411,11 @@
     "ComputedScopeResponse",
     "CopyOperation",
     "CountsResponse",
+    "CredentialApprovalRecord",
+    "CredentialApprovalRequest",
+    "CredentialApprovalResponse",
+    "CredentialApprovalSecret",
+    "CredentialOperation",
     "CurrentTokenMetadata",
     "DatabaseConfig",
     "DbStateResponse",
@@ -14065,12 +14575,14 @@
     "Provenance",
     "ProvenanceActor",
     "ProvenancePrincipal",
+    "RebuildTaskDetails",
     "RelatedClassGraph",
     "RelatedObjectGraph",
     "ReleaseRateLimitResponse",
     "RemoteAuthConfig",
     "RemoteCallConfig",
     "RemoteCallResult",
+    "RemoteCallTaskDetails",
     "RemoteHttpMethod",
     "RemoteInvocationBodyOverride",
     "RemoteInvocationParameters",
@@ -14086,10 +14598,14 @@
     "ResourceRevision",
     "RestoreConfig",
     "RestoreConfirmRequest",
+    "RestoreJobID",
     "RestoreJobStatus",
     "RestoreStageResponse",
     "RestoreTimestamps",
     "RestoreValidationSummary",
+    "RetainedBackupDetails",
+    "RetainedExportDetails",
+    "RetainedImportDetails",
     "RunningConfig",
     "SchemaActivationPolicy",
     "SchemaActivationRequest",
@@ -14115,6 +14631,7 @@
     "SchemaRevisionResponse",
     "SchemaRevisionStatus",
     "SchemaStageRequest",
+    "SchemaTaskDetails",
     "SchemaValidationConfig",
     "SchemaWorkKind",
     "SchemaWorkResponse",
@@ -14144,10 +14661,12 @@
     "TaskCancelRequest",
     "TaskConfig",
     "TaskDetails",
+    "TaskDiscoveryTarget",
     "TaskEventResponse",
     "TaskID",
     "TaskKind",
     "TaskLinks",
+    "TaskOutputDiscoveryState",
     "TaskProgress",
     "TaskQueueStateResponse",
     "TaskRemoteSideEffectState",
@@ -14180,6 +14699,7 @@
     "UpdateRemoteTarget",
     "UpdateServiceAccount",
     "UpdateUser",
+    "UserID",
     "UserPointResponse",
     "UserResponse"
   ],
@@ -14204,6 +14724,12 @@
         },
         "message": {
           "type": "string"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -14450,6 +14976,16 @@
         },
         "output_url": {
           "type": "string"
+        },
+        "retained": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/RetainedBackupDetails"
+            }
+          ]
         },
         "sha256": {
           "type": [
@@ -15199,6 +15735,248 @@
         "total_objects"
       ],
       "type": "object"
+    },
+    "CredentialApprovalRecord": {
+      "properties": {
+        "actor_id": {
+          "$ref": "#/components/schemas/PrincipalID"
+        },
+        "authenticated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "consumed_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "invalidated_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "type": "string"
+        },
+        "restore_job_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/RestoreJobID"
+            }
+          ]
+        },
+        "target_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/PrincipalID"
+            }
+          ]
+        },
+        "token_id": {
+          "$ref": "#/components/schemas/TokenID"
+        }
+      },
+      "required": [
+        "actor_id",
+        "authenticated_at",
+        "expires_at",
+        "id",
+        "operation",
+        "token_id"
+      ],
+      "type": "object"
+    },
+    "CredentialApprovalRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "$ref": "#/components/schemas/CredentialOperation"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "password"
+      ],
+      "type": "object"
+    },
+    "CredentialApprovalResponse": {
+      "properties": {
+        "approval": {
+          "$ref": "#/components/schemas/CredentialApprovalSecret"
+        },
+        "record": {
+          "$ref": "#/components/schemas/CredentialApprovalRecord"
+        },
+        "token_expires_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "approval",
+        "record"
+      ],
+      "type": "object"
+    },
+    "CredentialApprovalSecret": {
+      "pattern": "^hca1\\.[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "CredentialOperation": {
+      "oneOf": [
+        {
+          "properties": {
+            "import": {
+              "$ref": "#/components/schemas/ImportRequest"
+            },
+            "kind": {
+              "enum": [
+                "import_credentials"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "import",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confirmation": {
+              "$ref": "#/components/schemas/RestoreConfirmRequest"
+            },
+            "kind": {
+              "enum": [
+                "confirm_restore"
+              ],
+              "type": "string"
+            },
+            "restore_id": {
+              "$ref": "#/components/schemas/RestoreJobID"
+            }
+          },
+          "required": [
+            "confirmation",
+            "kind",
+            "restore_id"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "create_token"
+              ],
+              "type": "string"
+            },
+            "principal_id": {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            "token": {
+              "$ref": "#/components/schemas/NewTokenRequest"
+            }
+          },
+          "required": [
+            "kind",
+            "principal_id",
+            "token"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "renew_token"
+              ],
+              "type": "string"
+            },
+            "principal_id": {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            "token": {
+              "$ref": "#/components/schemas/RenewTokenRequest"
+            },
+            "token_id": {
+              "$ref": "#/components/schemas/TokenID"
+            }
+          },
+          "required": [
+            "kind",
+            "principal_id",
+            "token",
+            "token_id"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "create_user"
+              ],
+              "type": "string"
+            },
+            "user": {
+              "$ref": "#/components/schemas/NewUser"
+            }
+          },
+          "required": [
+            "kind",
+            "user"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "update_user"
+              ],
+              "type": "string"
+            },
+            "user": {
+              "$ref": "#/components/schemas/UpdateUser"
+            },
+            "user_id": {
+              "$ref": "#/components/schemas/UserID"
+            }
+          },
+          "required": [
+            "kind",
+            "user",
+            "user_id"
+          ],
+          "type": "object"
+        }
+      ]
     },
     "CurrentTokenMetadata": {
       "properties": {
@@ -16627,6 +17405,16 @@
           "type": [
             "integer",
             "null"
+          ]
+        },
+        "retained": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/RetainedExportDetails"
+            }
           ]
         },
         "template_name": {
@@ -19963,6 +20751,16 @@
       "properties": {
         "results_url": {
           "type": "string"
+        },
+        "retained": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/RetainedImportDetails"
+            }
+          ]
         }
       },
       "required": [
@@ -22218,6 +23016,28 @@
       ],
       "type": "object"
     },
+    "RebuildTaskDetails": {
+      "properties": {
+        "class_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/HubuumClassID"
+            }
+          ]
+        },
+        "computation_revision": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
     "RelatedClassGraph": {
       "properties": {
         "classes": {
@@ -22446,6 +23266,31 @@
         "success",
         "task_id"
       ],
+      "type": "object"
+    },
+    "RemoteCallTaskDetails": {
+      "properties": {
+        "remote_target_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/RemoteTargetID"
+            }
+          ]
+        },
+        "target": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/TaskDiscoveryTarget"
+            }
+          ]
+        }
+      },
       "type": "object"
     },
     "RemoteHttpMethod": {
@@ -22873,6 +23718,11 @@
       ],
       "type": "object"
     },
+    "RestoreJobID": {
+      "format": "int64",
+      "minimum": 1,
+      "type": "integer"
+    },
     "RestoreJobStatus": {
       "enum": [
         "validated",
@@ -23015,6 +23865,150 @@
         "source_version",
         "total_items"
       ],
+      "type": "object"
+    },
+    "RetainedBackupDetails": {
+      "properties": {
+        "include_history": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "output_state": {
+          "$ref": "#/components/schemas/TaskOutputDiscoveryState"
+        }
+      },
+      "required": [
+        "output_state"
+      ],
+      "type": "object"
+    },
+    "RetainedExportDetails": {
+      "properties": {
+        "max_items": {
+          "format": "int64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_output_bytes": {
+          "format": "int64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "missing_data_policy": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/ExportMissingDataPolicy"
+            }
+          ]
+        },
+        "output_state": {
+          "$ref": "#/components/schemas/TaskOutputDiscoveryState"
+        },
+        "scope_kind": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/ExportScopeKind"
+            }
+          ]
+        },
+        "target": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/TaskDiscoveryTarget"
+            }
+          ]
+        },
+        "template_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/ExportTemplateID"
+            }
+          ]
+        },
+        "truncated": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "warning_count": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "output_state"
+      ],
+      "type": "object"
+    },
+    "RetainedImportDetails": {
+      "properties": {
+        "atomicity": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/ImportAtomicity"
+            }
+          ]
+        },
+        "collision_policy": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/ImportCollisionPolicy"
+            }
+          ]
+        },
+        "dry_run": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "has_failed_items": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "permission_policy": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/ImportPermissionPolicy"
+            }
+          ]
+        }
+      },
       "type": "object"
     },
     "RunningConfig": {
@@ -23691,6 +24685,57 @@
       "required": [
         "validate_schema"
       ],
+      "type": "object"
+    },
+    "SchemaTaskDetails": {
+      "properties": {
+        "class_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/HubuumClassID"
+            }
+          ]
+        },
+        "results_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schema_revision": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/SchemaRevision"
+            }
+          ]
+        },
+        "work_kind": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/SchemaWorkKind"
+            }
+          ]
+        },
+        "work_status": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/SchemaWorkStatus"
+            }
+          ]
+        }
+      },
       "type": "object"
     },
     "SchemaValidationConfig": {
@@ -24923,6 +25968,7 @@
       "type": "object"
     },
     "TaskDetails": {
+      "additionalProperties": false,
       "properties": {
         "backup": {
           "oneOf": [
@@ -24953,9 +25999,143 @@
               "$ref": "#/components/schemas/ImportTaskDetails"
             }
           ]
+        },
+        "reindex": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/RebuildTaskDetails"
+            }
+          ]
+        },
+        "remote_call": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/RemoteCallTaskDetails"
+            }
+          ]
+        },
+        "schema_validation": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/components/schemas/SchemaTaskDetails"
+            }
+          ]
         }
       },
       "type": "object"
+    },
+    "TaskDiscoveryTarget": {
+      "oneOf": [
+        {
+          "properties": {
+            "collection_id": {
+              "$ref": "#/components/schemas/CollectionID"
+            },
+            "type": {
+              "enum": [
+                "collection"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection_id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "class_id": {
+              "$ref": "#/components/schemas/HubuumClassID"
+            },
+            "type": {
+              "enum": [
+                "class"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "class_id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "class_id": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/HubuumClassID"
+                }
+              ]
+            },
+            "object_id": {
+              "$ref": "#/components/schemas/HubuumObjectID"
+            },
+            "type": {
+              "enum": [
+                "object"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "object_id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "relation_id": {
+              "$ref": "#/components/schemas/HubuumClassRelationID"
+            },
+            "type": {
+              "enum": [
+                "class_relation"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "relation_id",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "relation_id": {
+              "$ref": "#/components/schemas/HubuumObjectRelationID"
+            },
+            "type": {
+              "enum": [
+                "object_relation"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "relation_id",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
     },
     "TaskEventResponse": {
       "properties": {
@@ -25058,6 +26238,15 @@
         "task"
       ],
       "type": "object"
+    },
+    "TaskOutputDiscoveryState": {
+      "enum": [
+        "available",
+        "expired",
+        "not_produced",
+        "unknown"
+      ],
+      "type": "string"
     },
     "TaskProgress": {
       "properties": {
@@ -26179,6 +27368,11 @@
       },
       "type": "object"
     },
+    "UserID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
     "UserPointResponse": {
       "properties": {
         "created_at": {
@@ -26299,5 +27493,5 @@
       "type": "object"
     }
   },
-  "spec_sha256": "85b8a0ee6f40fc93474579e5f443014b9acc0c8203a73f9c2720c600960279f3"
+  "spec_sha256": "b8bcf05f8cba063871bd51e6690fc3fc8089d6a4642a9cfe5ec82970e2a0154b"
 }

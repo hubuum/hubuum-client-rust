@@ -6,6 +6,36 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-09-22
+
+### Changed
+
+- This release explicitly targets Hubuum server v0.0.16, pinning its
+  220-operation OpenAPI contract and immutable multi-platform image
+  `sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e`.
+  Required integration tests now assert credential approval enforcement.
+- The existing async and blocking approval APIs cover both approval endpoints
+  and all six protected operations. Task-discovery filters and additional
+  retained details remain available through `raw()`; see
+  [task discovery](docs/task-discovery.md) for the typed model limitations.
+- Public Rust APIs, features, Rust 1.88, and backup format 6 remain unchanged.
+  All dependencies were checked for updates; the existing constraints and
+  locked dependency versions remain current under the repository policy.
+
+### Breaking server behavior and upgrade notes
+
+- **Breaking server behavior:** bearer-only token creation/renewal, local user
+  creation, password changes, credential-bearing imports (including dry runs),
+  and restore confirmation return `403 reauthentication_required`. Update
+  applications to use the [explicit approval workflow](docs/credential-approvals.md)
+  before upgrading the running server. Existing mutation calls do not prompt
+  or automatically retry with a password.
+- Keep a verified v0.0.15 backup, quiesce protected mutations, drain workers,
+  and apply the task-discovery and credential-approval migrations with
+  `hubuum-admin --migrate`. Deploy matching API, worker, administrator, and
+  separately supervised restore-executor binaries before resuming operations.
+  Older format-6 backups without discovery metadata remain accepted.
+
 ## [0.11.1] - 2026-09-22
 
 ### Added

@@ -9,7 +9,7 @@ blocking equivalents.
 
 Backups are administrator-only task operations. `run()` submits the task, waits
 for a successful terminal state, and decodes the resulting versioned backup
-document. Hubuum v0.0.15 uses backup format 6; format 5 and earlier artifacts must be
+document. Hubuum v0.0.16 retains backup format 6; format 5 and earlier artifacts must be
 restored with their matching older server before database migration and creation
 of a new format 6 backup. No artifact converter is provided. Preserve the server-assigned `created_at`
 instant when saving or staging a backup; the client serializes it as RFC 3339 UTC.
@@ -46,10 +46,13 @@ Restoring is deliberately a two-step operation. Staging validates a complete
 `BackupDocument` and returns a one-time capability. Confirmation requires that
 capability, the staged SHA-256, and the server-defined destructive confirmation
 phrase. `RestoreConfirmRequest::new` supplies the exact phrase.
+On v0.0.16, also collect the acting human's current password and obtain a fresh
+operation-bound [approval](credential-approvals.md). The password and restore
+capability are separate requirements.
 
 ```rust
 use std::time::{Duration, Instant};
-use hubuum_client::{RestoreConfirmRequest, RestoreJobStatus};
+use hubuum_client::{CredentialOperation, RestoreConfirmRequest, RestoreJobStatus};
 
 let staged = client.restores().stage(&document).await?;
 let capability = staged
@@ -62,11 +65,16 @@ assert_eq!(inspected.sha256, staged.sha256);
 
 // Destructive: replaces all Hubuum data and invalidates existing bearer tokens.
 let accepted = client
-    .restores()
-    .confirm(
-        staged.id,
-        RestoreConfirmRequest::new(capability.clone(), staged.sha256.clone()),
+    .credential_approvals()
+    .approve(
+        acting_password,
+        CredentialOperation::confirm_restore(
+            staged.id,
+            RestoreConfirmRequest::new(capability.clone(), staged.sha256.clone()),
+        ),
     )
+    .await?
+    .send()
     .await?;
 assert_eq!(accepted.status, RestoreJobStatus::Confirmed);
 
@@ -83,7 +91,7 @@ loop {
 }
 ```
 
-Hubuum v0.0.15 returns `202 Accepted` from confirmation. Deploy the matching
+Hubuum v0.0.16 returns `202 Accepted` from confirmation. Deploy the matching
 `hubuum-admin --restore-executor` before allowing web restores. Upgrade server,
 administrator, and template-worker binaries together, including any separately
 deployed restore executor. Drain old workers and apply migrations before starting
