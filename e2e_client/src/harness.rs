@@ -2,7 +2,8 @@ use std::str::FromStr;
 
 use hubuum_client::{
     ApiError, Authenticated, BaseUrl, ClassId, ClassPost, Client, CollectionId, CollectionPost,
-    Credentials, GroupId, GroupPost, ObjectId, ObjectPost, UserId, UserPost, blocking,
+    CredentialOperation, Credentials, GroupId, GroupPost, ObjectId, ObjectPost, UserId, UserPost,
+    blocking,
 };
 
 use crate::naming::unique_case_prefix;
@@ -93,13 +94,24 @@ impl E2EHarness {
         let prefix = unique_case_prefix(case);
         let username = format!("{prefix}-user");
         let password = format!("{prefix}-Passw0rd!");
-        let user = self.client.users().create_raw(UserPost {
+        let request = UserPost {
             identity_scope: None,
             name: username.clone(),
             password: password.clone(),
             email: Some(format!("{prefix}@example.test")),
             proper_name: Some(format!("{prefix} User")),
-        })?;
+        };
+        let user = match self.client.users().create_raw(request.clone()) {
+            Err(error) if error.is_reauthentication_required() => self
+                .client
+                .credential_approvals()
+                .approve(
+                    self.admin_password.clone(),
+                    CredentialOperation::create_user(request),
+                )?
+                .send()?,
+            result => result?,
+        };
 
         Ok(E2EUser {
             id: user.id,

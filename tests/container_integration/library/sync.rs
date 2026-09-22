@@ -597,8 +597,12 @@ fn sync_auth_logout_token_revokes_target_token() {
 
     let controller = login_sync(base_url.clone(), &stack.admin_password)
         .expect("failed to login controller client");
-    let target = create_sync_loginable_user(&controller, "sync-auth-logout-token-target")
-        .expect("failed to create revocation target");
+    let target = create_sync_loginable_user(
+        &controller,
+        &stack.admin_password,
+        "sync-auth-logout-token-target",
+    )
+    .expect("failed to create revocation target");
     let revoked = target
         .login_sync(base_url)
         .expect("failed to login revocation target");
@@ -624,8 +628,12 @@ fn sync_auth_logout_user_revokes_user_tokens() {
 
     let controller = login_sync(base_url.clone(), &stack.admin_password)
         .expect("failed to login controller client");
-    let target = create_sync_loginable_user(&controller, "sync-auth-logout-user-target")
-        .expect("failed to create revocation target");
+    let target = create_sync_loginable_user(
+        &controller,
+        &stack.admin_password,
+        "sync-auth-logout-user-target",
+    )
+    .expect("failed to create revocation target");
     let revoked = target
         .login_sync(base_url)
         .expect("failed to login revocation target");
@@ -651,8 +659,9 @@ fn sync_auth_logout_all_revokes_existing_tokens() {
 
     let admin =
         login_sync(base_url.clone(), &stack.admin_password).expect("failed to login admin client");
-    let target = create_sync_loginable_user(&admin, "sync-auth-logout-all-target")
-        .expect("failed to create revocation target");
+    let target =
+        create_sync_loginable_user(&admin, &stack.admin_password, "sync-auth-logout-all-target")
+            .expect("failed to create revocation target");
     let controller = target
         .login_sync(base_url.clone())
         .expect("failed to login controller client");
@@ -672,8 +681,12 @@ fn sync_auth_logout_all_revokes_existing_tokens() {
 #[ignore = "requires Docker and hubuum server image"]
 fn sync_users_create_and_get_by_name_roundtrip() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
-    let (username, user_id) = create_sync_user(&harness.client, "sync-users-create-select")
-        .expect("user creation failed");
+    let (username, user_id) = create_sync_user(
+        &harness.client,
+        harness.admin_password(),
+        "sync-users-create-select",
+    )
+    .expect("user creation failed");
 
     let selected = harness
         .client
@@ -688,8 +701,12 @@ fn sync_users_create_and_get_by_name_roundtrip() {
 #[ignore = "requires Docker and hubuum server image"]
 fn sync_users_update_changes_fields() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
-    let (_, user_id) =
-        create_sync_user(&harness.client, "sync-users-update").expect("user creation failed");
+    let (_, user_id) = create_sync_user(
+        &harness.client,
+        harness.admin_password(),
+        "sync-users-update",
+    )
+    .expect("user creation failed");
     let prefix = unique_case_prefix("sync-users-update");
     let updated_proper_name = format!("{prefix} Updated User");
     let updated_email = format!("{prefix}@example.test");
@@ -715,8 +732,12 @@ fn sync_users_update_changes_fields() {
 #[ignore = "requires Docker and hubuum server image"]
 fn sync_users_delete_removes_resource() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
-    let (_, user_id) =
-        create_sync_user(&harness.client, "sync-users-delete").expect("user creation failed");
+    let (_, user_id) = create_sync_user(
+        &harness.client,
+        harness.admin_password(),
+        "sync-users-delete",
+    )
+    .expect("user creation failed");
 
     harness
         .client
@@ -799,8 +820,12 @@ fn sync_groups_delete_removes_resource() {
 #[ignore = "requires Docker and hubuum server image"]
 fn sync_group_membership_add_remove_roundtrip() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
-    let (_, user_id) = create_sync_user(&harness.client, "sync-group-membership-user")
-        .expect("user creation failed");
+    let (_, user_id) = create_sync_user(
+        &harness.client,
+        harness.admin_password(),
+        "sync-group-membership-user",
+    )
+    .expect("user creation failed");
     let (_, group_id) = create_sync_group(&harness.client, "sync-group-membership-group")
         .expect("group creation failed");
     let group = harness
@@ -1202,8 +1227,12 @@ fn sync_groups_filter_helpers_return_expected_group() {
 #[ignore = "requires Docker and hubuum server image"]
 fn sync_query_iequals_supports_case_insensitive_match() {
     let harness = SyncHarness::start().expect("failed to bootstrap sync harness");
-    let (username, user_id) =
-        create_sync_user(&harness.client, "sync-query-iequals").expect("user creation failed");
+    let (username, user_id) = create_sync_user(
+        &harness.client,
+        harness.admin_password(),
+        "sync-query-iequals",
+    )
+    .expect("user creation failed");
 
     let found = harness
         .client

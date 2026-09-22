@@ -2,7 +2,8 @@ use std::future::Future;
 
 use hubuum_client::{
     ApiError, Authenticated, BaseUrl, ClassId, ClassPost, Client, CollectionId, CollectionPost,
-    Credentials, GroupId, GroupPost, ObjectId, ObjectPost, UserId, UserPost, blocking,
+    CredentialOperation, Credentials, GroupId, GroupPost, ObjectId, ObjectPost, UserId, UserPost,
+    blocking,
 };
 
 use crate::support::naming::unique_case_prefix;
@@ -78,6 +79,10 @@ pub(crate) struct SyncHarness {
 }
 
 impl SyncHarness {
+    pub(crate) fn admin_password(&self) -> &str {
+        &self._stack.admin_password
+    }
+
     pub(crate) fn start() -> Result<Self, String> {
         let stack = IntegrationStack::start()?;
         let base_url = stack
@@ -101,6 +106,10 @@ pub(crate) struct AsyncHarness {
 }
 
 impl AsyncHarness {
+    pub(crate) fn admin_password(&self) -> &str {
+        &self._stack.admin_password
+    }
+
     pub(crate) fn start() -> Result<Self, String> {
         let stack = IntegrationStack::start()?;
         let base_url = stack
@@ -153,35 +162,51 @@ pub(crate) fn sync_admin_context(
 
 pub(crate) fn create_sync_user(
     client: &blocking::Client<Authenticated>,
+    admin_password: &str,
     case: &str,
 ) -> Result<(String, UserId), ApiError> {
     let prefix = unique_case_prefix(case);
     let username = format!("{prefix}-user");
-    let user = client.users().create_raw(UserPost {
+    let request = UserPost {
         identity_scope: None,
         name: username.clone(),
         password: format!("{prefix}-Passw0rd!"),
         email: Some(format!("{prefix}@example.test")),
         proper_name: None,
-    })?;
+    };
+    let user = match client.users().create_raw(request.clone()) {
+        Err(error) if error.is_reauthentication_required() => client
+            .credential_approvals()
+            .approve(admin_password, CredentialOperation::create_user(request))?
+            .send()?,
+        result => result?,
+    };
 
     Ok((username, user.id))
 }
 
 pub(crate) fn create_sync_loginable_user(
     client: &blocking::Client<Authenticated>,
+    admin_password: &str,
     case: &str,
 ) -> Result<TestUserCredentials, ApiError> {
     let prefix = unique_case_prefix(case);
     let username = format!("{prefix}-user");
     let password = format!("{prefix}-Passw0rd!");
-    let user = client.users().create_raw(UserPost {
+    let request = UserPost {
         identity_scope: None,
         name: username.clone(),
         password: password.clone(),
         email: Some(format!("{prefix}@example.test")),
         proper_name: None,
-    })?;
+    };
+    let user = match client.users().create_raw(request.clone()) {
+        Err(error) if error.is_reauthentication_required() => client
+            .credential_approvals()
+            .approve(admin_password, CredentialOperation::create_user(request))?
+            .send()?,
+        result => result?,
+    };
 
     Ok(TestUserCredentials {
         user_id: user.id,
@@ -230,41 +255,59 @@ pub(crate) async fn async_admin_context(
 
 pub(crate) async fn create_async_user(
     client: &Client<Authenticated>,
+    admin_password: &str,
     case: &str,
 ) -> Result<(String, UserId), ApiError> {
     let prefix = unique_case_prefix(case);
     let username = format!("{prefix}-user");
-    let user = client
-        .users()
-        .create_raw(UserPost {
-            identity_scope: None,
-            name: username.clone(),
-            password: format!("{prefix}-Passw0rd!"),
-            email: Some(format!("{prefix}@example.test")),
-            proper_name: None,
-        })
-        .await?;
+    let request = UserPost {
+        identity_scope: None,
+        name: username.clone(),
+        password: format!("{prefix}-Passw0rd!"),
+        email: Some(format!("{prefix}@example.test")),
+        proper_name: None,
+    };
+    let user = match client.users().create_raw(request.clone()).await {
+        Err(error) if error.is_reauthentication_required() => {
+            client
+                .credential_approvals()
+                .approve(admin_password, CredentialOperation::create_user(request))
+                .await?
+                .send()
+                .await?
+        }
+        result => result?,
+    };
 
     Ok((username, user.id))
 }
 
 pub(crate) async fn create_async_loginable_user(
     client: &Client<Authenticated>,
+    admin_password: &str,
     case: &str,
 ) -> Result<TestUserCredentials, ApiError> {
     let prefix = unique_case_prefix(case);
     let username = format!("{prefix}-user");
     let password = format!("{prefix}-Passw0rd!");
-    let user = client
-        .users()
-        .create_raw(UserPost {
-            identity_scope: None,
-            name: username.clone(),
-            password: password.clone(),
-            email: Some(format!("{prefix}@example.test")),
-            proper_name: None,
-        })
-        .await?;
+    let request = UserPost {
+        identity_scope: None,
+        name: username.clone(),
+        password: password.clone(),
+        email: Some(format!("{prefix}@example.test")),
+        proper_name: None,
+    };
+    let user = match client.users().create_raw(request.clone()).await {
+        Err(error) if error.is_reauthentication_required() => {
+            client
+                .credential_approvals()
+                .approve(admin_password, CredentialOperation::create_user(request))
+                .await?
+                .send()
+                .await?
+        }
+        result => result?,
+    };
 
     Ok(TestUserCredentials {
         user_id: user.id,

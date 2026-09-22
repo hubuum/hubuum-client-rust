@@ -34,3 +34,4 @@ jobs:
         run: ./scripts/run-integration-tests.sh --with-e2e-client -- --test-threads=1
         env:
           HUBUUM_INTEGRATION_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server:main
+          HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS: "1"

@@ -772,6 +772,7 @@ fn async_auth_logout_token_revokes_target_token() {
     let target = runtime
         .block_on(create_async_loginable_user(
             &controller,
+            &stack.admin_password,
             "async-auth-logout-token-target",
         ))
         .expect("failed to create revocation target");
@@ -805,6 +806,7 @@ fn async_auth_logout_user_revokes_user_tokens() {
     let target = runtime
         .block_on(create_async_loginable_user(
             &controller,
+            &stack.admin_password,
             "async-auth-logout-user-target",
         ))
         .expect("failed to create revocation target");
@@ -838,6 +840,7 @@ fn async_auth_logout_all_revokes_existing_tokens() {
     let target = runtime
         .block_on(create_async_loginable_user(
             &admin,
+            &stack.admin_password,
             "async-auth-logout-all-target",
         ))
         .expect("failed to create revocation target");
@@ -864,7 +867,11 @@ fn async_users_create_and_get_by_name_roundtrip() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let (username, user_id) = harness
-        .block_on(create_async_user(&client, "async-users-create-select"))
+        .block_on(create_async_user(
+            &client,
+            harness.admin_password(),
+            "async-users-create-select",
+        ))
         .expect("user creation failed");
 
     let selected = harness
@@ -880,7 +887,11 @@ fn async_users_update_changes_fields() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let (_, user_id) = harness
-        .block_on(create_async_user(&client, "async-users-update"))
+        .block_on(create_async_user(
+            &client,
+            harness.admin_password(),
+            "async-users-update",
+        ))
         .expect("user creation failed");
     let prefix = unique_case_prefix("async-users-update");
     let updated_proper_name = format!("{prefix} Updated User");
@@ -907,7 +918,11 @@ fn async_users_delete_removes_resource() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let (_, user_id) = harness
-        .block_on(create_async_user(&client, "async-users-delete"))
+        .block_on(create_async_user(
+            &client,
+            harness.admin_password(),
+            "async-users-delete",
+        ))
         .expect("user creation failed");
 
     harness
@@ -991,7 +1006,11 @@ fn async_group_membership_add_remove_roundtrip() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let (_, user_id) = harness
-        .block_on(create_async_user(&client, "async-group-membership-user"))
+        .block_on(create_async_user(
+            &client,
+            harness.admin_password(),
+            "async-group-membership-user",
+        ))
         .expect("user creation failed");
     let (_, group_id) = harness
         .block_on(create_async_group(&client, "async-group-membership-group"))
@@ -1406,7 +1425,11 @@ fn async_query_iequals_supports_case_insensitive_match() {
     let harness = AsyncHarness::start().expect("failed to bootstrap async harness");
     let client = harness.client.clone();
     let (username, user_id) = harness
-        .block_on(create_async_user(&client, "async-query-iequals"))
+        .block_on(create_async_user(
+            &client,
+            harness.admin_password(),
+            "async-query-iequals",
+        ))
         .expect("user creation failed");
 
     let found = harness.block_on(
