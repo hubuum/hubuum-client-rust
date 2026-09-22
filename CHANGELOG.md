@@ -6,8 +6,13 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-09-22
+
 ### Added
 
+- This release explicitly targets Hubuum server v0.0.15 with its existing
+  immutable image and 218-operation OpenAPI contract. Credential approvals are
+  optional forward support for the upcoming server release.
 - Add optional async and blocking fresh credential approval workflows for servers
   incorporating Hubuum PR 423: token creation/renewal, user creation/password
   changes, credential imports, and restore confirmation. Approved operations
@@ -22,8 +27,19 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 - Refresh the pinned PostgreSQL 18 integration fixture image.
 
-- Refresh locked Rust dependencies and pin GitHub Actions to verified current
-  revisions. Rust 1.88 and the Hubuum v0.0.15 target remain unchanged.
+- Refresh locked Rust dependencies, including hyper-rustls 0.27.10 and rand
+  0.10.3, and pin GitHub Actions to verified current revisions. Rust 1.88 and
+  public feature availability remain unchanged.
+
+### Upgrade notes
+
+- No breaking Rust API changes. Before upgrading to a server that enforces
+  credential approvals, update applications to request fresh authentication
+  and submit the approved operation. Updating the crate alone does not enable
+  the approval flow; existing mutation methods retain their original behavior.
+- The declared server target remains v0.0.15. Full integration coverage against
+  an immutable candidate with approval enforcement supplements the pinned run;
+  it does not declare support for every upcoming server API addition.
 
 ## [0.11.0] - 2026-09-16
 
