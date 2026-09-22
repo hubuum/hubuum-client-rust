@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use e2e_client::harness::{E2EHarness, admin_context};
 use hubuum_client::{
-    BackupRequest, ComputedFieldDefinitionRequest, ComputedFieldOperation,
+    BackupRequest, ComputationRevision, ComputedFieldDefinitionRequest, ComputedFieldOperation,
     ComputedFieldPreviewRequest, ComputedResultType, PersonalComputedFieldDefinitionRequest,
-    blocking,
+    TaskOutputDiscoveryState, blocking,
 };
 
 #[test]
@@ -41,14 +41,44 @@ fn e2e_admin_config_backup_and_restore_staging() {
     assert!(config.restores.max_upload_bytes > 0);
     assert!(!config.permissions.backend.is_empty());
 
-    let document = harness
+    let submitted = harness
         .client
         .backups()
-        .run(BackupRequest::default())
+        .submit(BackupRequest::default())
+        .send()
+        .unwrap();
+    let completed = harness
+        .client
+        .tasks()
+        .wait(submitted.id)
         .poll_interval(Duration::from_millis(100))
         .timeout(Some(Duration::from_secs(60)))
         .send()
-        .expect("backup should complete");
+        .unwrap();
+    assert!(completed.status.is_success());
+    let retained = completed
+        .details
+        .as_ref()
+        .unwrap()
+        .backup
+        .as_ref()
+        .unwrap()
+        .retained
+        .as_ref()
+        .unwrap();
+    assert_eq!(retained.include_history, Some(true));
+    assert_eq!(retained.output_state, TaskOutputDiscoveryState::Available);
+    let discovered = harness
+        .client
+        .tasks()
+        .query()
+        .backup_include_history(true)
+        .output_state(TaskOutputDiscoveryState::Available)
+        .created_after(completed.created_at.clone())
+        .all()
+        .unwrap();
+    assert!(discovered.iter().any(|task| task.id == completed.id));
+    let document = harness.client.backups().output(completed.id).unwrap();
     assert!(document.has_supported_version());
     let staged = harness
         .client
@@ -90,15 +120,31 @@ fn e2e_shared_and_personal_computed_fields_enrich_objects() {
         .computed_fields(class_id)
         .create(shared_request)
         .expect("shared computed field should create");
-    if let Some(task_id) = shared.state.active_task_id {
-        harness
+    let revision = ComputationRevision::new(shared.state.evaluation_revision).unwrap();
+    let tasks = harness
+        .client
+        .tasks()
+        .query()
+        .class_id(class_id)
+        .computation_revision(revision)
+        .all()
+        .unwrap();
+    assert!(
+        !tasks.is_empty(),
+        "creating a computed field should enqueue a rebuild"
+    );
+    for task in tasks {
+        let completed = harness
             .client
             .tasks()
-            .wait(task_id)
+            .wait(task.id)
             .poll_interval(Duration::from_millis(100))
             .timeout(Some(Duration::from_secs(60)))
             .send()
-            .expect("computed-field rebuild should complete");
+            .unwrap();
+        let details = completed.details.unwrap().reindex.unwrap();
+        assert_eq!(details.class_id, Some(class_id));
+        assert_eq!(details.computation_revision, Some(revision));
     }
 
     let personal_request = ComputedFieldDefinitionRequest::new(

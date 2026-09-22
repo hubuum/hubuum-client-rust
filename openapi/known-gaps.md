@@ -34,11 +34,6 @@ Rust wire models:
   null when absent.
 - `TaskResponse.unattempted_items` defaults to zero for older responses that
   predate cancellation accounting.
-- The optional `retained` fields in `ImportTaskDetails`, `ExportTaskDetails`, and
-  `BackupTaskDetails`, and `TaskDetails.reindex`, `remote_call`, and
-  `schema_validation`, are not exposed by the existing public structs. These
-  projections are available through `raw()` without changing struct literals.
-  See [task discovery](../docs/task-discovery.md) for usage and limitations.
 - `UpdateUser.password` is intentionally absent from `UserPatch`; the async and
   blocking clients provide dedicated `set_password` helpers. Future unmapped
   properties can still be reached through the constrained `raw()` extension
@@ -53,11 +48,6 @@ Rust wire models:
   incremental structured-search stream yet.
 - Class object lists' `related.<alias>` filter groups have no dedicated typed
   builders. Use `raw_param` with the server's documented query keys.
-- Task discovery's resource, timestamp, option, output-state, cancellation, and
-  trace filters, including comma-separated statuses, have no dedicated methods
-  on `TaskListRequest`. Use authenticated `raw()` requests with `query_param`.
-  Typed task reads continue to expose status, progress, cancellation, and the
-  existing import/export/backup details; additional discovery fields are ignored.
 - Database diagnostics can return 404 for storage backends that do not provide
   them, such as the experimental memory backend. `meta_db()` and `meta_db_full()`
   preserve that structured HTTP error. Required integration uses PostgreSQL.

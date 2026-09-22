@@ -135,9 +135,12 @@ pub use settings::{
     PrincipalSettingsResponse,
 };
 pub use task::{
-    BackupTaskDetails, ExportTaskDetails, ImportTaskDetails, ImportTaskResultResponse,
-    TaskCancelRequest, TaskCancellationReason, TaskDetails, TaskEventResponse, TaskKind, TaskLinks,
-    TaskProgress, TaskQueueStateResponse, TaskRemoteSideEffectState, TaskResponse, TaskStatus,
+    BackupTaskDetails, ComputationRevision, ExportTaskDetails, ImportTaskDetails,
+    ImportTaskResultResponse, RebuildTaskDetails, RemoteCallTaskDetails, RetainedBackupDetails,
+    RetainedExportDetails, RetainedImportDetails, SchemaTaskDetails, TaskCancelRequest,
+    TaskCancellationReason, TaskDetails, TaskDiscoveryTarget, TaskEventResponse, TaskKind,
+    TaskLinks, TaskOutputDiscoveryState, TaskProgress, TaskQueueStateResponse,
+    TaskRemoteSideEffectState, TaskResponse, TaskStatus, TaskTerminalReason, TaskTraceId,
 };
 pub use token::{MAX_TOKEN_RESOURCE_SCOPES, TokenListState, TokenResourceScope, TokenScopeDetails};
 pub use typed_object::TypedObject;

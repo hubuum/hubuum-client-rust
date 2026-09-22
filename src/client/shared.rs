@@ -30,6 +30,144 @@ pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";
 pub(crate) const PAGE_LIMIT_HEADER: &str = "X-Page-Limit";
 
+pub(crate) fn task_filter_set<T: ToString>(values: impl IntoIterator<Item = T>) -> String {
+    let mut unique = Vec::new();
+    for value in values {
+        let value = value.to_string();
+        if !unique.contains(&value) {
+            unique.push(value);
+        }
+    }
+    unique.join(",")
+}
+
+/// Validate discovery before every page, including iterator and stream entry points.
+pub(crate) fn validate_task_query(params: &[QueryFilter]) -> Result<(), ApiError> {
+    use crate::types::{TaskKind, TaskStatus};
+
+    let value = |key: &str| {
+        params
+            .iter()
+            .find(|p| p.key == key && matches!(p.operator, FilterOperator::Raw))
+            .map(|p| p.value.as_str())
+    };
+    let invalid = |reason| ApiError::InvalidTaskQuery { reason };
+    let kinds = value("kind")
+        .map(|raw| {
+            raw.split(',')
+                .map(|item| {
+                    item.parse::<TaskKind>()
+                        .ok()
+                        .filter(|v| *v != TaskKind::Unknown)
+                        .ok_or_else(|| invalid("kinds must contain at least one known task kind"))
+                })
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .transpose()?;
+    if let Some(raw) = value("status") {
+        for item in raw.split(',') {
+            let status = item
+                .parse::<TaskStatus>()
+                .ok()
+                .filter(|v| *v != TaskStatus::Unknown)
+                .ok_or_else(|| invalid("statuses must contain at least one known task status"))?;
+            if let Some(terminal) = value("terminal")
+                && status.is_terminal() != (terminal == "true")
+            {
+                return Err(invalid("status contradicts terminal"));
+            }
+        }
+    }
+    for (after, before) in [
+        ("created_after", "created_before"),
+        ("started_after", "started_before"),
+        ("finished_after", "finished_before"),
+    ] {
+        if let (Some(a), Some(b)) = (value(after), value(before)) {
+            let a = chrono::DateTime::parse_from_rfc3339(a)
+                .map_err(|_| invalid("timestamp bounds must be RFC 3339"))?;
+            let b = chrono::DateTime::parse_from_rfc3339(b)
+                .map_err(|_| invalid("timestamp bounds must be RFC 3339"))?;
+            if a >= b {
+                return Err(invalid("timestamp ranges require after < before"));
+            }
+        }
+    }
+    if (value("schema_revision").is_some() || value("computation_revision").is_some())
+        && value("class_id").is_none()
+    {
+        return Err(invalid("revision filters require class_id"));
+    }
+    match (value("relation_type"), value("relation_id")) {
+        (None, None) | (Some("class_relation" | "object_relation"), Some(_)) => {}
+        _ => {
+            return Err(invalid(
+                "relation_type and relation_id must select one relation together",
+            ));
+        }
+    }
+    // Unknown is a response fallback for these enums, not a server filter value.
+    for key in [
+        "schema_work_kind",
+        "schema_work_status",
+        "remote_side_effect_state",
+        "export_scope_kind",
+        "import_atomicity",
+        "import_collision_policy",
+        "import_permission_policy",
+    ] {
+        if value(key) == Some("unknown") {
+            return Err(invalid(
+                "response-only Unknown variants cannot be used as filters",
+            ));
+        }
+    }
+    use TaskKind::{Backup, Export, Import, Reindex, RemoteCall, SchemaValidation};
+    let mut applicable = vec![
+        Import,
+        Export,
+        Backup,
+        Reindex,
+        RemoteCall,
+        SchemaValidation,
+    ];
+    for param in params
+        .iter()
+        .filter(|p| matches!(p.operator, FilterOperator::Raw))
+    {
+        let allowed: &[TaskKind] = match param.key.as_str() {
+            "schema_revision" | "schema_work_kind" | "schema_work_status" => &[SchemaValidation],
+            "computation_revision" => &[Reindex],
+            "remote_target_id" | "remote_side_effect_state" | "collection_id" | "relation_type" => {
+                &[RemoteCall]
+            }
+            "export_scope_kind"
+            | "export_template_id"
+            | "export_has_warnings"
+            | "export_truncated" => &[Export],
+            "import_dry_run"
+            | "import_atomicity"
+            | "import_collision_policy"
+            | "import_permission_policy"
+            | "import_has_failed_items" => &[Import],
+            "backup_include_history" => &[Backup],
+            "output_state" => &[Export, Backup],
+            "class_id" => &[SchemaValidation, Reindex, Export, RemoteCall],
+            "object_id" => &[Export, RemoteCall],
+            _ => continue,
+        };
+        applicable.retain(|kind| allowed.contains(kind));
+    }
+    if applicable.is_empty()
+        || kinds
+            .as_ref()
+            .is_some_and(|kinds| kinds.iter().any(|k| !applicable.contains(k)))
+    {
+        return Err(invalid("filters select incompatible task kinds"));
+    }
+    Ok(())
+}
+
 pub(crate) struct ApprovedCredentialRequest {
     pub method: Method,
     pub endpoint: Endpoint,

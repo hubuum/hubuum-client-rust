@@ -1,0 +1,27 @@
+error[E0308]: mismatched types
+ --> tests/trybuild/task_discovery_fail_wrong_id.rs:4:37
+  |
+4 |     client.tasks().query().class_id(object_id);
+  |                            -------- ^^^^^^^^^ expected `ClassId`, found `ObjectId`
+  |                            |
+  |                            arguments to this method are incorrect
+  |
+note: method defined here
+ --> src/client/async.rs
+  |
+  |     pub fn class_id(mut self, value: ClassId) -> Self {
+  |            ^^^^^^^^
+
+error[E0308]: mismatched types
+ --> tests/trybuild/task_discovery_fail_wrong_id.rs:8:44
+  |
+8 |     client.tasks().query().schema_revision(ResourceRevision::INITIAL);
+  |                            --------------- ^^^^^^^^^^^^^^^^^^^^^^^^^ expected `SchemaRevision`, found `ResourceRevision`
+  |                            |
+  |                            arguments to this method are incorrect
+  |
+note: method defined here
+ --> src/client/sync.rs
+  |
+  |     pub fn schema_revision(mut self, value: SchemaRevision) -> Self {
+  |            ^^^^^^^^^^^^^^^

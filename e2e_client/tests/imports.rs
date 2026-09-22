@@ -2,12 +2,13 @@ use std::time::Duration;
 
 use hubuum_client::{
     EventSinkKind, ExportContentType, ExportTemplateKind, FullImportGraph, FullImportRequest,
-    ImportClassInput, ImportClassRelationInput, ImportCollectionInput, ImportEventSinkInput,
-    ImportEventSubscriptionInput, ImportExportTemplateInput, ImportGraph, ImportGroupInput,
-    ImportGroupMembershipInput, ImportIdentityScopeInput, ImportMode, ImportObjectInput,
-    ImportObjectRelationInput, ImportPrincipalInput, ImportPrincipalSubtype,
-    ImportRemoteTargetInput, ImportRequest, ObjectRelationLimit, RemoteAuthConfig,
-    RemoteHttpMethod, RemoteTargetSubjectType, RestoreTimestamps, TaskKind,
+    ImportAtomicity, ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
+    ImportCollisionPolicy, ImportEventSinkInput, ImportEventSubscriptionInput,
+    ImportExportTemplateInput, ImportGraph, ImportGroupInput, ImportGroupMembershipInput,
+    ImportIdentityScopeInput, ImportMode, ImportObjectInput, ImportObjectRelationInput,
+    ImportPermissionPolicy, ImportPrincipalInput, ImportPrincipalSubtype, ImportRemoteTargetInput,
+    ImportRequest, ObjectRelationLimit, RemoteAuthConfig, RemoteHttpMethod,
+    RemoteTargetSubjectType, RestoreTimestamps, TaskKind,
 };
 use serde_json::json;
 
@@ -128,6 +129,43 @@ fn e2e_import_creates_graph_and_exposes_results() {
         .expect("import should complete and return result rows");
     assert_eq!(imported.task.kind, TaskKind::Import);
     assert!(imported.task.status.is_success(), "{:?}", imported.task);
+
+    let retained = imported
+        .task
+        .details
+        .as_ref()
+        .unwrap()
+        .import_details
+        .as_ref()
+        .unwrap()
+        .retained
+        .as_ref()
+        .unwrap();
+    assert_eq!(retained.dry_run, Some(false));
+    assert_eq!(retained.atomicity, Some(ImportAtomicity::Strict));
+    assert_eq!(
+        retained.collision_policy,
+        Some(ImportCollisionPolicy::Abort)
+    );
+    assert_eq!(
+        retained.permission_policy,
+        Some(ImportPermissionPolicy::Abort)
+    );
+    assert_eq!(retained.has_failed_items, Some(false));
+    let discovered = harness
+        .client
+        .tasks()
+        .query()
+        .kind(TaskKind::Import)
+        .created_after(imported.task.created_at.clone())
+        .import_dry_run(false)
+        .import_atomicity(ImportAtomicity::Strict)
+        .import_collision_policy(ImportCollisionPolicy::Abort)
+        .import_permission_policy(ImportPermissionPolicy::Abort)
+        .import_has_failed_items(false)
+        .all()
+        .unwrap();
+    assert!(discovered.iter().any(|task| task.id == imported.task.id));
 
     let fetched_import = harness
         .client

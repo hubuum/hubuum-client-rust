@@ -2,7 +2,8 @@ use std::time::Duration;
 
 use hubuum_client::{
     FilterOperator, NewRemoteTarget, RemoteAuthConfig, RemoteHttpMethod, RemoteInvocationSubject,
-    RemoteTargetInvokeRequest, RemoteTargetSubjectType, TaskKind, UpdateRemoteTarget,
+    RemoteTargetInvokeRequest, RemoteTargetSubjectType, TaskDiscoveryTarget, TaskKind,
+    UpdateRemoteTarget,
 };
 use serde_json::json;
 
@@ -101,6 +102,26 @@ fn e2e_remote_target_lifecycle_invocation_history_and_events() {
         .send()
         .expect("remote call task should reach a terminal state");
     assert!(completed.status.is_terminal(), "{completed:?}");
+
+    let discovered = harness
+        .client
+        .tasks()
+        .query()
+        .remote_target_id(target.id)
+        .collection_id(collection_id)
+        .terminal(true)
+        .all()
+        .unwrap();
+    let task = discovered
+        .iter()
+        .find(|task| task.id == invoked.id)
+        .unwrap();
+    let details = task.details.as_ref().unwrap().remote_call.as_ref().unwrap();
+    assert_eq!(details.remote_target_id, Some(target.id));
+    assert_eq!(
+        details.target,
+        Some(TaskDiscoveryTarget::Collection { collection_id })
+    );
 
     let task_events = harness
         .client
