@@ -422,19 +422,8 @@ mod test {
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();
 
-        // Optional forward support for server PR 423 does not change the
-        // declared v0.0.15 snapshot. Keep this list exact and documented in
-        // openapi/known-gaps.md; all pinned paths must still be present.
-        let optional_paths = std::collections::BTreeSet::from([
-            "/api/v1/iam/credential-approvals",
-            "/api/v1/iam/credential-approvals/{approval_id}",
-        ]);
-        assert!(spec_paths.is_disjoint(&optional_paths));
-        assert_eq!(
-            client_paths,
-            spec_paths.union(&optional_paths).copied().collect()
-        );
-        assert_eq!(contract["operation_count"], 218);
+        assert_eq!(client_paths, spec_paths);
+        assert_eq!(contract["operation_count"], 220);
     }
     use std::str::FromStr;
     use yare::parameterized;

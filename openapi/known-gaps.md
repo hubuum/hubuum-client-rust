@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.15 OpenAPI gaps
+# Known Hubuum server v0.0.16 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.15
+The pinned client contract records these limitations in the server v0.0.16
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not
@@ -34,6 +34,11 @@ Rust wire models:
   null when absent.
 - `TaskResponse.unattempted_items` defaults to zero for older responses that
   predate cancellation accounting.
+- The optional `retained` fields in `ImportTaskDetails`, `ExportTaskDetails`, and
+  `BackupTaskDetails`, and `TaskDetails.reindex`, `remote_call`, and
+  `schema_validation`, are not exposed by the existing public structs. These
+  projections are available through `raw()` without changing struct literals.
+  See [task discovery](../docs/task-discovery.md) for usage and limitations.
 - `UpdateUser.password` is intentionally absent from `UserPatch`; the async and
   blocking clients provide dedicated `set_password` helpers. Future unmapped
   properties can still be reached through the constrained `raw()` extension
@@ -48,6 +53,11 @@ Rust wire models:
   incremental structured-search stream yet.
 - Class object lists' `related.<alias>` filter groups have no dedicated typed
   builders. Use `raw_param` with the server's documented query keys.
+- Task discovery's resource, timestamp, option, output-state, cancellation, and
+  trace filters, including comma-separated statuses, have no dedicated methods
+  on `TaskListRequest`. Use authenticated `raw()` requests with `query_param`.
+  Typed task reads continue to expose status, progress, cancellation, and the
+  existing import/export/backup details; additional discovery fields are ignored.
 - Database diagnostics can return 404 for storage backends that do not provide
   them, such as the experimental memory backend. `meta_db()` and `meta_db_full()`
   preserve that structured HTTP error. Required integration uses PostgreSQL.
@@ -55,10 +65,10 @@ Rust wire models:
   that previously fit older limits. The client preserves the server error;
   callers must narrow queries or reduce traversal depth and template workloads.
 
-## Optional forward compatibility
+## Credential approval coverage
 
-The typed `credential_approvals()` API supports the two approval endpoints and
-six protected operations introduced by [server PR 423](https://github.com/hubuum/hubuum/pull/423).
-These endpoints are absent from the declared v0.0.15 target, so they are not added
-to its normalized snapshot. Existing mutation calls remain unchanged; explicit
-approval calls require a supporting server. See the [approval guide](../docs/credential-approvals.md).
+The pinned v0.0.16 contract includes both approval endpoints and the approval
+headers on all six protected operations. The existing typed approval API covers
+them, and required integration checks assert enforcement. Ordinary mutation calls
+retain their behavior and can return `reauthentication_required`; applications
+must use the [approval workflow](../docs/credential-approvals.md).

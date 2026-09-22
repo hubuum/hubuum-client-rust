@@ -129,7 +129,7 @@
       "rust_type": "GroupPatch",
       "direction": "request",
       "rust_only_fields": {
-        "description": "The runtime PATCH route accepts group descriptions, but v0.0.15 omits this field from UpdateGroup."
+        "description": "The runtime PATCH route accepts group descriptions, but v0.0.16 omits this field from UpdateGroup."
       }
     },
     {
@@ -271,7 +271,10 @@
       "openapi_schema": "ExportTaskDetails",
       "rust_file": "src/types/task.rs",
       "rust_type": "ExportTaskDetails",
-      "direction": "response"
+      "direction": "response",
+      "openapi_only_fields": {
+        "retained": "Optional v0.0.16 task-discovery metadata is available through raw() without changing this public struct; see docs/task-discovery.md."
+      }
     },
     {
       "openapi_schema": "RunningConfig",
@@ -473,6 +476,53 @@
       "rust_file": "src/types/task.rs",
       "rust_type": "TaskCancelRequest",
       "direction": "request"
+    },
+    {
+      "openapi_schema": "ImportTaskDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "ImportTaskDetails",
+      "direction": "response",
+      "openapi_only_fields": {
+        "retained": "Optional v0.0.16 task-discovery metadata is available through raw() without changing this public struct; see docs/task-discovery.md."
+      }
+    },
+    {
+      "openapi_schema": "BackupTaskDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "BackupTaskDetails",
+      "direction": "response",
+      "openapi_only_fields": {
+        "retained": "Optional v0.0.16 task-discovery metadata is available through raw() without changing this public struct; see docs/task-discovery.md."
+      }
+    },
+    {
+      "openapi_schema": "TaskDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "TaskDetails",
+      "direction": "response",
+      "openapi_only_fields": {
+        "reindex": "This optional task-discovery detail projection is available through raw(); the existing typed task status and progress remain usable. See docs/task-discovery.md.",
+        "remote_call": "This optional task-discovery detail projection is available through raw(); the existing typed task status and progress remain usable. See docs/task-discovery.md.",
+        "schema_validation": "This optional task-discovery detail projection is available through raw(); the existing typed task status and progress remain usable. See docs/task-discovery.md."
+      }
+    },
+    {
+      "openapi_schema": "CredentialApprovalRequest",
+      "rust_file": "src/types/credential_approval.rs",
+      "rust_type": "CredentialApprovalRequest",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "CredentialApprovalResponse",
+      "rust_file": "src/types/credential_approval.rs",
+      "rust_type": "CredentialApprovalResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "CredentialApprovalRecord",
+      "rust_file": "src/types/credential_approval.rs",
+      "rust_type": "CredentialApprovalRecord",
+      "direction": "response"
     }
   ]
 }
