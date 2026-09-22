@@ -170,7 +170,7 @@ pub(crate) fn create_sync_user(
     let request = UserPost {
         identity_scope: None,
         name: username.clone(),
-        password: format!("{prefix}-Passw0rd!"),
+        password: format!("fixture-{:032x}", fastrand::u128(..)),
         email: Some(format!("{prefix}@example.test")),
         proper_name: None,
     };
@@ -192,7 +192,7 @@ pub(crate) fn create_sync_loginable_user(
 ) -> Result<TestUserCredentials, ApiError> {
     let prefix = unique_case_prefix(case);
     let username = format!("{prefix}-user");
-    let password = format!("{prefix}-Passw0rd!");
+    let password = format!("fixture-{:032x}", fastrand::u128(..));
     let request = UserPost {
         identity_scope: None,
         name: username.clone(),
@@ -263,7 +263,7 @@ pub(crate) async fn create_async_user(
     let request = UserPost {
         identity_scope: None,
         name: username.clone(),
-        password: format!("{prefix}-Passw0rd!"),
+        password: format!("fixture-{:032x}", fastrand::u128(..)),
         email: Some(format!("{prefix}@example.test")),
         proper_name: None,
     };
@@ -289,7 +289,7 @@ pub(crate) async fn create_async_loginable_user(
 ) -> Result<TestUserCredentials, ApiError> {
     let prefix = unique_case_prefix(case);
     let username = format!("{prefix}-user");
-    let password = format!("{prefix}-Passw0rd!");
+    let password = format!("fixture-{:032x}", fastrand::u128(..));
     let request = UserPost {
         identity_scope: None,
         name: username.clone(),
