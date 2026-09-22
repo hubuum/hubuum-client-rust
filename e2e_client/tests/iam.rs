@@ -1,4 +1,4 @@
-use hubuum_client::{NewTokenRequest, PrincipalId, ServiceAccountPost};
+use hubuum_client::{CredentialOperation, NewTokenRequest, PrincipalId, ServiceAccountPost};
 
 use e2e_client::harness::{E2EHarness, admin_context};
 
@@ -89,13 +89,24 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
             .iter()
             .all(|entry| !entry.collection_name.is_empty())
     );
-    let raw_user_token = user_handle
-        .tokens_create(
-            NewTokenRequest::new()
-                .name("e2e-user-token")
-                .description("e2e minted user token"),
-        )
-        .expect("user token should mint");
+    let user_token_request = NewTokenRequest::new()
+        .name("e2e-user-token")
+        .description("e2e minted user token");
+    let raw_user_token = match user_handle.tokens_create(user_token_request.clone()) {
+        Err(error) if error.is_reauthentication_required() => harness
+            .client
+            .credential_approvals()
+            .approve(
+                harness.admin_password.clone(),
+                CredentialOperation::create_token(user.id, user_token_request),
+            )
+            .expect("user token should receive approval")
+            .send()
+            .expect("approved user token should mint")
+            .as_str()
+            .to_string(),
+        result => result.expect("user token should mint"),
+    };
     assert!(!raw_user_token.is_empty());
 
     assert!(
@@ -161,9 +172,23 @@ fn e2e_iam_me_principal_tokens_and_service_accounts() {
             .iter()
             .all(|entry| !entry.collection_name.is_empty())
     );
-    let raw_service_token = service_account_handle
-        .tokens_create(NewTokenRequest::new().name("e2e-service-token"))
-        .expect("service account token should mint");
+    let service_token_request = NewTokenRequest::new().name("e2e-service-token");
+    let raw_service_token =
+        match service_account_handle.tokens_create(service_token_request.clone()) {
+            Err(error) if error.is_reauthentication_required() => harness
+                .client
+                .credential_approvals()
+                .approve(
+                    harness.admin_password.clone(),
+                    CredentialOperation::create_token(service_account.id, service_token_request),
+                )
+                .expect("service-account token should receive approval")
+                .send()
+                .expect("approved service-account token should mint")
+                .as_str()
+                .to_string(),
+            result => result.expect("service account token should mint"),
+        };
     assert!(!raw_service_token.is_empty());
     let service_tokens = service_account_handle
         .tokens()
