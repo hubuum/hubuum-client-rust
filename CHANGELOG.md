@@ -6,6 +6,45 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-22
+
+### Added
+
+- Full typed task discovery for Hubuum server v0.0.16 in both async and blocking
+  clients: resource, revision, lifecycle, timestamp, operation-option, output,
+  cancellation, and trace filters, including multiple kinds and statuses.
+  All filters support cursor pagination through `page`, `all`, `pages`, and
+  `items`, with local validation of incompatible combinations.
+- Typed retained import/export/backup options and outcomes, explicit resource
+  targets, and rebuild, remote-call, and schema-validation details. Unknown
+  historical facts remain optional; output state distinguishes unknown,
+  available, expired, and not produced.
+
+### Changed
+
+- This release targets Hubuum server v0.0.16 at the existing immutable image
+  `sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e`.
+  The 220-operation contract now reconciles 79 Rust wire models. The complete
+  pinned library and downstream-consumer suites passed, including all four
+  restore/recovery variants. Features, Rust 1.88, and locked dependency versions
+  remain unchanged after checking all compatible dependency updates.
+
+### Breaking changes and migration
+
+- **Breaking Rust API:** `ImportTaskDetails`, `ExportTaskDetails`, and
+  `BackupTaskDetails` gain optional `retained` fields; `TaskDetails` gains
+  `reindex`, `remote_call`, and `schema_validation`. Add `retained: None` or
+  the three new `None` fields to existing literals, or use the new
+  `..Default::default()` support. Add `..` to exhaustive destructuring patterns.
+  Reading existing fields and decoding historical responses remain supported.
+- Invalid typed task discovery queries now fail locally with
+  `ApiError::InvalidTaskQuery` before transport. Select compatible task kinds,
+  include `class_id` for revision filters, use nonempty kind/status sets, and
+  ensure timestamp bounds and terminal-status selections agree. `Unknown`
+  response fallbacks are rejected as filters except the server-supported
+  `TaskOutputDiscoveryState::Unknown`.
+
+
 ## [0.11.2] - 2026-09-22
 
 ### Changed

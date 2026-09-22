@@ -77,6 +77,15 @@ pub enum ApiError {
     )]
     InvalidTaskCancellationReason,
 
+    #[error("Computation revision must be a nonnegative 64-bit integer, got {0}")]
+    InvalidComputationRevision(i64),
+
+    #[error("Task trace ID must be a nonzero 32-digit hexadecimal value")]
+    InvalidTaskTraceId,
+
+    #[error("Invalid task query: {reason}")]
+    InvalidTaskQuery { reason: &'static str },
+
     #[error("Entity tag must be an opaque, quoted strong validator")]
     InvalidEntityTag,
 
@@ -219,6 +228,15 @@ impl std::fmt::Debug for ApiError {
             Self::InvalidSchemaContinuation => f.write_str("InvalidSchemaContinuation"),
             Self::InvalidSchemaObjectUrlTemplate => f.write_str("InvalidSchemaObjectUrlTemplate"),
             Self::InvalidTaskCancellationReason => f.write_str("InvalidTaskCancellationReason"),
+            Self::InvalidComputationRevision(value) => f
+                .debug_tuple("InvalidComputationRevision")
+                .field(value)
+                .finish(),
+            Self::InvalidTaskTraceId => f.write_str("InvalidTaskTraceId"),
+            Self::InvalidTaskQuery { reason } => f
+                .debug_struct("InvalidTaskQuery")
+                .field("reason", reason)
+                .finish(),
             Self::InvalidResourceRevision(value) => f
                 .debug_tuple("InvalidResourceRevision")
                 .field(value)

@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.12.0 | 0.0.16 | `ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e` | Declared target; 220-operation contract and 79 wire-model mappings. Complete canonical run passed with approval enforcement required: 93 library tests, all downstream suites with typed discovery and retained details for all six task kinds, real cursor pagination, and four full restore/recovery variants (2026-09-22). |
 | 0.11.2 | 0.0.16 | `ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e` | Declared target; 220-operation contract and 73 wire-model mappings. Complete canonical run passed with approval enforcement required: 93 library tests, all downstream suites including async/blocking task discovery, and four full restore/recovery variants (2026-09-22). |
 | 0.11.1 | 0.0.15 | `ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821` | Declared target; unchanged 218-operation contract, optional credential approvals, and refreshed Rust 1.88-compatible dependencies. Complete canonical run passed: 93 library integration tests, all downstream consumer suites, and four async/blocking full restore/recovery variants (2026-09-22). |
 | 0.11.0 | 0.0.15 | `ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821` | Declared target; 218-operation pinned contract, 67 wire-model mappings, schema evolution, cancellation, format 6 backups, and refreshed Rust 1.88-compatible dependencies. 91 library and 26 consumer integration tests, plus four async/blocking full restores with and without history and schema-evidence-preserving recovery (2026-09-16). |
@@ -81,12 +82,11 @@ do not change a published client's declared target.
 
 ## v0.0.16 target
 
-Client 0.11.2 targets server v0.0.16. The pinned contract grows from 218 to
+Clients 0.11.2 and 0.12.0 target server v0.0.16. The pinned contract grows from 218 to
 220 operations and from 315 to 330 schemas. Both added approval routes already
-have typed async and blocking APIs. Wire-model reconciliation covers 73
-mappings, including the approval request, response, and retained evidence.
-Public Rust APIs, feature availability, Rust 1.88, and backup format 6 are
-unchanged.
+have typed async and blocking APIs. Client 0.12.0 reconciles 79
+wire-model mappings, including retained task details. Feature availability,
+Rust 1.88, and backup format 6 are unchanged.
 
 Credential mutations require fresh, operation-bound password approval. Before
 upgrading the running server, update applications to use the
@@ -94,11 +94,11 @@ upgrading the running server, update applications to use the
 retain their original behavior and return `reauthentication_required` when the
 server enforces approvals; they do not prompt or automatically retry.
 
-Task discovery adds optional detail projections and filters. This patch keeps
-the public task structs unchanged and documents access through `raw()` in the
-[task discovery guide](docs/task-discovery.md) and
-[known gaps](openapi/known-gaps.md). Typed reads ignore the additional discovery
-fields and preserve existing status, progress, and detail fields.
+Client 0.12.0 exposes every task-discovery filter and retained detail projection
+through the async and blocking typed APIs, including cursor pagination and local
+query validation. Client 0.11.2 required `raw()` for those additions. The new
+optional fields break exhaustive Rust struct literals and destructuring; see the
+[task discovery migration guide](docs/task-discovery.md#migration-from-011).
 
 Keep a verified v0.0.15 backup, quiesce protected mutations, drain workers, and
 apply `2026-09-18-000001_task_discovery` and

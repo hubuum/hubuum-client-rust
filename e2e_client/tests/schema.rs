@@ -5,7 +5,8 @@ use hubuum_client::{
     ClassPatch, CollectionKey, ComplianceStatus, ImportClassInput, ImportGraph, ImportRequest,
     ImportSchemaActivation, ImportWriteCondition, SchemaActivationPolicy, SchemaActivationRequest,
     SchemaImpactReadiness, SchemaObjectUrlTemplate, SchemaPageOptions, SchemaRepairReportRequest,
-    SchemaRevisionStatus, SchemaStageRequest, SchemaWorkStatus, TaskCancelRequest, TaskKind,
+    SchemaRevisionStatus, SchemaStageRequest, SchemaWorkKind, SchemaWorkStatus, TaskCancelRequest,
+    TaskKind,
 };
 use serde_json::json;
 
@@ -72,6 +73,18 @@ macro_rules! lifecycle {
         };
         assert_eq!(report.status, SchemaWorkStatus::Complete);
         assert_eq!(report.readiness, Some(SchemaImpactReadiness::Incompatible));
+        let discovered = $send!(client.tasks().query().class_id(class_id)
+            .schema_revision(staged.revision)
+            .schema_work_kind(SchemaWorkKind::Impact)
+            .schema_work_status(SchemaWorkStatus::Complete).all()).unwrap();
+        let task = discovered.iter().find(|task| task.id == started.task_id).unwrap();
+        let details = task.details.as_ref().unwrap().schema_validation.as_ref().unwrap();
+        assert_eq!(details.class_id, Some(class_id));
+        assert_eq!(details.schema_revision, Some(staged.revision));
+        assert_eq!(details.work_kind, Some(SchemaWorkKind::Impact));
+        assert_eq!(details.work_status, Some(SchemaWorkStatus::Complete));
+        assert!(details.results_url.is_some());
+
         let impact = report.impact.unwrap();
         assert_eq!(impact.counts.newly_invalid, 1);
         assert_eq!(impact.findings[0].object_id, object_id);

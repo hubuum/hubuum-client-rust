@@ -1,48 +1,93 @@
 # Task discovery
 
-Hubuum v0.0.16 adds resource, timestamp, operation-option, output-state,
-cancellation, and trace filters to `GET /api/v1/tasks`. It also retains task
-targets and options and exposes schema-validation, rebuild, and remote-call
-details. Historical tasks can have unknown metadata.
-
-Client 0.11.2 preserves the existing public task structs and query methods.
-Typed task reads continue to expose status, progress, cancellation, and the
-existing import/export/backup details. The new optional projections are ignored
-by those structs: `details.import.retained`, `details.export.retained`,
-`details.backup.retained`, `details.reindex`, `details.remote_call`, and
-`details.schema_validation`.
-
-Use `raw()` to retrieve these fields and the additional filters. For example,
-with an authenticated async client and a `ClassId`:
+Client 0.12.0 exposes Hubuum v0.0.16 task discovery through typed models and the
+same paginated query API in both async and blocking clients.
 
 ```rust,no_run
 # async fn example(client: &hubuum_client::Client<hubuum_client::Authenticated>, class_id: hubuum_client::ClassId) -> Result<(), hubuum_client::ApiError> {
-let tasks: Vec<serde_json::Value> = client
-    .raw("GET".parse().expect("valid HTTP method"), "/api/v1/tasks")
-    .query_param("class_id", class_id)
-    .query_param("kind", "export")
-    .query_param("status", "succeeded,partially_succeeded")
-    .query_param("terminal", true)
-    .query_param("output_state", "available")
-    .query_param("limit", 20)
-    .send()
+use hubuum_client::{TaskKind, TaskOutputDiscoveryState, TaskStatus};
+
+let tasks = client.tasks().query()
+    .class_id(class_id)
+    .kind(TaskKind::Export)
+    .statuses([TaskStatus::Succeeded, TaskStatus::PartiallySucceeded])
+    .terminal(true)
+    .output_state(TaskOutputDiscoveryState::Available)
+    .limit(20)
+    .all()
     .await?;
-# let _ = tasks;
+
+for task in tasks {
+    if let Some(export) = task.details.and_then(|details| details.export)
+        && let Some(retained) = export.retained
+    {
+        println!("{:?}: {:?}", retained.target, retained.output_state);
+    }
+}
 # Ok(())
 # }
 ```
 
-The blocking client uses the same request without `.await`. Use
-`raw(..., format!("/api/v1/tasks/{task_id}"))` to inspect one task's retained
-details. Only include typed IDs in this path; dynamic resource names require
-the client's encoded route helpers.
+Remove `.await` for the blocking client. `list()` reads one page; `page()` also
+returns the next cursor and optional total count. `all()`, `pages()`, and
+`items()` follow cursors while preserving every filter. Async `pages()` and
+`items()` return streams; their blocking counterparts return iterators.
 
-This raw list example reads one page. `RawRequest::send()` does not expose
-pagination response headers, so it is not a replacement for typed `.all()` or
-`.pages()` when a complete result set is required. The existing typed query
-surface supports kind, one status, submitter, sorting, and cursor pagination.
+## Filters
 
-The server authorizes referenced resources before returning discovery results.
-Use `terminal` consistently with the selected statuses. See the
-[v0.0.16 OpenAPI contract](https://github.com/hubuum/hubuum/blob/v0.0.16/docs/openapi.json)
-for all query keys and response fields.
+Filters combine with AND. Members of `kinds(...)` and `statuses(...)` combine
+with OR. Each setter replaces the previous value, including `kind`/`kinds` and
+`status`/`statuses`. Empty sets and unsupported `Unknown` response fallbacks are
+rejected before transport. `TaskOutputDiscoveryState::Unknown` is a valid filter.
+
+| Filters | Typed arguments and constraints |
+| --- | --- |
+| `class_id`, `object_id`, `collection_id` | Corresponding resource IDs; explicit targets, not all resources touched by a task |
+| `class_relation`, `object_relation` | Corresponding relation IDs; set `relation_type` and `relation_id` together |
+| `schema_revision`, `computation_revision` | `SchemaRevision`, `ComputationRevision`; both require `class_id` |
+| `schema_work_kind`, `schema_work_status` | `SchemaWorkKind`, `SchemaWorkStatus` |
+| `remote_target_id`, `remote_side_effect_state` | `RemoteTargetId`, `TaskRemoteSideEffectState` |
+| `export_scope_kind`, `export_template_id` | `ExportScopeKind`, `ExportTemplateId` |
+| `export_has_warnings`, `export_truncated` | Boolean known outcomes |
+| `import_dry_run`, `import_has_failed_items` | Boolean captured option or terminal outcome |
+| `import_atomicity`, `import_collision_policy`, `import_permission_policy` | Existing typed import policy enums |
+| `backup_include_history` | Boolean captured option |
+| `output_state` | `TaskOutputDiscoveryState`; export and backup tasks |
+| `kind`, `kinds`, `status`, `statuses` | `TaskKind`, `TaskStatus`, or iterators of them |
+| `terminal`, `cancel_requested` | Boolean lifecycle predicates; `terminal` must agree with every selected status |
+| `terminal_reason`, `trace_id` | `TaskTerminalReason`, validated `TaskTraceId` |
+| `created_after`, `created_before`, `started_after`, `started_before`, `finished_after`, `finished_before` | `HubuumDateTime`; inclusive lower and exclusive upper bounds with `after < before` |
+| `submitted_by` | `PrincipalId`; effective only for administrators |
+
+Operation-specific filters restrict the applicable task kinds. For example,
+`import_dry_run` cannot be combined with export options. Collection and relation
+target filters apply to remote calls. Schema tasks require administrator access.
+The server authorizes referenced resources before returning matches and counts.
+
+## Retained details
+
+`tasks().get(id)` and every list result expose `TaskResponse.details`:
+
+- `import_details.retained`: dry run, atomicity, collision and permission policies,
+  and known failed-item outcome.
+- `export.retained`: `TaskDiscoveryTarget`, scope, template ID, limits, missing-data
+  policy, warning count, truncation, and output retention state.
+- `backup.retained`: history option and output retention state.
+- `reindex`: target class and computation revision.
+- `remote_call`: target configuration ID and `TaskDiscoveryTarget`.
+- `schema_validation`: target class and schema revision, work kind/status, and
+  results URL. Use `client.class_schema(class_id).work(task_id)` for typed work
+  results; URLs in server responses are redacted from `Debug`.
+
+Historical or unauthorized metadata can be absent. `None` means unknown, not
+false or zero. Output state distinguishes `Available`, `Expired`, `NotProduced`,
+and `Unknown`. Newly introduced server enum values decode through response
+fallbacks; that does not add support for using them as query predicates.
+
+## Migration from 0.11
+
+The import/export/backup detail structs gain an optional `retained` field, and
+`TaskDetails` gains three optional detail fields. For manually constructed
+literals, add the new fields as `None` or append `..Default::default()`. Add `..`
+to exhaustive destructuring patterns. Existing response JSON still decodes when
+optional fields are absent. The new response structs are non-exhaustive.

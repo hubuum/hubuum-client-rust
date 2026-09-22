@@ -7448,3 +7448,410 @@ mod schema_v015 {
         ));
     }
 }
+
+mod task_discovery {
+    use std::{collections::BTreeMap, sync::Arc};
+
+    use futures_util::TryStreamExt;
+    use hubuum_client::{
+        ApiError, BaseUrl, Client, ComputationRevision, ExportScopeKind, HubuumDateTime,
+        ImportAtomicity, ImportCollisionPolicy, ImportPermissionPolicy, MockTransport,
+        SchemaRevision, SchemaWorkKind, SchemaWorkStatus, TaskKind, TaskOutputDiscoveryState,
+        TaskRemoteSideEffectState, TaskStatus, TaskTerminalReason, TaskTraceId, Token,
+        TransportResponse, blocking,
+    };
+    use reqwest::{StatusCode, header::HeaderValue};
+    use rstest::rstest;
+    use serde_json::json;
+
+    fn time(value: &str) -> HubuumDateTime {
+        serde_json::from_value(json!(value)).unwrap()
+    }
+
+    macro_rules! filters {
+        ($q:expr, $case:expr) => {{
+            let q = $q;
+            match $case {
+                "export" => q
+                    .class_id(42.into())
+                    .object_id(9.into())
+                    .kind(TaskKind::Export)
+                    .export_scope_kind(ExportScopeKind::RelatedObjects)
+                    .export_template_id(5.into())
+                    .export_has_warnings(false)
+                    .export_truncated(true)
+                    .output_state(TaskOutputDiscoveryState::Available),
+                "import" => q
+                    .import_dry_run(true)
+                    .import_atomicity(ImportAtomicity::BestEffort)
+                    .import_collision_policy(ImportCollisionPolicy::Overwrite)
+                    .import_permission_policy(ImportPermissionPolicy::Continue)
+                    .import_has_failed_items(false),
+                "backup" => q
+                    .backup_include_history(false)
+                    .output_state(TaskOutputDiscoveryState::Unknown),
+                "schema" => q
+                    .class_id(42.into())
+                    .schema_revision(SchemaRevision::new(3).unwrap())
+                    .schema_work_kind(SchemaWorkKind::Impact)
+                    .schema_work_status(SchemaWorkStatus::Complete),
+                "reindex" => q
+                    .computation_revision(ComputationRevision::new(0).unwrap())
+                    .class_id(42.into()),
+                "remote" => q
+                    .collection_id(7.into())
+                    .remote_target_id(8.into())
+                    .remote_side_effect_state(TaskRemoteSideEffectState::PossiblySent),
+                "class_relation" => q.object_relation(4.into()).class_relation(3.into()),
+                "object_relation" => q.class_relation(3.into()).object_relation(4.into()),
+                "lifecycle" => q
+                    .kind(TaskKind::Import)
+                    .kinds([TaskKind::Export, TaskKind::Backup, TaskKind::Export])
+                    .status(TaskStatus::Running)
+                    .statuses([
+                        TaskStatus::Cancelled,
+                        TaskStatus::Failed,
+                        TaskStatus::Failed,
+                    ])
+                    .terminal(true)
+                    .cancel_requested(true)
+                    .terminal_reason(TaskTerminalReason::DeadlineExceeded)
+                    .trace_id(TaskTraceId::new("0123456789ABCDEF0123456789ABCDEF").unwrap())
+                    .submitted_by(2)
+                    .include_total(false)
+                    .limit(3),
+                "timestamps" => q
+                    .created_after(time("2026-01-01T01:00:00+01:00"))
+                    .created_before(time("2026-01-02T00:00:00Z"))
+                    .started_after(time("2026-01-03T00:00:00Z"))
+                    .started_before(time("2026-01-04T00:00:00Z"))
+                    .finished_after(time("2026-01-05T00:00:00Z"))
+                    .finished_before(time("2026-01-06T00:00:00Z")),
+                _ => panic!("unhandled test case"),
+            }
+        }};
+    }
+
+    fn expected(case: &str) -> BTreeMap<String, String> {
+        let encoded = match case {
+            "export" => {
+                "class_id=42&object_id=9&kind=export&export_scope_kind=related_objects&export_template_id=5&export_has_warnings=false&export_truncated=true&output_state=available"
+            }
+            "import" => {
+                "import_dry_run=true&import_atomicity=best_effort&import_collision_policy=overwrite&import_permission_policy=continue&import_has_failed_items=false"
+            }
+            "backup" => "backup_include_history=false&output_state=unknown",
+            "schema" => {
+                "class_id=42&schema_revision=3&schema_work_kind=impact&schema_work_status=complete"
+            }
+            "reindex" => "class_id=42&computation_revision=0",
+            "remote" => "collection_id=7&remote_target_id=8&remote_side_effect_state=possibly_sent",
+            "class_relation" => "relation_type=class_relation&relation_id=3",
+            "object_relation" => "relation_type=object_relation&relation_id=4",
+            "lifecycle" => {
+                "kind=export,backup&status=cancelled,failed&terminal=true&cancel_requested=true&terminal_reason=deadline_exceeded&trace_id=0123456789abcdef0123456789abcdef&submitted_by=2&include_total=false&limit=3"
+            }
+            "timestamps" => {
+                "created_after=2026-01-01T00:00:00%2B00:00&created_before=2026-01-02T00:00:00%2B00:00&started_after=2026-01-03T00:00:00%2B00:00&started_before=2026-01-04T00:00:00%2B00:00&finished_after=2026-01-05T00:00:00%2B00:00&finished_before=2026-01-06T00:00:00%2B00:00"
+            }
+            _ => panic!("unhandled test case"),
+        };
+        url::form_urlencoded::parse(encoded.as_bytes())
+            .into_owned()
+            .collect()
+    }
+
+    fn assert_request(transport: &MockTransport, case: &str) {
+        let requests = transport.requests();
+        assert_eq!(requests.len(), 1);
+        let request = &requests[0];
+        assert_eq!(request.url.path(), "/prefix/api/v1/tasks");
+        assert_eq!(request.headers["authorization"], "Bearer token");
+        let pairs = request.url.query_pairs().into_owned().collect::<Vec<_>>();
+        let actual = pairs.iter().cloned().collect::<BTreeMap<_, _>>();
+        assert_eq!(
+            pairs.len(),
+            actual.len(),
+            "setters must replace previous values"
+        );
+        assert_eq!(actual, expected(case));
+    }
+
+    #[rstest]
+    #[case("export")]
+    #[case("import")]
+    #[case("backup")]
+    #[case("schema")]
+    #[case("reindex")]
+    #[case("remote")]
+    #[case("class_relation")]
+    #[case("object_relation")]
+    #[case("lifecycle")]
+    #[case("timestamps")]
+    fn blocking_discovery_encodes_typed_filters(#[case] case: &str) {
+        let transport = MockTransport::default();
+        transport.push_response(TransportResponse::json(StatusCode::OK, &json!([])).unwrap());
+        let client =
+            blocking::Client::builder(BaseUrl::new("https://example.test/prefix").unwrap())
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("token"));
+        assert!(
+            filters!(client.tasks().query(), case)
+                .list()
+                .unwrap()
+                .is_empty()
+        );
+        assert_request(&transport, case);
+    }
+
+    #[rstest]
+    #[case("export")]
+    #[case("import")]
+    #[case("backup")]
+    #[case("schema")]
+    #[case("reindex")]
+    #[case("remote")]
+    #[case("class_relation")]
+    #[case("object_relation")]
+    #[case("lifecycle")]
+    #[case("timestamps")]
+    #[tokio::test]
+    async fn async_discovery_encodes_typed_filters(#[case] case: &str) {
+        let transport = MockTransport::default();
+        transport.push_response(TransportResponse::json(StatusCode::OK, &json!([])).unwrap());
+        let client = Client::builder(BaseUrl::new("https://example.test/prefix").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        assert!(
+            filters!(client.tasks().query(), case)
+                .list()
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert_request(&transport, case);
+    }
+
+    macro_rules! invalid {
+        ($q:expr, $case:expr) => {{
+            let q = $q;
+            match $case {
+                "empty" => q.statuses([]),
+                "empty_kinds" => q.kinds([]),
+                "unknown" => q.schema_work_status(SchemaWorkStatus::Unknown),
+                "terminal" => q
+                    .terminal(true)
+                    .statuses([TaskStatus::Running, TaskStatus::Failed]),
+                "range" => q
+                    .created_before(time("2026-01-01T00:00:00Z"))
+                    .created_after(time("2026-01-01T00:00:00Z")),
+                "revision" => q.schema_revision(SchemaRevision::INITIAL),
+                "computation" => q.computation_revision(ComputationRevision::new(1).unwrap()),
+                "options" => q.export_truncated(false).import_dry_run(true),
+                "kinds" => q
+                    .kinds([TaskKind::Export, TaskKind::Backup])
+                    .export_has_warnings(false),
+                _ => panic!("unhandled test case"),
+            }
+        }};
+    }
+
+    #[rstest]
+    #[case("empty")]
+    #[case("empty_kinds")]
+    #[case("unknown")]
+    #[case("terminal")]
+    #[case("range")]
+    #[case("revision")]
+    #[case("computation")]
+    #[case("options")]
+    #[case("kinds")]
+    fn blocking_discovery_rejects_invalid_filters_before_transport(#[case] case: &str) {
+        let transport = MockTransport::default();
+        let client = blocking::Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        for mode in 0..5 {
+            let query = invalid!(client.tasks().query(), case);
+            let error = match mode {
+                0 => query.page().unwrap_err(),
+                1 => query.list().unwrap_err(),
+                2 => query.all().unwrap_err(),
+                3 => query.pages().next().unwrap().unwrap_err(),
+                _ => query.items().next().unwrap().unwrap_err(),
+            };
+            assert!(
+                matches!(error, ApiError::InvalidTaskQuery { .. }),
+                "{error:?}"
+            );
+        }
+        assert!(transport.requests().is_empty());
+    }
+
+    #[rstest]
+    #[case("empty")]
+    #[case("empty_kinds")]
+    #[case("unknown")]
+    #[case("terminal")]
+    #[case("range")]
+    #[case("revision")]
+    #[case("computation")]
+    #[case("options")]
+    #[case("kinds")]
+    #[tokio::test]
+    async fn async_discovery_rejects_invalid_filters_before_transport(#[case] case: &str) {
+        let transport = MockTransport::default();
+        let client = Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        for mode in 0..5 {
+            let query = invalid!(client.tasks().query(), case);
+            let error = match mode {
+                0 => query.page().await.unwrap_err(),
+                1 => query.list().await.unwrap_err(),
+                2 => query.all().await.unwrap_err(),
+                3 => query.pages().try_next().await.unwrap_err(),
+                _ => query.items().try_next().await.unwrap_err(),
+            };
+            assert!(
+                matches!(error, ApiError::InvalidTaskQuery { .. }),
+                "{error:?}"
+            );
+        }
+        assert!(transport.requests().is_empty());
+    }
+
+    fn paginated_transport() -> MockTransport {
+        let transport = MockTransport::default();
+        for id in [71, 72] {
+            let mut response = TransportResponse::json(StatusCode::OK, &json!([{
+                "id":id, "kind":"export", "status":"succeeded", "created_at":"2026-01-01T00:00:00Z",
+                "progress":{"total_items":1,"processed_items":1,"success_items":1,"failed_items":0},
+                "links":{"task":format!("/api/v1/tasks/{id}"),"events":format!("/api/v1/tasks/{id}/events")},
+                "details":{"export":{"output_url":format!("/api/v1/exports/{id}/output"),"output_available":true,"output_expired":false,
+                    "retained":{"output_state":"available","scope_kind":"objects_in_class","target":{"type":"class","class_id":42},"truncated":false,"warning_count":0}}}
+            }])).unwrap();
+            if id == 71 {
+                response
+                    .headers
+                    .insert("X-Next-Cursor", HeaderValue::from_static("opaque-cursor"));
+            }
+            response
+                .headers
+                .insert("X-Total-Count", HeaderValue::from_static("2"));
+            transport.push_response(response);
+        }
+        transport
+    }
+
+    fn assert_pagination(transport: MockTransport, tasks: Vec<hubuum_client::TaskResponse>) {
+        assert_eq!(
+            tasks
+                .iter()
+                .map(|task| task.id.to_string())
+                .collect::<Vec<_>>(),
+            ["71", "72"]
+        );
+        for task in tasks {
+            let retained = task.details.unwrap().export.unwrap().retained.unwrap();
+            assert_eq!(retained.output_state, TaskOutputDiscoveryState::Available);
+            assert_eq!(retained.truncated, Some(false));
+        }
+        let requests = transport.requests();
+        assert_eq!(requests.len(), 2);
+        for (index, request) in requests.iter().enumerate() {
+            let params = request
+                .url
+                .query_pairs()
+                .into_owned()
+                .collect::<BTreeMap<_, _>>();
+            assert_eq!(params["class_id"], "42");
+            assert_eq!(params["status"], "succeeded,partially_succeeded");
+            assert_eq!(params["output_state"], "available");
+            assert_eq!(
+                params.get("cursor").map(String::as_str),
+                if index == 0 {
+                    None
+                } else {
+                    Some("opaque-cursor")
+                }
+            );
+        }
+    }
+
+    #[rstest]
+    #[case(0)]
+    #[case(1)]
+    #[case(2)]
+    fn blocking_discovery_preserves_filters_across_pages(#[case] mode: u8) {
+        let transport = paginated_transport();
+        let client = blocking::Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        let query = client
+            .tasks()
+            .query()
+            .class_id(42.into())
+            .statuses([TaskStatus::Succeeded, TaskStatus::PartiallySucceeded])
+            .output_state(TaskOutputDiscoveryState::Available);
+        let tasks = match mode {
+            0 => query.all().unwrap(),
+            1 => query
+                .pages()
+                .flat_map(|page| {
+                    let page = page.unwrap();
+                    assert_eq!(page.total_count, Some(2));
+                    page.items
+                })
+                .collect(),
+            _ => query.items().collect::<Result<Vec<_>, _>>().unwrap(),
+        };
+        assert_pagination(transport, tasks);
+    }
+
+    #[rstest]
+    #[case(0)]
+    #[case(1)]
+    #[case(2)]
+    #[tokio::test]
+    async fn async_discovery_preserves_filters_across_pages(#[case] mode: u8) {
+        let transport = paginated_transport();
+        let client = Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        let query = client
+            .tasks()
+            .query()
+            .class_id(42.into())
+            .statuses([TaskStatus::Succeeded, TaskStatus::PartiallySucceeded])
+            .output_state(TaskOutputDiscoveryState::Available);
+        let tasks = match mode {
+            0 => query.all().await.unwrap(),
+            1 => query
+                .pages()
+                .try_collect::<Vec<_>>()
+                .await
+                .unwrap()
+                .into_iter()
+                .flat_map(|page| {
+                    assert_eq!(page.total_count, Some(2));
+                    page.items
+                })
+                .collect(),
+            _ => query.items().try_collect::<Vec<_>>().await.unwrap(),
+        };
+        assert_pagination(transport, tasks);
+    }
+}

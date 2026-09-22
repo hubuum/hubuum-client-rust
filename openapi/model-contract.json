@@ -271,10 +271,7 @@
       "openapi_schema": "ExportTaskDetails",
       "rust_file": "src/types/task.rs",
       "rust_type": "ExportTaskDetails",
-      "direction": "response",
-      "openapi_only_fields": {
-        "retained": "Optional v0.0.16 task-discovery metadata is available through raw() without changing this public struct; see docs/task-discovery.md."
-      }
+      "direction": "response"
     },
     {
       "openapi_schema": "RunningConfig",
@@ -481,30 +478,19 @@
       "openapi_schema": "ImportTaskDetails",
       "rust_file": "src/types/task.rs",
       "rust_type": "ImportTaskDetails",
-      "direction": "response",
-      "openapi_only_fields": {
-        "retained": "Optional v0.0.16 task-discovery metadata is available through raw() without changing this public struct; see docs/task-discovery.md."
-      }
+      "direction": "response"
     },
     {
       "openapi_schema": "BackupTaskDetails",
       "rust_file": "src/types/task.rs",
       "rust_type": "BackupTaskDetails",
-      "direction": "response",
-      "openapi_only_fields": {
-        "retained": "Optional v0.0.16 task-discovery metadata is available through raw() without changing this public struct; see docs/task-discovery.md."
-      }
+      "direction": "response"
     },
     {
       "openapi_schema": "TaskDetails",
       "rust_file": "src/types/task.rs",
       "rust_type": "TaskDetails",
-      "direction": "response",
-      "openapi_only_fields": {
-        "reindex": "This optional task-discovery detail projection is available through raw(); the existing typed task status and progress remain usable. See docs/task-discovery.md.",
-        "remote_call": "This optional task-discovery detail projection is available through raw(); the existing typed task status and progress remain usable. See docs/task-discovery.md.",
-        "schema_validation": "This optional task-discovery detail projection is available through raw(); the existing typed task status and progress remain usable. See docs/task-discovery.md."
-      }
+      "direction": "response"
     },
     {
       "openapi_schema": "CredentialApprovalRequest",
@@ -522,6 +508,42 @@
       "openapi_schema": "CredentialApprovalRecord",
       "rust_file": "src/types/credential_approval.rs",
       "rust_type": "CredentialApprovalRecord",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RetainedImportDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "RetainedImportDetails",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RetainedExportDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "RetainedExportDetails",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RetainedBackupDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "RetainedBackupDetails",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaTaskDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "SchemaTaskDetails",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RebuildTaskDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "RebuildTaskDetails",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RemoteCallTaskDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "RemoteCallTaskDetails",
       "direction": "response"
     }
   ]

@@ -1,3 +1,9 @@
+use crate::types::{
+    ComputationRevision, ExportScopeKind, ImportAtomicity, ImportCollisionPolicy,
+    ImportPermissionPolicy, SchemaWorkKind, SchemaWorkStatus, TaskOutputDiscoveryState,
+    TaskRemoteSideEffectState, TaskTerminalReason, TaskTraceId,
+};
+use crate::{ClassRelationId, ObjectRelationId};
 use log::{debug, trace};
 use reqwest::Response;
 use secrecy::SecretString;
@@ -4892,11 +4898,233 @@ impl Tasks {
     }
 }
 
+/// Typed task discovery with cursor pagination. Invalid combinations fail before transport.
+/// Filters combine with AND; members of `kinds` and `statuses` combine with OR.
 pub struct TaskListRequest {
     inner: CursorRequest<TaskResponse>,
 }
 
 impl TaskListRequest {
+    /// Explicit target class. This does not include every task touching a class.
+    pub fn class_id(mut self, value: ClassId) -> Self {
+        self.inner = self.inner.set_query_param("class_id", value);
+        self
+    }
+
+    /// Explicit target object.
+    pub fn object_id(mut self, value: ObjectId) -> Self {
+        self.inner = self.inner.set_query_param("object_id", value);
+        self
+    }
+
+    /// Explicit remote-call target collection.
+    pub fn collection_id(mut self, value: CollectionId) -> Self {
+        self.inner = self.inner.set_query_param("collection_id", value);
+        self
+    }
+
+    /// Schema revision to discover; requires `class_id`.
+    pub fn schema_revision(mut self, value: SchemaRevision) -> Self {
+        self.inner = self.inner.set_query_param("schema_revision", value);
+        self
+    }
+
+    /// Computation revision to discover; requires `class_id`.
+    pub fn computation_revision(mut self, value: ComputationRevision) -> Self {
+        self.inner = self.inner.set_query_param("computation_revision", value);
+        self
+    }
+
+    /// Retained schema operation kind.
+    pub fn schema_work_kind(mut self, value: SchemaWorkKind) -> Self {
+        self.inner = self.inner.set_query_param("schema_work_kind", value);
+        self
+    }
+
+    /// Retained schema operation status.
+    pub fn schema_work_status(mut self, value: SchemaWorkStatus) -> Self {
+        self.inner = self.inner.set_query_param("schema_work_status", value);
+        self
+    }
+
+    /// Remote target configuration identity.
+    pub fn remote_target_id(mut self, value: RemoteTargetId) -> Self {
+        self.inner = self.inner.set_query_param("remote_target_id", value);
+        self
+    }
+
+    /// Whether a remote side effect may have occurred.
+    pub fn remote_side_effect_state(mut self, value: TaskRemoteSideEffectState) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("remote_side_effect_state", value);
+        self
+    }
+
+    /// Captured export scope kind.
+    pub fn export_scope_kind(mut self, value: ExportScopeKind) -> Self {
+        self.inner = self.inner.set_query_param("export_scope_kind", value);
+        self
+    }
+
+    /// Resolved export template identity.
+    pub fn export_template_id(mut self, value: ExportTemplateId) -> Self {
+        self.inner = self.inner.set_query_param("export_template_id", value);
+        self
+    }
+
+    /// Known export warning outcome; false does not match unknown facts.
+    pub fn export_has_warnings(mut self, value: bool) -> Self {
+        self.inner = self.inner.set_query_param("export_has_warnings", value);
+        self
+    }
+
+    /// Known export truncation outcome.
+    pub fn export_truncated(mut self, value: bool) -> Self {
+        self.inner = self.inner.set_query_param("export_truncated", value);
+        self
+    }
+
+    /// Captured import dry-run option.
+    pub fn import_dry_run(mut self, value: bool) -> Self {
+        self.inner = self.inner.set_query_param("import_dry_run", value);
+        self
+    }
+
+    /// Captured import atomicity policy.
+    pub fn import_atomicity(mut self, value: ImportAtomicity) -> Self {
+        self.inner = self.inner.set_query_param("import_atomicity", value);
+        self
+    }
+
+    /// Captured import collision policy.
+    pub fn import_collision_policy(mut self, value: ImportCollisionPolicy) -> Self {
+        self.inner = self.inner.set_query_param("import_collision_policy", value);
+        self
+    }
+
+    /// Captured import permission policy.
+    pub fn import_permission_policy(mut self, value: ImportPermissionPolicy) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("import_permission_policy", value);
+        self
+    }
+
+    /// Whether a terminal import has a known nonzero failure count.
+    pub fn import_has_failed_items(mut self, value: bool) -> Self {
+        self.inner = self.inner.set_query_param("import_has_failed_items", value);
+        self
+    }
+
+    /// Captured backup history option.
+    pub fn backup_include_history(mut self, value: bool) -> Self {
+        self.inner = self.inner.set_query_param("backup_include_history", value);
+        self
+    }
+
+    /// Output retention state for exports and backups.
+    pub fn output_state(mut self, value: TaskOutputDiscoveryState) -> Self {
+        self.inner = self.inner.set_query_param("output_state", value);
+        self
+    }
+
+    /// Terminal or nonterminal tasks; must agree with every selected status.
+    pub fn terminal(mut self, value: bool) -> Self {
+        self.inner = self.inner.set_query_param("terminal", value);
+        self
+    }
+
+    /// Durable cancellation intent, independent of terminal status.
+    pub fn cancel_requested(mut self, value: bool) -> Self {
+        self.inner = self.inner.set_query_param("cancel_requested", value);
+        self
+    }
+
+    /// Terminal stop reason.
+    pub fn terminal_reason(mut self, value: TaskTerminalReason) -> Self {
+        self.inner = self.inner.set_query_param("terminal_reason", value);
+        self
+    }
+
+    /// Originating trace identity.
+    pub fn trace_id(mut self, value: TaskTraceId) -> Self {
+        self.inner = self.inner.set_query_param("trace_id", value);
+        self
+    }
+
+    /// Created timestamp inclusive lower bound, serialized as RFC 3339.
+    pub fn created_after(mut self, value: HubuumDateTime) -> Self {
+        self.inner = self.inner.set_query_param("created_after", value);
+        self
+    }
+
+    /// Created timestamp exclusive upper bound, serialized as RFC 3339.
+    pub fn created_before(mut self, value: HubuumDateTime) -> Self {
+        self.inner = self.inner.set_query_param("created_before", value);
+        self
+    }
+
+    /// Started timestamp inclusive lower bound, serialized as RFC 3339.
+    pub fn started_after(mut self, value: HubuumDateTime) -> Self {
+        self.inner = self.inner.set_query_param("started_after", value);
+        self
+    }
+
+    /// Started timestamp exclusive upper bound, serialized as RFC 3339.
+    pub fn started_before(mut self, value: HubuumDateTime) -> Self {
+        self.inner = self.inner.set_query_param("started_before", value);
+        self
+    }
+
+    /// Finished timestamp inclusive lower bound, serialized as RFC 3339.
+    pub fn finished_after(mut self, value: HubuumDateTime) -> Self {
+        self.inner = self.inner.set_query_param("finished_after", value);
+        self
+    }
+
+    /// Finished timestamp exclusive upper bound, serialized as RFC 3339.
+    pub fn finished_before(mut self, value: HubuumDateTime) -> Self {
+        self.inner = self.inner.set_query_param("finished_before", value);
+        self
+    }
+
+    /// Select a class relation target, setting its kind and ID together.
+    /// Replaces any earlier relation target.
+    pub fn class_relation(mut self, relation_id: ClassRelationId) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("relation_type", "class_relation")
+            .set_query_param("relation_id", relation_id);
+        self
+    }
+
+    /// Select a object relation target, setting its kind and ID together.
+    /// Replaces any earlier relation target.
+    pub fn object_relation(mut self, relation_id: ObjectRelationId) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("relation_type", "object_relation")
+            .set_query_param("relation_id", relation_id);
+        self
+    }
+
+    /// Match any of these kinds; replaces the earlier selection. Empty sets are rejected.
+    pub fn kinds(mut self, values: impl IntoIterator<Item = TaskKind>) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("kind", shared::task_filter_set(values));
+        self
+    }
+
+    /// Match any of these statuses; replaces the earlier selection. Empty sets are rejected.
+    pub fn statuses(mut self, values: impl IntoIterator<Item = TaskStatus>) -> Self {
+        self.inner = self
+            .inner
+            .set_query_param("status", shared::task_filter_set(values));
+        self
+    }
+
     pub fn kind(mut self, kind: TaskKind) -> Self {
         self.inner = self.inner.set_query_param("kind", kind);
         self
@@ -5748,6 +5976,9 @@ where
     T: DeserializeOwned,
 {
     pub async fn page(self) -> Result<shared::Page<T>, ApiError> {
+        if matches!(self.endpoint, Endpoint::Tasks) {
+            shared::validate_task_query(&self.query_params)?;
+        }
         let (endpoint, url_params) = match &self.name_route_fallback {
             Some(fallback) => fallback.resolve(&self.client).await?,
             None => (self.endpoint, self.url_params),

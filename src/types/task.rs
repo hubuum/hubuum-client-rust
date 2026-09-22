@@ -2,7 +2,220 @@ use crate::ApiError;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
-use super::{HubuumDateTime, ImportResultId, PrincipalId, Provenance, TaskEventId, TaskId};
+use super::{
+    ExportMissingDataPolicy, ExportScopeKind, HubuumDateTime, ImportAtomicity,
+    ImportCollisionPolicy, ImportPermissionPolicy, ImportResultId, PrincipalId, Provenance,
+    SchemaRevision, SchemaWorkKind, SchemaWorkStatus, TaskEventId, TaskId,
+};
+use crate::{
+    ClassId, ClassRelationId, CollectionId, ExportTemplateId, ObjectId, ObjectRelationId,
+    RemoteTargetId,
+};
+
+/// The explicit resource captured when a task was submitted.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum TaskDiscoveryTarget {
+    Collection {
+        collection_id: CollectionId,
+    },
+    Class {
+        class_id: ClassId,
+    },
+    Object {
+        object_id: ObjectId,
+        class_id: Option<ClassId>,
+    },
+    ClassRelation {
+        relation_id: ClassRelationId,
+    },
+    ObjectRelation {
+        relation_id: ObjectRelationId,
+    },
+    #[serde(other)]
+    Unknown,
+}
+
+/// Retention state of an export or backup output. Unknown is distinct from absent output.
+#[non_exhaustive]
+#[derive(
+    Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq, EnumString, Display,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum TaskOutputDiscoveryState {
+    Available,
+    Expired,
+    NotProduced,
+    #[default]
+    #[serde(other)]
+    Unknown,
+}
+
+/// A terminal stop reason accepted by task discovery.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum TaskTerminalReason {
+    CancelRequested,
+    DeadlineExceeded,
+}
+
+/// Nonnegative computation identity within a class, distinct from a resource revision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(try_from = "i64", into = "i64")]
+pub struct ComputationRevision(i64);
+
+impl ComputationRevision {
+    pub const fn new(value: i64) -> Result<Self, ApiError> {
+        if value >= 0 {
+            Ok(Self(value))
+        } else {
+            Err(ApiError::InvalidComputationRevision(value))
+        }
+    }
+
+    pub const fn get(self) -> i64 {
+        self.0
+    }
+}
+
+impl TryFrom<i64> for ComputationRevision {
+    type Error = ApiError;
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl From<ComputationRevision> for i64 {
+    fn from(value: ComputationRevision) -> Self {
+        value.get()
+    }
+}
+
+impl std::fmt::Display for ComputationRevision {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+/// A nonzero 32-digit hexadecimal trace identity, normalized to lowercase.
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct TaskTraceId(String);
+
+impl TaskTraceId {
+    pub fn new(value: impl Into<String>) -> Result<Self, ApiError> {
+        let value = value.into();
+        if value.len() != 32
+            || !value.bytes().all(|b| b.is_ascii_hexdigit())
+            || value.bytes().all(|b| b == b'0')
+        {
+            return Err(ApiError::InvalidTaskTraceId);
+        }
+        Ok(Self(value.to_ascii_lowercase()))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for TaskTraceId {
+    type Error = ApiError;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl From<TaskTraceId> for String {
+    fn from(value: TaskTraceId) -> Self {
+        value.0
+    }
+}
+
+impl std::fmt::Display for TaskTraceId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl std::fmt::Debug for TaskTraceId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("TaskTraceId([REDACTED])")
+    }
+}
+
+/// Retained import options and outcomes; `None` denotes an unknown fact.
+#[non_exhaustive]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RetainedImportDetails {
+    pub atomicity: Option<ImportAtomicity>,
+    pub collision_policy: Option<ImportCollisionPolicy>,
+    pub dry_run: Option<bool>,
+    pub has_failed_items: Option<bool>,
+    pub permission_policy: Option<ImportPermissionPolicy>,
+}
+
+/// Retained export target, options and output facts, including after request redaction.
+#[non_exhaustive]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RetainedExportDetails {
+    pub max_items: Option<u64>,
+    pub max_output_bytes: Option<u64>,
+    pub missing_data_policy: Option<ExportMissingDataPolicy>,
+    pub output_state: TaskOutputDiscoveryState,
+    pub scope_kind: Option<ExportScopeKind>,
+    pub target: Option<TaskDiscoveryTarget>,
+    pub template_id: Option<ExportTemplateId>,
+    pub truncated: Option<bool>,
+    pub warning_count: Option<i32>,
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RetainedBackupDetails {
+    pub include_history: Option<bool>,
+    pub output_state: TaskOutputDiscoveryState,
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RebuildTaskDetails {
+    pub class_id: Option<ClassId>,
+    pub computation_revision: Option<ComputationRevision>,
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RemoteCallTaskDetails {
+    pub remote_target_id: Option<RemoteTargetId>,
+    pub target: Option<TaskDiscoveryTarget>,
+}
+
+#[non_exhaustive]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SchemaTaskDetails {
+    pub class_id: Option<ClassId>,
+    pub results_url: Option<String>,
+    pub schema_revision: Option<SchemaRevision>,
+    pub work_kind: Option<SchemaWorkKind>,
+    pub work_status: Option<SchemaWorkStatus>,
+}
+
+impl std::fmt::Debug for SchemaTaskDetails {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SchemaTaskDetails")
+            .field("class_id", &self.class_id)
+            .field("results_url", &redacted_if_present(&self.results_url))
+            .field("schema_revision", &self.schema_revision)
+            .field("work_kind", &self.work_kind)
+            .field("work_status", &self.work_status)
+            .finish()
+    }
+}
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
@@ -94,21 +307,24 @@ impl std::fmt::Debug for TaskLinks {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ImportTaskDetails {
     pub results_url: String,
+    pub retained: Option<RetainedImportDetails>,
 }
 
 impl std::fmt::Debug for ImportTaskDetails {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ImportTaskDetails")
             .field("results_url", &"[REDACTED]")
+            .field("retained", &self.retained)
             .finish()
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExportTaskDetails {
+    pub retained: Option<RetainedExportDetails>,
     pub output_url: String,
     pub output_available: bool,
     pub output_expired: bool,
@@ -126,6 +342,7 @@ pub struct ExportTaskDetails {
 impl std::fmt::Debug for ExportTaskDetails {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ExportTaskDetails")
+            .field("retained", &self.retained)
             .field("output_url", &"[REDACTED]")
             .field("output_available", &self.output_available)
             .field("output_expired", &self.output_expired)
@@ -142,8 +359,9 @@ impl std::fmt::Debug for ExportTaskDetails {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BackupTaskDetails {
+    pub retained: Option<RetainedBackupDetails>,
     pub output_url: String,
     pub output_available: bool,
     pub output_expired: bool,
@@ -155,6 +373,7 @@ pub struct BackupTaskDetails {
 impl std::fmt::Debug for BackupTaskDetails {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BackupTaskDetails")
+            .field("retained", &self.retained)
             .field("output_url", &"[REDACTED]")
             .field("output_available", &self.output_available)
             .field("output_expired", &self.output_expired)
@@ -165,12 +384,15 @@ impl std::fmt::Debug for BackupTaskDetails {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TaskDetails {
     #[serde(rename = "import")]
     pub import_details: Option<ImportTaskDetails>,
     pub export: Option<ExportTaskDetails>,
     pub backup: Option<BackupTaskDetails>,
+    pub reindex: Option<RebuildTaskDetails>,
+    pub remote_call: Option<RemoteCallTaskDetails>,
+    pub schema_validation: Option<SchemaTaskDetails>,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -230,8 +452,9 @@ impl std::fmt::Debug for TaskResponse {
 
 /// Whether cancellation can rule out a remote side effect.
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, EnumString, Display)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum TaskRemoteSideEffectState {
     NotSent,
     PossiblySent,
@@ -376,6 +599,83 @@ pub struct TaskQueueStateResponse {
 
 #[cfg(test)]
 mod tests {
+    #[rstest::rstest]
+    #[case(serde_json::json!({"type":"collection","collection_id":1}))]
+    #[case(serde_json::json!({"type":"class","class_id":2}))]
+    #[case(serde_json::json!({"type":"object","object_id":3,"class_id":2}))]
+    #[case(serde_json::json!({"type":"object","object_id":3,"class_id":null}))]
+    #[case(serde_json::json!({"type":"class_relation","relation_id":4}))]
+    #[case(serde_json::json!({"type":"object_relation","relation_id":5}))]
+    fn discovery_target_roundtrips(#[case] value: serde_json::Value) {
+        let target: super::TaskDiscoveryTarget = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(serde_json::to_value(target).unwrap(), value);
+    }
+
+    #[test]
+    fn discovery_preserves_unknown_facts_and_future_variants() {
+        use super::*;
+        let historical: TaskDetails = serde_json::from_str("{}").unwrap();
+        assert_eq!(historical, TaskDetails::default());
+        let retained: RetainedExportDetails =
+            serde_json::from_str(r#"{"output_state":"unknown"}"#).unwrap();
+        assert_eq!(retained.output_state, TaskOutputDiscoveryState::Unknown);
+        assert_eq!(retained.truncated, None);
+        assert_eq!(retained.target, None);
+        assert!(serde_json::from_str::<RetainedExportDetails>("{}").is_err());
+        let future: TaskDiscoveryTarget =
+            serde_json::from_str(r#"{"type":"future","credential":"secret"}"#).unwrap();
+        assert_eq!(future, TaskDiscoveryTarget::Unknown);
+        assert!(!format!("{future:?}").contains("secret"));
+        assert_eq!(
+            serde_json::from_str::<TaskOutputDiscoveryState>(r#""future""#).unwrap(),
+            TaskOutputDiscoveryState::Unknown
+        );
+    }
+
+    #[rstest::rstest]
+    #[case("")]
+    #[case("00000000000000000000000000000000")]
+    #[case("0123456789abcdef0123456789abcdeg")]
+    #[case("0123456789abcdef0123456789abcdef00")]
+    fn rejects_invalid_trace_identity(#[case] input: &str) {
+        assert!(super::TaskTraceId::new(input).is_err());
+        assert!(serde_json::from_value::<super::TaskTraceId>(serde_json::json!(input)).is_err());
+    }
+
+    #[test]
+    fn discovery_identities_validate_and_serialize() {
+        use super::*;
+        let trace = TaskTraceId::new("0123456789ABCDEF0123456789ABCDEF").unwrap();
+        assert_eq!(trace.as_str(), "0123456789abcdef0123456789abcdef");
+        assert_eq!(serde_json::to_value(&trace).unwrap(), trace.as_str());
+        assert!(!format!("{trace:?}").contains(trace.as_str()));
+        for revision in [0, 1, i64::MAX] {
+            let value = ComputationRevision::new(revision).unwrap();
+            assert_eq!(value.get(), revision);
+            assert_eq!(serde_json::to_value(value).unwrap(), revision);
+        }
+        assert!(ComputationRevision::new(-1).is_err());
+        assert!(serde_json::from_str::<ComputationRevision>("-1").is_err());
+    }
+
+    #[test]
+    fn schema_discovery_redacts_result_urls() {
+        let details: super::TaskDetails = serde_json::from_value(serde_json::json!({
+            "schema_validation": {"class_id": 1, "schema_revision": 2, "work_kind":"impact",
+                "work_status":"complete", "results_url":"https://example.test/private-result?secret=token"}
+        })).unwrap();
+        assert!(!format!("{details:?}").contains("private-result"));
+        assert!(!format!("{details:?}").contains("secret=token"));
+        assert_eq!(
+            details
+                .schema_validation
+                .unwrap()
+                .schema_revision
+                .unwrap()
+                .get(),
+            2
+        );
+    }
     use super::*;
     use rstest::rstest;
 
