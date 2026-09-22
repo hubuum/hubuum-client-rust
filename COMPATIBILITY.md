@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.11.1 | 0.0.15 | `ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821` | Declared target; unchanged 218-operation contract, optional credential approvals, and refreshed Rust 1.88-compatible dependencies. Complete canonical run passed: 93 library integration tests, all downstream consumer suites, and four async/blocking full restore/recovery variants (2026-09-22). |
 | 0.11.0 | 0.0.15 | `ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821` | Declared target; 218-operation pinned contract, 67 wire-model mappings, schema evolution, cancellation, format 6 backups, and refreshed Rust 1.88-compatible dependencies. 91 library and 26 consumer integration tests, plus four async/blocking full restores with and without history and schema-evidence-preserving recovery (2026-09-16). |
 | 0.10.1 | 0.0.14 | `ghcr.io/hubuum/hubuum-server@sha256:6c1c8d7316a1f60a02e4505611a44e21030ba678b5b451f5b293a12f2bd87594` | Declared target; unchanged 204-operation OpenAPI contract, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus four async/blocking full restores with and without history and revision-preserving recovery with subsequent backup validation (2026-09-10) |
 | 0.10.0 | 0.0.13 | `ghcr.io/hubuum/hubuum-server@sha256:512562e789d6430875c5075faf832a9669a4f266f7fe9fbf8c1524b49a6476c5` | Declared target; pinned OpenAPI, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus blocking and async full restore completion, token invalidation, and recovery after each restore (2026-09-09) |
@@ -40,7 +41,8 @@ versioned Hubuum server v0.0.2 release.
 
 ## Forward compatibility
 
-The optional fresh credential approval API supports servers incorporating
+The optional fresh credential approval API, available in client 0.11.1, supports
+servers incorporating
 [PR 423](https://github.com/hubuum/hubuum/pull/423). This addition does not change
 the declared v0.0.15 target, pinned image, or OpenAPI snapshot. Existing calls do
 not require the approval endpoints. On an enforcing server, credential mutations
@@ -61,6 +63,16 @@ The canonical complete pinned-server command also passed on 2026-09-19 against
 the v0.0.15 image declared in `Cargo.toml`, including library and downstream
 consumer tests and all four restore/recovery scenarios. The new credential
 scenarios passed through the original APIs without requiring approval support.
+
+After the fixture repairs in [client PR 95](https://github.com/hubuum/hubuum-client-rust/pull/95),
+the complete library and downstream consumer integration suite passed on
+2026-09-22 against immutable server candidate
+`61f1bfd3455af26254e1dc73e697a80b0536813a`, image
+`ghcr.io/hubuum/hubuum-server@sha256:8944a31e47ff97eb14bf5072772149c06d87714a316db54aa4e010195c5811a0`.
+Approval enforcement was required, and all four full restore/recovery variants
+passed. This extends the earlier focused evidence to the complete suite.
+The declared target remains the released v0.0.15 contract; selecting v0.0.16
+requires its published release artifact, immutable digest, and contract review.
 
 Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
