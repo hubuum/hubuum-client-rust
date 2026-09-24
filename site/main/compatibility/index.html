@@ -1,0 +1,1859 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Typed asynchronous and blocking Rust clients for Hubuum.">
+      
+      
+      
+        <link rel="canonical" href="https://hubuum.github.io/hubuum-client-rust/main/compatibility/">
+      
+      
+        <link rel="prev" href="../getting-started/">
+      
+      
+        <link rel="next" href="../client-setup/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.64">
+    
+    
+      
+        <title>Server compatibility - Hubuum Rust client</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.40d3fdbb.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.812a03bb.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#server-compatibility" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+        <aside class="md-banner">
+          <div class="md-banner__inner md-grid md-typeset">
+            
+            
+  <nav class="hubuum-ecosystem" aria-label="Hubuum projects">
+    <a href="https://hubuum.github.io/"><strong>Hubuum</strong></a>
+    
+      <a href="https://hubuum.github.io/hubuum/">Server</a>
+    
+      <a href="https://hubuum.github.io/hubuum-frontend/">Frontend</a>
+    
+      <a href="https://hubuum.github.io/hubuum-cli/">CLI</a>
+    
+      <a href="https://hubuum.github.io/hubuum-client-rust/">Rust client</a>
+    
+      <a href="https://hubuum.github.io/hubuum-client-python/">Python client</a>
+    
+  </nav>
+  
+  
+    <strong>Development documentation</strong> — may describe unreleased changes.
+  
+  <label for="docs-version">Version</label>
+  <select id="docs-version" data-version="main"
+    data-manifest="../../versions.json">
+    <option value="main">main</option>
+  </select>
+  
+
+          </div>
+          
+        </aside>
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="Hubuum Rust client" class="md-header__button md-logo" aria-label="Hubuum Rust client" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-network" viewBox="0 0 24 24"><rect width="6" height="6" x="16" y="16" rx="1"/><rect width="6" height="6" x="2" y="16" rx="1"/><rect width="6" height="6" x="9" y="2" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3M12 12V8"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Hubuum Rust client
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Server compatibility
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/hubuum/hubuum-client-rust" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hubuum/hubuum-client-rust
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./.." class="md-tabs__link">
+          
+  
+  Overview
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../client-setup/" class="md-tabs__link">
+          
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="https://docs.rs/hubuum_client/latest/hubuum_client/" class="md-tabs__link">
+          
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../integration-tests/" class="md-tabs__link">
+          
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="Hubuum Rust client" class="md-nav__button md-logo" aria-label="Hubuum Rust client" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-network" viewBox="0 0 24 24"><rect width="6" height="6" x="16" y="16" rx="1"/><rect width="6" height="6" x="2" y="16" rx="1"/><rect width="6" height="6" x="9" y="2" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3M12 12V8"/></svg>
+
+    </a>
+    Hubuum Rust client
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hubuum/hubuum-client-rust" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hubuum/hubuum-client-rust
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Overview
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_1">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Overview
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Welcome
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation and quick start
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server compatibility
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server compatibility
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#compatibility-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compatibility history
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#forward-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Forward compatibility
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0016-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.16 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0013-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.13 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0014-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.14 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0015-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.15 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Guides
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../client-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Client setup
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../querying/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Queries and pagination
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scoped-auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Scoped authentication
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../credential-approvals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Credential approvals
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../principal-settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Principal settings
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schema-evolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Schema evolution
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Task discovery
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exports-and-tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Exports and tasks
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backups-and-computed-fields/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Backups and computed fields
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Advanced usage
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://docs.rs/hubuum_client/latest/hubuum_client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rust API
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../known-gaps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Known contract gaps
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Release notes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Contributing
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Contributing
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integration-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Integration tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../code-generation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Code generation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-v0.0.4-preparation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Historical v0.0.4 preparation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Release process
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Documentation website
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#compatibility-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compatibility history
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#forward-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Forward compatibility
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0016-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.16 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0013-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.13 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0014-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.14 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0015-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.15 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+    <a href="https://github.com/hubuum/hubuum-client-rust/edit/main/docs/compatibility.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="server-compatibility">Server compatibility<a class="headerlink" href="#server-compatibility" title="Permanent link">&para;</a></h1>
+<p>The client and server are versioned independently. A client release "targets"
+a server release when its pinned OpenAPI contract comes from that server tag and
+the complete Docker-backed library and consumer integration suites pass against
+an immutable image for the same release.</p>
+<p>Dedicated typed helpers do not necessarily exist for every server operation.
+Authenticated relative routes remain available through <code>raw()</code> while typed
+coverage evolves.</p>
+<h2 id="compatibility-history">Compatibility history<a class="headerlink" href="#compatibility-history" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Client version</th>
+<th>Server target</th>
+<th>Tested server image</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.12.0</td>
+<td>0.0.16</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e</code></td>
+<td>Declared target; 220-operation contract and 79 wire-model mappings. Complete canonical run passed with approval enforcement required: 93 library tests, all downstream suites with typed discovery and retained details for all six task kinds, real cursor pagination, and four full restore/recovery variants (2026-09-22).</td>
+</tr>
+<tr>
+<td>0.11.2</td>
+<td>0.0.16</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e</code></td>
+<td>Declared target; 220-operation contract and 73 wire-model mappings. Complete canonical run passed with approval enforcement required: 93 library tests, all downstream suites including async/blocking task discovery, and four full restore/recovery variants (2026-09-22).</td>
+</tr>
+<tr>
+<td>0.11.1</td>
+<td>0.0.15</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821</code></td>
+<td>Declared target; unchanged 218-operation contract, optional credential approvals, and refreshed Rust 1.88-compatible dependencies. Complete canonical run passed: 93 library integration tests, all downstream consumer suites, and four async/blocking full restore/recovery variants (2026-09-22).</td>
+</tr>
+<tr>
+<td>0.11.0</td>
+<td>0.0.15</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821</code></td>
+<td>Declared target; 218-operation pinned contract, 67 wire-model mappings, schema evolution, cancellation, format 6 backups, and refreshed Rust 1.88-compatible dependencies. 91 library and 26 consumer integration tests, plus four async/blocking full restores with and without history and schema-evidence-preserving recovery (2026-09-16).</td>
+</tr>
+<tr>
+<td>0.10.1</td>
+<td>0.0.14</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:6c1c8d7316a1f60a02e4505611a44e21030ba678b5b451f5b293a12f2bd87594</code></td>
+<td>Declared target; unchanged 204-operation OpenAPI contract, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus four async/blocking full restores with and without history and revision-preserving recovery with subsequent backup validation (2026-09-10)</td>
+</tr>
+<tr>
+<td>0.10.0</td>
+<td>0.0.13</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:512562e789d6430875c5075faf832a9669a4f266f7fe9fbf8c1524b49a6476c5</code></td>
+<td>Declared target; pinned OpenAPI, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus blocking and async full restore completion, token invalidation, and recovery after each restore (2026-09-09)</td>
+</tr>
+<tr>
+<td>0.9.1</td>
+<td>0.0.9</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db</code></td>
+<td>Declared target; JSON-path validation, advertised pagination limits, atomic export downloads, property-level OpenAPI model reconciliation, dependency and release-workflow security updates, with pinned Docker-backed library plus downstream-consumer integration coverage</td>
+</tr>
+<tr>
+<td>0.9.0</td>
+<td>0.0.9</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db</code></td>
+<td>Declared target; revision and ETag concurrency, import v2, settings JSON Patch, revision-owned permission and membership responses, computed-field points, token lifecycle state and renewal, with pinned Docker-backed library plus downstream-consumer integration coverage</td>
+</tr>
+<tr>
+<td>0.8.0</td>
+<td>0.0.8</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6</code></td>
+<td>Declared target; property-complete v0.0.8 cardinality, core-import timestamp, and export-timing models with pinned Docker-backed library plus downstream-consumer integration coverage</td>
+</tr>
+<tr>
+<td>0.7.3</td>
+<td>0.0.8</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6</code></td>
+<td>Declared target; pinned OpenAPI and complete Docker-backed library plus downstream-consumer integration suites</td>
+</tr>
+<tr>
+<td>0.7.2</td>
+<td>0.0.5</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:6f3e0f0debd418acd5cbc2b1399db9859a85ca1fa397525a5ef0e2f493a77c9b</code></td>
+<td>Declared target; pinned OpenAPI and full integration suites, including public default-token-lifetime discovery, authoritative login and token-mint expiry metadata, token retention configuration, scoped/unscoped token lifecycles, expiry enforcement, revocation, imports, exports, and downstream-consumer coverage</td>
+</tr>
+<tr>
+<td>0.7.1</td>
+<td>0.0.4</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583</code></td>
+<td>Declared target; pinned OpenAPI and full integration suites, including sensitive secret-header metadata plus blocking user and async service-account scoped/unscoped token lifecycles, expiry enforcement, revocation, and post-revocation rejection</td>
+</tr>
+<tr>
+<td>0.7.0</td>
+<td>0.0.4</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583</code></td>
+<td>Declared target; pinned OpenAPI and full integration suites, including blocking user and async service-account scoped/unscoped token lifecycles, expiry enforcement, revocation, and post-revocation rejection</td>
+</tr>
+<tr>
+<td>0.6.1</td>
+<td>0.0.3</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186</code></td>
+<td>Declared target; pinned OpenAPI and full integration suites, including async and blocking diagnostic redaction, custom-transport isolation, and redirect-confinement regressions</td>
+</tr>
+<tr>
+<td>0.6.0</td>
+<td>0.0.3</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186</code></td>
+<td>Declared target; pinned OpenAPI and full integration suites, including exact-name routing, aggregates, object-data patching, and public pagination configuration</td>
+</tr>
+<tr>
+<td>0.5.1</td>
+<td>0.0.2</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:8f543383b422124546c8d337fd557e1b182b1b6c7078d7870d3c5cd4f955ef1f</code></td>
+<td>Declared target; pinned OpenAPI and full integration suites, including the runtime-configurable metrics route</td>
+</tr>
+<tr>
+<td>0.5.0</td>
+<td>0.0.2</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:8f543383b422124546c8d337fd557e1b182b1b6c7078d7870d3c5cd4f955ef1f</code></td>
+<td>Declared target; pinned OpenAPI and full integration suites</td>
+</tr>
+<tr>
+<td>0.4.0</td>
+<td><code>main@eed194f2339ce221ef251a14062e2a37850186b1</code></td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:9eb7d2eb83220ac6e38d9964df2e6f4268152a072b0cece3e81a63b52d7b8e19</code></td>
+<td>Reproducible pre-release snapshot, not a stable server release</td>
+</tr>
+<tr>
+<td>0.3.0</td>
+<td><code>main@eed194f2339ce221ef251a14062e2a37850186b1</code></td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:9eb7d2eb83220ac6e38d9964df2e6f4268152a072b0cece3e81a63b52d7b8e19</code></td>
+<td>Reproducible pre-release snapshot, not a stable server release</td>
+</tr>
+<tr>
+<td>0.2.0</td>
+<td><code>main</code> (floating)</td>
+<td>Not recorded</td>
+<td>No stable server target was declared</td>
+</tr>
+<tr>
+<td>0.1.0</td>
+<td>Not recorded</td>
+<td>Not recorded</td>
+<td>No stable server target was declared</td>
+</tr>
+<tr>
+<td>0.0.3</td>
+<td><code>main</code> (floating)</td>
+<td>Not recorded</td>
+<td>No stable server target was declared</td>
+</tr>
+<tr>
+<td>0.0.2</td>
+<td><code>no-tls-main</code> (floating)</td>
+<td>Not recorded</td>
+<td>No stable server target was declared</td>
+</tr>
+<tr>
+<td>0.0.1</td>
+<td>Not recorded</td>
+<td>Not recorded</td>
+<td>No stable server target was declared</td>
+</tr>
+</tbody>
+</table>
+<p>The client version 0.0.2 row predates and is unrelated to the independently
+versioned Hubuum server v0.0.2 release.</p>
+<h2 id="forward-compatibility">Forward compatibility<a class="headerlink" href="#forward-compatibility" title="Permanent link">&para;</a></h2>
+<p>Client 0.11.1 introduced the fresh credential approval API for servers incorporating
+<a href="https://github.com/hubuum/hubuum/pull/423">PR 423</a>. That release kept its declared
+v0.0.15 target, pinned image, and OpenAPI snapshot. Existing calls do
+not require the approval endpoints. On an enforcing server, credential mutations
+return <code>reauthentication_required</code> until the caller uses the explicit
+<a href="../credential-approvals/">approval workflow</a>.</p>
+<p>Focused live verification on 2026-09-19 used the PR's merged source revision
+<code>3a1c44c938cc9d06d665229612c0fb1b4f3c98c8</code> and immutable Linux amd64 image
+<code>ghcr.io/hubuum/hubuum-server@sha256:62438f2473ee15f9699ccc904e79c4c20c27e06a1219986c04493d269127f3e0</code>.
+With <code>HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1</code>, async and blocking token
+creation/renewal preserved approved expirations, and downstream user/password and
+credential-import dry runs passed. Blocking and async full restore confirmation
+and recovery passed with and without history. These focused checks supplement
+the required complete pinned-server run; they do not declare compatibility with
+all other changes on server <code>main</code>.</p>
+<p>The canonical complete pinned-server command also passed on 2026-09-19 against
+the v0.0.15 image declared in <code>Cargo.toml</code>, including library and downstream
+consumer tests and all four restore/recovery scenarios. The new credential
+scenarios passed through the original APIs without requiring approval support.</p>
+<p>After the fixture repairs in <a href="https://github.com/hubuum/hubuum-client-rust/pull/95">client PR 95</a>,
+the complete library and downstream consumer integration suite passed on
+2026-09-22 against immutable server candidate
+<code>61f1bfd3455af26254e1dc73e697a80b0536813a</code>, image
+<code>ghcr.io/hubuum/hubuum-server@sha256:8944a31e47ff97eb14bf5072772149c06d87714a316db54aa4e010195c5811a0</code>.
+Approval enforcement was required, and all four full restore/recovery variants
+passed. This extends the earlier focused evidence to the complete suite.
+This evidence preceded publication of v0.0.16. Client 0.11.2 targets the
+released artifact and reviewed contract as described below.</p>
+<p>Required CI is deterministic and stays pinned to the declared target. Scheduled
+jobs separately compare the contract and run the integration suites against the
+server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
+do not change a published client's declared target.</p>
+<h2 id="v0016-target">v0.0.16 target<a class="headerlink" href="#v0016-target" title="Permanent link">&para;</a></h2>
+<p>Clients 0.11.2 and 0.12.0 target server v0.0.16. The pinned contract grows from 218 to
+220 operations and from 315 to 330 schemas. Both added approval routes already
+have typed async and blocking APIs. Client 0.12.0 reconciles 79
+wire-model mappings, including retained task details. Feature availability,
+Rust 1.88, and backup format 6 are unchanged.</p>
+<p>Credential mutations require fresh, operation-bound password approval. Before
+upgrading the running server, update applications to use the
+<a href="../credential-approvals/">approval workflow</a>. Existing mutation methods
+retain their original behavior and return <code>reauthentication_required</code> when the
+server enforces approvals; they do not prompt or automatically retry.</p>
+<p>Client 0.12.0 exposes every task-discovery filter and retained detail projection
+through the async and blocking typed APIs, including cursor pagination and local
+query validation. Client 0.11.2 required <code>raw()</code> for those additions. The new
+optional fields break exhaustive Rust struct literals and destructuring; see the
+<a href="../task-discovery/#migration-from-011">task discovery migration guide</a>.</p>
+<p>Keep a verified v0.0.15 backup, quiesce protected mutations, drain workers, and
+apply <code>2026-09-18-000001_task_discovery</code> and
+<code>2026-09-19-000001_credential_approvals</code> with <code>hubuum-admin --migrate</code>. Deploy
+matching API, worker, administrator, and separately supervised restore-executor
+binaries before resuming operations. Older format-6 backups without discovery
+metadata remain accepted. See the
+<a href="https://github.com/hubuum/hubuum/releases/tag/v0.0.16">server release notes</a>.</p>
+<p>The immutable multi-platform release image is
+<code>ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e</code>.
+Its Linux amd64 manifest is
+<code>sha256:2f1e59519c3e5fb0a849ee6db8f3f3981b76145cac2f9ffb6f463a8927d4f7d2</code>,
+and its source label matches the v0.0.16 tag commit
+<code>8f4194ffe25d172d579b676f109efbdc71d9aab7</code>.</p>
+<p>The canonical combined command passed on 2026-09-22 with
+<code>HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1</code>: all 93 library integration
+tests, every downstream consumer suite, and all four async/blocking full
+restore/recovery variants. The downstream discovery scenarios verified resource
+and output filters, comma-separated statuses, retained export metadata, and
+decoding of newer responses through the unchanged typed task models.</p>
+<h2 id="v0013-target">v0.0.13 target<a class="headerlink" href="#v0013-target" title="Permanent link">&para;</a></h2>
+<p>The 0.10.0 release targets server v0.0.13, which fixes the restore drain-state
+race and JSON-null insertion failure found during v0.0.12 verification. Its
+204-operation OpenAPI contract is unchanged from v0.0.12 apart from the server
+version. Backup format 5 is unchanged.</p>
+<p>Install matching server, administrator, and template-worker binaries, including
+any separately deployed <code>hubuum-admin --restore-executor</code>. See the
+<a href="https://github.com/hubuum/hubuum/releases/tag/v0.0.13">server release notes</a>
+and the <a href="../backups-and-computed-fields/">backup and restore guide</a> for
+migration and recovery steps.</p>
+<p>The canonical combined integration command passed on 2026-09-09 against the
+released immutable image above (Linux amd64). All 89 library and 24 ordinary
+consumer tests passed, followed by blocking and async full restore completion
+and recovery after each restore. Both modes reached <code>Succeeded</code>, rejected the
+pre-restore bearer token, and recovered the deleted object after administrator
+password reset and a fresh login.</p>
+<p>The published image identifies source revision
+<code>8ecefbf3e3147714014221598d9873ba92e0fdce</code>, matching the v0.0.13 release tag.
+The manifest pins the multi-platform image index; this live run verifies its
+Linux amd64 image.</p>
+<h2 id="v0014-target">v0.0.14 target<a class="headerlink" href="#v0014-target" title="Permanent link">&para;</a></h2>
+<p>The 0.10.1 patch release targets server v0.0.14. Its 204-operation OpenAPI
+contract is unchanged from v0.0.13 apart from the server version. Public client
+APIs, features, the Rust 1.88 MSRV, and backup format 5 are unchanged.</p>
+<p>The server fixes backup and restore consistency, including preserving revisions
+and establishing current temporal snapshots after history-free restores so later
+backups remain restorable. Install matching server, administrator, and
+template-worker binaries, including any separately deployed
+<code>hubuum-admin --restore-executor</code>. Existing history-free format 5 artifacts can
+be restored directly with the fixed executor. No database migration is added;
+the server's certified upgrade and application rollback path is v0.0.13 to
+v0.0.14. See the
+<a href="https://github.com/hubuum/hubuum/releases/tag/v0.0.14">server release notes</a>
+and the <a href="../backups-and-computed-fields/">backup and restore guide</a>.</p>
+<p>The canonical combined integration command passed on 2026-09-10 against the
+released immutable image above (Linux amd64). All 89 library and 24 ordinary
+consumer tests passed, followed by all four combinations of blocking/async full
+restore and history included/omitted. Every restore reached <code>Succeeded</code>, rejected
+the pre-restore bearer token, and recovered the deleted object with its original
+revision after administrator password reset and a fresh login. Recovery also
+created and successfully staged default backups both before and after another
+mutation, covering the history-free restore fix.</p>
+<p>The published image identifies source revision
+<code>0b0aa17f278496a32cc018cfcac56f34a408ccd6</code>, matching the v0.0.14 release tag.
+The manifest pins the multi-platform image index; this live run verifies its
+Linux amd64 image.</p>
+<h2 id="v0015-target">v0.0.15 target<a class="headerlink" href="#v0015-target" title="Permanent link">&para;</a></h2>
+<p>The 0.11.0 release targets server v0.0.15. The contract grows from
+204 to 218 operations and from 280 to 315 schemas. All 14 new operations have
+typed async and blocking helpers, covering the class schema lifecycle, retained
+HTML repair reports, and task cancellation. Feature availability and Rust 1.88
+remain unchanged.</p>
+<p><code>ImportClassInput</code> gains <code>schema_activation</code>; add <code>schema_activation: None</code> to
+existing struct literals or provide an explicit activation request. Changing
+schema policy on a nonempty class now requires staging, impact analysis, and
+activation instead of direct PATCH or legacy import overwrite. Imports must
+provide the exact staged policy. See the <a href="../schema-evolution/">schema guide</a>.</p>
+<p>Backup format 6 replaces format 5, adding schema revisions, state, evidence,
+and history. Restore older artifacts using their matching older server before
+migrating and creating new format 6 backups; no artifact converter is provided.
+Drain old workers, apply the release's migrations, then deploy matching API,
+worker, administrator, and restore-executor binaries. Existing enforced objects
+start pending and need revalidation. See the
+<a href="../backups-and-computed-fields/">backup guide</a> and
+<a href="https://github.com/hubuum/hubuum/releases/tag/v0.0.15">server release notes</a>.</p>
+<p>The server also tightens schema validation and resource budgets, changes string
+cursor ordering to byte ordering on locale-collated databases, and requires the
+<code>CancelTask</code> external authorization action. Restart in-progress string-sorted
+pagination, review stored schema admission, and deploy consistent schema, task,
+and backup limits across processes. Report assembly can return HTTP 413, and
+external-authorization traversal is bounded at 10,000 candidates.</p>
+<p>All direct dependencies already use constraints that select the latest
+compatible releases. The lockfile refresh updates twelve packages, including
+Rustls 0.23.45 for RUSTSEC-2026-0285. <code>generic-array</code> remains at 0.14.7 because
+the current <code>crypto-common</code> 0.1.7 dependency requires that exact version.</p>
+<p>The pinned multi-platform image identifies source revision
+<code>4bb889c66a5e2a1dfc86d1b6beac7495912fd02e</code>, matching the annotated v0.0.15 tag.</p>
+<p>The canonical combined integration command passed on 2026-09-16 against this
+image's Linux amd64 build. All 91 library and 26 ordinary consumer tests passed,
+including both modes of the schema lifecycle, diagnostic HTML, import activation,
+and task cancellation. All four combinations of blocking/async full restore and
+history included/omitted reached <code>Succeeded</code> and invalidated the old bearer token.
+Recovery after each restore preserved the object's resource revision, the active
+schema revision, and validation evidence. Subsequent backups before and after a
+mutation also passed restore staging validation.</p>
+
+
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../getting-started/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Installation and quick start">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Installation and quick start
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../client-setup/" class="md-footer__link md-footer__link--next" aria-label="Next: Client setup">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Client setup
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Hubuum · MIT licensed
+    </div>
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["navigation.tabs","navigation.tabs.sticky","navigation.sections","navigation.path","navigation.top","navigation.footer","navigation.instant","navigation.instant.progress","content.action.edit","content.code.copy","toc.follow"],"redirect":null,"search":"../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c04ba553.min.js"></script>
+      
+        <script src="../assets/javascripts/versions.js"></script>
+      
+    
+  </body>
+</html>
