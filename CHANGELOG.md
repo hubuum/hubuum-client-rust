@@ -12,6 +12,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   automatic GitHub Pages publishing, the latest release as its default,
   immutable release snapshots, and an explicit development edition.
 
+### Fixed
+
+- Documentation tables keep long environment-variable names readable, use wider
+  reference layouts, and scroll within the table on small screens. Shared style
+  fixes also reach retained release documentation.
+
 ## [0.12.0] - 2026-09-22
 
 ### Added
