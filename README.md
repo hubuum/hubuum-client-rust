@@ -1,5 +1,7 @@
 # Hubuum client library (Rust)
 
+[Documentation](https://hubuum.github.io/hubuum-client-rust/) · [Hubuum ecosystem](https://hubuum.github.io/)
+
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
 `hubuum_client` 0.12.0 targets Hubuum server v0.0.16. The pinned image,

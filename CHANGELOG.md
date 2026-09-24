@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- A searchable, versioned documentation site with shared Hubuum navigation,
+  automatic GitHub Pages publishing, the latest release as its default,
+  immutable release snapshots, and an explicit development edition.
+
 ## [0.12.0] - 2026-09-22
 
 ### Added
@@ -43,7 +49,6 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   ensure timestamp bounds and terminal-status selections agree. `Unknown`
   response fallbacks are rejected as filters except the server-supported
   `TaskOutputDiscoveryState::Unknown`.
-
 
 ## [0.11.2] - 2026-09-22
 

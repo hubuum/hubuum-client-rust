@@ -1,0 +1,49 @@
+[project]
+site_name = "Hubuum Rust client"
+site_description = "Typed asynchronous and blocking Rust clients for Hubuum."
+site_url = "https://hubuum.github.io/hubuum-client-rust/"
+repo_url = "https://github.com/hubuum/hubuum-client-rust"
+repo_name = "hubuum/hubuum-client-rust"
+edit_uri = "edit/main/docs/"
+docs_dir = "docs"
+nav = [
+  { "Overview" = [
+    { "Welcome" = "index.md" },
+    { "Installation and quick start" = "getting-started.md" },
+    { "Server compatibility" = "compatibility.md" },
+  ] },
+  { "Guides" = [
+    { "Client setup" = "client-setup.md" },
+    { "Queries and pagination" = "querying.md" },
+    { "Scoped authentication" = "scoped-auth.md" },
+    { "Credential approvals" = "credential-approvals.md" },
+    { "Principal settings" = "principal-settings.md" },
+    { "Schema evolution" = "schema-evolution.md" },
+    { "Task discovery" = "task-discovery.md" },
+    { "Exports and tasks" = "exports-and-tasks.md" },
+    { "Backups and computed fields" = "backups-and-computed-fields.md" },
+    { "Advanced usage" = "advanced.md" },
+  ] },
+  { "Reference" = [
+    { "Rust API" = "https://docs.rs/hubuum_client/{version}/hubuum_client/" },
+    { "Known contract gaps" = "known-gaps.md" },
+    { "Release notes" = "changelog.md" },
+  ] },
+  { "Contributing" = [
+    { "Integration tests" = "integration-tests.md" },
+    { "Code generation" = "code-generation.md" },
+    { "Historical v0.0.4 preparation" = "server-v0.0.4-preparation.md" },
+    { "Release process" = "releasing.md" },
+    { "Documentation website" = "documentation.md" },
+  ] },
+]
+
+[tool.hubuum_docs]
+versioned = true
+
+[tool.hubuum_docs.source_files]
+"README.md" = "getting-started.md"
+"COMPATIBILITY.md" = "compatibility.md"
+"CHANGELOG.md" = "changelog.md"
+"RELEASING.md" = "releasing.md"
+"openapi/known-gaps.md" = "known-gaps.md"
