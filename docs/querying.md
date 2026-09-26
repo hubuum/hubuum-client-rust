@@ -1,5 +1,8 @@
 # Querying Resources
 
+For a small inventory shared across Hubuum interfaces, use the
+[Atlas example walkthrough](example-dataset.md).
+
 This page assumes you already have an authenticated client. Examples use the blocking client; async callers use the same builders and await terminal operations.
 
 ## Creating and Fetching Resources
