@@ -586,6 +586,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#documentation-only-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Documentation-only CI
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1410,6 +1421,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#documentation-only-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Documentation-only CI
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1672,6 +1694,24 @@ and retained metadata for all six task kinds.</p>
 <p>Contributions are welcome. If you find issues or have suggestions for improvements, please open an issue or submit a pull request on GitHub.</p>
 <h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
 <p>Distributed under the MIT License. See LICENSE for more details.</p>
+<h2 id="documentation-only-ci">Documentation-only CI<a class="headerlink" href="#documentation-only-ci" title="Permanent link">&para;</a></h2>
+<p>Pull requests and pushes containing only prose or documentation-site inputs run
+Markdown lint and documentation validation without the application test/build
+matrix. Unknown files, source changes, executable examples, and declared
+test/build inputs retain application CI. Mixed changes run both kinds of checks.</p>
+<p><code>scripts/ci-policy.py</code> owns the allowlist and exceptions. Update its regression
+tests whenever a document becomes a build, test, or packaging input; direct
+literal Rust includes are checked automatically. Run the policy tests with
+<code>python3 scripts/test-ci-policy.py</code>.</p>
+<p>The individually required feature-matrix checks still report lightweight
+successful statuses for documentation-only changes, without checking out code,
+installing toolchains, or compiling. This keeps their existing branch-protection
+contexts available.</p>
+<p>The <code>Formatting, Lints, and Docs</code> check is the aggregate CI gate: classification failures,
+failed checks, and unexpectedly skipped required jobs fail it. Keep that check
+required in branch protection. Add the <code>ci:full</code> pull-request label or dispatch
+the CI workflow manually to request complete validation. Release validation
+and separately scheduled checks retain their existing coverage.</p>
 
 
 
