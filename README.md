@@ -300,6 +300,11 @@ tests whenever a document becomes a build, test, or packaging input; direct
 literal Rust includes are checked automatically. Run the policy tests with
 `python3 scripts/test-ci-policy.py`.
 
+The individually required feature-matrix checks still report lightweight
+successful statuses for documentation-only changes, without checking out code,
+installing toolchains, or compiling. This keeps their existing branch-protection
+contexts available.
+
 The `Formatting, Lints, and Docs` check is the aggregate CI gate: classification failures,
 failed checks, and unexpectedly skipped required jobs fail it. Keep that check
 required in branch protection. Add the `ci:full` pull-request label or dispatch

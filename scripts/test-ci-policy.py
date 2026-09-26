@@ -95,6 +95,19 @@ class ClassificationTests(unittest.TestCase):
                         self.assertTrue(policy.classify([relative])["code"])
 
 
+class WorkflowTests(unittest.TestCase):
+    def test_required_feature_checks_survive_docs_only_selection(self):
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+        features = workflow.split("  features:\n", 1)[1].split("\n  msrv:", 1)[0]
+        header, steps = features.split("    steps:\n", 1)
+        self.assertNotIn("    if:", header)
+        entries = re.split(r"(?m)^      - ", steps)[1:]
+        self.assertIn("needs.changes.outputs.code == 'false'", entries[0])
+        for step in entries[1:]:
+            with self.subTest(step=step.splitlines()[0]):
+                self.assertIn("if: needs.changes.outputs.code == 'true'", step)
+
+
 class DiffTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

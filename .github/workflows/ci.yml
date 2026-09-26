@@ -119,7 +119,7 @@ jobs:
         run: cargo test --workspace --all-features --locked
 
   features:
-    if: needs.changes.outputs.code == 'true'
+    # Expand every required feature check even for documentation-only changes.
     needs: changes
     name: Feature Set (${{ matrix.name }})
     runs-on: ubuntu-latest
@@ -138,16 +138,24 @@ jobs:
           - name: blocking-typed
             flags: --no-default-features --features blocking,typed-schemas
     steps:
+      - name: Documentation-only status
+        if: needs.changes.outputs.code == 'false'
+        run: echo 'Documentation-only change; feature compilation is not required.'
+
       - name: Checkout
+        if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Rust
+        if: needs.changes.outputs.code == 'true'
         uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
 
       - name: Cache Cargo Artifacts
+        if: needs.changes.outputs.code == 'true'
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Check Feature Set
+        if: needs.changes.outputs.code == 'true'
         run: cargo check -p hubuum_client --locked ${{ matrix.flags }}
 
   msrv:
