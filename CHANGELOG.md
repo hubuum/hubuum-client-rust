@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- Documentation uses the shared warm Hubuum theme from the ecosystem site's
+  unversioned stylesheet, including retained release editions. Future styling
+  updates no longer require changes or rebuilds in this repository.
+
 ### Added
 
 - A searchable, versioned documentation site with shared Hubuum navigation,
