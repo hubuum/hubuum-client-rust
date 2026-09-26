@@ -287,3 +287,26 @@ Contributions are welcome. If you find issues or have suggestions for improvemen
 ## License
 
 Distributed under the MIT License. See LICENSE for more details.
+
+## Documentation-only CI
+
+Pull requests and pushes containing only prose or documentation-site inputs run
+Markdown lint and documentation validation without the application test/build
+matrix. Unknown files, source changes, executable examples, and declared
+test/build inputs retain application CI. Mixed changes run both kinds of checks.
+
+`scripts/ci-policy.py` owns the allowlist and exceptions. Update its regression
+tests whenever a document becomes a build, test, or packaging input; direct
+literal Rust includes are checked automatically. Run the policy tests with
+`python3 scripts/test-ci-policy.py`.
+
+The individually required feature-matrix checks still report lightweight
+successful statuses for documentation-only changes, without checking out code,
+installing toolchains, or compiling. This keeps their existing branch-protection
+contexts available.
+
+The `Formatting, Lints, and Docs` check is the aggregate CI gate: classification failures,
+failed checks, and unexpectedly skipped required jobs fail it. Keep that check
+required in branch protection. Add the `ci:full` pull-request label or dispatch
+the CI workflow manually to request complete validation. Release validation
+and separately scheduled checks retain their existing coverage.

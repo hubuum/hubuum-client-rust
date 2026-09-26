@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches:
       - main
@@ -25,8 +26,44 @@ env:
   HUBUUM_TARGET_SERVER_IMAGE: ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e
 
 jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.policy.outputs.code }}
+      markdown: ${{ steps.policy.outputs.markdown }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Test CI selection and gate
+        run: python3 scripts/test-ci-policy.py
+      - name: Classify changes
+        id: policy
+        run: python3 scripts/ci-policy.py
+
+  markdown:
+    name: Markdown lint
+    needs: changes
+    if: needs.changes.outputs.markdown == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          config: '.markdownlint.json'
+          globs: '**/*.md'
+
   quality:
-    name: Formatting, Lints, and Docs
+    if: needs.changes.outputs.code == 'true'
+    needs: changes
+    name: Application quality
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -64,6 +101,8 @@ jobs:
         run: ./scripts/test-github-release.sh
 
   test:
+    if: needs.changes.outputs.code == 'true'
+    needs: changes
     name: Unit, Behavior, and Compile Tests
     runs-on: ubuntu-latest
     steps:
@@ -80,6 +119,8 @@ jobs:
         run: cargo test --workspace --all-features --locked
 
   features:
+    # Expand every required feature check even for documentation-only changes.
+    needs: changes
     name: Feature Set (${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
@@ -97,19 +138,29 @@ jobs:
           - name: blocking-typed
             flags: --no-default-features --features blocking,typed-schemas
     steps:
+      - name: Documentation-only status
+        if: needs.changes.outputs.code == 'false'
+        run: echo 'Documentation-only change; feature compilation is not required.'
+
       - name: Checkout
+        if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Rust
+        if: needs.changes.outputs.code == 'true'
         uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
 
       - name: Cache Cargo Artifacts
+        if: needs.changes.outputs.code == 'true'
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Check Feature Set
+        if: needs.changes.outputs.code == 'true'
         run: cargo check -p hubuum_client --locked ${{ matrix.flags }}
 
   msrv:
+    if: needs.changes.outputs.code == 'true'
+    needs: changes
     # Keep this check name stable because the main-branch ruleset requires it.
     name: MSRV
     runs-on: ubuntu-latest
@@ -129,6 +180,8 @@ jobs:
         run: cargo check --workspace --all-targets --all-features --locked
 
   server-contract:
+    if: needs.changes.outputs.code == 'true'
+    needs: changes
     # Keep this check name stable because the main-branch ruleset requires it.
     name: OpenAPI Drift
     runs-on: ubuntu-latest
@@ -140,6 +193,8 @@ jobs:
         run: python3 scripts/openapi-contract.py check
 
   supply-chain:
+    if: needs.changes.outputs.code == 'true'
+    needs: changes
     name: Supply Chain
     runs-on: ubuntu-latest
     steps:
@@ -159,9 +214,10 @@ jobs:
           rust-version: 1.88
 
   semver:
+    needs: changes
     name: Public API Compatibility
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || inputs.run_semver
+    if: needs.changes.outputs.code == 'true' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || inputs.run_semver)
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -174,9 +230,10 @@ jobs:
           feature-group: all-features
 
   integration:
+    if: needs.changes.outputs.code == 'true'
     name: Integration Tests (Pinned Server)
     runs-on: ubuntu-latest
-    needs: test
+    needs: [changes, test]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -199,3 +256,24 @@ jobs:
         env:
           HUBUUM_INTEGRATION_SERVER_IMAGE: ${{ env.HUBUUM_TARGET_SERVER_IMAGE }}
           HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS: "1"
+
+  ci-gate:
+    # Preserve the existing required check name while aggregating every CI job.
+    name: Formatting, Lints, and Docs
+    if: always()
+    needs: [changes, markdown, quality, test, features, msrv, server-contract, supply-chain, integration, semver]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Require every selected check to pass
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+          CODE_JOBS: >-
+            quality test features msrv server-contract supply-chain integration
+            ${{ (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || inputs.run_semver) && 'semver' || '' }}
+        run: python3 scripts/ci-policy.py --gate
