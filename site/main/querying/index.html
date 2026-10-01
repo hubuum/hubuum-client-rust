@@ -446,6 +446,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../example-dataset/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Atlas example inventory
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../getting-started/" class="md-nav__link">
         
   
@@ -1418,6 +1445,8 @@
 
 
 <h1 id="querying-resources">Querying Resources<a class="headerlink" href="#querying-resources" title="Permanent link">&para;</a></h1>
+<p>For a small inventory shared across Hubuum interfaces, use the
+<a href="../example-dataset/">Atlas example walkthrough</a>.</p>
 <p>This page assumes you already have an authenticated client. Examples use the blocking client; async callers use the same builders and await terminal operations.</p>
 <h2 id="creating-and-fetching-resources">Creating and Fetching Resources<a class="headerlink" href="#creating-and-fetching-resources" title="Permanent link">&para;</a></h2>
 <p>The fluent API works across create, update, and query flows. <code>create_checked()</code> tracks required fields in the builder type, so <code>.send()</code> is unavailable until all of them are supplied. Use <code>create_raw</code> and <code>update_raw</code> when values already exist as request structs.</p>
