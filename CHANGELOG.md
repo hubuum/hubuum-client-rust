@@ -8,6 +8,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Changed
 
+- Refresh direct and transitive Rust dependencies, including Tokio, thiserror,
+  and TLS support, while retaining the Rust 1.88 minimum supported version.
 - Documentation uses the shared warm Hubuum theme from the ecosystem site's
   unversioned stylesheet, including retained release editions. Future styling
   updates no longer require changes or rebuilds in this repository.
