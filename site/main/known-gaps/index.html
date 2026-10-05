@@ -79,7 +79,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#known-hubuum-server-v0016-openapi-gaps" class="md-skip">
+        <a href="#known-hubuum-server-v0017-openapi-gaps" class="md-skip">
           Skip to content
         </a>
       
@@ -1038,6 +1038,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#v0017-notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.17 notifications
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1349,6 +1360,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#v0017-notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.17 notifications
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1378,8 +1400,8 @@
   
 
 
-<h1 id="known-hubuum-server-v0016-openapi-gaps">Known Hubuum server v0.0.16 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0016-openapi-gaps" title="Permanent link">&para;</a></h1>
-<p>The pinned client contract records these limitations in the server v0.0.16
+<h1 id="known-hubuum-server-v0017-openapi-gaps">Known Hubuum server v0.0.17 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0017-openapi-gaps" title="Permanent link">&para;</a></h1>
+<p>The pinned client contract records these limitations in the server v0.0.17
 specification explicitly:</p>
 <ul>
 <li><code>GET /api/v1/search/stream</code> declares <code>text/event-stream</code> but does not
@@ -1411,6 +1433,8 @@ Rust wire models:</p>
   null when absent.</li>
 <li><code>TaskResponse.unattempted_items</code> defaults to zero for older responses that
   predate cancellation accounting.</li>
+<li><code>EventDelivery.purpose</code> defaults to <code>Event</code> for older responses. Import sink
+  requests always serialize <code>config</code>, although the server can default it.</li>
 <li><code>UpdateUser.password</code> is intentionally absent from <code>UserPatch</code>; the async and
   blocking clients provide dedicated <code>set_password</code> helpers. Future unmapped
   properties can still be reached through the constrained <code>raw()</code> extension
@@ -1433,11 +1457,59 @@ Rust wire models:</p>
   callers must narrow queries or reduce traversal depth and template workloads.</li>
 </ul>
 <h2 id="credential-approval-coverage">Credential approval coverage<a class="headerlink" href="#credential-approval-coverage" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.16 contract includes both approval endpoints and the approval
+<p>The pinned v0.0.17 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return <code>reauthentication_required</code>; applications
 must use the <a href="../credential-approvals/">approval workflow</a>.</p>
+<h2 id="v0017-notifications">v0.0.17 notifications<a class="headerlink" href="#v0017-notifications" title="Permanent link">&para;</a></h2>
+<p>All seven newly declared operations are available through authenticated <code>raw()</code>
+requests in both client modes; this release has no dedicated typed route helpers:</p>
+<table>
+<thead>
+<tr>
+<th>Operations</th>
+<th>Route</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET, POST</td>
+<td><code>/api/v1/system-event-subscriptions</code></td>
+</tr>
+<tr>
+<td>GET, PATCH, DELETE</td>
+<td><code>/api/v1/system-event-subscriptions/{subscription_id}</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/event-sinks/{sink_id}/preview</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/event-sinks/{sink_id}/test</code></td>
+</tr>
+</tbody>
+</table>
+<p>System subscriptions reuse <code>NewEventSubscription</code> and <code>UpdateEventSubscription</code>
+request models. Decode their responses as application-owned models or
+<code>serde_json::Value</code>: <code>EventSubscription</code> is collection-scoped and requires a
+collection ID. Preview and test requests take <code>subscription_id</code> and the source
+<code>event_id</code> UUID string. Preview returns a sink kind and a rendered JSON payload;
+test returns an <code>EventDelivery</code> with purpose <code>Test</code>. These administrator-only
+operations can bypass disabled flags and subscription filters to test a real
+source event. Protect rendered payloads as potentially sensitive data.</p>
+<p>Existing typed sink CRUD and imports now preserve <code>delivery_policy</code>; a policy
+with <code>min_interval_ms</code> limits admission pacing, and an empty policy clears it.
+The server retains provider cooldowns when pacing changes. Webhook payload,
+secret-backed URL, authentication, acknowledgement, and retry settings remain in
+the existing JSON <code>config</code> model. <code>EventSubscriptionFilter.task_kinds</code> narrows
+task lifecycle notifications. Delivery responses preserve <code>purpose</code> and
+<code>deferred_reason</code>; debug output redacts the latter. System subscription health
+uses <code>collection_id: None</code>.</p>
+<p>The combined live suite covers all seven routes through both async and blocking
+public clients, including typed pacing, filter serialization, nullable health,
+and test-delivery decoding.</p>
 
 
 

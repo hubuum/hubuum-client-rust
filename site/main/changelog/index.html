@@ -1041,8 +1041,41 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0130-2026-10-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.13.0] - 2026-10-05
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.13.0] - 2026-10-05">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compatibility
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#breaking-changes-and-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Breaking changes and migration
+      </span>
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
@@ -1117,7 +1150,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#breaking-changes-and-migration" class="md-nav__link">
+  <a href="#breaking-changes-and-migration_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Breaking changes and migration
@@ -2443,8 +2476,41 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0130-2026-10-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.13.0] - 2026-10-05
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.13.0] - 2026-10-05">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compatibility
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#breaking-changes-and-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Breaking changes and migration
+      </span>
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
@@ -2519,7 +2585,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#breaking-changes-and-migration" class="md-nav__link">
+  <a href="#breaking-changes-and-migration_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Breaking changes and migration
@@ -3618,6 +3684,43 @@
 <p>All notable changes to this project will be documented in this file.</p>
 <p>The format is based on Keep a Changelog, and this project aims to follow Semantic Versioning.</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="0130-2026-10-05">[0.13.0] - 2026-10-05<a class="headerlink" href="#0130-2026-10-05" title="Permanent link">&para;</a></h2>
+<h3 id="compatibility">Compatibility<a class="headerlink" href="#compatibility" title="Permanent link">&para;</a></h3>
+<ul>
+<li>This release explicitly targets Hubuum server v0.0.17, with its 227-operation,
+  336-schema OpenAPI contract and immutable multi-platform image
+  <code>sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302</code>.
+  Rust 1.88 and public feature availability remain unchanged. The canonical
+  pinned run passed 93 library and 33 consumer tests plus all four
+  restore/recovery variants; 87 wire-model mappings are reconciled.</li>
+<li>Accept backup formats 6 and 7; <code>CURRENT_BACKUP_VERSION</code> is now 7. The server
+  produces format 7 and accepts format 6 with legacy notification defaults.</li>
+<li>Preserve event sink delivery policies in CRUD and imports, task-kind
+  subscription filters, and delivery purpose and deferral details. Delivery
+  intervals are validated from 1 to 86,400,000 milliseconds. System-subscription
+  CRUD and notification preview/test are available through <code>raw()</code>; see
+  <a href="../known-gaps/#v0017-notifications">the documented coverage</a>.</li>
+<li>Refresh the lockfile to Mio 1.2.4 after checking all workspace dependencies.
+  Verify all action pins against upstream releases and maintained branches;
+  the existing pins are current, including the Node 24 audit action revision.</li>
+</ul>
+<h3 id="breaking-changes-and-migration">Breaking changes and migration<a class="headerlink" href="#breaking-changes-and-migration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Breaking Rust API:</strong> <code>EventSubscriptionDeliveryHealth.collection_id</code> is now
+  <code>Option&lt;CollectionId&gt;</code>. Handle <code>None</code> for system subscriptions and wrap
+  collection IDs in <code>Some</code> when constructing this response type.</li>
+<li><strong>Breaking Rust API:</strong> <code>NewEventSink</code>, <code>UpdateEventSink</code>, and
+  <code>ImportEventSinkInput</code> gain <code>delivery_policy</code>; <code>EventSubscriptionFilter</code> gains
+  <code>task_kinds</code>. Add <code>None</code> to exhaustive literals, use <code>..Default::default()</code>
+  where available, and add <code>..</code> to exhaustive destructuring patterns.</li>
+<li><strong>Server upgrade:</strong> stop all API, worker, and restore-executor writers, take a
+  PostgreSQL snapshot, and apply the webhook-notification migration before
+  starting matching v0.0.17 binaries. Binary-only rollback is unsupported;
+  recovery requires that snapshot and matching v0.0.16 binaries. Older servers
+  cannot restore new format-7 backups. Optional Treetop installations must
+  upgrade Treetop and their policy bundles to protocol 0.1; see the
+  <a href="https://github.com/hubuum/hubuum/releases/tag/v0.0.17">server release notes</a>.</li>
+</ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Refresh direct and transitive Rust dependencies, including Tokio, thiserror,
@@ -3666,7 +3769,7 @@
   restore/recovery variants. Features, Rust 1.88, and locked dependency versions
   remain unchanged after checking all compatible dependency updates.</li>
 </ul>
-<h3 id="breaking-changes-and-migration">Breaking changes and migration<a class="headerlink" href="#breaking-changes-and-migration" title="Permanent link">&para;</a></h3>
+<h3 id="breaking-changes-and-migration_1">Breaking changes and migration<a class="headerlink" href="#breaking-changes-and-migration_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Breaking Rust API:</strong> <code>ImportTaskDetails</code>, <code>ExportTaskDetails</code>, and
   <code>BackupTaskDetails</code> gain optional <code>retained</code> fields; <code>TaskDetails</code> gains

@@ -586,6 +586,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0017-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.17 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0016-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1372,6 +1383,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0017-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.17 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0016-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1463,6 +1485,12 @@ coverage evolves.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.13.0</td>
+<td>0.0.17</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302</code></td>
+<td>Declared target; 227-operation contract and 87 wire-model mappings. Canonical run passed with approval enforcement: 93 library tests, 33 consumer tests including both notification modes, and all four full restore/recovery variants (2026-10-05).</td>
+</tr>
 <tr>
 <td>0.12.0</td>
 <td>0.0.16</td>
@@ -1644,6 +1672,57 @@ released artifact and reviewed contract as described below.</p>
 jobs separately compare the contract and run the integration suites against the
 server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.</p>
+<h2 id="v0017-target">v0.0.17 target<a class="headerlink" href="#v0017-target" title="Permanent link">&para;</a></h2>
+<p>Client 0.13.0 targets server v0.0.17. The reviewed contract grows from 220 to
+227 operations and from 330 to 336 schemas. Most other snapshot changes reorder
+nullable schema alternatives after the server's Utoipa update; they do not alter
+wire behavior. Rust 1.88 and the client feature sets are unchanged.</p>
+<p>Event sink CRUD and import models preserve delivery policy, subscription filters
+include task kinds, and delivery responses preserve purpose and deferral details.
+Delivery health accepts an absent or null collection ID for system subscriptions.
+The seven new system-subscription CRUD and notification preview/test operations
+use the existing authenticated <code>raw()</code> extension point. Their routes and
+limitations are recorded in <a href="../known-gaps/#v0017-notifications">known gaps</a>.</p>
+<p>This is a breaking Rust release: handle <code>None</code> in
+<code>EventSubscriptionDeliveryHealth.collection_id</code>, add <code>delivery_policy: None</code> to
+exhaustive sink request/import literals and <code>task_kinds: None</code> to exhaustive
+subscription filter literals. Default-based construction remains available for
+sink requests and filters; use <code>..</code> in exhaustive destructuring patterns.</p>
+<p>The server emits backup format 7 and still accepts format 6 with legacy
+notification defaults. The client recognizes both formats and rejects older or
+unknown formats through <code>has_supported_version()</code>. Existing format-6 schema
+sections and format-7 notification data remain intact in the generic backup
+section maps. See the <a href="../backups-and-computed-fields/">backup guide</a>.</p>
+<p>Upgrading from v0.0.16 requires a maintenance window. Stop all writers, including
+API, worker, and restore-executor processes; take a PostgreSQL snapshot; then
+apply the webhook-notification migration and deploy matching v0.0.17 binaries.
+Binary-only rollback is unsupported. Recovery requires that snapshot with the
+matching v0.0.16 binaries and loses writes made after the snapshot. Older servers
+cannot restore format 7. Optional Treetop backends also require protocol 0.1 and
+updated policy bundles. See the
+<a href="https://github.com/hubuum/hubuum/releases/tag/v0.0.17">server release notes</a>.</p>
+<p>The pinned multi-platform index is
+<code>sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302</code>.
+Its Linux amd64 manifest is
+<code>sha256:a7082cb13a94d2c0f8934ade79f2117e39b66c1725b4ee9696e49c2895bcb672</code>.
+The image's version and source labels identify v0.0.17 and tag commit
+<code>4a03d56b27f35af62175a80d09d36d0d41c4a663</code>.</p>
+<p>The canonical combined command passed on 2026-10-05 against that Linux amd64
+image with <code>HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1</code>: all 93 library
+integration tests, 33 ordinary consumer tests, and all four async/blocking
+restore/recovery variants with history included and omitted. The consumer tests
+covered all seven new notification routes in both modes, nullable system health,
+delivery-policy round trips and clearing, task-kind filter serialization,
+rendered previews, and real test-delivery decoding. Format-7 backups staged and
+restored successfully; recovery retained resource and schema revisions and
+validated subsequent backups.</p>
+<p>All workspace tests, feature combinations, Rust 1.88, lint, documentation,
+generator, pinned contract, and dependency audit/policy checks passed. Dependency
+resolution is current under Rust 1.88 and upstream constraints; <code>crypto-common</code>
+0.1.7 still pins <code>generic-array</code> to 0.14.7. The normal public API check accepts
+the 0.13.0 version; a stricter comparison confirms the documented added-field
+breaks requiring this pre-1.0 major bump. All GitHub Action pins and the
+PostgreSQL 18 fixture digest were verified current.</p>
 <h2 id="v0016-target">v0.0.16 target<a class="headerlink" href="#v0016-target" title="Permanent link">&para;</a></h2>
 <p>Clients 0.11.2 and 0.12.0 target server v0.0.16. The pinned contract grows from 218 to
 220 operations and from 315 to 330 schemas. Both added approval routes already

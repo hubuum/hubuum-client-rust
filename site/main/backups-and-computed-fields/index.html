@@ -1430,10 +1430,17 @@ blocking equivalents.</p>
 <h2 id="full-system-backups">Full-System Backups<a class="headerlink" href="#full-system-backups" title="Permanent link">&para;</a></h2>
 <p>Backups are administrator-only task operations. <code>run()</code> submits the task, waits
 for a successful terminal state, and decodes the resulting versioned backup
-document. Hubuum v0.0.16 retains backup format 6; format 5 and earlier artifacts must be
-restored with their matching older server before database migration and creation
-of a new format 6 backup. No artifact converter is provided. Preserve the server-assigned <code>created_at</code>
+document. Hubuum v0.0.17 produces backup format 7 and accepts format 6 with
+legacy notification defaults. <code>CURRENT_BACKUP_VERSION</code> is 7, and
+<code>has_supported_version()</code> accepts both 6 and 7. Older servers cannot restore
+format 7. Format 5 and earlier artifacts must be restored with their matching
+older server before database migration and creation of a new backup. No artifact
+converter is provided. Preserve the server-assigned <code>created_at</code>
 instant when saving or staging a backup; the client serializes it as RFC 3339 UTC.</p>
+<p>Format 7 adds notification configuration and history, while restore resets
+transient sink scheduling. Upgrading from v0.0.16 requires stopping all writers
+and taking a PostgreSQL snapshot before migration; rollback requires that
+snapshot and matching v0.0.16 binaries. See <a href="../compatibility/#v0017-target">compatibility</a>.</p>
 <p>Format 6 adds schema revisions, class schema state, object validation evidence,
 and schema history. Both history-preserving and history-free restores retain
 the active policy and resource revisions. Backup capture enforces the configured
@@ -1451,7 +1458,7 @@ Deploy consistent limits across the API, workers, and administrator tools.</p>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="fm">assert!</span><span class="p">(</span><span class="n">document</span><span class="p">.</span><span class="n">has_supported_version</span><span class="p">());</span>
 </code></pre></div>
 <p>Use <code>submit()</code>, <code>get()</code>, and <code>output()</code> separately when an application needs to
-persist task IDs or control polling. Format 6 backups contain privileged integration configuration but exclude
+persist task IDs or control polling. Formats 6 and 7 contain privileged integration configuration but exclude
 password hashes, bearer tokens, and token scopes. Their debug output is redacted,
 but applications
 must still protect serialized documents at rest and in transit. Large documents
@@ -1461,7 +1468,7 @@ may also require increasing the client's <code>max_response_body_bytes</code> se
 <code>BackupDocument</code> and returns a one-time capability. Confirmation requires that
 capability, the staged SHA-256, and the server-defined destructive confirmation
 phrase. <code>RestoreConfirmRequest::new</code> supplies the exact phrase.
-On v0.0.16, also collect the acting human's current password and obtain a fresh
+On v0.0.16 and newer, also collect the acting human's current password and obtain a fresh
 operation-bound <a href="../credential-approvals/">approval</a>. The password and restore
 capability are separate requirements.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">use</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">time</span><span class="p">::{</span><span class="n">Duration</span><span class="p">,</span><span class="w"> </span><span class="n">Instant</span><span class="p">};</span>
@@ -1503,7 +1510,7 @@ capability are separate requirements.</p>
 <a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="w">    </span><span class="n">tokio</span><span class="p">::</span><span class="n">time</span><span class="p">::</span><span class="n">sleep</span><span class="p">(</span><span class="n">Duration</span><span class="p">::</span><span class="n">from_millis</span><span class="p">(</span><span class="mi">250</span><span class="p">)).</span><span class="k">await</span><span class="p">;</span>
 <a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a><span class="p">}</span>
 </code></pre></div>
-<p>Hubuum v0.0.16 returns <code>202 Accepted</code> from confirmation. Deploy the matching
+<p>Hubuum v0.0.16 and newer return <code>202 Accepted</code> from confirmation. Deploy the matching
 <code>hubuum-admin --restore-executor</code> before allowing web restores. Upgrade server,
 administrator, and template-worker binaries together, including any separately
 deployed restore executor. Drain old workers and apply migrations before starting
