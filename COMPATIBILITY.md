@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.13.0 | 0.0.17 | `ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302` | Declared target; 227-operation contract and 87 wire-model mappings. Canonical run passed with approval enforcement: 93 library tests, 33 consumer tests including both notification modes, and all four full restore/recovery variants (2026-10-05). |
 | 0.12.0 | 0.0.16 | `ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e` | Declared target; 220-operation contract and 79 wire-model mappings. Complete canonical run passed with approval enforcement required: 93 library tests, all downstream suites with typed discovery and retained details for all six task kinds, real cursor pagination, and four full restore/recovery variants (2026-09-22). |
 | 0.11.2 | 0.0.16 | `ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e` | Declared target; 220-operation contract and 73 wire-model mappings. Complete canonical run passed with approval enforcement required: 93 library tests, all downstream suites including async/blocking task discovery, and four full restore/recovery variants (2026-09-22). |
 | 0.11.1 | 0.0.15 | `ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821` | Declared target; unchanged 218-operation contract, optional credential approvals, and refreshed Rust 1.88-compatible dependencies. Complete canonical run passed: 93 library integration tests, all downstream consumer suites, and four async/blocking full restore/recovery variants (2026-09-22). |
@@ -79,6 +80,66 @@ Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
+
+## v0.0.17 target
+
+Client 0.13.0 targets server v0.0.17. The reviewed contract grows from 220 to
+227 operations and from 330 to 336 schemas. Most other snapshot changes reorder
+nullable schema alternatives after the server's Utoipa update; they do not alter
+wire behavior. Rust 1.88 and the client feature sets are unchanged.
+
+Event sink CRUD and import models preserve delivery policy, subscription filters
+include task kinds, and delivery responses preserve purpose and deferral details.
+Delivery health accepts an absent or null collection ID for system subscriptions.
+The seven new system-subscription CRUD and notification preview/test operations
+use the existing authenticated `raw()` extension point. Their routes and
+limitations are recorded in [known gaps](openapi/known-gaps.md#v0017-notifications).
+
+This is a breaking Rust release: handle `None` in
+`EventSubscriptionDeliveryHealth.collection_id`, add `delivery_policy: None` to
+exhaustive sink request/import literals and `task_kinds: None` to exhaustive
+subscription filter literals. Default-based construction remains available for
+sink requests and filters; use `..` in exhaustive destructuring patterns.
+
+The server emits backup format 7 and still accepts format 6 with legacy
+notification defaults. The client recognizes both formats and rejects older or
+unknown formats through `has_supported_version()`. Existing format-6 schema
+sections and format-7 notification data remain intact in the generic backup
+section maps. See the [backup guide](docs/backups-and-computed-fields.md).
+
+Upgrading from v0.0.16 requires a maintenance window. Stop all writers, including
+API, worker, and restore-executor processes; take a PostgreSQL snapshot; then
+apply the webhook-notification migration and deploy matching v0.0.17 binaries.
+Binary-only rollback is unsupported. Recovery requires that snapshot with the
+matching v0.0.16 binaries and loses writes made after the snapshot. Older servers
+cannot restore format 7. Optional Treetop backends also require protocol 0.1 and
+updated policy bundles. See the
+[server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.17).
+
+The pinned multi-platform index is
+`sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302`.
+Its Linux amd64 manifest is
+`sha256:a7082cb13a94d2c0f8934ade79f2117e39b66c1725b4ee9696e49c2895bcb672`.
+The image's version and source labels identify v0.0.17 and tag commit
+`4a03d56b27f35af62175a80d09d36d0d41c4a663`.
+
+The canonical combined command passed on 2026-10-05 against that Linux amd64
+image with `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`: all 93 library
+integration tests, 33 ordinary consumer tests, and all four async/blocking
+restore/recovery variants with history included and omitted. The consumer tests
+covered all seven new notification routes in both modes, nullable system health,
+delivery-policy round trips and clearing, task-kind filter serialization,
+rendered previews, and real test-delivery decoding. Format-7 backups staged and
+restored successfully; recovery retained resource and schema revisions and
+validated subsequent backups.
+
+All workspace tests, feature combinations, Rust 1.88, lint, documentation,
+generator, pinned contract, and dependency audit/policy checks passed. Dependency
+resolution is current under Rust 1.88 and upstream constraints; `crypto-common`
+0.1.7 still pins `generic-array` to 0.14.7. The normal public API check accepts
+the 0.13.0 version; a stricter comparison confirms the documented added-field
+breaks requiring this pre-1.0 major bump. All GitHub Action pins and the
+PostgreSQL 18 fixture digest were verified current.
 
 ## v0.0.16 target
 

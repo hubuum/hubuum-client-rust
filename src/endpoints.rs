@@ -134,6 +134,10 @@ pub enum Endpoint {
     Events,
     EventSinks,
     EventSinksById,
+    EventSinkPreview,
+    EventSinkTest,
+    SystemEventSubscriptions,
+    SystemEventSubscriptionsById,
     EventDeliveries,
     EventDeliveryHealth,
     EventDeliveriesById,
@@ -363,6 +367,12 @@ impl Endpoint {
             Endpoint::Events => "/api/v1/events",
             Endpoint::EventSinks => "/api/v1/event-sinks",
             Endpoint::EventSinksById => "/api/v1/event-sinks/{sink_id}",
+            Endpoint::EventSinkPreview => "/api/v1/event-sinks/{sink_id}/preview",
+            Endpoint::EventSinkTest => "/api/v1/event-sinks/{sink_id}/test",
+            Endpoint::SystemEventSubscriptions => "/api/v1/system-event-subscriptions",
+            Endpoint::SystemEventSubscriptionsById => {
+                "/api/v1/system-event-subscriptions/{subscription_id}"
+            }
             Endpoint::EventDeliveries => "/api/v1/event-deliveries",
             Endpoint::EventDeliveryHealth => "/api/v1/event-deliveries/health",
             Endpoint::EventDeliveriesById => "/api/v1/event-deliveries/{delivery_id}",
@@ -423,7 +433,7 @@ mod test {
             .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(client_paths, spec_paths);
-        assert_eq!(contract["operation_count"], 220);
+        assert_eq!(contract["operation_count"], 227);
     }
     use std::str::FromStr;
     use yare::parameterized;

@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.16",
+  "api_version": "0.0.17",
   "openapi": "3.1.0",
-  "operation_count": 220,
+  "operation_count": 227,
   "operations": [
     {
       "method": "POST",
@@ -5911,7 +5911,8 @@
         "EventSubscription",
         "EventSubscriptionFilter",
         "PrincipalID",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskKind"
       ],
       "response_schemas": {
         "200": {
@@ -5974,7 +5975,8 @@
         "EventSinkID",
         "EventSubscriptionFilter",
         "NewEventSubscription",
-        "PrincipalID"
+        "PrincipalID",
+        "TaskKind"
       ],
       "request_schemas": {
         "application/json": {
@@ -5988,7 +5990,8 @@
         "EventSubscription",
         "EventSubscriptionFilter",
         "PrincipalID",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskKind"
       ],
       "response_schemas": {
         "201": {
@@ -6119,7 +6122,8 @@
         "EventSubscription",
         "EventSubscriptionFilter",
         "PrincipalID",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskKind"
       ],
       "response_schemas": {
         "200": {
@@ -6181,6 +6185,7 @@
         "EventSinkID",
         "EventSubscriptionFilter",
         "PrincipalID",
+        "TaskKind",
         "UpdateEventSubscription"
       ],
       "request_schemas": {
@@ -6195,7 +6200,8 @@
         "EventSubscription",
         "EventSubscriptionFilter",
         "PrincipalID",
-        "ResourceRevision"
+        "ResourceRevision",
+        "TaskKind"
       ],
       "response_schemas": {
         "200": {
@@ -7278,6 +7284,7 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "EventDeliveryPurpose",
         "EventDeliveryResponse"
       ],
       "response_schemas": {
@@ -7390,6 +7397,7 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "EventDeliveryPurpose",
         "EventDeliveryResponse"
       ],
       "response_schemas": {
@@ -7446,6 +7454,7 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "EventDeliveryPurpose",
         "EventDeliveryResponse",
         "EventDeliveryUpdateResponse"
       ],
@@ -7503,6 +7512,7 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "EventDeliveryPurpose",
         "EventDeliveryResponse",
         "EventDeliveryUpdateResponse"
       ],
@@ -7571,6 +7581,7 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "EventDeliveryPolicy",
         "EventSink",
         "EventSinkKind",
         "ResourceRevision"
@@ -7629,6 +7640,7 @@
         "application/json"
       ],
       "request_schema_refs": [
+        "EventDeliveryPolicy",
         "EventSinkKind",
         "NewEventSink"
       ],
@@ -7639,6 +7651,7 @@
       },
       "response_schema_refs": [
         "ApiErrorResponse",
+        "EventDeliveryPolicy",
         "EventSink",
         "EventSinkKind",
         "ResourceRevision"
@@ -7757,6 +7770,7 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "EventDeliveryPolicy",
         "EventSink",
         "EventSinkKind",
         "ResourceRevision"
@@ -7815,6 +7829,7 @@
         "application/json"
       ],
       "request_schema_refs": [
+        "EventDeliveryPolicy",
         "EventSinkKind",
         "UpdateEventSink"
       ],
@@ -7825,6 +7840,7 @@
       },
       "response_schema_refs": [
         "ApiErrorResponse",
+        "EventDeliveryPolicy",
         "EventSink",
         "EventSinkKind",
         "ResourceRevision"
@@ -7882,6 +7898,138 @@
           "application/json"
         ],
         "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1EventSinksBySinkIdPreview",
+      "parameters": [
+        "path:sink_id"
+      ],
+      "path": "/api/v1/event-sinks/{sink_id}/preview",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "EventNotificationRequest",
+        "EventSubscriptionID"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/EventNotificationRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "EventNotificationPreview",
+        "EventSinkKind"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/EventNotificationPreview"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1EventSinksBySinkIdTest",
+      "parameters": [
+        "path:sink_id"
+      ],
+      "path": "/api/v1/event-sinks/{sink_id}/test",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "EventNotificationRequest",
+        "EventSubscriptionID"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/EventNotificationRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "EventDeliveryPurpose",
+        "EventDeliveryResponse"
+      ],
+      "response_schemas": {
+        "202": {
+          "application/json": {
+            "$ref": "#/components/schemas/EventDeliveryResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
       },
       "security": [
         {
@@ -8953,6 +9101,7 @@
         "ComputedResultType",
         "CredentialApprovalRequest",
         "CredentialOperation",
+        "EventDeliveryPolicy",
         "EventSinkKey",
         "EventSinkKind",
         "ExportContentType",
@@ -12004,6 +12153,7 @@
         "ClassKey",
         "CollectionKey",
         "ComputedResultType",
+        "EventDeliveryPolicy",
         "EventSinkKey",
         "EventSinkKind",
         "ExportContentType",
@@ -13913,6 +14063,368 @@
     },
     {
       "method": "GET",
+      "operation_id": "getApiV1SystemEventSubscriptions",
+      "parameters": [],
+      "path": "/api/v1/system-event-subscriptions",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CollectionID",
+        "EventEntityId",
+        "EventSubscriptionFilter",
+        "PrincipalID",
+        "ResourceRevision",
+        "SystemEventSubscription",
+        "TaskKind"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "items": {
+              "$ref": "#/components/schemas/SystemEventSubscription"
+            },
+            "type": "array"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1SystemEventSubscriptions",
+      "parameters": [],
+      "path": "/api/v1/system-event-subscriptions",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "CollectionID",
+        "EventEntityId",
+        "EventSinkID",
+        "EventSubscriptionFilter",
+        "NewEventSubscription",
+        "PrincipalID",
+        "TaskKind"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/NewEventSubscription"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CollectionID",
+        "EventEntityId",
+        "EventSubscriptionFilter",
+        "PrincipalID",
+        "ResourceRevision",
+        "SystemEventSubscription",
+        "TaskKind"
+      ],
+      "response_schemas": {
+        "201": {
+          "application/json": {
+            "$ref": "#/components/schemas/SystemEventSubscription"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1SystemEventSubscriptionsBySubscriptionId",
+      "parameters": [
+        "header:If-Match",
+        "path:subscription_id"
+      ],
+      "path": "/api/v1/system-event-subscriptions/{subscription_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "204": {},
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {}
+      },
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1SystemEventSubscriptionsBySubscriptionId",
+      "parameters": [
+        "path:subscription_id"
+      ],
+      "path": "/api/v1/system-event-subscriptions/{subscription_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CollectionID",
+        "EventEntityId",
+        "EventSubscriptionFilter",
+        "PrincipalID",
+        "ResourceRevision",
+        "SystemEventSubscription",
+        "TaskKind"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SystemEventSubscription"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1SystemEventSubscriptionsBySubscriptionId",
+      "parameters": [
+        "header:If-Match",
+        "path:subscription_id"
+      ],
+      "path": "/api/v1/system-event-subscriptions/{subscription_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "CollectionID",
+        "EventEntityId",
+        "EventSinkID",
+        "EventSubscriptionFilter",
+        "PrincipalID",
+        "TaskKind",
+        "UpdateEventSubscription"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/UpdateEventSubscription"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CollectionID",
+        "EventEntityId",
+        "EventSubscriptionFilter",
+        "PrincipalID",
+        "ResourceRevision",
+        "SystemEventSubscription",
+        "TaskKind"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SystemEventSubscription"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {}
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
       "operation_id": "getApiV1Tasks",
       "parameters": [
         "query:backup_include_history",
@@ -14369,8 +14881,8 @@
       "security": []
     }
   ],
-  "path_count": 151,
-  "schema_count": 330,
+  "path_count": 155,
+  "schema_count": 336,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -14422,6 +14934,8 @@
     "EffectiveGroupPermission",
     "EventConfig",
     "EventDeliveryHealthResponse",
+    "EventDeliveryPolicy",
+    "EventDeliveryPurpose",
     "EventDeliveryQueueHealth",
     "EventDeliveryResponse",
     "EventDeliveryStatus",
@@ -14429,6 +14943,8 @@
     "EventDeliveryUpdateResponse",
     "EventEntityId",
     "EventFanoutHealth",
+    "EventNotificationPreview",
+    "EventNotificationRequest",
     "EventResponse",
     "EventSink",
     "EventSinkDeliveryHealth",
@@ -14438,6 +14954,7 @@
     "EventSubscription",
     "EventSubscriptionDeliveryHealth",
     "EventSubscriptionFilter",
+    "EventSubscriptionID",
     "EventWorkerHealth",
     "EventWorkerWakeupStats",
     "ExportConfig",
@@ -14658,6 +15175,7 @@
     "StructuredSearchSortDirection",
     "StructuredSearchStartedEvent",
     "StructuredSearchTarget",
+    "SystemEventSubscription",
     "TaskCancelRequest",
     "TaskConfig",
     "TaskDetails",
@@ -14875,10 +15393,10 @@
         "history": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/BackupHistory"
             },
             {
-              "$ref": "#/components/schemas/BackupHistory"
+              "type": "null"
             }
           ]
         },
@@ -14980,10 +15498,10 @@
         "retained": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RetainedBackupDetails"
             },
             {
-              "$ref": "#/components/schemas/RetainedBackupDetails"
+              "type": "null"
             }
           ]
         },
@@ -15050,10 +15568,10 @@
         "collection_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/CollectionKey"
             },
             {
-              "$ref": "#/components/schemas/CollectionKey"
+              "type": "null"
             }
           ]
         },
@@ -15480,10 +15998,10 @@
         "result_type": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ComputedResultType"
             },
             {
-              "$ref": "#/components/schemas/ComputedResultType"
+              "type": "null"
             }
           ]
         }
@@ -15627,10 +16145,10 @@
         "error": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ComputedFieldErrorResponse"
             },
             {
-              "$ref": "#/components/schemas/ComputedFieldErrorResponse"
+              "type": "null"
             }
           ]
         },
@@ -15646,10 +16164,10 @@
         "personal": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ComputedScopeResponse"
             },
             {
-              "$ref": "#/components/schemas/ComputedScopeResponse"
+              "type": "null"
             }
           ]
         },
@@ -15773,20 +16291,20 @@
         "restore_job_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreJobID"
             },
             {
-              "$ref": "#/components/schemas/RestoreJobID"
+              "type": "null"
             }
           ]
         },
         "target_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/PrincipalID"
             },
             {
-              "$ref": "#/components/schemas/PrincipalID"
+              "type": "null"
             }
           ]
         },
@@ -16019,10 +16537,10 @@
         "scope": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TokenScopeDetails"
             },
             {
-              "$ref": "#/components/schemas/TokenScopeDetails"
+              "type": "null"
             }
           ]
         }
@@ -16374,6 +16892,27 @@
       ],
       "type": "object"
     },
+    "EventDeliveryPolicy": {
+      "properties": {
+        "min_interval_ms": {
+          "format": "int64",
+          "maximum": 86400000,
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "EventDeliveryPurpose": {
+      "enum": [
+        "event",
+        "test"
+      ],
+      "type": "string"
+    },
     "EventDeliveryQueueHealth": {
       "properties": {
         "counts": {
@@ -16411,6 +16950,12 @@
           "format": "date-time",
           "type": "string"
         },
+        "deferred_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "event_id": {
           "format": "int64",
           "type": "integer"
@@ -16436,6 +16981,9 @@
           "format": "date-time",
           "type": "string"
         },
+        "purpose": {
+          "$ref": "#/components/schemas/EventDeliveryPurpose"
+        },
         "status": {
           "type": "string"
         },
@@ -16454,6 +17002,7 @@
         "event_id",
         "id",
         "next_attempt_at",
+        "purpose",
         "status",
         "subscription_id",
         "updated_at"
@@ -16561,6 +17110,36 @@
       ],
       "type": "object"
     },
+    "EventNotificationPreview": {
+      "properties": {
+        "payload": {},
+        "sink_kind": {
+          "$ref": "#/components/schemas/EventSinkKind"
+        }
+      },
+      "required": [
+        "payload",
+        "sink_kind"
+      ],
+      "type": "object"
+    },
+    "EventNotificationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "subscription_id": {
+          "$ref": "#/components/schemas/EventSubscriptionID"
+        }
+      },
+      "required": [
+        "event_id",
+        "subscription_id"
+      ],
+      "type": "object"
+    },
     "EventResponse": {
       "properties": {
         "action": {
@@ -16580,10 +17159,10 @@
         "after_revision": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ResourceRevision"
             },
             {
-              "$ref": "#/components/schemas/ResourceRevision"
+              "type": "null"
             }
           ]
         },
@@ -16591,10 +17170,10 @@
         "before_revision": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ResourceRevision"
             },
             {
-              "$ref": "#/components/schemas/ResourceRevision"
+              "type": "null"
             }
           ]
         },
@@ -16678,6 +17257,16 @@
         "created_at": {
           "format": "date-time",
           "type": "string"
+        },
+        "delivery_policy": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/EventDeliveryPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "enabled": {
           "type": "boolean"
@@ -16859,7 +17448,10 @@
       "properties": {
         "collection_id": {
           "format": "int32",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "counts": {
           "$ref": "#/components/schemas/EventDeliveryStatusCounts"
@@ -16900,7 +17492,6 @@
         }
       },
       "required": [
-        "collection_id",
         "counts",
         "sink_enabled",
         "sink_id",
@@ -16969,9 +17560,20 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "task_kinds": {
+          "items": {
+            "$ref": "#/components/schemas/TaskKind"
+          },
+          "type": "array"
         }
       },
       "type": "object"
+    },
+    "EventSubscriptionID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
     },
     "EventWorkerHealth": {
       "properties": {
@@ -17135,10 +17737,10 @@
         "direction": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportIncludeRelatedDirection"
             },
             {
-              "$ref": "#/components/schemas/ExportIncludeRelatedDirection"
+              "type": "null"
             }
           ]
         },
@@ -17159,10 +17761,10 @@
         "sort": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportIncludeRelatedSort"
             },
             {
-              "$ref": "#/components/schemas/ExportIncludeRelatedSort"
+              "type": "null"
             }
           ]
         }
@@ -17272,30 +17874,30 @@
         "include": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportInclude"
             },
             {
-              "$ref": "#/components/schemas/ExportInclude"
+              "type": "null"
             }
           ]
         },
         "limits": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportLimits"
             },
             {
-              "$ref": "#/components/schemas/ExportLimits"
+              "type": "null"
             }
           ]
         },
         "missing_data_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportMissingDataPolicy"
             },
             {
-              "$ref": "#/components/schemas/ExportMissingDataPolicy"
+              "type": "null"
             }
           ]
         },
@@ -17308,10 +17910,10 @@
         "relation_context": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportRelationContext"
             },
             {
-              "$ref": "#/components/schemas/ExportRelationContext"
+              "type": "null"
             }
           ]
         },
@@ -17410,10 +18012,10 @@
         "retained": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RetainedExportDetails"
             },
             {
-              "$ref": "#/components/schemas/RetainedExportDetails"
+              "type": "null"
             }
           ]
         },
@@ -17474,20 +18076,20 @@
         "default_limits": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportLimits"
             },
             {
-              "$ref": "#/components/schemas/ExportLimits"
+              "type": "null"
             }
           ]
         },
         "default_missing_data_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportMissingDataPolicy"
             },
             {
-              "$ref": "#/components/schemas/ExportMissingDataPolicy"
+              "type": "null"
             }
           ]
         },
@@ -17507,10 +18109,10 @@
         "include": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportInclude"
             },
             {
-              "$ref": "#/components/schemas/ExportInclude"
+              "type": "null"
             }
           ]
         },
@@ -17523,10 +18125,10 @@
         "relation_context": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportRelationContext"
             },
             {
-              "$ref": "#/components/schemas/ExportRelationContext"
+              "type": "null"
             }
           ]
         },
@@ -17536,10 +18138,10 @@
         "scope_kind": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportScopeKind"
             },
             {
-              "$ref": "#/components/schemas/ExportScopeKind"
+              "type": "null"
             }
           ]
         },
@@ -17710,20 +18312,20 @@
         "limits": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportLimits"
             },
             {
-              "$ref": "#/components/schemas/ExportLimits"
+              "type": "null"
             }
           ]
         },
         "missing_data_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportMissingDataPolicy"
             },
             {
-              "$ref": "#/components/schemas/ExportMissingDataPolicy"
+              "type": "null"
             }
           ]
         },
@@ -18825,10 +19427,10 @@
         "from_max_relations": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectRelationLimit"
             },
             {
-              "$ref": "#/components/schemas/ObjectRelationLimit"
+              "type": "null"
             }
           ]
         },
@@ -18852,10 +19454,10 @@
         "to_max_relations": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectRelationLimit"
             },
             {
-              "$ref": "#/components/schemas/ObjectRelationLimit"
+              "type": "null"
             }
           ]
         },
@@ -19227,10 +19829,10 @@
         "collection_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/CollectionKey"
             },
             {
-              "$ref": "#/components/schemas/CollectionKey"
+              "type": "null"
             }
           ]
         },
@@ -19243,10 +19845,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -19266,20 +19868,20 @@
         "schema_activation": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportSchemaActivation"
             },
             {
-              "$ref": "#/components/schemas/ImportSchemaActivation"
+              "type": "null"
             }
           ]
         },
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         },
@@ -19301,10 +19903,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -19317,10 +19919,10 @@
         "from_class_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ClassKey"
             },
             {
-              "$ref": "#/components/schemas/ClassKey"
+              "type": "null"
             }
           ]
         },
@@ -19333,10 +19935,10 @@
         "from_max_relations": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectRelationLimit"
             },
             {
-              "$ref": "#/components/schemas/ObjectRelationLimit"
+              "type": "null"
             }
           ]
         },
@@ -19355,20 +19957,20 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         },
         "to_class_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ClassKey"
             },
             {
-              "$ref": "#/components/schemas/ClassKey"
+              "type": "null"
             }
           ]
         },
@@ -19381,10 +19983,10 @@
         "to_max_relations": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectRelationLimit"
             },
             {
-              "$ref": "#/components/schemas/ObjectRelationLimit"
+              "type": "null"
             }
           ]
         }
@@ -19396,10 +19998,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -19412,10 +20014,10 @@
         "parent_collection_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/CollectionKey"
             },
             {
-              "$ref": "#/components/schemas/CollectionKey"
+              "type": "null"
             }
           ]
         },
@@ -19434,10 +20036,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         }
@@ -19453,10 +20055,10 @@
         "collection_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/CollectionKey"
             },
             {
-              "$ref": "#/components/schemas/CollectionKey"
+              "type": "null"
             }
           ]
         },
@@ -19469,10 +20071,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -19516,10 +20118,10 @@
         "class_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ClassKey"
             },
             {
-              "$ref": "#/components/schemas/ClassKey"
+              "type": "null"
             }
           ]
         },
@@ -19532,10 +20134,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -19557,10 +20159,10 @@
         "owner_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/PrincipalKey"
             },
             {
-              "$ref": "#/components/schemas/PrincipalKey"
+              "type": "null"
             }
           ]
         },
@@ -19582,10 +20184,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         },
@@ -19615,14 +20217,24 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
         "config": {},
+        "delivery_policy": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/EventDeliveryPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "enabled": {
           "type": "boolean"
         },
@@ -19647,10 +20259,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         }
@@ -19673,10 +20285,10 @@
         "collection_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/CollectionKey"
             },
             {
-              "$ref": "#/components/schemas/CollectionKey"
+              "type": "null"
             }
           ]
         },
@@ -19689,10 +20301,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -19722,10 +20334,10 @@
         "sink_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/EventSinkKey"
             },
             {
-              "$ref": "#/components/schemas/EventSinkKey"
+              "type": "null"
             }
           ]
         },
@@ -19738,10 +20350,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         }
@@ -19760,10 +20372,10 @@
         "class_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ClassKey"
             },
             {
-              "$ref": "#/components/schemas/ClassKey"
+              "type": "null"
             }
           ]
         },
@@ -19776,10 +20388,10 @@
         "collection_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/CollectionKey"
             },
             {
-              "$ref": "#/components/schemas/CollectionKey"
+              "type": "null"
             }
           ]
         },
@@ -19792,10 +20404,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -19805,20 +20417,20 @@
         "default_limits": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportLimits"
             },
             {
-              "$ref": "#/components/schemas/ExportLimits"
+              "type": "null"
             }
           ]
         },
         "default_missing_data_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportMissingDataPolicy"
             },
             {
-              "$ref": "#/components/schemas/ExportMissingDataPolicy"
+              "type": "null"
             }
           ]
         },
@@ -19834,10 +20446,10 @@
         "include": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportInclude"
             },
             {
-              "$ref": "#/components/schemas/ExportInclude"
+              "type": "null"
             }
           ]
         },
@@ -19856,20 +20468,20 @@
         "relation_context": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportRelationContext"
             },
             {
-              "$ref": "#/components/schemas/ExportRelationContext"
+              "type": "null"
             }
           ]
         },
         "scope_kind": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportScopeKind"
             },
             {
-              "$ref": "#/components/schemas/ExportScopeKind"
+              "type": "null"
             }
           ]
         },
@@ -19879,10 +20491,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         }
@@ -19996,10 +20608,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -20018,10 +20630,10 @@
         "identity_scope_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/IdentityScopeKey"
             },
             {
-              "$ref": "#/components/schemas/IdentityScopeKey"
+              "type": "null"
             }
           ]
         },
@@ -20057,10 +20669,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         }
@@ -20077,20 +20689,20 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
         "group_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/GroupKey"
             },
             {
-              "$ref": "#/components/schemas/GroupKey"
+              "type": "null"
             }
           ]
         },
@@ -20103,10 +20715,10 @@
         "principal_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/PrincipalKey"
             },
             {
-              "$ref": "#/components/schemas/PrincipalKey"
+              "type": "null"
             }
           ]
         },
@@ -20131,10 +20743,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         }
@@ -20146,10 +20758,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -20168,10 +20780,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         }
@@ -20193,10 +20805,10 @@
         "source_scope_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/IdentityScopeKey"
             },
             {
-              "$ref": "#/components/schemas/IdentityScopeKey"
+              "type": "null"
             }
           ]
         },
@@ -20209,10 +20821,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         }
@@ -20228,30 +20840,30 @@
         "atomicity": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportAtomicity"
             },
             {
-              "$ref": "#/components/schemas/ImportAtomicity"
+              "type": "null"
             }
           ]
         },
         "collision_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportCollisionPolicy"
             },
             {
-              "$ref": "#/components/schemas/ImportCollisionPolicy"
+              "type": "null"
             }
           ]
         },
         "permission_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportPermissionPolicy"
             },
             {
-              "$ref": "#/components/schemas/ImportPermissionPolicy"
+              "type": "null"
             }
           ]
         }
@@ -20263,10 +20875,10 @@
         "class_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ClassKey"
             },
             {
-              "$ref": "#/components/schemas/ClassKey"
+              "type": "null"
             }
           ]
         },
@@ -20279,10 +20891,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -20302,10 +20914,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         }
@@ -20322,20 +20934,20 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
         "from_object_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectKey"
             },
             {
-              "$ref": "#/components/schemas/ObjectKey"
+              "type": "null"
             }
           ]
         },
@@ -20354,20 +20966,20 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         },
         "to_object_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectKey"
             },
             {
-              "$ref": "#/components/schemas/ObjectKey"
+              "type": "null"
             }
           ]
         },
@@ -20397,10 +21009,10 @@
             "condition": {
               "oneOf": [
                 {
-                  "type": "null"
+                  "$ref": "#/components/schemas/ImportWriteCondition"
                 },
                 {
-                  "$ref": "#/components/schemas/ImportWriteCondition"
+                  "type": "null"
                 }
               ]
             },
@@ -20413,10 +21025,10 @@
             "identity_scope_key": {
               "oneOf": [
                 {
-                  "type": "null"
+                  "$ref": "#/components/schemas/IdentityScopeKey"
                 },
                 {
-                  "$ref": "#/components/schemas/IdentityScopeKey"
+                  "type": "null"
                 }
               ]
             },
@@ -20456,10 +21068,10 @@
             "timestamps": {
               "oneOf": [
                 {
-                  "type": "null"
+                  "$ref": "#/components/schemas/RestoreTimestamps"
                 },
                 {
-                  "$ref": "#/components/schemas/RestoreTimestamps"
+                  "type": "null"
                 }
               ]
             }
@@ -20524,10 +21136,10 @@
             "created_by_key": {
               "oneOf": [
                 {
-                  "type": "null"
+                  "$ref": "#/components/schemas/PrincipalKey"
                 },
                 {
-                  "$ref": "#/components/schemas/PrincipalKey"
+                  "type": "null"
                 }
               ]
             },
@@ -20556,10 +21168,10 @@
             "owner_group_key": {
               "oneOf": [
                 {
-                  "type": "null"
+                  "$ref": "#/components/schemas/GroupKey"
                 },
                 {
-                  "$ref": "#/components/schemas/GroupKey"
+                  "type": "null"
                 }
               ]
             },
@@ -20598,10 +21210,10 @@
         "class_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ClassKey"
             },
             {
-              "$ref": "#/components/schemas/ClassKey"
+              "type": "null"
             }
           ]
         },
@@ -20614,10 +21226,10 @@
         "collection_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/CollectionKey"
             },
             {
-              "$ref": "#/components/schemas/CollectionKey"
+              "type": "null"
             }
           ]
         },
@@ -20630,10 +21242,10 @@
         "condition": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportWriteCondition"
             },
             {
-              "$ref": "#/components/schemas/ImportWriteCondition"
+              "type": "null"
             }
           ]
         },
@@ -20663,10 +21275,10 @@
         "timestamps": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RestoreTimestamps"
             },
             {
-              "$ref": "#/components/schemas/RestoreTimestamps"
+              "type": "null"
             }
           ]
         },
@@ -20699,10 +21311,10 @@
         "mode": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportMode"
             },
             {
-              "$ref": "#/components/schemas/ImportMode"
+              "type": "null"
             }
           ]
         },
@@ -20726,10 +21338,10 @@
         "impact_task_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskID"
             },
             {
-              "$ref": "#/components/schemas/TaskID"
+              "type": "null"
             }
           ]
         },
@@ -20755,10 +21367,10 @@
         "retained": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RetainedImportDetails"
             },
             {
-              "$ref": "#/components/schemas/RetainedImportDetails"
+              "type": "null"
             }
           ]
         }
@@ -20806,10 +21418,10 @@
         "observed_revision": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ResourceRevision"
             },
             {
-              "$ref": "#/components/schemas/ResourceRevision"
+              "type": "null"
             }
           ]
         },
@@ -21261,10 +21873,10 @@
         "parent_collection_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/CollectionID"
             },
             {
-              "$ref": "#/components/schemas/CollectionID"
+              "type": "null"
             }
           ]
         }
@@ -21279,6 +21891,16 @@
     "NewEventSink": {
       "properties": {
         "config": {},
+        "delivery_policy": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/EventDeliveryPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "enabled": {
           "type": "boolean"
         },
@@ -21359,20 +21981,20 @@
         "default_limits": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportLimits"
             },
             {
-              "$ref": "#/components/schemas/ExportLimits"
+              "type": "null"
             }
           ]
         },
         "default_missing_data_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportMissingDataPolicy"
             },
             {
-              "$ref": "#/components/schemas/ExportMissingDataPolicy"
+              "type": "null"
             }
           ]
         },
@@ -21388,10 +22010,10 @@
         "include": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportInclude"
             },
             {
-              "$ref": "#/components/schemas/ExportInclude"
+              "type": "null"
             }
           ]
         },
@@ -21404,20 +22026,20 @@
         "relation_context": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportRelationContext"
             },
             {
-              "$ref": "#/components/schemas/ExportRelationContext"
+              "type": "null"
             }
           ]
         },
         "scope_kind": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportScopeKind"
             },
             {
-              "$ref": "#/components/schemas/ExportScopeKind"
+              "type": "null"
             }
           ]
         },
@@ -21500,10 +22122,10 @@
         "from_max_relations": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectRelationLimit"
             },
             {
-              "$ref": "#/components/schemas/ObjectRelationLimit"
+              "type": "null"
             }
           ]
         },
@@ -21520,10 +22142,10 @@
         "to_max_relations": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectRelationLimit"
             },
             {
-              "$ref": "#/components/schemas/ObjectRelationLimit"
+              "type": "null"
             }
           ]
         }
@@ -21545,10 +22167,10 @@
         "from_max_relations": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectRelationLimit"
             },
             {
-              "$ref": "#/components/schemas/ObjectRelationLimit"
+              "type": "null"
             }
           ]
         },
@@ -21565,10 +22187,10 @@
         "to_max_relations": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectRelationLimit"
             },
             {
-              "$ref": "#/components/schemas/ObjectRelationLimit"
+              "type": "null"
             }
           ]
         }
@@ -21678,10 +22300,10 @@
         "class_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/HubuumClassID"
             },
             {
-              "$ref": "#/components/schemas/HubuumClassID"
+              "type": "null"
             }
           ]
         },
@@ -21773,10 +22395,10 @@
         "scope": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TokenScopeDetails"
             },
             {
-              "$ref": "#/components/schemas/TokenScopeDetails"
+              "type": "null"
             }
           ]
         }
@@ -21920,10 +22542,10 @@
         "evidence": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ObjectSchemaEvidence"
             },
             {
-              "$ref": "#/components/schemas/ObjectSchemaEvidence"
+              "type": "null"
             }
           ]
         },
@@ -22085,10 +22707,10 @@
         "class_key": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ClassKey"
             },
             {
-              "$ref": "#/components/schemas/ClassKey"
+              "type": "null"
             }
           ]
         },
@@ -22621,10 +23243,10 @@
         "principal": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/MembershipPrincipalResponse"
             },
             {
-              "$ref": "#/components/schemas/MembershipPrincipalResponse"
+              "type": "null"
             }
           ]
         },
@@ -22858,10 +23480,10 @@
         "scope": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TokenScopeDetails"
             },
             {
-              "$ref": "#/components/schemas/TokenScopeDetails"
+              "type": "null"
             }
           ]
         }
@@ -22920,10 +23542,10 @@
         "scope": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TokenScopeDetails"
             },
             {
-              "$ref": "#/components/schemas/TokenScopeDetails"
+              "type": "null"
             }
           ]
         }
@@ -22955,20 +23577,20 @@
         "initiator": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ProvenancePrincipal"
             },
             {
-              "$ref": "#/components/schemas/ProvenancePrincipal"
+              "type": "null"
             }
           ]
         },
         "task_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskID"
             },
             {
-              "$ref": "#/components/schemas/TaskID"
+              "type": "null"
             }
           ]
         }
@@ -22989,10 +23611,10 @@
         "principal": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ProvenancePrincipal"
             },
             {
-              "$ref": "#/components/schemas/ProvenancePrincipal"
+              "type": "null"
             }
           ]
         }
@@ -23021,10 +23643,10 @@
         "class_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/HubuumClassID"
             },
             {
-              "$ref": "#/components/schemas/HubuumClassID"
+              "type": "null"
             }
           ]
         },
@@ -23273,20 +23895,20 @@
         "remote_target_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RemoteTargetID"
             },
             {
-              "$ref": "#/components/schemas/RemoteTargetID"
+              "type": "null"
             }
           ]
         },
         "target": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskDiscoveryTarget"
             },
             {
-              "$ref": "#/components/schemas/TaskDiscoveryTarget"
+              "type": "null"
             }
           ]
         }
@@ -23905,10 +24527,10 @@
         "missing_data_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportMissingDataPolicy"
             },
             {
-              "$ref": "#/components/schemas/ExportMissingDataPolicy"
+              "type": "null"
             }
           ]
         },
@@ -23918,30 +24540,30 @@
         "scope_kind": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportScopeKind"
             },
             {
-              "$ref": "#/components/schemas/ExportScopeKind"
+              "type": "null"
             }
           ]
         },
         "target": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskDiscoveryTarget"
             },
             {
-              "$ref": "#/components/schemas/TaskDiscoveryTarget"
+              "type": "null"
             }
           ]
         },
         "template_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportTemplateID"
             },
             {
-              "$ref": "#/components/schemas/ExportTemplateID"
+              "type": "null"
             }
           ]
         },
@@ -23969,20 +24591,20 @@
         "atomicity": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportAtomicity"
             },
             {
-              "$ref": "#/components/schemas/ImportAtomicity"
+              "type": "null"
             }
           ]
         },
         "collision_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportCollisionPolicy"
             },
             {
-              "$ref": "#/components/schemas/ImportCollisionPolicy"
+              "type": "null"
             }
           ]
         },
@@ -24001,10 +24623,10 @@
         "permission_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportPermissionPolicy"
             },
             {
-              "$ref": "#/components/schemas/ImportPermissionPolicy"
+              "type": "null"
             }
           ]
         }
@@ -24094,10 +24716,10 @@
         "impact_task_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskID"
             },
             {
-              "$ref": "#/components/schemas/TaskID"
+              "type": "null"
             }
           ]
         },
@@ -24119,20 +24741,20 @@
         "dependent_rebuild_task_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskID"
             },
             {
-              "$ref": "#/components/schemas/TaskID"
+              "type": "null"
             }
           ]
         },
         "task_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskID"
             },
             {
-              "$ref": "#/components/schemas/TaskID"
+              "type": "null"
             }
           ]
         }
@@ -24471,10 +25093,10 @@
         "snapshot": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/SchemaDiagnosticSnapshotResponse"
             },
             {
-              "$ref": "#/components/schemas/SchemaDiagnosticSnapshotResponse"
+              "type": "null"
             }
           ]
         }
@@ -24594,10 +25216,10 @@
         "template_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportTemplateID"
             },
             {
-              "$ref": "#/components/schemas/ExportTemplateID"
+              "type": "null"
             }
           ]
         }
@@ -24624,10 +25246,10 @@
         "activation_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/SchemaActivationPolicy"
             },
             {
-              "$ref": "#/components/schemas/SchemaActivationPolicy"
+              "type": "null"
             }
           ]
         },
@@ -24692,10 +25314,10 @@
         "class_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/HubuumClassID"
             },
             {
-              "$ref": "#/components/schemas/HubuumClassID"
+              "type": "null"
             }
           ]
         },
@@ -24708,30 +25330,30 @@
         "schema_revision": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/SchemaRevision"
             },
             {
-              "$ref": "#/components/schemas/SchemaRevision"
+              "type": "null"
             }
           ]
         },
         "work_kind": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/SchemaWorkKind"
             },
             {
-              "$ref": "#/components/schemas/SchemaWorkKind"
+              "type": "null"
             }
           ]
         },
         "work_status": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/SchemaWorkStatus"
             },
             {
-              "$ref": "#/components/schemas/SchemaWorkStatus"
+              "type": "null"
             }
           ]
         }
@@ -24786,10 +25408,10 @@
         "current_active_schema": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/SchemaReference"
             },
             {
-              "$ref": "#/components/schemas/SchemaReference"
+              "type": "null"
             }
           ]
         },
@@ -24826,10 +25448,10 @@
         "impact": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/SchemaImpactResponse"
             },
             {
-              "$ref": "#/components/schemas/SchemaImpactResponse"
+              "type": "null"
             }
           ]
         },
@@ -24856,10 +25478,10 @@
         "readiness": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/SchemaImpactReadiness"
             },
             {
-              "$ref": "#/components/schemas/SchemaImpactReadiness"
+              "type": "null"
             }
           ]
         },
@@ -25482,10 +26104,10 @@
         "filter": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/StructuredSearchExpression"
             },
             {
-              "$ref": "#/components/schemas/StructuredSearchExpression"
+              "type": "null"
             }
           ]
         },
@@ -25775,10 +26397,10 @@
             "class": {
               "oneOf": [
                 {
-                  "type": "null"
+                  "$ref": "#/components/schemas/StructuredClassSelector"
                 },
                 {
-                  "$ref": "#/components/schemas/StructuredClassSelector"
+                  "type": "null"
                 }
               ]
             },
@@ -25852,16 +26474,78 @@
         }
       ]
     },
+    "SystemEventSubscription": {
+      "properties": {
+        "actions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "entity_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "filter": {
+          "$ref": "#/components/schemas/EventSubscriptionFilter"
+        },
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "routing": {},
+        "sink_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actions",
+        "created_at",
+        "description",
+        "enabled",
+        "entity_types",
+        "id",
+        "name",
+        "revision",
+        "routing",
+        "sink_id",
+        "updated_at"
+      ],
+      "type": "object"
+    },
     "TaskCancelRequest": {
       "additionalProperties": false,
       "properties": {
         "expected_status": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskStatus"
             },
             {
-              "$ref": "#/components/schemas/TaskStatus"
+              "type": "null"
             }
           ]
         },
@@ -25973,60 +26657,60 @@
         "backup": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/BackupTaskDetails"
             },
             {
-              "$ref": "#/components/schemas/BackupTaskDetails"
+              "type": "null"
             }
           ]
         },
         "export": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportTaskDetails"
             },
             {
-              "$ref": "#/components/schemas/ExportTaskDetails"
+              "type": "null"
             }
           ]
         },
         "import": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ImportTaskDetails"
             },
             {
-              "$ref": "#/components/schemas/ImportTaskDetails"
+              "type": "null"
             }
           ]
         },
         "reindex": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RebuildTaskDetails"
             },
             {
-              "$ref": "#/components/schemas/RebuildTaskDetails"
+              "type": "null"
             }
           ]
         },
         "remote_call": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RemoteCallTaskDetails"
             },
             {
-              "$ref": "#/components/schemas/RemoteCallTaskDetails"
+              "type": "null"
             }
           ]
         },
         "schema_validation": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/SchemaTaskDetails"
             },
             {
-              "$ref": "#/components/schemas/SchemaTaskDetails"
+              "type": "null"
             }
           ]
         }
@@ -26076,10 +26760,10 @@
             "class_id": {
               "oneOf": [
                 {
-                  "type": "null"
+                  "$ref": "#/components/schemas/HubuumClassID"
                 },
                 {
-                  "$ref": "#/components/schemas/HubuumClassID"
+                  "type": "null"
                 }
               ]
             },
@@ -26417,10 +27101,10 @@
         "details": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskDetails"
             },
             {
-              "$ref": "#/components/schemas/TaskDetails"
+              "type": "null"
             }
           ]
         },
@@ -26454,10 +27138,10 @@
         "remote_side_effect_state": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/TaskRemoteSideEffectState"
             },
             {
-              "$ref": "#/components/schemas/TaskRemoteSideEffectState"
+              "type": "null"
             }
           ]
         },
@@ -26936,6 +27620,16 @@
     "UpdateEventSink": {
       "properties": {
         "config": {},
+        "delivery_policy": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/EventDeliveryPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "enabled": {
           "type": [
             "boolean",
@@ -26945,10 +27639,10 @@
         "kind": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/EventSinkKind"
             },
             {
-              "$ref": "#/components/schemas/EventSinkKind"
+              "type": "null"
             }
           ]
         },
@@ -27002,10 +27696,10 @@
         "filter": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/EventSubscriptionFilter"
             },
             {
-              "$ref": "#/components/schemas/EventSubscriptionFilter"
+              "type": "null"
             }
           ]
         },
@@ -27019,10 +27713,10 @@
         "sink_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/EventSinkID"
             },
             {
-              "$ref": "#/components/schemas/EventSinkID"
+              "type": "null"
             }
           ]
         }
@@ -27048,20 +27742,20 @@
         "default_limits": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportLimits"
             },
             {
-              "$ref": "#/components/schemas/ExportLimits"
+              "type": "null"
             }
           ]
         },
         "default_missing_data_policy": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportMissingDataPolicy"
             },
             {
-              "$ref": "#/components/schemas/ExportMissingDataPolicy"
+              "type": "null"
             }
           ]
         },
@@ -27080,20 +27774,20 @@
         "include": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportInclude"
             },
             {
-              "$ref": "#/components/schemas/ExportInclude"
+              "type": "null"
             }
           ]
         },
         "kind": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportTemplateKind"
             },
             {
-              "$ref": "#/components/schemas/ExportTemplateKind"
+              "type": "null"
             }
           ]
         },
@@ -27106,20 +27800,20 @@
         "relation_context": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportRelationContext"
             },
             {
-              "$ref": "#/components/schemas/ExportRelationContext"
+              "type": "null"
             }
           ]
         },
         "scope_kind": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/ExportScopeKind"
             },
             {
-              "$ref": "#/components/schemas/ExportScopeKind"
+              "type": "null"
             }
           ]
         },
@@ -27252,10 +27946,10 @@
         "auth_config": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RemoteAuthConfig"
             },
             {
-              "$ref": "#/components/schemas/RemoteAuthConfig"
+              "type": "null"
             }
           ]
         },
@@ -27275,10 +27969,10 @@
         "collection_id": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/CollectionID"
             },
             {
-              "$ref": "#/components/schemas/CollectionID"
+              "type": "null"
             }
           ]
         },
@@ -27298,10 +27992,10 @@
         "method": {
           "oneOf": [
             {
-              "type": "null"
+              "$ref": "#/components/schemas/RemoteHttpMethod"
             },
             {
-              "$ref": "#/components/schemas/RemoteHttpMethod"
+              "type": "null"
             }
           ]
         },
@@ -27493,5 +28187,5 @@
       "type": "object"
     }
   },
-  "spec_sha256": "b8bcf05f8cba063871bd51e6690fc3fc8089d6a4642a9cfe5ec82970e2a0154b"
+  "spec_sha256": "99e3e469fb2e8072e7a1721130c6a0279a79e1ee7f14790ab7c93661aac7673f"
 }

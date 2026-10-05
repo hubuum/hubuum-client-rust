@@ -80,6 +80,10 @@ fn e2e_admin_config_backup_and_restore_staging() {
     assert!(discovered.iter().any(|task| task.id == completed.id));
     let document = harness.client.backups().output(completed.id).unwrap();
     assert!(document.has_supported_version());
+    assert_eq!(
+        document.backup_version,
+        hubuum_client::CURRENT_BACKUP_VERSION
+    );
     let staged = harness
         .client
         .restores()

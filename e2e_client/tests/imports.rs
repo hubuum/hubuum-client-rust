@@ -412,6 +412,7 @@ fn e2e_full_import_dry_run_accepts_identity_and_integration_sections() {
         kind: EventSinkKind::Webhook,
         config: json!({}),
         secret_ref: None,
+        delivery_policy: None,
         enabled: false,
         condition: None,
         timestamps: None,

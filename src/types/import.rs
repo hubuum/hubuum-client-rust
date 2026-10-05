@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
 use super::{
-    ComputedResultType, EventSinkKind, ExportContentType, ExportInclude, ExportLimits,
-    ExportMissingDataPolicy, ExportRelationContext, ExportScopeKind, ExportTemplateKind,
-    ImportTaskResultResponse, ObjectRelationLimit, Permissions, RemoteAuthConfig, RemoteHttpMethod,
-    RemoteTargetSubjectType, TaskResponse,
+    ComputedResultType, EventDeliveryPolicy, EventSinkKind, ExportContentType, ExportInclude,
+    ExportLimits, ExportMissingDataPolicy, ExportRelationContext, ExportScopeKind,
+    ExportTemplateKind, ImportTaskResultResponse, ObjectRelationLimit, Permissions,
+    RemoteAuthConfig, RemoteHttpMethod, RemoteTargetSubjectType, TaskResponse,
 };
 
 pub const CURRENT_IMPORT_VERSION: i32 = 2;
@@ -679,6 +679,8 @@ pub struct ImportEventSinkInput {
     #[serde(default = "empty_json_object")]
     pub config: serde_json::Value,
     pub secret_ref: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delivery_policy: Option<EventDeliveryPolicy>,
     pub enabled: bool,
     pub condition: Option<ImportWriteCondition>,
     pub timestamps: Option<RestoreTimestamps>,
@@ -1346,6 +1348,7 @@ mod tests {
                 kind: EventSinkKind::Webhook,
                 config: serde_json::json!({}),
                 secret_ref: None,
+                delivery_policy: None,
                 enabled: false,
                 condition: None,
                 timestamps: Some(timestamps.clone()),
@@ -1493,6 +1496,7 @@ mod tests {
             kind: EventSinkKind::Webhook,
             config: serde_json::json!({"token": "sink-secret"}),
             secret_ref: Some("sink-secret-ref".into()),
+            delivery_policy: None,
             enabled: false,
             condition: None,
             timestamps: None,

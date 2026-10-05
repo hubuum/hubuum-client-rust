@@ -7855,3 +7855,83 @@ mod task_discovery {
         assert_pagination(transport, tasks);
     }
 }
+
+mod notification_compatibility {
+    use hubuum_client::{
+        BaseUrl, Client, EventDeliveryPurpose, MockTransport, Token, TransportResponse, blocking,
+    };
+    use reqwest::StatusCode;
+    use serde_json::json;
+    use std::sync::Arc;
+
+    fn transport() -> MockTransport {
+        let transport = MockTransport::default();
+        let counts = json!({"total":0,"pending":0,"in_flight":0,"succeeded":0,"failed":0,"dead":0,"retryable":0});
+        let worker = json!({"workers_configured":1,"batch_size":1,"poll_interval_ms":100,"lock_timeout_ms":1000,
+            "wakeups":{"notifications_sent":0,"notification_wakeups":0,"poll_wakeups":0}});
+        transport.push_response(TransportResponse::json(StatusCode::OK, &json!({
+            "fanout":{"pending_events":0,"in_flight_events":0,"stale_claims":0,"worker":worker},
+            "delivery":{"counts":counts,"stale_claims":0,"worker":worker},"sinks":[],
+            "subscriptions":([json!(null),json!(7)].map(|collection| json!({
+                "subscription_id":42,"subscription_name":"subscription","collection_id":collection,
+                "sink_id":1,"sink_name":"sink","sink_kind":"webhook","subscription_enabled":true,
+                "sink_enabled":true,"counts":counts,"stale_claims":0
+            })))
+        })).unwrap());
+        transport.push_response(TransportResponse::json(StatusCode::OK, &json!({
+            "id":1,"event_id":2,"subscription_id":42,"status":"pending","purpose":"test",
+            "deferred_reason":"sink_min_interval","attempts":0,"next_attempt_at":"2026-10-05T00:00:00Z",
+            "created_at":"2026-10-05T00:00:00Z","updated_at":"2026-10-05T00:00:00Z"
+        })).unwrap());
+        transport
+    }
+
+    macro_rules! verify {
+        ($client:ident, $transport:ident, $send:ident) => {{
+            let health = $send!($client.event_deliveries().health()).unwrap();
+            assert_eq!(health.subscriptions[0].collection_id, None);
+            assert_eq!(health.subscriptions[1].collection_id.unwrap().get(), 7);
+            let delivery = $send!($client.event_deliveries().get(1)).unwrap();
+            assert_eq!(delivery.purpose, EventDeliveryPurpose::Test);
+            assert_eq!(
+                delivery.deferred_reason.as_deref(),
+                Some("sink_min_interval")
+            );
+            let requests = $transport.requests();
+            assert_eq!(requests[0].url.path(), "/api/v1/event-deliveries/health");
+            assert_eq!(requests[1].url.path(), "/api/v1/event-deliveries/1");
+        }};
+    }
+
+    #[test]
+    fn blocking_decodes_system_health_and_test_deliveries() {
+        let transport = transport();
+        let client = blocking::Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        macro_rules! send {
+            ($value:expr) => {
+                $value
+            };
+        }
+        verify!(client, transport, send);
+    }
+
+    #[tokio::test]
+    async fn async_decodes_system_health_and_test_deliveries() {
+        let transport = transport();
+        let client = Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        macro_rules! send {
+            ($value:expr) => {
+                $value.await
+            };
+        }
+        verify!(client, transport, send);
+    }
+}

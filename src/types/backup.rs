@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{HubuumDateTime, PrincipalId, RestoreId};
 
-/// Backup document version produced and accepted by Hubuum server v0.0.15.
-pub const CURRENT_BACKUP_VERSION: i32 = 6;
+/// Backup document version produced by Hubuum server v0.0.17.
+pub const CURRENT_BACKUP_VERSION: i32 = 7;
 
 /// Exact phrase required to confirm a destructive full-system restore.
 pub const RESTORE_CONFIRMATION_PHRASE: &str = "REPLACE ALL HUBUUM DATA";
@@ -112,8 +112,9 @@ impl std::fmt::Debug for BackupDocument {
 }
 
 impl BackupDocument {
+    /// Whether the targeted server accepts this format, including legacy format 6.
     pub const fn has_supported_version(&self) -> bool {
-        self.backup_version == CURRENT_BACKUP_VERSION
+        matches!(self.backup_version, 6 | CURRENT_BACKUP_VERSION)
     }
 }
 
@@ -342,5 +343,23 @@ mod tests {
         assert_eq!(round_trip, document);
         document.backup_version = 5;
         assert!(!document.has_supported_version());
+    }
+
+    #[rstest::rstest]
+    #[case(5, false)]
+    #[case(6, true)]
+    #[case(7, true)]
+    #[case(8, false)]
+    fn supported_backup_formats(#[case] version: i32, #[case] supported: bool) {
+        let document: BackupDocument = serde_json::from_value(serde_json::json!({
+            "backup_version": version,
+            "created_at": "2026-10-05T00:00:00Z",
+            "source_version": "0.0.17",
+            "state": {"sections": {}},
+            "history": null,
+            "manifest": {"item_counts": {}, "exclusions": []}
+        }))
+        .unwrap();
+        assert_eq!(document.has_supported_version(), supported);
     }
 }

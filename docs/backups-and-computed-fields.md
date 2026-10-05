@@ -9,10 +9,18 @@ blocking equivalents.
 
 Backups are administrator-only task operations. `run()` submits the task, waits
 for a successful terminal state, and decodes the resulting versioned backup
-document. Hubuum v0.0.16 retains backup format 6; format 5 and earlier artifacts must be
-restored with their matching older server before database migration and creation
-of a new format 6 backup. No artifact converter is provided. Preserve the server-assigned `created_at`
+document. Hubuum v0.0.17 produces backup format 7 and accepts format 6 with
+legacy notification defaults. `CURRENT_BACKUP_VERSION` is 7, and
+`has_supported_version()` accepts both 6 and 7. Older servers cannot restore
+format 7. Format 5 and earlier artifacts must be restored with their matching
+older server before database migration and creation of a new backup. No artifact
+converter is provided. Preserve the server-assigned `created_at`
 instant when saving or staging a backup; the client serializes it as RFC 3339 UTC.
+
+Format 7 adds notification configuration and history, while restore resets
+transient sink scheduling. Upgrading from v0.0.16 requires stopping all writers
+and taking a PostgreSQL snapshot before migration; rollback requires that
+snapshot and matching v0.0.16 binaries. See [compatibility](../COMPATIBILITY.md#v0017-target).
 
 Format 6 adds schema revisions, class schema state, object validation evidence,
 and schema history. Both history-preserving and history-free restores retain
@@ -34,7 +42,7 @@ assert!(document.has_supported_version());
 ```
 
 Use `submit()`, `get()`, and `output()` separately when an application needs to
-persist task IDs or control polling. Format 6 backups contain privileged integration configuration but exclude
+persist task IDs or control polling. Formats 6 and 7 contain privileged integration configuration but exclude
 password hashes, bearer tokens, and token scopes. Their debug output is redacted,
 but applications
 must still protect serialized documents at rest and in transit. Large documents
@@ -46,7 +54,7 @@ Restoring is deliberately a two-step operation. Staging validates a complete
 `BackupDocument` and returns a one-time capability. Confirmation requires that
 capability, the staged SHA-256, and the server-defined destructive confirmation
 phrase. `RestoreConfirmRequest::new` supplies the exact phrase.
-On v0.0.16, also collect the acting human's current password and obtain a fresh
+On v0.0.16 and newer, also collect the acting human's current password and obtain a fresh
 operation-bound [approval](credential-approvals.md). The password and restore
 capability are separate requirements.
 
@@ -91,7 +99,7 @@ loop {
 }
 ```
 
-Hubuum v0.0.16 returns `202 Accepted` from confirmation. Deploy the matching
+Hubuum v0.0.16 and newer return `202 Accepted` from confirmation. Deploy the matching
 `hubuum-admin --restore-executor` before allowing web restores. Upgrade server,
 administrator, and template-worker binaries together, including any separately
 deployed restore executor. Drain old workers and apply migrations before starting
