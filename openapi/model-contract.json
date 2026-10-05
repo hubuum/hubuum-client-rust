@@ -545,6 +545,60 @@
       "rust_file": "src/types/task.rs",
       "rust_type": "RemoteCallTaskDetails",
       "direction": "response"
+    },
+    {
+      "openapi_schema": "EventSink",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "EventSink",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "NewEventSink",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "NewEventSink",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "UpdateEventSink",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "UpdateEventSink",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "EventSubscriptionFilter",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "EventSubscriptionFilter",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "EventSubscriptionDeliveryHealth",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "EventSubscriptionDeliveryHealth",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "EventDeliveryResponse",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "EventDelivery",
+      "direction": "response",
+      "requiredness_exceptions": {
+        "purpose": "Deliveries from older servers default to event purpose."
+      }
+    },
+    {
+      "openapi_schema": "EventDeliveryPolicy",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "EventDeliveryPolicy",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "ImportEventSinkInput",
+      "rust_file": "src/types/import.rs",
+      "rust_type": "ImportEventSinkInput",
+      "direction": "request",
+      "requiredness_exceptions": {
+        "config": "The client always serializes an object for legacy import construction; the server defaults an omitted config."
+      }
     }
   ]
 }

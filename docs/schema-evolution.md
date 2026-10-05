@@ -136,4 +136,4 @@ schema, task, and backup limits. External authorization traversal is capped at
 
 See the [v0.0.15 release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.15),
 [server validation limits](https://github.com/hubuum/hubuum/blob/v0.0.15/docs/json_schema_validation.md),
-and [format 6 backup migration](backups-and-computed-fields.md).
+and [backup format compatibility](backups-and-computed-fields.md).

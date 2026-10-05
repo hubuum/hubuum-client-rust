@@ -47,6 +47,7 @@ fn e2e_event_subscriptions_create_delivery_rows() {
             config: Some(json!({})),
             enabled: Some(true),
             secret_ref: None,
+            delivery_policy: None,
         })
         .expect("event sink should create");
 

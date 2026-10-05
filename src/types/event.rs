@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 
+use crate::ApiError;
 use crate::resources::{CollectionId, EventSinkId, UserId};
 
 use super::{
-    EventDeliveryId, EventSubscriptionId, HubuumDateTime, PrincipalId, Provenance, ResourceRevision,
+    EventDeliveryId, EventSubscriptionId, HubuumDateTime, PrincipalId, Provenance,
+    ResourceRevision, TaskKind,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -56,6 +58,42 @@ pub enum EventSinkKind {
     Unknown,
 }
 
+/// Optional minimum interval between delivery admissions to a sink.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, Default)]
+pub struct EventDeliveryPolicy {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    min_interval_ms: Option<i64>,
+}
+
+impl EventDeliveryPolicy {
+    /// Set an interval from one millisecond to one day.
+    pub fn new(min_interval_ms: i64) -> Result<Self, ApiError> {
+        if !(1..=86_400_000).contains(&min_interval_ms) {
+            return Err(ApiError::InvalidEventDeliveryInterval);
+        }
+        Ok(Self {
+            min_interval_ms: Some(min_interval_ms),
+        })
+    }
+
+    pub const fn min_interval_ms(&self) -> Option<i64> {
+        self.min_interval_ms
+    }
+}
+
+impl<'de> Deserialize<'de> for EventDeliveryPolicy {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        struct WirePolicy {
+            min_interval_ms: Option<i64>,
+        }
+        match WirePolicy::deserialize(deserializer)?.min_interval_ms {
+            Some(value) => Self::new(value).map_err(serde::de::Error::custom),
+            None => Ok(Self::default()),
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 #[non_exhaustive]
 pub struct EventSink {
@@ -66,6 +104,8 @@ pub struct EventSink {
     pub enabled: bool,
     #[serde(default)]
     pub secret_ref: Option<String>,
+    #[serde(default)]
+    pub delivery_policy: Option<EventDeliveryPolicy>,
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
     pub revision: ResourceRevision,
@@ -81,6 +121,8 @@ pub struct NewEventSink {
     pub enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secret_ref: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delivery_policy: Option<EventDeliveryPolicy>,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -95,6 +137,8 @@ pub struct UpdateEventSink {
     pub enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secret_ref: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delivery_policy: Option<EventDeliveryPolicy>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -107,6 +151,8 @@ pub struct EventSinkGet {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct EventSubscriptionFilter {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub task_kinds: Option<Vec<TaskKind>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actor_kinds: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -287,6 +333,17 @@ pub enum EventDeliveryStatus {
     Unknown,
 }
 
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum EventDeliveryPurpose {
+    #[default]
+    Event,
+    Test,
+    #[serde(other)]
+    Unknown,
+}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct EventDelivery {
@@ -294,6 +351,11 @@ pub struct EventDelivery {
     pub event_id: i64,
     pub subscription_id: EventSubscriptionId,
     pub status: EventDeliveryStatus,
+    /// Older servers omit purpose; their deliveries always originated from events.
+    #[serde(default)]
+    pub purpose: EventDeliveryPurpose,
+    #[serde(default)]
+    pub deferred_reason: Option<String>,
     pub attempts: i32,
     pub next_attempt_at: HubuumDateTime,
     #[serde(default)]
@@ -311,6 +373,11 @@ impl std::fmt::Debug for EventDelivery {
             .field("event_id", &self.event_id)
             .field("subscription_id", &self.subscription_id)
             .field("status", &self.status)
+            .field("purpose", &self.purpose)
+            .field(
+                "deferred_reason",
+                &redacted_if_present(&self.deferred_reason),
+            )
             .field("attempts", &self.attempts)
             .field("next_attempt_at", &self.next_attempt_at)
             .field(
@@ -392,7 +459,8 @@ pub struct EventSinkDeliveryHealth {
 pub struct EventSubscriptionDeliveryHealth {
     pub subscription_id: EventSubscriptionId,
     pub subscription_name: String,
-    pub collection_id: CollectionId,
+    /// Absent for administrator system event subscriptions.
+    pub collection_id: Option<CollectionId>,
     pub sink_id: EventSinkId,
     pub sink_name: String,
     pub sink_kind: String,
@@ -415,11 +483,45 @@ pub struct EventDeliveryHealthResponse {
 #[cfg(test)]
 mod tests {
     use super::{
-        EventDelivery, EventSink, EventSinkKind, EventSubscription, NewEventSink,
-        NewEventSubscription, UpdateEventSink, UpdateEventSubscription,
+        EventDelivery, EventDeliveryPolicy, EventDeliveryPurpose, EventSink, EventSinkKind,
+        EventSubscription, NewEventSink, NewEventSubscription, UpdateEventSink,
+        UpdateEventSubscription,
     };
     use crate::EventSinkId;
     use serde_json::json;
+
+    #[rstest::rstest]
+    #[case(0, false)]
+    #[case(-1, false)]
+    #[case(1, true)]
+    #[case(86_400_000, true)]
+    #[case(86_400_001, false)]
+    fn delivery_interval_is_validated_on_construction_and_decode(
+        #[case] interval: i64,
+        #[case] valid: bool,
+    ) {
+        assert_eq!(EventDeliveryPolicy::new(interval).is_ok(), valid);
+        let decoded =
+            serde_json::from_value::<EventDeliveryPolicy>(json!({"min_interval_ms": interval}));
+        assert_eq!(decoded.is_ok(), valid);
+        if let Ok(policy) = decoded {
+            assert_eq!(policy.min_interval_ms(), Some(interval));
+            assert_eq!(
+                serde_json::to_value(policy).unwrap(),
+                json!({"min_interval_ms": interval})
+            );
+        }
+    }
+
+    #[rstest::rstest]
+    #[case(json!({}))]
+    #[case(json!({"min_interval_ms": null}))]
+    fn empty_policy_clears_sink_pacing(#[case] value: serde_json::Value) {
+        let policy: EventDeliveryPolicy = serde_json::from_value(value).unwrap();
+        assert_eq!(policy, EventDeliveryPolicy::default());
+        assert_eq!(policy.min_interval_ms(), None);
+        assert_eq!(serde_json::to_value(policy).unwrap(), json!({}));
+    }
 
     #[test]
     fn delivery_debug_redacts_error_details_and_ignores_removed_claim_tokens() {
@@ -432,6 +534,7 @@ mod tests {
             "next_attempt_at": "2026-07-23T08:00:00Z",
             "claim_token": "delivery-claim-secret",
             "last_error": "sink rejected bearer sink-secret",
+            "deferred_reason": "deferred-secret",
             "locked_until": "2026-07-23T08:01:00Z",
             "created_at": "2026-07-23T07:59:00Z",
             "updated_at": "2026-07-23T08:00:00Z"
@@ -442,6 +545,8 @@ mod tests {
         assert!(diagnostic.contains("last_error: Some(\"[REDACTED]\")"));
         assert!(!diagnostic.contains("delivery-claim-secret"));
         assert!(!diagnostic.contains("sink-secret"));
+        assert!(!diagnostic.contains("deferred-secret"));
+        assert_eq!(delivery.purpose, EventDeliveryPurpose::Event);
         assert_eq!(
             delivery.last_error.as_deref(),
             Some("sink rejected bearer sink-secret")
@@ -468,6 +573,7 @@ mod tests {
             config: Some(json!({"authorization": "create-secret"})),
             enabled: Some(true),
             secret_ref: Some("create-secret-ref".into()),
+            delivery_policy: None,
         };
         let update_sink = UpdateEventSink {
             config: Some(json!({"password": "update-secret"})),

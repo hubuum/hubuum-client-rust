@@ -6,6 +6,44 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-05
+
+### Compatibility
+
+- This release explicitly targets Hubuum server v0.0.17, with its 227-operation,
+  336-schema OpenAPI contract and immutable multi-platform image
+  `sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302`.
+  Rust 1.88 and public feature availability remain unchanged. The canonical
+  pinned run passed 93 library and 33 consumer tests plus all four
+  restore/recovery variants; 87 wire-model mappings are reconciled.
+- Accept backup formats 6 and 7; `CURRENT_BACKUP_VERSION` is now 7. The server
+  produces format 7 and accepts format 6 with legacy notification defaults.
+- Preserve event sink delivery policies in CRUD and imports, task-kind
+  subscription filters, and delivery purpose and deferral details. Delivery
+  intervals are validated from 1 to 86,400,000 milliseconds. System-subscription
+  CRUD and notification preview/test are available through `raw()`; see
+  [the documented coverage](openapi/known-gaps.md#v0017-notifications).
+- Refresh the lockfile to Mio 1.2.4 after checking all workspace dependencies.
+  Verify all action pins against upstream releases and maintained branches;
+  the existing pins are current, including the Node 24 audit action revision.
+
+### Breaking changes and migration
+
+- **Breaking Rust API:** `EventSubscriptionDeliveryHealth.collection_id` is now
+  `Option<CollectionId>`. Handle `None` for system subscriptions and wrap
+  collection IDs in `Some` when constructing this response type.
+- **Breaking Rust API:** `NewEventSink`, `UpdateEventSink`, and
+  `ImportEventSinkInput` gain `delivery_policy`; `EventSubscriptionFilter` gains
+  `task_kinds`. Add `None` to exhaustive literals, use `..Default::default()`
+  where available, and add `..` to exhaustive destructuring patterns.
+- **Server upgrade:** stop all API, worker, and restore-executor writers, take a
+  PostgreSQL snapshot, and apply the webhook-notification migration before
+  starting matching v0.0.17 binaries. Binary-only rollback is unsupported;
+  recovery requires that snapshot and matching v0.0.16 binaries. Older servers
+  cannot restore new format-7 backups. Optional Treetop installations must
+  upgrade Treetop and their policy bundles to protocol 0.1; see the
+  [server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.17).
+
 ### Changed
 
 - Refresh direct and transitive Rust dependencies, including Tokio, thiserror,

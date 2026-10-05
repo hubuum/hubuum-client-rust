@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.12.0 targets Hubuum server v0.0.16. See the repository's
+//! Version 0.13.0 targets Hubuum server v0.0.17. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -45,7 +45,7 @@ pub mod types;
 mod endpoints;
 
 /// Hubuum server release targeted by this client release.
-pub const TARGET_SERVER_VERSION: &str = "0.0.16";
+pub const TARGET_SERVER_VERSION: &str = "0.0.17";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
@@ -78,23 +78,24 @@ pub use types::{
     ComputedFieldQueryScope, ComputedFieldSelector, ComputedFieldVisibility, ComputedObject,
     ComputedObjectScopes, ComputedResultType, ComputedScope, CountsResponse, Credentials,
     DEFAULT_METRICS_PATH, DatabaseConfig, DbStateResponse, EntityTag, EventConfig, EventDelivery,
-    EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryQueueHealth, EventDeliveryStatus,
-    EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
-    EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKey, EventSinkKind,
-    EventSubscription, EventSubscriptionDeliveryHealth, EventSubscriptionFilter,
-    EventSubscriptionId, EventWorkerHealth, EventWorkerWakeupStats, ExportConfig,
-    ExportContentType, ExportInclude, ExportIncludeRelatedDirection, ExportIncludeRelatedObject,
-    ExportIncludeRelatedSort, ExportJsonResponse, ExportLimits, ExportMeta,
-    ExportMissingDataPolicy, ExportRelationContext, ExportRequest, ExportResult, ExportScope,
-    ExportScopeKind, ExportTaskDetails, ExportTemplateHistory, ExportTemplateKind,
-    ExportTemplateRunRequest, ExportWarning, FullCollectionHistory, FullDbStateResponse,
-    FullImportClassRelationInput, FullImportGraph, FullImportRequest, GroupKey, HistoryId,
-    HistoryMetadata, IdentityScopeKey, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
-    ImportCollectionInput, ImportCollectionPermissionInput, ImportCollisionPolicy,
-    ImportComputedFieldInput, ImportComputedFieldVisibility, ImportEventSinkInput,
-    ImportEventSubscriptionInput, ImportExportTemplateInput, ImportGraph, ImportGroupInput,
-    ImportGroupMembershipInput, ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode,
-    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
+    EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryPolicy, EventDeliveryPurpose,
+    EventDeliveryQueueHealth, EventDeliveryStatus, EventDeliveryStatusCounts,
+    EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse, EventSink,
+    EventSinkDeliveryHealth, EventSinkGet, EventSinkKey, EventSinkKind, EventSubscription,
+    EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventSubscriptionId,
+    EventWorkerHealth, EventWorkerWakeupStats, ExportConfig, ExportContentType, ExportInclude,
+    ExportIncludeRelatedDirection, ExportIncludeRelatedObject, ExportIncludeRelatedSort,
+    ExportJsonResponse, ExportLimits, ExportMeta, ExportMissingDataPolicy, ExportRelationContext,
+    ExportRequest, ExportResult, ExportScope, ExportScopeKind, ExportTaskDetails,
+    ExportTemplateHistory, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning,
+    FullCollectionHistory, FullDbStateResponse, FullImportClassRelationInput, FullImportGraph,
+    FullImportRequest, GroupKey, HistoryId, HistoryMetadata, IdentityScopeKey, ImportAtomicity,
+    ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
+    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportComputedFieldInput,
+    ImportComputedFieldVisibility, ImportEventSinkInput, ImportEventSubscriptionInput,
+    ImportExportTemplateInput, ImportGraph, ImportGroupInput, ImportGroupMembershipInput,
+    ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode, ImportObjectInput,
+    ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
     ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportResultId,
     ImportRunResult, ImportSchemaActivation, ImportTaskDetails, ImportTaskResultResponse,
     ImportWriteCondition, JsonPath, LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND,

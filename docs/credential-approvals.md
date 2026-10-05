@@ -1,8 +1,8 @@
 # Fresh credential approvals
 
-Hubuum v0.0.16 requires fresh password authentication for token creation and renewal, local user
+Hubuum v0.0.16 and newer require fresh password authentication for token creation and renewal, local user
 creation, password changes, credential-bearing imports (including dry runs), and
-restore confirmation. Client 0.12.0 targets this release; the approval helpers
+restore confirmation. Client 0.13.0 targets v0.0.17; the approval helpers
 have been available since client 0.11.1.
 
 ## Authenticate the acting human

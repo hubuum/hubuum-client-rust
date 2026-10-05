@@ -58,6 +58,9 @@ pub enum ApiError {
     #[error("Tracing sampling ratio must be finite and between zero and one")]
     InvalidSamplingRatio,
 
+    #[error("Event delivery interval must be between 1 and 86400000 milliseconds")]
+    InvalidEventDeliveryInterval,
+
     #[error("Resource revision must be a positive 64-bit integer, got {0}")]
     InvalidResourceRevision(i64),
 
@@ -222,6 +225,7 @@ impl std::fmt::Debug for ApiError {
             Self::QueryEncoding(message) => f.debug_tuple("QueryEncoding").field(message).finish(),
             Self::InvalidPrincipalSettings => f.write_str("InvalidPrincipalSettings"),
             Self::InvalidSamplingRatio => f.write_str("InvalidSamplingRatio"),
+            Self::InvalidEventDeliveryInterval => f.write_str("InvalidEventDeliveryInterval"),
             Self::InvalidSchemaRevision(value) => {
                 f.debug_tuple("InvalidSchemaRevision").field(value).finish()
             }

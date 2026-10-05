@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.16 OpenAPI gaps
+# Known Hubuum server v0.0.17 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.16
+The pinned client contract records these limitations in the server v0.0.17
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not
@@ -34,6 +34,8 @@ Rust wire models:
   null when absent.
 - `TaskResponse.unattempted_items` defaults to zero for older responses that
   predate cancellation accounting.
+- `EventDelivery.purpose` defaults to `Event` for older responses. Import sink
+  requests always serialize `config`, although the server can default it.
 - `UpdateUser.password` is intentionally absent from `UserPatch`; the async and
   blocking clients provide dedicated `set_password` helpers. Future unmapped
   properties can still be reached through the constrained `raw()` extension
@@ -57,8 +59,42 @@ Rust wire models:
 
 ## Credential approval coverage
 
-The pinned v0.0.16 contract includes both approval endpoints and the approval
+The pinned v0.0.17 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return `reauthentication_required`; applications
 must use the [approval workflow](../docs/credential-approvals.md).
+
+## v0.0.17 notifications
+
+All seven newly declared operations are available through authenticated `raw()`
+requests in both client modes; this release has no dedicated typed route helpers:
+
+| Operations | Route |
+| --- | --- |
+| GET, POST | `/api/v1/system-event-subscriptions` |
+| GET, PATCH, DELETE | `/api/v1/system-event-subscriptions/{subscription_id}` |
+| POST | `/api/v1/event-sinks/{sink_id}/preview` |
+| POST | `/api/v1/event-sinks/{sink_id}/test` |
+
+System subscriptions reuse `NewEventSubscription` and `UpdateEventSubscription`
+request models. Decode their responses as application-owned models or
+`serde_json::Value`: `EventSubscription` is collection-scoped and requires a
+collection ID. Preview and test requests take `subscription_id` and the source
+`event_id` UUID string. Preview returns a sink kind and a rendered JSON payload;
+test returns an `EventDelivery` with purpose `Test`. These administrator-only
+operations can bypass disabled flags and subscription filters to test a real
+source event. Protect rendered payloads as potentially sensitive data.
+
+Existing typed sink CRUD and imports now preserve `delivery_policy`; a policy
+with `min_interval_ms` limits admission pacing, and an empty policy clears it.
+The server retains provider cooldowns when pacing changes. Webhook payload,
+secret-backed URL, authentication, acknowledgement, and retry settings remain in
+the existing JSON `config` model. `EventSubscriptionFilter.task_kinds` narrows
+task lifecycle notifications. Delivery responses preserve `purpose` and
+`deferred_reason`; debug output redacts the latter. System subscription health
+uses `collection_id: None`.
+
+The combined live suite covers all seven routes through both async and blocking
+public clients, including typed pacing, filter serialization, nullable health,
+and test-delivery decoding.
