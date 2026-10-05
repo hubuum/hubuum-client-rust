@@ -94,9 +94,39 @@ impl<'de> Deserialize<'de> for EventDeliveryPolicy {
     }
 }
 
+/// Permitted destination metadata. URLs, configuration and secret aliases are omitted.
+/// Requires server collection-integration support after v0.0.17.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[non_exhaustive]
+pub struct CollectionEventSink {
+    pub id: EventSinkId,
+    pub name: String,
+    pub kind: EventSinkKind,
+    pub enabled: bool,
+    pub collection_id: Option<CollectionId>,
+    pub revision: ResourceRevision,
+    pub routing: EventSinkRouting,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[non_exhaustive]
+#[serde(rename_all = "snake_case")]
+pub enum EventSinkRouting {
+    Fixed,
+    WebhookUrl,
+    EmailRecipients,
+    ValkeyStream,
+    Amqp,
+    #[default]
+    #[serde(other)]
+    Unknown,
+}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 #[non_exhaustive]
 pub struct EventSink {
+    #[serde(default)]
+    pub collection_id: Option<CollectionId>,
     pub id: EventSinkId,
     pub name: String,
     pub kind: EventSinkKind,

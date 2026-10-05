@@ -422,6 +422,11 @@ mod parity_contract {
     macro_rules! assert_v003_surface {
         ($module:ident) => {
             let _ = |client: &$module::Client<Authenticated>| {
+                let _ = client.collection_event_sinks(1);
+                let _ = client.collection(1).event_sinks();
+                std::mem::drop(client.event_sink_collections(1));
+                std::mem::drop(client.grant_event_sink(1, 2));
+                std::mem::drop(client.revoke_event_sink(1, 2));
                 let _ = client.class_by_name(String::new());
                 let _ = client.object_aggregates(1);
                 let _ = client.collection_history_full(1);

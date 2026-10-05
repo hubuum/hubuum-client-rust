@@ -7935,3 +7935,89 @@ mod notification_compatibility {
         verify!(client, transport, send);
     }
 }
+
+mod collection_destinations {
+    use hubuum_client::{
+        BaseUrl, Client, EventSinkRouting, MockTransport, NewEventSink, Token, TransportResponse,
+        UpdateEventSink, blocking,
+    };
+    use reqwest::StatusCode;
+    use serde_json::json;
+    use std::sync::Arc;
+
+    fn transport() -> MockTransport {
+        let transport = MockTransport::default();
+        let sink = json!({"id": 5, "name": "notifications", "kind": "webhook", "enabled": true, "collection_id": 7, "revision": 1, "routing": "fixed"});
+        for (status, body) in [
+            (StatusCode::CREATED, sink.clone()),
+            (StatusCode::OK, json!([sink.clone()])),
+            (StatusCode::OK, sink.clone()),
+            (StatusCode::OK, sink),
+        ] {
+            transport.push_response(TransportResponse::json(status, &body).unwrap());
+        }
+        transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+        transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+        transport.push_response(TransportResponse::json(StatusCode::OK, &json!([7])).unwrap());
+        transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
+        transport
+    }
+
+    macro_rules! verify {
+        ($client:ident, $transport:ident, $send:ident) => {{
+            let sinks = $client.collection(7).event_sinks();
+            let created = $send!(sinks.create_raw(NewEventSink { name: "notifications".into(), config: Some(json!({"destination_url":"https://example.test/private-token"})), ..Default::default() })).unwrap();
+            assert_eq!(created.routing, EventSinkRouting::Fixed);
+            assert_eq!($send!(sinks.query().page()).unwrap().items.len(), 1);
+            assert_eq!($send!(sinks.get(5)).unwrap().id(), 5);
+            $send!(sinks.update_raw(5, UpdateEventSink { enabled: Some(false), ..Default::default() })).unwrap();
+            $send!(sinks.delete(5)).unwrap();
+            $send!($client.grant_event_sink(12, 7)).unwrap();
+            assert_eq!($send!($client.event_sink_collections(12)).unwrap()[0], 7);
+            $send!($client.revoke_event_sink(12, 7)).unwrap();
+            let requests = $transport.requests();
+            let paths: Vec<_> = requests.iter().map(|request| (request.method.as_str(), request.url.path())).collect();
+            assert_eq!(paths, vec![
+                ("POST", "/api/v1/collections/7/event-sinks"),
+                ("GET", "/api/v1/collections/7/event-sinks"),
+                ("GET", "/api/v1/collections/7/event-sinks/5"),
+                ("PATCH", "/api/v1/collections/7/event-sinks/5"),
+                ("DELETE", "/api/v1/collections/7/event-sinks/5"),
+                ("PUT", "/api/v1/event-sinks/12/collections/7"),
+                ("GET", "/api/v1/event-sinks/12/collections"),
+                ("DELETE", "/api/v1/event-sinks/12/collections/7"),
+            ]);
+            assert!(!format!("{:?}", requests[0]).contains("private-token"));
+        }};
+    }
+    #[test]
+    fn blocking_uses_collection_scoped_destinations() {
+        let transport = transport();
+        let client = blocking::Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        macro_rules! send {
+            ($value:expr) => {
+                $value
+            };
+        }
+        verify!(client, transport, send);
+    }
+    #[tokio::test]
+    async fn async_uses_collection_scoped_destinations() {
+        let transport = transport();
+        let client = Client::builder(BaseUrl::new("https://example.test").unwrap())
+            .with_transport(Arc::new(transport.clone()))
+            .build()
+            .unwrap()
+            .authenticate(Token::new("token"));
+        macro_rules! send {
+            ($value:expr) => {
+                $value.await
+            };
+        }
+        verify!(client, transport, send);
+    }
+}

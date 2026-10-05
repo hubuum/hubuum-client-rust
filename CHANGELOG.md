@@ -6,6 +6,16 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Collection-owned webhook CRUD and permitted sink discovery through
+  `collection(id).event_sinks()` and `collection_event_sinks(id)` in both client modes.
+- Administrator methods to list, grant and revoke a global sink's collection use.
+  Safe collection destination models omit configuration, URLs and credentials.
+- This prepares client `0.14.0`. New collection integration APIs require the matching
+  server update after `v0.0.17`; the pinned `v0.0.17` contract remains the baseline
+  for existing APIs and does not include these optional endpoints.
+
 ## [0.13.0] - 2026-10-05
 
 ### Compatibility

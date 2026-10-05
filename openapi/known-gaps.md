@@ -98,3 +98,10 @@ uses `collection_id: None`.
 The combined live suite covers all seven routes through both async and blocking
 public clients, including typed pacing, filter serialization, nullable health,
 and test-delivery decoding.
+
+## Optional collection integration extension
+
+The typed collection destination and administrator grant helpers target the server
+collection-integration update after `v0.0.17`. They are intentionally additional to
+the pinned released-server snapshot. Their safe response shape is `CollectionEventSink`;
+configuration and secrets are omitted. Both client modes have equivalent behavior tests.

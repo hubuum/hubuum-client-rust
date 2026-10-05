@@ -285,3 +285,22 @@ history included/omitted reached `Succeeded` and invalidated the old bearer toke
 Recovery after each restore preserved the object's resource revision, the active
 schema revision, and validation evidence. Subsequent backups before and after a
 mutation also passed restore staging validation.
+
+## Unreleased collection integration support
+
+Client `0.14.0` adds optional APIs for the server collection-integration update after
+`v0.0.17`. The declared released-server baseline and its normalized OpenAPI snapshot
+remain `v0.0.17`. New endpoints return the server's unsupported-route response on that
+release; these methods do not fall back to global administrator discovery.
+
+Use `client.collection(id).event_sinks()` to discover permitted destinations and
+create a webhook with `NewEventSink.config` containing `destination_url`. The same
+resource supports reads, edits, deletion, cursor pagination and conditional writes.
+Use `client.event_subscriptions(id)` to select events. Writes require both
+`ManageEventSubscription` and `ReadAudit` on the collection.
+
+Administrators can use `event_sink_collections`, `grant_event_sink` and
+`revoke_event_sink` for global sinks. Collection-owned sinks cannot be shared.
+URLs in collection discovery are write-only, and credentials cannot be redirected
+by subscription routing. Provision a fixed destination for credential-bearing
+webhooks before using the newer server. Grants do not inherit to child collections.

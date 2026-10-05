@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.13.0 targets Hubuum server v0.0.17. See the repository's
+//! Version 0.14.0 targets Hubuum server v0.0.17. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -70,8 +70,8 @@ pub use types::{
     BackupManifest, BackupRequest, BackupState, BackupTaskDetails, BaseUrl, CURRENT_BACKUP_VERSION,
     CURRENT_IMPORT_VERSION, ClassComputationState, ClassHistory, ClassKey, ClassParams,
     ClassSchemaResponse, ClearRateLimitResponse, ClientAllowlistStatus, ClientAuthenticationConfig,
-    ClientConfig, ClientPaginationConfig, CollectionHistory, CollectionKey, ComplianceStatus,
-    ComputationRevision, ComputedFieldDefinition, ComputedFieldDefinitionId,
+    ClientConfig, ClientPaginationConfig, CollectionEventSink, CollectionHistory, CollectionKey,
+    ComplianceStatus, ComputationRevision, ComputedFieldDefinition, ComputedFieldDefinitionId,
     ComputedFieldDefinitionPatch, ComputedFieldDefinitionRequest, ComputedFieldDeleteResponse,
     ComputedFieldError, ComputedFieldListResponse, ComputedFieldMutationResponse,
     ComputedFieldOperation, ComputedFieldPreviewRequest, ComputedFieldPreviewResponse,
@@ -81,21 +81,21 @@ pub use types::{
     EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryPolicy, EventDeliveryPurpose,
     EventDeliveryQueueHealth, EventDeliveryStatus, EventDeliveryStatusCounts,
     EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse, EventSink,
-    EventSinkDeliveryHealth, EventSinkGet, EventSinkKey, EventSinkKind, EventSubscription,
-    EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventSubscriptionId,
-    EventWorkerHealth, EventWorkerWakeupStats, ExportConfig, ExportContentType, ExportInclude,
-    ExportIncludeRelatedDirection, ExportIncludeRelatedObject, ExportIncludeRelatedSort,
-    ExportJsonResponse, ExportLimits, ExportMeta, ExportMissingDataPolicy, ExportRelationContext,
-    ExportRequest, ExportResult, ExportScope, ExportScopeKind, ExportTaskDetails,
-    ExportTemplateHistory, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning,
-    FullCollectionHistory, FullDbStateResponse, FullImportClassRelationInput, FullImportGraph,
-    FullImportRequest, GroupKey, HistoryId, HistoryMetadata, IdentityScopeKey, ImportAtomicity,
-    ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
-    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportComputedFieldInput,
-    ImportComputedFieldVisibility, ImportEventSinkInput, ImportEventSubscriptionInput,
-    ImportExportTemplateInput, ImportGraph, ImportGroupInput, ImportGroupMembershipInput,
-    ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode, ImportObjectInput,
-    ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
+    EventSinkDeliveryHealth, EventSinkGet, EventSinkKey, EventSinkKind, EventSinkRouting,
+    EventSubscription, EventSubscriptionDeliveryHealth, EventSubscriptionFilter,
+    EventSubscriptionId, EventWorkerHealth, EventWorkerWakeupStats, ExportConfig,
+    ExportContentType, ExportInclude, ExportIncludeRelatedDirection, ExportIncludeRelatedObject,
+    ExportIncludeRelatedSort, ExportJsonResponse, ExportLimits, ExportMeta,
+    ExportMissingDataPolicy, ExportRelationContext, ExportRequest, ExportResult, ExportScope,
+    ExportScopeKind, ExportTaskDetails, ExportTemplateHistory, ExportTemplateKind,
+    ExportTemplateRunRequest, ExportWarning, FullCollectionHistory, FullDbStateResponse,
+    FullImportClassRelationInput, FullImportGraph, FullImportRequest, GroupKey, HistoryId,
+    HistoryMetadata, IdentityScopeKey, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
+    ImportCollectionInput, ImportCollectionPermissionInput, ImportCollisionPolicy,
+    ImportComputedFieldInput, ImportComputedFieldVisibility, ImportEventSinkInput,
+    ImportEventSubscriptionInput, ImportExportTemplateInput, ImportGraph, ImportGroupInput,
+    ImportGroupMembershipInput, ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode,
+    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
     ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportResultId,
     ImportRunResult, ImportSchemaActivation, ImportTaskDetails, ImportTaskResultResponse,
     ImportWriteCondition, JsonPath, LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND,
