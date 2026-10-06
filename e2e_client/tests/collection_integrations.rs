@@ -50,14 +50,8 @@ macro_rules! workflow {
 }
 
 #[yare::parameterized(blocking = { false }, asynchronous = { true })]
-#[ignore = "requires HUBUUM_INTEGRATION_COLLECTION_INTEGRATIONS=1 and the updated server"]
+#[ignore = "requires Docker and hubuum server image"]
 fn delegated_collection_webhooks(asynchronous: bool) {
-    if std::env::var("HUBUUM_INTEGRATION_COLLECTION_INTEGRATIONS").as_deref() != Ok("1") {
-        eprintln!(
-            "Collection integrations require the updated server; pinned v0.0.17 excludes them."
-        );
-        return;
-    }
     let harness = E2EHarness::from_env().unwrap();
     let mut password_bytes = [0u8; 32];
     getrandom::fill(&mut password_bytes).unwrap();

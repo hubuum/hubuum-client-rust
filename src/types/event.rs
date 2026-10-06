@@ -95,7 +95,7 @@ impl<'de> Deserialize<'de> for EventDeliveryPolicy {
 }
 
 /// Permitted destination metadata. URLs, configuration and secret aliases are omitted.
-/// Requires server collection-integration support after v0.0.17.
+/// Requires server collection-integration support in v0.0.18 and newer.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[non_exhaustive]
 pub struct CollectionEventSink {

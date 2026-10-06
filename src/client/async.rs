@@ -1524,7 +1524,7 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    /// Discover and manage collection-owned destinations on servers after v0.0.17.
+    /// Discover and manage collection-owned destinations on server v0.0.18 and newer.
     pub fn collection_event_sinks(
         &self,
         collection_id: impl Into<CollectionId>,

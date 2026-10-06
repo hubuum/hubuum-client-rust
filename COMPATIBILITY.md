@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.14.1 | 0.0.18 | `ghcr.io/hubuum/hubuum-server@sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4` | Declared target; 235-operation contract and 88 wire-model mappings. Canonical released-image run passed with approval enforcement: 93 library tests, 35 consumer tests including delegated setup in both modes, four full restores, and four recovery runs (2026-10-06). |
 | 0.14.0 | 0.0.17 | `ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302` | Declared target retained; canonical library, consumer, LDAP, and all four restore/recovery suites passed (2026-10-06). Optional collection integrations were separately verified against the updated server in both client modes. |
 | 0.13.0 | 0.0.17 | `ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302` | Declared target; 227-operation contract and 87 wire-model mappings. Canonical run passed with approval enforcement: 93 library tests, 33 consumer tests including both notification modes, and all four full restore/recovery variants (2026-10-05). |
 | 0.12.0 | 0.0.16 | `ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e` | Declared target; 220-operation contract and 79 wire-model mappings. Complete canonical run passed with approval enforcement required: 93 library tests, all downstream suites with typed discovery and retained details for all six task kinds, real cursor pagination, and four full restore/recovery variants (2026-09-22). |
@@ -81,6 +82,33 @@ Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
+
+## v0.0.18 target
+
+Client 0.14.1 targets server v0.0.18. The pinned contract grows from 227 to
+235 operations and includes the collection sink and grant APIs already exposed
+in 0.14.0. Public client APIs, Rust 1.88, and feature combinations are unchanged.
+The canonical live suite now requires delegated webhook setup in both client modes
+and grants a global sink to its collection before creating a subscription.
+
+The tested multi-platform image was published from server release commit
+`35fcf6696d4d564e2d89534db0c5194c14129d9f`. Its native Linux AMD64 binary and
+OCI source/version labels were verified before the complete 136-check live run.
+
+Collection managers need `ManageEventSubscription` and `ReadAudit`. Shared sinks
+require direct administrator grants, which do not inherit to child collections.
+Credentials and static headers must be bound to a fixed destination; subscription
+routing cannot override it. Revocation is checked before dispatch, and queued
+claims retain configuration revisions. Collection-owned integrations survive the
+creator losing access, and related-collection payloads omit resource snapshots.
+
+The server emits backup format 8 and accepts formats 6 and 7 with legacy sink-grant
+backfill. Older servers cannot restore format 8. Stop all API, worker, and restore
+writers, take a PostgreSQL snapshot, apply the collection-event-sinks migration,
+reconcile role grants, and start matching v0.0.18 binaries. Binary-only rollback is
+unsupported; recovery requires that snapshot and matching v0.0.17 binaries and
+loses later writes. See the
+[server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.18).
 
 ## v0.0.17 target
 
@@ -287,12 +315,12 @@ Recovery after each restore preserved the object's resource revision, the active
 schema revision, and validation evidence. Subsequent backups before and after a
 mutation also passed restore staging validation.
 
-## Unreleased collection integration support
+## Collection integration APIs
 
-Client `0.14.0` adds optional APIs for the server collection-integration update after
-`v0.0.17`. The declared released-server baseline and its normalized OpenAPI snapshot
-remain `v0.0.17`. New endpoints return the server's unsupported-route response on that
-release; these methods do not fall back to global administrator discovery.
+Client `0.14.0` introduced these APIs as optional extensions after `v0.0.17`.
+Client `0.14.1` includes them in its declared released-server `v0.0.18` contract.
+Older servers return their unsupported-route response; these methods do not fall
+back to global administrator discovery.
 
 Use `client.collection(id).event_sinks()` to discover permitted destinations and
 create a webhook with `NewEventSink.config` containing `destination_url`. The same
@@ -306,6 +334,6 @@ URLs in collection discovery are write-only, and credentials cannot be redirecte
 by subscription routing. Provision a fixed destination for credential-bearing
 webhooks before using the newer server. Grants do not inherit to child collections.
 
-The client also recognizes backup format 8 from the updated server while preserving
-formats 6 and 7. `CURRENT_BACKUP_VERSION` is 8; the pinned v0.0.17 server still
-emits format 7 and cannot restore format 8. The server validates restore support.
+The client recognizes backup formats 6, 7, and 8. `CURRENT_BACKUP_VERSION` is 8,
+matching the pinned v0.0.18 server. Server v0.0.17 emits format 7 and cannot
+restore format 8. The server validates restore support.

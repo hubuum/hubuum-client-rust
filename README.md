@@ -4,14 +4,15 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.14.0 targets Hubuum server v0.0.17. The pinned image,
+`hubuum_client` 0.14.1 targets Hubuum server v0.0.18. The pinned image,
 verification evidence, and history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
-[Version 0.14.0](https://github.com/hubuum/hubuum-client-rust/releases/tag/v0.14.0)
-(2026-10-06) adds delegated collection webhook management in both client modes and
-recognizes backup format 8. These optional features require the updated server;
-existing v0.0.17 APIs remain supported. See the [release notes](CHANGELOG.md).
+[Version 0.14.1](https://github.com/hubuum/hubuum-client-rust/releases/tag/v0.14.1)
+(2026-10-06) targets the released server collection integrations, including
+collection-owned webhooks, explicit shared-sink grants, and backup format 8.
+Both client modes retain their public API and Rust 1.88 requirement.
+See the [release notes](CHANGELOG.md).
 
 ## Features
 
@@ -45,14 +46,14 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.14.0"
+hubuum_client = "0.14.1"
 ```
 
 Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.14.0", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.14.1", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
@@ -261,7 +262,7 @@ let config = admin_client.admin_config().await?;
 let configured_metrics = client.metrics_at(&config.server.metrics_path).await?;
 ```
 
-Hubuum v0.0.17 requires [fresh password approvals](docs/credential-approvals.md)
+Hubuum v0.0.18 requires [fresh password approvals](docs/credential-approvals.md)
 for credential management. Use the async or blocking approval APIs before
 deploying an enforcing server; ordinary mutation calls do not prompt or retry
 automatically. See [task discovery](docs/task-discovery.md) for typed filters, cursor pagination,
