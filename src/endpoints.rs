@@ -132,6 +132,10 @@ pub enum Endpoint {
     ClassSchemaReport,
     TaskCancel,
     Events,
+    CollectionEventSinks,
+    CollectionEventSinksById,
+    EventSinkCollections,
+    EventSinkCollectionGrant,
     EventSinks,
     EventSinksById,
     EventSinkPreview,
@@ -365,6 +369,14 @@ impl Endpoint {
             }
             Endpoint::TaskCancel => "/api/v1/tasks/{task_id}/cancel",
             Endpoint::Events => "/api/v1/events",
+            Endpoint::CollectionEventSinks => "/api/v1/collections/{collection_id}/event-sinks",
+            Endpoint::CollectionEventSinksById => {
+                "/api/v1/collections/{collection_id}/event-sinks/{sink_id}"
+            }
+            Endpoint::EventSinkCollections => "/api/v1/event-sinks/{sink_id}/collections",
+            Endpoint::EventSinkCollectionGrant => {
+                "/api/v1/event-sinks/{sink_id}/collections/{collection_id}"
+            }
             Endpoint::EventSinks => "/api/v1/event-sinks",
             Endpoint::EventSinksById => "/api/v1/event-sinks/{sink_id}",
             Endpoint::EventSinkPreview => "/api/v1/event-sinks/{sink_id}/preview",
@@ -414,11 +426,11 @@ mod test {
     use strum::IntoEnumIterator;
 
     #[test]
-    fn endpoint_paths_match_the_pinned_openapi_contract() {
+    fn endpoint_paths_match_the_pinned_contract_and_collection_extension() {
         let contract: serde_json::Value =
             serde_json::from_str(include_str!("../openapi/operations.json"))
                 .expect("OpenAPI operation snapshot should be valid JSON");
-        let spec_paths = contract["operations"]
+        let mut spec_paths = contract["operations"]
             .as_array()
             .expect("snapshot operations should be an array")
             .iter()
@@ -428,6 +440,15 @@ mod test {
                     .expect("operation path should be a string")
             })
             .collect::<std::collections::BTreeSet<_>>();
+        let extension: serde_json::Value =
+            serde_json::from_str(include_str!("../openapi/collection-integrations.json")).unwrap();
+        spec_paths.extend(
+            extension["paths"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str),
+        );
         let client_paths = Endpoint::iter()
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();

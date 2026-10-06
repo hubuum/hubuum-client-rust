@@ -4,6 +4,7 @@ use crate::types::{
     TaskRemoteSideEffectState, TaskTerminalReason, TaskTraceId,
 };
 use crate::{ClassRelationId, ObjectRelationId};
+use crate::{CollectionEventSink, EventSinkId};
 use log::{debug, trace};
 use reqwest::blocking::Response;
 use secrecy::SecretString;
@@ -1429,8 +1430,77 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
+    /// Discover and manage collection-owned destinations on servers after v0.0.17.
+    pub fn collection_event_sinks(
+        &self,
+        collection_id: impl Into<CollectionId>,
+    ) -> Resource<CollectionEventSink> {
+        Resource::new(
+            self.clone(),
+            vec![("collection_id", collection_id.into().to_string())],
+        )
+    }
+
     pub fn event_sinks(&self) -> Resource<EventSink> {
         Resource::new(self.clone(), UrlParams::default())
+    }
+
+    /// List direct collection grants for a global sink. Administrator-only.
+    pub fn event_sink_collections(
+        &self,
+        sink_id: impl Into<EventSinkId>,
+    ) -> Result<Vec<CollectionId>, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, Vec<CollectionId>>(
+            reqwest::Method::GET,
+            &Endpoint::EventSinkCollections,
+            vec![("sink_id".into(), sink_id.into().to_string().into())],
+            vec![],
+            EmptyPostParams,
+        )?
+        .ok_or(ApiError::EmptyResult(
+            "Sink collection grants returned empty result".into(),
+        ))
+    }
+
+    /// Permit one collection to use a global sink. Administrator-only.
+    pub fn grant_event_sink(
+        &self,
+        sink_id: impl Into<EventSinkId>,
+        collection_id: impl Into<CollectionId>,
+    ) -> Result<(), ApiError> {
+        self.change_event_sink_grant(sink_id.into(), collection_id.into(), reqwest::Method::PUT)
+    }
+
+    /// Revoke a collection's grant, including admission of queued deliveries.
+    pub fn revoke_event_sink(
+        &self,
+        sink_id: impl Into<EventSinkId>,
+        collection_id: impl Into<CollectionId>,
+    ) -> Result<(), ApiError> {
+        self.change_event_sink_grant(
+            sink_id.into(),
+            collection_id.into(),
+            reqwest::Method::DELETE,
+        )
+    }
+
+    fn change_event_sink_grant(
+        &self,
+        sink_id: EventSinkId,
+        collection_id: CollectionId,
+        method: reqwest::Method,
+    ) -> Result<(), ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+            method,
+            &Endpoint::EventSinkCollectionGrant,
+            vec![
+                ("sink_id".into(), sink_id.to_string().into()),
+                ("collection_id".into(), collection_id.to_string().into()),
+            ],
+            vec![],
+            EmptyPostParams,
+        )
+        .map(|_| ())
     }
 
     pub fn events(&self) -> EventListRequest {
@@ -2768,6 +2838,11 @@ impl CollectionScope {
 
     pub fn history_full(&self) -> HistoryRequest<FullCollectionHistory> {
         self.client.collection_history_full(self.collection_id)
+    }
+
+    /// Collection-owned and explicitly granted event destinations.
+    pub fn event_sinks(&self) -> Resource<CollectionEventSink> {
+        self.client.collection_event_sinks(self.collection_id)
     }
 
     pub fn event_subscriptions(&self) -> EventSubscriptions {

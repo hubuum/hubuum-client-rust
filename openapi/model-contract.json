@@ -550,7 +550,10 @@
       "openapi_schema": "EventSink",
       "rust_file": "src/types/event.rs",
       "rust_type": "EventSink",
-      "direction": "response"
+      "direction": "response",
+      "rust_only_fields": {
+        "collection_id": "Optional ownership metadata from the collection-integration update after v0.0.17. Defaults to None for the pinned server; the new scoped response contract is recorded in collection-integrations.json."
+      }
     },
     {
       "openapi_schema": "NewEventSink",

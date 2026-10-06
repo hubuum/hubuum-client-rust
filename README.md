@@ -4,7 +4,7 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.13.0 targets Hubuum server v0.0.17. The pinned image,
+`hubuum_client` 0.14.0 targets Hubuum server v0.0.17. The pinned image,
 verification evidence, and history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
@@ -40,14 +40,14 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.13.0"
+hubuum_client = "0.14.0"
 ```
 
 Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.13.0", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.14.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
