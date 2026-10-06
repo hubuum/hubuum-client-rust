@@ -11,7 +11,7 @@ verification evidence, and history for earlier client releases are recorded in
 [Version 0.14.0](https://github.com/hubuum/hubuum-client-rust/releases/tag/v0.14.0)
 (2026-10-06) adds delegated collection webhook management in both client modes and
 recognizes backup format 8. These optional features require the updated server;
-existing v0.0.17 APIs remain supported. See the [release notes](CHANGELOG.md#0140---2026-10-06).
+existing v0.0.17 APIs remain supported. See the [release notes](CHANGELOG.md).
 
 ## Features
 
