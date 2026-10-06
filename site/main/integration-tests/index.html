@@ -1474,6 +1474,12 @@ An external stack must expose the same <code>planet-express</code> provider and 
   scenarios also verify ordinary credential operations on the pinned older
   server. Full restore scenarios adapt to either policy. The focused run does
   not replace the complete pinned library plus consumer suite.</li>
+<li><code>HUBUUM_INTEGRATION_COLLECTION_INTEGRATIONS=1</code> enables the delegated webhook
+  consumer tests against a server containing the collection-integration update.
+  With the external connection variables above set, run
+  <code>cargo test -p e2e_client --test collection_integrations -- --ignored</code>. These
+  tests exercise blocking and async non-admin clients and do not run against
+  the pinned v0.0.17 server.</li>
 <li><code>HUBUUM_INTEGRATION_AUTH_CONFIG</code> overrides the server auth-provider configuration file.</li>
 <li><code>HUBUUM_INTEGRATION_CONTAINER_RUNTIME</code> forces <code>docker</code> or <code>podman</code>.</li>
 <li><code>HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS</code> overrides startup timeout. The default is <code>300</code>.</li>

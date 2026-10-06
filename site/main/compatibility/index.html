@@ -640,6 +640,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#unreleased-collection-integration-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased collection integration support
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1437,6 +1448,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#unreleased-collection-integration-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased collection integration support
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1843,6 +1865,24 @@ history included/omitted reached <code>Succeeded</code> and invalidated the old 
 Recovery after each restore preserved the object's resource revision, the active
 schema revision, and validation evidence. Subsequent backups before and after a
 mutation also passed restore staging validation.</p>
+<h2 id="unreleased-collection-integration-support">Unreleased collection integration support<a class="headerlink" href="#unreleased-collection-integration-support" title="Permanent link">&para;</a></h2>
+<p>Client <code>0.14.0</code> adds optional APIs for the server collection-integration update after
+<code>v0.0.17</code>. The declared released-server baseline and its normalized OpenAPI snapshot
+remain <code>v0.0.17</code>. New endpoints return the server's unsupported-route response on that
+release; these methods do not fall back to global administrator discovery.</p>
+<p>Use <code>client.collection(id).event_sinks()</code> to discover permitted destinations and
+create a webhook with <code>NewEventSink.config</code> containing <code>destination_url</code>. The same
+resource supports reads, edits, deletion, cursor pagination and conditional writes.
+Use <code>client.event_subscriptions(id)</code> to select events. Writes require both
+<code>ManageEventSubscription</code> and <code>ReadAudit</code> on the collection.</p>
+<p>Administrators can use <code>event_sink_collections</code>, <code>grant_event_sink</code> and
+<code>revoke_event_sink</code> for global sinks. Collection-owned sinks cannot be shared.
+URLs in collection discovery are write-only, and credentials cannot be redirected
+by subscription routing. Provision a fixed destination for credential-bearing
+webhooks before using the newer server. Grants do not inherit to child collections.</p>
+<p>The client also recognizes backup format 8 from the updated server while preserving
+formats 6 and 7. <code>CURRENT_BACKUP_VERSION</code> is 8; the pinned v0.0.17 server still
+emits format 7 and cannot restore format 8. The server validates restore support.</p>
 
 
 
