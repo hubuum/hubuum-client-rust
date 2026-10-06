@@ -6,6 +6,17 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-06
+
+### Compatibility
+
+- This release explicitly targets Hubuum server v0.0.17 and its immutable tested
+  image. The new collection integration methods are optional extensions requiring
+  the coordinated server update after v0.0.17; existing APIs retain the pinned
+  v0.0.17 baseline. Rust 1.88 and the public feature combinations are unchanged.
+- Update the HTTP connection coordination dependency `want` to 0.3.2 after
+  refreshing all dependencies compatible with the declared MSRV.
+
 ### Changed
 
 - Recognize backup format 8 from the collection-integration server update while
@@ -21,9 +32,6 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   `collection(id).event_sinks()` and `collection_event_sinks(id)` in both client modes.
 - Administrator methods to list, grant and revoke a global sink's collection use.
   Safe collection destination models omit configuration, URLs and credentials.
-- This prepares client `0.14.0`. New collection integration APIs require the matching
-  server update after `v0.0.17`; the pinned `v0.0.17` contract remains the baseline
-  for existing APIs and does not include these optional endpoints.
 
 ## [0.13.0] - 2026-10-05
 
