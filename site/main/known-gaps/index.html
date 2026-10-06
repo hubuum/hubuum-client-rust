@@ -79,7 +79,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#known-hubuum-server-v0017-openapi-gaps" class="md-skip">
+        <a href="#known-hubuum-server-v0018-openapi-gaps" class="md-skip">
           Skip to content
         </a>
       
@@ -1050,10 +1050,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-collection-integration-extension" class="md-nav__link">
+  <a href="#collection-integrations" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional collection integration extension
+        Collection integrations
       </span>
     </span>
   </a>
@@ -1383,10 +1383,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-collection-integration-extension" class="md-nav__link">
+  <a href="#collection-integrations" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional collection integration extension
+        Collection integrations
       </span>
     </span>
   </a>
@@ -1422,8 +1422,8 @@
   
 
 
-<h1 id="known-hubuum-server-v0017-openapi-gaps">Known Hubuum server v0.0.17 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0017-openapi-gaps" title="Permanent link">&para;</a></h1>
-<p>The pinned client contract records these limitations in the server v0.0.17
+<h1 id="known-hubuum-server-v0018-openapi-gaps">Known Hubuum server v0.0.18 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0018-openapi-gaps" title="Permanent link">&para;</a></h1>
+<p>The pinned client contract records these limitations in the server v0.0.18
 specification explicitly:</p>
 <ul>
 <li><code>GET /api/v1/search/stream</code> declares <code>text/event-stream</code> but does not
@@ -1479,7 +1479,7 @@ Rust wire models:</p>
   callers must narrow queries or reduce traversal depth and template workloads.</li>
 </ul>
 <h2 id="credential-approval-coverage">Credential approval coverage<a class="headerlink" href="#credential-approval-coverage" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.17 contract includes both approval endpoints and the approval
+<p>The pinned v0.0.18 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return <code>reauthentication_required</code>; applications
@@ -1532,11 +1532,14 @@ uses <code>collection_id: None</code>.</p>
 <p>The combined live suite covers all seven routes through both async and blocking
 public clients, including typed pacing, filter serialization, nullable health,
 and test-delivery decoding.</p>
-<h2 id="optional-collection-integration-extension">Optional collection integration extension<a class="headerlink" href="#optional-collection-integration-extension" title="Permanent link">&para;</a></h2>
-<p>The typed collection destination and administrator grant helpers target the server
-collection-integration update after <code>v0.0.17</code>. They are intentionally additional to
-the pinned released-server snapshot. Their safe response shape is <code>CollectionEventSink</code>;
-configuration and secrets are omitted. Both client modes have equivalent behavior tests.</p>
+<h2 id="collection-integrations">Collection integrations<a class="headerlink" href="#collection-integrations" title="Permanent link">&para;</a></h2>
+<p>The pinned v0.0.18 snapshot includes all eight collection destination and
+administrator grant operations. Both client modes provide typed helpers, and
+<code>CollectionEventSink</code> preserves safe metadata while omitting configuration,
+URLs, and credentials. The canonical live suite requires delegated collection
+setup in both modes and exercises global sink use through an explicit collection
+grant. These APIs require <code>ManageEventSubscription</code> and <code>ReadAudit</code>; grants do
+not inherit to child collections.</p>
 
 
 

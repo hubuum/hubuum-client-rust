@@ -586,6 +586,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0018-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.18 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0017-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -641,10 +652,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#unreleased-collection-integration-support" class="md-nav__link">
+  <a href="#collection-integration-apis" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Unreleased collection integration support
+        Collection integration APIs
       </span>
     </span>
   </a>
@@ -1394,6 +1405,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0018-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.18 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0017-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1449,10 +1471,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#unreleased-collection-integration-support" class="md-nav__link">
+  <a href="#collection-integration-apis" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Unreleased collection integration support
+        Collection integration APIs
       </span>
     </span>
   </a>
@@ -1507,6 +1529,12 @@ coverage evolves.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.14.1</td>
+<td>0.0.18</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4</code></td>
+<td>Declared target; 235-operation contract and 88 wire-model mappings. Canonical released-image run passed with approval enforcement: 93 library tests, 35 consumer tests including delegated setup in both modes, four full restores, and four recovery runs (2026-10-06).</td>
+</tr>
 <tr>
 <td>0.14.0</td>
 <td>0.0.17</td>
@@ -1700,6 +1728,28 @@ released artifact and reviewed contract as described below.</p>
 jobs separately compare the contract and run the integration suites against the
 server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.</p>
+<h2 id="v0018-target">v0.0.18 target<a class="headerlink" href="#v0018-target" title="Permanent link">&para;</a></h2>
+<p>Client 0.14.1 targets server v0.0.18. The pinned contract grows from 227 to
+235 operations and includes the collection sink and grant APIs already exposed
+in 0.14.0. Public client APIs, Rust 1.88, and feature combinations are unchanged.
+The canonical live suite now requires delegated webhook setup in both client modes
+and grants a global sink to its collection before creating a subscription.</p>
+<p>The tested multi-platform image was published from server release commit
+<code>35fcf6696d4d564e2d89534db0c5194c14129d9f</code>. Its native Linux AMD64 binary and
+OCI source/version labels were verified before the complete 136-check live run.</p>
+<p>Collection managers need <code>ManageEventSubscription</code> and <code>ReadAudit</code>. Shared sinks
+require direct administrator grants, which do not inherit to child collections.
+Credentials and static headers must be bound to a fixed destination; subscription
+routing cannot override it. Revocation is checked before dispatch, and queued
+claims retain configuration revisions. Collection-owned integrations survive the
+creator losing access, and related-collection payloads omit resource snapshots.</p>
+<p>The server emits backup format 8 and accepts formats 6 and 7 with legacy sink-grant
+backfill. Older servers cannot restore format 8. Stop all API, worker, and restore
+writers, take a PostgreSQL snapshot, apply the collection-event-sinks migration,
+reconcile role grants, and start matching v0.0.18 binaries. Binary-only rollback is
+unsupported; recovery requires that snapshot and matching v0.0.17 binaries and
+loses later writes. See the
+<a href="https://github.com/hubuum/hubuum/releases/tag/v0.0.18">server release notes</a>.</p>
 <h2 id="v0017-target">v0.0.17 target<a class="headerlink" href="#v0017-target" title="Permanent link">&para;</a></h2>
 <p>Client 0.13.0 targets server v0.0.17. The reviewed contract grows from 220 to
 227 operations and from 330 to 336 schemas. Most other snapshot changes reorder
@@ -1871,11 +1921,11 @@ history included/omitted reached <code>Succeeded</code> and invalidated the old 
 Recovery after each restore preserved the object's resource revision, the active
 schema revision, and validation evidence. Subsequent backups before and after a
 mutation also passed restore staging validation.</p>
-<h2 id="unreleased-collection-integration-support">Unreleased collection integration support<a class="headerlink" href="#unreleased-collection-integration-support" title="Permanent link">&para;</a></h2>
-<p>Client <code>0.14.0</code> adds optional APIs for the server collection-integration update after
-<code>v0.0.17</code>. The declared released-server baseline and its normalized OpenAPI snapshot
-remain <code>v0.0.17</code>. New endpoints return the server's unsupported-route response on that
-release; these methods do not fall back to global administrator discovery.</p>
+<h2 id="collection-integration-apis">Collection integration APIs<a class="headerlink" href="#collection-integration-apis" title="Permanent link">&para;</a></h2>
+<p>Client <code>0.14.0</code> introduced these APIs as optional extensions after <code>v0.0.17</code>.
+Client <code>0.14.1</code> includes them in its declared released-server <code>v0.0.18</code> contract.
+Older servers return their unsupported-route response; these methods do not fall
+back to global administrator discovery.</p>
 <p>Use <code>client.collection(id).event_sinks()</code> to discover permitted destinations and
 create a webhook with <code>NewEventSink.config</code> containing <code>destination_url</code>. The same
 resource supports reads, edits, deletion, cursor pagination and conditional writes.
@@ -1886,9 +1936,9 @@ Use <code>client.event_subscriptions(id)</code> to select events. Writes require
 URLs in collection discovery are write-only, and credentials cannot be redirected
 by subscription routing. Provision a fixed destination for credential-bearing
 webhooks before using the newer server. Grants do not inherit to child collections.</p>
-<p>The client also recognizes backup format 8 from the updated server while preserving
-formats 6 and 7. <code>CURRENT_BACKUP_VERSION</code> is 8; the pinned v0.0.17 server still
-emits format 7 and cannot restore format 8. The server validates restore support.</p>
+<p>The client recognizes backup formats 6, 7, and 8. <code>CURRENT_BACKUP_VERSION</code> is 8,
+matching the pinned v0.0.18 server. Server v0.0.17 emits format 7 and cannot
+restore format 8. The server validates restore support.</p>
 
 
 

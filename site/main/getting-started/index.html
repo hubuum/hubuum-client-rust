@@ -1491,13 +1491,14 @@
 <h1 id="hubuum-client-library-rust">Hubuum client library (Rust)<a class="headerlink" href="#hubuum-client-library-rust" title="Permanent link">&para;</a></h1>
 <p><a href="https://hubuum.github.io/hubuum-client-rust/">Documentation</a> · <a href="https://hubuum.github.io/">Hubuum ecosystem</a></p>
 <p>A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.</p>
-<p><code>hubuum_client</code> 0.14.0 targets Hubuum server v0.0.17. The pinned image,
+<p><code>hubuum_client</code> 0.14.1 targets Hubuum server v0.0.18. The pinned image,
 verification evidence, and history for earlier client releases are recorded in
 <a href="../compatibility/">COMPATIBILITY.md</a>.</p>
-<p><a href="https://github.com/hubuum/hubuum-client-rust/releases/tag/v0.14.0">Version 0.14.0</a>
-(2026-10-06) adds delegated collection webhook management in both client modes and
-recognizes backup format 8. These optional features require the updated server;
-existing v0.0.17 APIs remain supported. See the <a href="../changelog/">release notes</a>.</p>
+<p><a href="https://github.com/hubuum/hubuum-client-rust/releases/tag/v0.14.1">Version 0.14.1</a>
+(2026-10-06) targets the released server collection integrations, including
+collection-owned webhooks, explicit shared-sink grants, and backup format 8.
+Both client modes retain their public API and Rust 1.88 requirement.
+See the <a href="../changelog/">release notes</a>.</p>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Type-state authentication</strong>: unauthenticated clients can only log in; authenticated clients expose the full API.</li>
@@ -1527,11 +1528,11 @@ existing v0.0.17 APIs remain supported. See the <a href="../changelog/">release 
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>Add the dependency to your project's <code>Cargo.toml</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[dependencies]</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">hubuum_client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"0.14.0"</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">hubuum_client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"0.14.1"</span>
 </code></pre></div>
 <p>Async support is enabled by default. Blocking applications can opt into only the synchronous surface:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">[dependencies]</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">hubuum_client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"0.14.0"</span><span class="p">,</span><span class="w"> </span><span class="n">default-features</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="n">features</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"blocking"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">hubuum_client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"0.14.1"</span><span class="p">,</span><span class="w"> </span><span class="n">default-features</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="n">features</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"blocking"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
 <p>If you need unreleased changes, point Cargo at the Git repository:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[dependencies]</span>
@@ -1699,7 +1700,7 @@ non-default path, use the value exposed by the read-only administrative config:<
 <a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">admin_client</span><span class="p">.</span><span class="n">admin_config</span><span class="p">().</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
 <a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">configured_metrics</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="n">metrics_at</span><span class="p">(</span><span class="o">&amp;</span><span class="n">config</span><span class="p">.</span><span class="n">server</span><span class="p">.</span><span class="n">metrics_path</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
 </code></pre></div>
-<p>Hubuum v0.0.17 requires <a href="../credential-approvals/">fresh password approvals</a>
+<p>Hubuum v0.0.18 requires <a href="../credential-approvals/">fresh password approvals</a>
 for credential management. Use the async or blocking approval APIs before
 deploying an enforcing server; ordinary mutation calls do not prompt or retry
 automatically. See <a href="../task-discovery/">task discovery</a> for typed filters, cursor pagination,
