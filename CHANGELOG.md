@@ -6,6 +6,15 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- Recognize backup format 8 from the collection-integration server update while
+  retaining formats 6 and 7. The pinned v0.0.17 server still emits format 7.
+
+### Fixed
+
+- Collection destination queries expose only filters supported by the server.
+
 ### Added
 
 - Collection-owned webhook CRUD and permitted sink discovery through

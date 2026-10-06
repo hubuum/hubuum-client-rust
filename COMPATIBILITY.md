@@ -304,3 +304,7 @@ Administrators can use `event_sink_collections`, `grant_event_sink` and
 URLs in collection discovery are write-only, and credentials cannot be redirected
 by subscription routing. Provision a fixed destination for credential-bearing
 webhooks before using the newer server. Grants do not inherit to child collections.
+
+The client also recognizes backup format 8 from the updated server while preserving
+formats 6 and 7. `CURRENT_BACKUP_VERSION` is 8; the pinned v0.0.17 server still
+emits format 7 and cannot restore format 8. The server validates restore support.

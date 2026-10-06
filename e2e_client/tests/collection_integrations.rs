@@ -2,7 +2,7 @@ use e2e_client::harness::E2EHarness;
 use e2e_client::naming::unique_case_prefix;
 use hubuum_client::{
     Client, CollectionPost, Credentials, EventSinkRouting, NewEventSink, NewEventSubscription,
-    UpdateEventSink,
+    UpdateEventSink, UserPost,
 };
 use serde_json::json;
 
@@ -59,7 +59,34 @@ fn delegated_collection_webhooks(asynchronous: bool) {
         return;
     }
     let harness = E2EHarness::from_env().unwrap();
-    let user = harness.create_user("collection-integrations").unwrap();
+    let mut password_bytes = [0u8; 32];
+    getrandom::fill(&mut password_bytes).unwrap();
+    let password = password_bytes
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    let username = unique_case_prefix("collection-integrations-user");
+    let request = UserPost {
+        name: username.clone(),
+        password: password.clone(),
+        ..Default::default()
+    };
+    let user_id = harness
+        .client
+        .credential_approvals()
+        .approve(
+            harness.admin_password.clone(),
+            hubuum_client::CredentialOperation::create_user(request),
+        )
+        .unwrap()
+        .send()
+        .unwrap()
+        .id;
+    let user = e2e_client::harness::E2EUser {
+        id: user_id,
+        username,
+        password,
+    };
     let (_, group_id) = harness.create_group("collection-integrations").unwrap();
     harness
         .client

@@ -2,8 +2,8 @@ use crate::{
     endpoints::Endpoint,
     resources::ResourceId,
     types::{
-        CollectionEventSink, EventSink, EventSinkGet, EventSinkKind, FilterOperator, NewEventSink,
-        QueryFilter, UpdateEventSink,
+        CollectionEventSink, CollectionEventSinkGet, EventSink, EventSinkGet, EventSinkKind,
+        FilterOperator, NewEventSink, QueryFilter, UpdateEventSink,
     },
 };
 
@@ -172,7 +172,7 @@ impl crate::resources::sealed::Sealed for CollectionEventSink {}
 
 impl crate::resources::ApiResource for CollectionEventSink {
     type Id = EventSinkId;
-    type GetParams = EventSinkGet;
+    type GetParams = CollectionEventSinkGet;
     type GetOutput = CollectionEventSink;
     type PostParams = NewEventSink;
     type PostOutput = CollectionEventSink;
@@ -217,9 +217,6 @@ impl crate::resources::ApiResource for CollectionEventSink {
         }
         if let Some(kind) = params.kind {
             push("kind", event_sink_kind_value(kind).to_string());
-        }
-        if let Some(enabled) = params.enabled {
-            push("enabled", enabled.to_string());
         }
         queries
     }

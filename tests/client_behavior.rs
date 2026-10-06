@@ -7938,8 +7938,8 @@ mod notification_compatibility {
 
 mod collection_destinations {
     use hubuum_client::{
-        BaseUrl, Client, EventSinkRouting, MockTransport, NewEventSink, Token, TransportResponse,
-        UpdateEventSink, blocking,
+        BaseUrl, Client, CollectionEventSinkGet, EventSinkKind, EventSinkRouting, MockTransport,
+        NewEventSink, Token, TransportResponse, UpdateEventSink, blocking,
     };
     use reqwest::StatusCode;
     use serde_json::json;
@@ -7968,7 +7968,10 @@ mod collection_destinations {
             let sinks = $client.collection(7).event_sinks();
             let created = $send!(sinks.create_raw(NewEventSink { name: "notifications".into(), config: Some(json!({"destination_url":"https://example.test/private-token"})), ..Default::default() })).unwrap();
             assert_eq!(created.routing, EventSinkRouting::Fixed);
-            assert_eq!($send!(sinks.query().page()).unwrap().items.len(), 1);
+            let mut filters = CollectionEventSinkGet::default();
+            filters.name = Some("notifications".into());
+            filters.kind = Some(EventSinkKind::Webhook);
+            assert_eq!($send!(sinks.query().params(filters).page()).unwrap().items.len(), 1);
             assert_eq!($send!(sinks.get(5)).unwrap().id(), 5);
             $send!(sinks.update_raw(5, UpdateEventSink { enabled: Some(false), ..Default::default() })).unwrap();
             $send!(sinks.delete(5)).unwrap();
@@ -7988,6 +7991,10 @@ mod collection_destinations {
                 ("DELETE", "/api/v1/event-sinks/12/collections/7"),
             ]);
             assert!(!format!("{:?}", requests[0]).contains("private-token"));
+            let query: std::collections::BTreeMap<_, _> = requests[1].url.query_pairs().collect();
+            assert_eq!(query.get("name__equals").map(|v| v.as_ref()), Some("notifications"));
+            assert_eq!(query.get("kind__equals").map(|v| v.as_ref()), Some("webhook"));
+            assert!(!query.contains_key("enabled"));
         }};
     }
     #[test]

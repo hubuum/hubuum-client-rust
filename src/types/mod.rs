@@ -58,11 +58,11 @@ pub(crate) use credential_approval::{
 };
 pub use datetime::HubuumDateTime;
 pub use event::{
-    CollectionEventSink, EventDelivery, EventDeliveryHealthResponse, EventDeliveryPolicy,
-    EventDeliveryPurpose, EventDeliveryQueueHealth, EventDeliveryStatus, EventDeliveryStatusCounts,
-    EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse, EventSink,
-    EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSinkRouting, EventSubscription,
-    EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventWorkerHealth,
+    CollectionEventSink, CollectionEventSinkGet, EventDelivery, EventDeliveryHealthResponse,
+    EventDeliveryPolicy, EventDeliveryPurpose, EventDeliveryQueueHealth, EventDeliveryStatus,
+    EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
+    EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSinkRouting,
+    EventSubscription, EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventWorkerHealth,
     EventWorkerWakeupStats, NewEventSink, NewEventSubscription, UpdateEventSink,
     UpdateEventSubscription,
 };

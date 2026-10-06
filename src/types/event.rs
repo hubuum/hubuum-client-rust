@@ -108,6 +108,15 @@ pub struct CollectionEventSink {
     pub routing: EventSinkRouting,
 }
 
+/// Searchable metadata fields supported by collection destination discovery.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[non_exhaustive]
+pub struct CollectionEventSinkGet {
+    pub id: Option<EventSinkId>,
+    pub name: Option<String>,
+    pub kind: Option<EventSinkKind>,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[non_exhaustive]
 #[serde(rename_all = "snake_case")]
