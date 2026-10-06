@@ -51,6 +51,11 @@ fn e2e_event_subscriptions_create_delivery_rows() {
         })
         .expect("event sink should create");
 
+    harness
+        .client
+        .grant_event_sink(sink.id, collection_id)
+        .expect("collection should be granted use of the global sink");
+
     let subscription = harness
         .client
         .event_subscriptions(collection_id)

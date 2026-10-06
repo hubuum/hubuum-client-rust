@@ -67,21 +67,19 @@ An external stack must expose the same `planet-express` provider and fixture use
   scenarios also verify ordinary credential operations on the pinned older
   server. Full restore scenarios adapt to either policy. The focused run does
   not replace the complete pinned library plus consumer suite.
-- `HUBUUM_INTEGRATION_COLLECTION_INTEGRATIONS=1` enables the delegated webhook
-  consumer tests against a server containing the collection-integration update.
-  With the external connection variables above set, run
-  `cargo test -p e2e_client --test collection_integrations -- --ignored`. These
-  tests exercise blocking and async non-admin clients and do not run against
-  the pinned v0.0.17 server.
 - `HUBUUM_INTEGRATION_AUTH_CONFIG` overrides the server auth-provider configuration file.
 - `HUBUUM_INTEGRATION_CONTAINER_RUNTIME` forces `docker` or `podman`.
 - `HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS` overrides startup timeout. The default is `300`.
 - `HUBUUM_INTEGRATION_KEEP_CONTAINERS=1` keeps containers running for debugging.
 - `HUBUUM_INTEGRATION_SEED_SQL` overrides the default seed SQL file.
 
+The canonical suite includes delegated collection webhook setup in both async
+and blocking modes. These cases are mandatory for the v0.0.18 target and need
+no separate opt-in variable.
+
 Required CI runs integration tests against an immutable server image digest.
-For client 0.13.0, that image is Hubuum server v0.0.17 at
-`sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302`.
+For client 0.14.1, that image is Hubuum server v0.0.18 at
+`sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4`.
 Required CI sets `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`; set the
 same variable for local release verification so missing enforcement fails.
 A scheduled compatibility workflow separately runs against
@@ -110,13 +108,13 @@ docker login ghcr.io
 
 With `--with-e2e-client` or `--e2e-only`, the wrapper runs both blocking and async
 full restore scenarios with and without history after all ordinary suites finish.
-Each scenario activates an enforced schema, creates and downloads a format 7 backup, deletes an object, stages
+Each scenario activates an enforced schema, creates and downloads a format 8 backup, deletes an object, stages
 and confirms the restore, polls with its capability until completion, verifies bearer-token
 invalidation, and checks that the deleted object and its revision were restored
 after a new login. Recovery also creates and stages default backups before and
 after another mutation. Recovery also checks the restored schema revision and
 object validation evidence, with and without history.
-Because formats 6 and 7 exclude password hashes, the wrapper resets the disposable
+Because formats 6, 7, and 8 exclude password hashes, the wrapper resets the disposable
 administrator password after each restore before running the recovery assertion.
 
 The separate `e2e_client` restore test target requires `restore-tests` and the

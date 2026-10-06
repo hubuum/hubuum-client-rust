@@ -80,7 +80,7 @@ macro_rules! notifications {
 }
 
 #[test]
-#[ignore = "requires Docker and Hubuum server v0.0.17 image"]
+#[ignore = "requires Docker and Hubuum server v0.0.18 image"]
 fn blocking_system_notifications_and_nullable_health() {
     let harness = E2EHarness::from_env().unwrap();
     macro_rules! send {
@@ -92,7 +92,7 @@ fn blocking_system_notifications_and_nullable_health() {
 }
 
 #[tokio::test]
-#[ignore = "requires Docker and Hubuum server v0.0.17 image"]
+#[ignore = "requires Docker and Hubuum server v0.0.18 image"]
 async fn async_system_notifications_and_nullable_health() {
     let harness = AsyncE2EHarness::from_env().await.unwrap();
     macro_rules! send {

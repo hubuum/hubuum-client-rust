@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.17 OpenAPI gaps
+# Known Hubuum server v0.0.18 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.17
+The pinned client contract records these limitations in the server v0.0.18
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not
@@ -59,7 +59,7 @@ Rust wire models:
 
 ## Credential approval coverage
 
-The pinned v0.0.17 contract includes both approval endpoints and the approval
+The pinned v0.0.18 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return `reauthentication_required`; applications
@@ -99,9 +99,12 @@ The combined live suite covers all seven routes through both async and blocking
 public clients, including typed pacing, filter serialization, nullable health,
 and test-delivery decoding.
 
-## Optional collection integration extension
+## Collection integrations
 
-The typed collection destination and administrator grant helpers target the server
-collection-integration update after `v0.0.17`. They are intentionally additional to
-the pinned released-server snapshot. Their safe response shape is `CollectionEventSink`;
-configuration and secrets are omitted. Both client modes have equivalent behavior tests.
+The pinned v0.0.18 snapshot includes all eight collection destination and
+administrator grant operations. Both client modes provide typed helpers, and
+`CollectionEventSink` preserves safe metadata while omitting configuration,
+URLs, and credentials. The canonical live suite requires delegated collection
+setup in both modes and exercises global sink use through an explicit collection
+grant. These APIs require `ManageEventSubscription` and `ReadAudit`; grants do
+not inherit to child collections.

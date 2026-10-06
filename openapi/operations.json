@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.17",
+  "api_version": "0.0.18",
   "openapi": "3.1.0",
-  "operation_count": 227,
+  "operation_count": 235,
   "operations": [
     {
       "method": "POST",
@@ -5892,6 +5892,283 @@
     },
     {
       "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdEventSinks",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-sinks",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CollectionEventSink",
+        "EventSinkKind",
+        "EventSinkRouting",
+        "ResourceRevision"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "items": {
+              "$ref": "#/components/schemas/CollectionEventSink"
+            },
+            "type": "array"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1CollectionsByCollectionIdEventSinks",
+      "parameters": [
+        "path:collection_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-sinks",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "EventDeliveryPolicy",
+        "EventSinkKind",
+        "NewEventSink"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/NewEventSink"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CollectionEventSink",
+        "EventSinkKind",
+        "EventSinkRouting",
+        "ResourceRevision"
+      ],
+      "response_schemas": {
+        "201": {
+          "application/json": {
+            "$ref": "#/components/schemas/CollectionEventSink"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1CollectionsByCollectionIdEventSinksBySinkId",
+      "parameters": [
+        "header:If-Match",
+        "path:collection_id",
+        "path:sink_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-sinks/{sink_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "204": {},
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {}
+      },
+      "responses": {
+        "204": [],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1CollectionsByCollectionIdEventSinksBySinkId",
+      "parameters": [
+        "path:collection_id",
+        "path:sink_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-sinks/{sink_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CollectionEventSink",
+        "EventSinkKind",
+        "EventSinkRouting",
+        "ResourceRevision"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/CollectionEventSink"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1CollectionsByCollectionIdEventSinksBySinkId",
+      "parameters": [
+        "header:If-Match",
+        "path:collection_id",
+        "path:sink_id"
+      ],
+      "path": "/api/v1/collections/{collection_id}/event-sinks/{sink_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "EventDeliveryPolicy",
+        "EventSinkKind",
+        "UpdateEventSink"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/UpdateEventSink"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CollectionEventSink",
+        "EventSinkKind",
+        "EventSinkRouting",
+        "ResourceRevision"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/CollectionEventSink"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {}
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
       "operation_id": "getApiV1CollectionsByCollectionIdEventSubscriptions",
       "parameters": [
         "path:collection_id",
@@ -7898,6 +8175,117 @@
           "application/json"
         ],
         "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1EventSinksBySinkIdCollections",
+      "parameters": [
+        "path:sink_id"
+      ],
+      "path": "/api/v1/event-sinks/{sink_id}/collections",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "items": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1EventSinksBySinkIdCollectionsByCollectionId",
+      "parameters": [
+        "path:collection_id",
+        "path:sink_id"
+      ],
+      "path": "/api/v1/event-sinks/{sink_id}/collections/{collection_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "204": {},
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "204": [],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1EventSinksBySinkIdCollectionsByCollectionId",
+      "parameters": [
+        "path:collection_id",
+        "path:sink_id"
+      ],
+      "path": "/api/v1/event-sinks/{sink_id}/collections/{collection_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "204": {},
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "204": [],
+        "403": [
+          "application/json"
+        ]
       },
       "security": [
         {
@@ -14881,8 +15269,8 @@
       "security": []
     }
   ],
-  "path_count": 155,
-  "schema_count": 336,
+  "path_count": 159,
+  "schema_count": 338,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -14904,6 +15292,7 @@
     "ClientConfig",
     "ClientPaginationConfig",
     "Collection",
+    "CollectionEventSink",
     "CollectionHistory",
     "CollectionID",
     "CollectionKey",
@@ -14951,6 +15340,7 @@
     "EventSinkID",
     "EventSinkKey",
     "EventSinkKind",
+    "EventSinkRouting",
     "EventSubscription",
     "EventSubscriptionDeliveryHealth",
     "EventSubscriptionFilter",
@@ -15728,6 +16118,45 @@
         "name",
         "revision",
         "updated_at"
+      ],
+      "type": "object"
+    },
+    "CollectionEventSink": {
+      "properties": {
+        "collection_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/components/schemas/EventSinkKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "routing": {
+          "$ref": "#/components/schemas/EventSinkRouting"
+        }
+      },
+      "required": [
+        "enabled",
+        "id",
+        "kind",
+        "name",
+        "revision",
+        "routing"
       ],
       "type": "object"
     },
@@ -17253,6 +17682,13 @@
     },
     "EventSink": {
       "properties": {
+        "collection_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "config": {},
         "created_at": {
           "format": "date-time",
@@ -17374,6 +17810,16 @@
         "amqp",
         "valkey_stream",
         "email"
+      ],
+      "type": "string"
+    },
+    "EventSinkRouting": {
+      "enum": [
+        "fixed",
+        "webhook_url",
+        "email_recipients",
+        "valkey_stream",
+        "amqp"
       ],
       "type": "string"
     },
@@ -28187,5 +28633,5 @@
       "type": "object"
     }
   },
-  "spec_sha256": "99e3e469fb2e8072e7a1721130c6a0279a79e1ee7f14790ab7c93661aac7673f"
+  "spec_sha256": "7995a12420b8843103666e1530cc6f3da782f63842478004b74db0840887173a"
 }

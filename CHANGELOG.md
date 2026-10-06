@@ -6,6 +6,27 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-06
+
+### Compatibility
+
+- Refresh compatible HTTP dependencies to Hyper 1.12 and h2 0.4.20.
+- This release explicitly targets Hubuum server v0.0.18. Reconcile its
+  235-operation contract and pin required integration checks to its immutable
+  released image. Rust 1.88, public APIs, and feature combinations are unchanged.
+- Collection webhook setup in both async and blocking modes is now required in
+  the canonical consumer suite. Global sink fixtures explicitly grant collection
+  use before creating subscriptions, matching the server authorization model.
+- **Breaking (server upgrade and backup output):** the new target requires an
+  offline migration and emits format 8 backups. Formats 6 and 7 remain accepted.
+  Stop all server writers and take a PostgreSQL snapshot before migrating; deploy
+  matching v0.0.18 binaries together. Rollback requires that snapshot and matching
+  v0.0.17 binaries; older servers cannot restore format 8.
+- **Breaking (server authorization):** subscription creation and edits require
+  `ReadAudit` plus `ManageEventSubscription` and collection ownership or a direct
+  sink grant. Bind credential-bearing webhooks to a fixed destination before
+  enabling delivery. These server requirements do not change the Rust API.
+
 ## [0.14.0] - 2026-10-06
 
 ### Compatibility
