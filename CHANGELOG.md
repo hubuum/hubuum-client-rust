@@ -10,7 +10,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Compatibility
 
-- Refresh compatible HTTP dependencies to Hyper 1.12 and h2 0.4.20.
+- Refresh compatible dependencies to Hyper 1.12, h2 0.4.20, and zeroize 1.9.1.
 - This release explicitly targets Hubuum server v0.0.18. Reconcile its
   235-operation contract and pin required integration checks to its immutable
   released image. Rust 1.88, public APIs, and feature combinations are unchanged.
