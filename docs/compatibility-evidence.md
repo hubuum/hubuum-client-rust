@@ -1,0 +1,339 @@
+# Compatibility evidence and history
+
+The client and server are versioned independently. A client release "targets"
+a server release when its pinned OpenAPI contract comes from that server tag and
+the complete Docker-backed library and consumer integration suites pass against
+an immutable image for the same release.
+
+Dedicated typed helpers do not necessarily exist for every server operation.
+Authenticated relative routes remain available through `raw()` while typed
+coverage evolves.
+
+## Compatibility history
+
+| Client version | Server target | Tested server image | Evidence |
+| --- | --- | --- | --- |
+| 0.14.1 | 0.0.18 | `ghcr.io/hubuum/hubuum-server@sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4` | Declared target; 235-operation contract and 88 wire-model mappings. Canonical released-image run passed with approval enforcement: 93 library tests, 35 consumer tests including delegated setup in both modes, four full restores, and four recovery runs (2026-10-06). |
+| 0.14.0 | 0.0.17 | `ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302` | Declared target retained; canonical library, consumer, LDAP, and all four restore/recovery suites passed (2026-10-06). Optional collection integrations were separately verified against the updated server in both client modes. |
+| 0.13.0 | 0.0.17 | `ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302` | Declared target; 227-operation contract and 87 wire-model mappings. Canonical run passed with approval enforcement: 93 library tests, 33 consumer tests including both notification modes, and all four full restore/recovery variants (2026-10-05). |
+| 0.12.0 | 0.0.16 | `ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e` | Declared target; 220-operation contract and 79 wire-model mappings. Complete canonical run passed with approval enforcement required: 93 library tests, all downstream suites with typed discovery and retained details for all six task kinds, real cursor pagination, and four full restore/recovery variants (2026-09-22). |
+| 0.11.2 | 0.0.16 | `ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e` | Declared target; 220-operation contract and 73 wire-model mappings. Complete canonical run passed with approval enforcement required: 93 library tests, all downstream suites including async/blocking task discovery, and four full restore/recovery variants (2026-09-22). |
+| 0.11.1 | 0.0.15 | `ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821` | Declared target; unchanged 218-operation contract, optional credential approvals, and refreshed Rust 1.88-compatible dependencies. Complete canonical run passed: 93 library integration tests, all downstream consumer suites, and four async/blocking full restore/recovery variants (2026-09-22). |
+| 0.11.0 | 0.0.15 | `ghcr.io/hubuum/hubuum-server@sha256:36af667dbc9e221a40448496d4a87e168c999d0834df4b69177345ff3d36e821` | Declared target; 218-operation pinned contract, 67 wire-model mappings, schema evolution, cancellation, format 6 backups, and refreshed Rust 1.88-compatible dependencies. 91 library and 26 consumer integration tests, plus four async/blocking full restores with and without history and schema-evidence-preserving recovery (2026-09-16). |
+| 0.10.1 | 0.0.14 | `ghcr.io/hubuum/hubuum-server@sha256:6c1c8d7316a1f60a02e4505611a44e21030ba678b5b451f5b293a12f2bd87594` | Declared target; unchanged 204-operation OpenAPI contract, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus four async/blocking full restores with and without history and revision-preserving recovery with subsequent backup validation (2026-09-10) |
+| 0.10.0 | 0.0.13 | `ghcr.io/hubuum/hubuum-server@sha256:512562e789d6430875c5075faf832a9669a4f266f7fe9fbf8c1524b49a6476c5` | Declared target; pinned OpenAPI, refreshed Rust 1.88-compatible dependencies, 89 library and 24 consumer integration tests, plus blocking and async full restore completion, token invalidation, and recovery after each restore (2026-09-09) |
+| 0.9.1 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; JSON-path validation, advertised pagination limits, atomic export downloads, property-level OpenAPI model reconciliation, dependency and release-workflow security updates, with pinned Docker-backed library plus downstream-consumer integration coverage |
+| 0.9.0 | 0.0.9 | `ghcr.io/hubuum/hubuum-server@sha256:1f12baf882b6d3df5b4b2dbdf26aad0793274e57f86a2c186b8e1e68632db5db` | Declared target; revision and ETag concurrency, import v2, settings JSON Patch, revision-owned permission and membership responses, computed-field points, token lifecycle state and renewal, with pinned Docker-backed library plus downstream-consumer integration coverage |
+| 0.8.0 | 0.0.8 | `ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6` | Declared target; property-complete v0.0.8 cardinality, core-import timestamp, and export-timing models with pinned Docker-backed library plus downstream-consumer integration coverage |
+| 0.7.3 | 0.0.8 | `ghcr.io/hubuum/hubuum-server@sha256:850bfd95a2802485f93c1700fbff5a33465cbc7855cbc94962982c1074fd96f6` | Declared target; pinned OpenAPI and complete Docker-backed library plus downstream-consumer integration suites |
+| 0.7.2 | 0.0.5 | `ghcr.io/hubuum/hubuum-server@sha256:6f3e0f0debd418acd5cbc2b1399db9859a85ca1fa397525a5ef0e2f493a77c9b` | Declared target; pinned OpenAPI and full integration suites, including public default-token-lifetime discovery, authoritative login and token-mint expiry metadata, token retention configuration, scoped/unscoped token lifecycles, expiry enforcement, revocation, imports, exports, and downstream-consumer coverage |
+| 0.7.1 | 0.0.4 | `ghcr.io/hubuum/hubuum-server@sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583` | Declared target; pinned OpenAPI and full integration suites, including sensitive secret-header metadata plus blocking user and async service-account scoped/unscoped token lifecycles, expiry enforcement, revocation, and post-revocation rejection |
+| 0.7.0 | 0.0.4 | `ghcr.io/hubuum/hubuum-server@sha256:60142d605f423b1dc58d9dfe709164b0d5ec93befd2d702f9bdca7ee0654a583` | Declared target; pinned OpenAPI and full integration suites, including blocking user and async service-account scoped/unscoped token lifecycles, expiry enforcement, revocation, and post-revocation rejection |
+| 0.6.1 | 0.0.3 | `ghcr.io/hubuum/hubuum-server@sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186` | Declared target; pinned OpenAPI and full integration suites, including async and blocking diagnostic redaction, custom-transport isolation, and redirect-confinement regressions |
+| 0.6.0 | 0.0.3 | `ghcr.io/hubuum/hubuum-server@sha256:f1f57a991f69005ee81f24e77533e61f75b5586949d98cccf1c40fc4329eb186` | Declared target; pinned OpenAPI and full integration suites, including exact-name routing, aggregates, object-data patching, and public pagination configuration |
+| 0.5.1 | 0.0.2 | `ghcr.io/hubuum/hubuum-server@sha256:8f543383b422124546c8d337fd557e1b182b1b6c7078d7870d3c5cd4f955ef1f` | Declared target; pinned OpenAPI and full integration suites, including the runtime-configurable metrics route |
+| 0.5.0 | 0.0.2 | `ghcr.io/hubuum/hubuum-server@sha256:8f543383b422124546c8d337fd557e1b182b1b6c7078d7870d3c5cd4f955ef1f` | Declared target; pinned OpenAPI and full integration suites |
+| 0.4.0 | `main@eed194f2339ce221ef251a14062e2a37850186b1` | `ghcr.io/hubuum/hubuum-server@sha256:9eb7d2eb83220ac6e38d9964df2e6f4268152a072b0cece3e81a63b52d7b8e19` | Reproducible pre-release snapshot, not a stable server release |
+| 0.3.0 | `main@eed194f2339ce221ef251a14062e2a37850186b1` | `ghcr.io/hubuum/hubuum-server@sha256:9eb7d2eb83220ac6e38d9964df2e6f4268152a072b0cece3e81a63b52d7b8e19` | Reproducible pre-release snapshot, not a stable server release |
+| 0.2.0 | `main` (floating) | Not recorded | No stable server target was declared |
+| 0.1.0 | Not recorded | Not recorded | No stable server target was declared |
+| 0.0.3 | `main` (floating) | Not recorded | No stable server target was declared |
+| 0.0.2 | `no-tls-main` (floating) | Not recorded | No stable server target was declared |
+| 0.0.1 | Not recorded | Not recorded | No stable server target was declared |
+
+The client version 0.0.2 row predates and is unrelated to the independently
+versioned Hubuum server v0.0.2 release.
+
+## Forward compatibility
+
+Client 0.11.1 introduced the fresh credential approval API for servers incorporating
+[PR 423](https://github.com/hubuum/hubuum/pull/423). That release kept its declared
+v0.0.15 target, pinned image, and OpenAPI snapshot. Existing calls do
+not require the approval endpoints. On an enforcing server, credential mutations
+return `reauthentication_required` until the caller uses the explicit
+[approval workflow](credential-approvals.md).
+
+Focused live verification on 2026-09-19 used the PR's merged source revision
+`3a1c44c938cc9d06d665229612c0fb1b4f3c98c8` and immutable Linux amd64 image
+`ghcr.io/hubuum/hubuum-server@sha256:62438f2473ee15f9699ccc904e79c4c20c27e06a1219986c04493d269127f3e0`.
+With `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`, async and blocking token
+creation/renewal preserved approved expirations, and downstream user/password and
+credential-import dry runs passed. Blocking and async full restore confirmation
+and recovery passed with and without history. These focused checks supplement
+the required complete pinned-server run; they do not declare compatibility with
+all other changes on server `main`.
+
+The canonical complete pinned-server command also passed on 2026-09-19 against
+the v0.0.15 image declared in `Cargo.toml`, including library and downstream
+consumer tests and all four restore/recovery scenarios. The new credential
+scenarios passed through the original APIs without requiring approval support.
+
+After the fixture repairs in [client PR 95](https://github.com/hubuum/hubuum-client-rust/pull/95),
+the complete library and downstream consumer integration suite passed on
+2026-09-22 against immutable server candidate
+`61f1bfd3455af26254e1dc73e697a80b0536813a`, image
+`ghcr.io/hubuum/hubuum-server@sha256:8944a31e47ff97eb14bf5072772149c06d87714a316db54aa4e010195c5811a0`.
+Approval enforcement was required, and all four full restore/recovery variants
+passed. This extends the earlier focused evidence to the complete suite.
+This evidence preceded publication of v0.0.16. Client 0.11.2 targets the
+released artifact and reviewed contract as described below.
+
+Required CI is deterministic and stays pinned to the declared target. Scheduled
+jobs separately compare the contract and run the integration suites against the
+server's `main` branch. Those scheduled checks are early-warning signals; they
+do not change a published client's declared target.
+
+## v0.0.18 target
+
+Client 0.14.1 targets server v0.0.18. The pinned contract grows from 227 to
+235 operations and includes the collection sink and grant APIs already exposed
+in 0.14.0. Public client APIs, Rust 1.88, and feature combinations are unchanged.
+The canonical live suite now requires delegated webhook setup in both client modes
+and grants a global sink to its collection before creating a subscription.
+
+The tested multi-platform image was published from server release commit
+`35fcf6696d4d564e2d89534db0c5194c14129d9f`. Its native Linux AMD64 binary and
+OCI source/version labels were verified before the complete 136-check live run.
+
+Collection managers need `ManageEventSubscription` and `ReadAudit`. Shared sinks
+require direct administrator grants, which do not inherit to child collections.
+Credentials and static headers must be bound to a fixed destination; subscription
+routing cannot override it. Revocation is checked before dispatch, and queued
+claims retain configuration revisions. Collection-owned integrations survive the
+creator losing access, and related-collection payloads omit resource snapshots.
+
+The server emits backup format 8 and accepts formats 6 and 7 with legacy sink-grant
+backfill. Older servers cannot restore format 8. Stop all API, worker, and restore
+writers, take a PostgreSQL snapshot, apply the collection-event-sinks migration,
+reconcile role grants, and start matching v0.0.18 binaries. Binary-only rollback is
+unsupported; recovery requires that snapshot and matching v0.0.17 binaries and
+loses later writes. See the
+[server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.18).
+
+## v0.0.17 target
+
+Client 0.13.0 targets server v0.0.17. The reviewed contract grows from 220 to
+227 operations and from 330 to 336 schemas. Most other snapshot changes reorder
+nullable schema alternatives after the server's Utoipa update; they do not alter
+wire behavior. Rust 1.88 and the client feature sets are unchanged.
+
+Event sink CRUD and import models preserve delivery policy, subscription filters
+include task kinds, and delivery responses preserve purpose and deferral details.
+Delivery health accepts an absent or null collection ID for system subscriptions.
+The seven new system-subscription CRUD and notification preview/test operations
+use the existing authenticated `raw()` extension point. Their routes and
+limitations are recorded in [known gaps](../openapi/known-gaps.md#v0017-notifications).
+
+This is a breaking Rust release: handle `None` in
+`EventSubscriptionDeliveryHealth.collection_id`, add `delivery_policy: None` to
+exhaustive sink request/import literals and `task_kinds: None` to exhaustive
+subscription filter literals. Default-based construction remains available for
+sink requests and filters; use `..` in exhaustive destructuring patterns.
+
+The server emits backup format 7 and still accepts format 6 with legacy
+notification defaults. The client recognizes both formats and rejects older or
+unknown formats through `has_supported_version()`. Existing format-6 schema
+sections and format-7 notification data remain intact in the generic backup
+section maps. See the [backup guide](backups-and-computed-fields.md).
+
+Upgrading from v0.0.16 requires a maintenance window. Stop all writers, including
+API, worker, and restore-executor processes; take a PostgreSQL snapshot; then
+apply the webhook-notification migration and deploy matching v0.0.17 binaries.
+Binary-only rollback is unsupported. Recovery requires that snapshot with the
+matching v0.0.16 binaries and loses writes made after the snapshot. Older servers
+cannot restore format 7. Optional Treetop backends also require protocol 0.1 and
+updated policy bundles. See the
+[server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.17).
+
+The pinned multi-platform index is
+`sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302`.
+Its Linux amd64 manifest is
+`sha256:a7082cb13a94d2c0f8934ade79f2117e39b66c1725b4ee9696e49c2895bcb672`.
+The image's version and source labels identify v0.0.17 and tag commit
+`4a03d56b27f35af62175a80d09d36d0d41c4a663`.
+
+The canonical combined command passed on 2026-10-05 against that Linux amd64
+image with `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`: all 93 library
+integration tests, 33 ordinary consumer tests, and all four async/blocking
+restore/recovery variants with history included and omitted. The consumer tests
+covered all seven new notification routes in both modes, nullable system health,
+delivery-policy round trips and clearing, task-kind filter serialization,
+rendered previews, and real test-delivery decoding. Format-7 backups staged and
+restored successfully; recovery retained resource and schema revisions and
+validated subsequent backups.
+
+All workspace tests, feature combinations, Rust 1.88, lint, documentation,
+generator, pinned contract, and dependency audit/policy checks passed. Dependency
+resolution is current under Rust 1.88 and upstream constraints; `crypto-common`
+0.1.7 still pins `generic-array` to 0.14.7. The normal public API check accepts
+the 0.13.0 version; a stricter comparison confirms the documented added-field
+breaks requiring this pre-1.0 major bump. All GitHub Action pins and the
+PostgreSQL 18 fixture digest were verified current.
+
+## v0.0.16 target
+
+Clients 0.11.2 and 0.12.0 target server v0.0.16. The pinned contract grows from 218 to
+220 operations and from 315 to 330 schemas. Both added approval routes already
+have typed async and blocking APIs. Client 0.12.0 reconciles 79
+wire-model mappings, including retained task details. Feature availability,
+Rust 1.88, and backup format 6 are unchanged.
+
+Credential mutations require fresh, operation-bound password approval. Before
+upgrading the running server, update applications to use the
+[approval workflow](credential-approvals.md). Existing mutation methods
+retain their original behavior and return `reauthentication_required` when the
+server enforces approvals; they do not prompt or automatically retry.
+
+Client 0.12.0 exposes every task-discovery filter and retained detail projection
+through the async and blocking typed APIs, including cursor pagination and local
+query validation. Client 0.11.2 required `raw()` for those additions. The new
+optional fields break exhaustive Rust struct literals and destructuring; see the
+[task discovery migration guide](task-discovery.md#migration-from-011).
+
+Keep a verified v0.0.15 backup, quiesce protected mutations, drain workers, and
+apply `2026-09-18-000001_task_discovery` and
+`2026-09-19-000001_credential_approvals` with `hubuum-admin --migrate`. Deploy
+matching API, worker, administrator, and separately supervised restore-executor
+binaries before resuming operations. Older format-6 backups without discovery
+metadata remain accepted. See the
+[server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.16).
+
+The immutable multi-platform release image is
+`ghcr.io/hubuum/hubuum-server@sha256:37b3299edd845a0c2aa7772d7d68565233ac8c1802bc44be3fb4bbc6dfa8778e`.
+Its Linux amd64 manifest is
+`sha256:2f1e59519c3e5fb0a849ee6db8f3f3981b76145cac2f9ffb6f463a8927d4f7d2`,
+and its source label matches the v0.0.16 tag commit
+`8f4194ffe25d172d579b676f109efbdc71d9aab7`.
+
+The canonical combined command passed on 2026-09-22 with
+`HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`: all 93 library integration
+tests, every downstream consumer suite, and all four async/blocking full
+restore/recovery variants. The downstream discovery scenarios verified resource
+and output filters, comma-separated statuses, retained export metadata, and
+decoding of newer responses through the unchanged typed task models.
+
+## v0.0.13 target
+
+The 0.10.0 release targets server v0.0.13, which fixes the restore drain-state
+race and JSON-null insertion failure found during v0.0.12 verification. Its
+204-operation OpenAPI contract is unchanged from v0.0.12 apart from the server
+version. Backup format 5 is unchanged.
+
+Install matching server, administrator, and template-worker binaries, including
+any separately deployed `hubuum-admin --restore-executor`. See the
+[server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.13)
+and the [backup and restore guide](backups-and-computed-fields.md) for
+migration and recovery steps.
+
+The canonical combined integration command passed on 2026-09-09 against the
+released immutable image above (Linux amd64). All 89 library and 24 ordinary
+consumer tests passed, followed by blocking and async full restore completion
+and recovery after each restore. Both modes reached `Succeeded`, rejected the
+pre-restore bearer token, and recovered the deleted object after administrator
+password reset and a fresh login.
+
+The published image identifies source revision
+`8ecefbf3e3147714014221598d9873ba92e0fdce`, matching the v0.0.13 release tag.
+The manifest pins the multi-platform image index; this live run verifies its
+Linux amd64 image.
+
+## v0.0.14 target
+
+The 0.10.1 patch release targets server v0.0.14. Its 204-operation OpenAPI
+contract is unchanged from v0.0.13 apart from the server version. Public client
+APIs, features, the Rust 1.88 MSRV, and backup format 5 are unchanged.
+
+The server fixes backup and restore consistency, including preserving revisions
+and establishing current temporal snapshots after history-free restores so later
+backups remain restorable. Install matching server, administrator, and
+template-worker binaries, including any separately deployed
+`hubuum-admin --restore-executor`. Existing history-free format 5 artifacts can
+be restored directly with the fixed executor. No database migration is added;
+the server's certified upgrade and application rollback path is v0.0.13 to
+v0.0.14. See the
+[server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.14)
+and the [backup and restore guide](backups-and-computed-fields.md).
+
+The canonical combined integration command passed on 2026-09-10 against the
+released immutable image above (Linux amd64). All 89 library and 24 ordinary
+consumer tests passed, followed by all four combinations of blocking/async full
+restore and history included/omitted. Every restore reached `Succeeded`, rejected
+the pre-restore bearer token, and recovered the deleted object with its original
+revision after administrator password reset and a fresh login. Recovery also
+created and successfully staged default backups both before and after another
+mutation, covering the history-free restore fix.
+
+The published image identifies source revision
+`0b0aa17f278496a32cc018cfcac56f34a408ccd6`, matching the v0.0.14 release tag.
+The manifest pins the multi-platform image index; this live run verifies its
+Linux amd64 image.
+
+## v0.0.15 target
+
+The 0.11.0 release targets server v0.0.15. The contract grows from
+204 to 218 operations and from 280 to 315 schemas. All 14 new operations have
+typed async and blocking helpers, covering the class schema lifecycle, retained
+HTML repair reports, and task cancellation. Feature availability and Rust 1.88
+remain unchanged.
+
+`ImportClassInput` gains `schema_activation`; add `schema_activation: None` to
+existing struct literals or provide an explicit activation request. Changing
+schema policy on a nonempty class now requires staging, impact analysis, and
+activation instead of direct PATCH or legacy import overwrite. Imports must
+provide the exact staged policy. See the [schema guide](schema-evolution.md).
+
+Backup format 6 replaces format 5, adding schema revisions, state, evidence,
+and history. Restore older artifacts using their matching older server before
+migrating and creating new format 6 backups; no artifact converter is provided.
+Drain old workers, apply the release's migrations, then deploy matching API,
+worker, administrator, and restore-executor binaries. Existing enforced objects
+start pending and need revalidation. See the
+[backup guide](backups-and-computed-fields.md) and
+[server release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.15).
+
+The server also tightens schema validation and resource budgets, changes string
+cursor ordering to byte ordering on locale-collated databases, and requires the
+`CancelTask` external authorization action. Restart in-progress string-sorted
+pagination, review stored schema admission, and deploy consistent schema, task,
+and backup limits across processes. Report assembly can return HTTP 413, and
+external-authorization traversal is bounded at 10,000 candidates.
+
+All direct dependencies already use constraints that select the latest
+compatible releases. The lockfile refresh updates twelve packages, including
+Rustls 0.23.45 for RUSTSEC-2026-0285. `generic-array` remains at 0.14.7 because
+the current `crypto-common` 0.1.7 dependency requires that exact version.
+
+The pinned multi-platform image identifies source revision
+`4bb889c66a5e2a1dfc86d1b6beac7495912fd02e`, matching the annotated v0.0.15 tag.
+
+The canonical combined integration command passed on 2026-09-16 against this
+image's Linux amd64 build. All 91 library and 26 ordinary consumer tests passed,
+including both modes of the schema lifecycle, diagnostic HTML, import activation,
+and task cancellation. All four combinations of blocking/async full restore and
+history included/omitted reached `Succeeded` and invalidated the old bearer token.
+Recovery after each restore preserved the object's resource revision, the active
+schema revision, and validation evidence. Subsequent backups before and after a
+mutation also passed restore staging validation.
+
+## Collection integration APIs
+
+Client `0.14.0` introduced these APIs as optional extensions after `v0.0.17`.
+Client `0.14.1` includes them in its declared released-server `v0.0.18` contract.
+Older servers return their unsupported-route response; these methods do not fall
+back to global administrator discovery.
+
+Use `client.collection(id).event_sinks()` to discover permitted destinations and
+create a webhook with `NewEventSink.config` containing `destination_url`. The same
+resource supports reads, edits, deletion, cursor pagination and conditional writes.
+Use `client.event_subscriptions(id)` to select events. Writes require both
+`ManageEventSubscription` and `ReadAudit` on the collection.
+
+Administrators can use `event_sink_collections`, `grant_event_sink` and
+`revoke_event_sink` for global sinks. Collection-owned sinks cannot be shared.
+URLs in collection discovery are write-only, and credentials cannot be redirected
+by subscription routing. Provision a fixed destination for credential-bearing
+webhooks before using the newer server. Grants do not inherit to child collections.
+
+The client recognizes backup formats 6, 7, and 8. `CURRENT_BACKUP_VERSION` is 8,
+matching the pinned v0.0.18 server. Server v0.0.17 emits format 7 and cannot
+restore format 8. The server validates restore support.

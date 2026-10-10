@@ -31,6 +31,7 @@ nav = [
     { "Release notes" = "changelog.md" },
   ] },
   { "Contributing" = [
+    { "Compatibility evidence" = "compatibility-evidence.md" },
     { "Integration tests" = "integration-tests.md" },
     { "Code generation" = "code-generation.md" },
     { "Historical v0.0.4 preparation" = "server-v0.0.4-preparation.md" },

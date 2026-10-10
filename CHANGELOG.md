@@ -6,6 +6,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- Completed the async quick-start prerequisites, clarified collection parents, and pinned Atlas examples to the declared server target.
+
 ## [0.14.1] - 2026-10-06
 
 ### Compatibility
