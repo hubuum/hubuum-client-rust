@@ -1,5 +1,8 @@
 # Querying Resources
 
+Examples outside the Atlas walkthrough use illustrative resources. Substitute
+your own class names and resolved IDs; Atlas does not create Hosts, Rooms, or Jacks.
+
 For a small inventory shared across Hubuum interfaces, use the
 [Atlas example walkthrough](example-dataset.md).
 
@@ -51,7 +54,7 @@ let moved = collection.move_parent(new_parent_collection_id)?;
 let effective = collection.effective_group_permissions(admin_group_id)?;
 ```
 
-Omit `parent_collection_id(...)` when creating a root collection. Permission helpers include direct grants plus effective inherited permission views for groups and principals.
+Omit `parent_collection_id(...)` to create a child of the system `root` collection. Permission helpers include direct grants plus effective inherited permission views for groups and principals.
 
 ## Fluent Filters
 

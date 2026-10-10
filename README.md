@@ -47,6 +47,7 @@ Add the dependency to your project's `Cargo.toml`:
 ```toml
 [dependencies]
 hubuum_client = "0.14.1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
 Async support is enabled by default. Blocking applications can opt into only the synchronous surface:
@@ -65,6 +66,9 @@ hubuum_client = { git = "https://github.com/hubuum/hubuum-client-rust" }
 
 ## Quick Start
 
+Load the [Atlas inventory](docs/example-dataset.md) and use an account with read
+access. Replace the example URL and credentials; this example does not write data.
+
 The root `Client` is asynchronous. Blocking users can use `hubuum_client::blocking::Client`; the blocking API mirrors the async surface without `.await`.
 
 ```rust
@@ -76,24 +80,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .login(Credentials::new("foo", "secret"))
         .await?;
 
-    let class = client
-        .classes()
-        .create_checked()
-        .name("example-class")
-        .collection_id(1)
-        .description("Example class")
-        .send()
+    let atlas = client
+        .class_by_name("Service")
+        .objects()
+        .by_name("Atlas")
+        .get()
         .await?;
 
-    let matches = client
-        .classes()
-        .name()
-        .contains("server")
-        .limit(25)
-        .list()
-        .await?;
-
-    println!("created class {} and found {} matches", class.id, matches.len());
+    println!("{}: {:#?}", atlas.name, atlas.data);
     Ok(())
 }
 ```
