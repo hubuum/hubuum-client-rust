@@ -299,7 +299,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../integration-tests/" class="md-tabs__link">
+        <a href="../compatibility-evidence/" class="md-tabs__link">
           
   
   Contributing
@@ -1173,6 +1173,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../compatibility-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility evidence
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../integration-tests/" class="md-nav__link">
         
   
@@ -1445,6 +1472,8 @@
 
 
 <h1 id="querying-resources">Querying Resources<a class="headerlink" href="#querying-resources" title="Permanent link">&para;</a></h1>
+<p>Examples outside the Atlas walkthrough use illustrative resources. Substitute
+your own class names and resolved IDs; Atlas does not create Hosts, Rooms, or Jacks.</p>
 <p>For a small inventory shared across Hubuum interfaces, use the
 <a href="../example-dataset/">Atlas example walkthrough</a>.</p>
 <p>This page assumes you already have an authenticated client. Examples use the blocking client; async callers use the same builders and await terminal operations.</p>
@@ -1485,7 +1514,7 @@ polymorphic boundaries, such as a generic event entity ID.</p>
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="kd">let</span><span class="w"> </span><span class="n">moved</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">collection</span><span class="p">.</span><span class="n">move_parent</span><span class="p">(</span><span class="n">new_parent_collection_id</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="kd">let</span><span class="w"> </span><span class="n">effective</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">collection</span><span class="p">.</span><span class="n">effective_group_permissions</span><span class="p">(</span><span class="n">admin_group_id</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
 </code></pre></div>
-<p>Omit <code>parent_collection_id(...)</code> when creating a root collection. Permission helpers include direct grants plus effective inherited permission views for groups and principals.</p>
+<p>Omit <code>parent_collection_id(...)</code> to create a child of the system <code>root</code> collection. Permission helpers include direct grants plus effective inherited permission views for groups and principals.</p>
 <h2 id="fluent-filters">Fluent Filters<a class="headerlink" href="#fluent-filters" title="Permanent link">&para;</a></h2>
 <p>Typed query fields expose only operators that make sense for that field shape:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">classes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>

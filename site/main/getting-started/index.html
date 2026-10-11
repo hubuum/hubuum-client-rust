@@ -299,7 +299,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../integration-tests/" class="md-tabs__link">
+        <a href="../compatibility-evidence/" class="md-tabs__link">
           
   
   Contributing
@@ -1195,6 +1195,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../compatibility-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility evidence
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../integration-tests/" class="md-nav__link">
         
   
@@ -1529,6 +1556,7 @@ See the <a href="../changelog/">release notes</a>.</p>
 <p>Add the dependency to your project's <code>Cargo.toml</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[dependencies]</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">hubuum_client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"0.14.1"</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">tokio</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"1"</span><span class="p">,</span><span class="w"> </span><span class="n">features</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"macros"</span><span class="p">,</span><span class="w"> </span><span class="s2">"rt-multi-thread"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
 <p>Async support is enabled by default. Blocking applications can opt into only the synchronous surface:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">[dependencies]</span>
@@ -1539,6 +1567,8 @@ See the <a href="../changelog/">release notes</a>.</p>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">hubuum_client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"https://github.com/hubuum/hubuum-client-rust"</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<p>Load the <a href="../example-dataset/">Atlas inventory</a> and use an account with read
+access. Replace the example URL and credentials; this example does not write data.</p>
 <p>The root <code>Client</code> is asynchronous. Blocking users can use <code>hubuum_client::blocking::Client</code>; the blocking API mirrors the async surface without <code>.await</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">use</span><span class="w"> </span><span class="n">hubuum_client</span><span class="p">::{</span><span class="n">Client</span><span class="p">,</span><span class="w"> </span><span class="n">Credentials</span><span class="p">};</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
@@ -1548,26 +1578,16 @@ See the <a href="../changelog/">release notes</a>.</p>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="p">.</span><span class="n">login</span><span class="p">(</span><span class="n">Credentials</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">"foo"</span><span class="p">,</span><span class="w"> </span><span class="s">"secret"</span><span class="p">))</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">class</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="p">.</span><span class="n">classes</span><span class="p">()</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">        </span><span class="p">.</span><span class="n">create_checked</span><span class="p">()</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="p">.</span><span class="n">name</span><span class="p">(</span><span class="s">"example-class"</span><span class="p">)</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">        </span><span class="p">.</span><span class="n">collection_id</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="p">.</span><span class="n">description</span><span class="p">(</span><span class="s">"Example class"</span><span class="p">)</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">        </span><span class="p">.</span><span class="n">send</span><span class="p">()</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">        </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">matches</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
-<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">        </span><span class="p">.</span><span class="n">classes</span><span class="p">()</span>
-<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">        </span><span class="p">.</span><span class="n">name</span><span class="p">()</span>
-<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">        </span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="s">"server"</span><span class="p">)</span>
-<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">        </span><span class="p">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span>
-<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">        </span><span class="p">.</span><span class="n">list</span><span class="p">()</span>
-<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">        </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>
-<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"created class {} and found {} matches"</span><span class="p">,</span><span class="w"> </span><span class="n">class</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">matches</span><span class="p">.</span><span class="n">len</span><span class="p">());</span>
-<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="w">    </span><span class="nb">Ok</span><span class="p">(())</span>
-<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="p">}</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">atlas</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="p">.</span><span class="n">class_by_name</span><span class="p">(</span><span class="s">"Service"</span><span class="p">)</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">        </span><span class="p">.</span><span class="n">objects</span><span class="p">()</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="p">.</span><span class="n">by_name</span><span class="p">(</span><span class="s">"Atlas"</span><span class="p">)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">        </span><span class="p">.</span><span class="n">get</span><span class="p">()</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"{}: {:#?}"</span><span class="p">,</span><span class="w"> </span><span class="n">atlas</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">atlas</span><span class="p">.</span><span class="n">data</span><span class="p">);</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="nb">Ok</span><span class="p">(())</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="p">}</span>
 </code></pre></div>
 <p>Resource identity is typed. Handles and resources expose IDs such as <code>ClassId</code>, <code>CollectionId</code>, <code>ObjectId</code>, and <code>GroupId</code>, so accidentally passing a group ID to <code>classes().get(...)</code> is rejected at compile time. Carry these types through application code; fluent API boundaries accept owned IDs, borrowed IDs, integer literals, and raw <code>i32</code> values. Use <code>.get()</code> only when crossing into an intentionally untyped or polymorphic interface.</p>
 <h2 id="common-flows">Common Flows<a class="headerlink" href="#common-flows" title="Permanent link">&para;</a></h2>
