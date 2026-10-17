@@ -1,5 +1,11 @@
 #![cfg(all(feature = "async", feature = "blocking"))]
 
+use hubuum_client::{
+    StructuredSearchEvent, StructuredSearchField, StructuredSearchFieldPredicate,
+    StructuredSearchOperator, StructuredSearchRequest, StructuredSearchResult,
+    StructuredSearchTarget,
+};
+
 use std::str::FromStr;
 
 use futures_util::TryStreamExt;
@@ -37,6 +43,7 @@ fn blocking_stream_types_remain_send_and_sync() {
 
     assert_send_sync::<blocking::ExportOutputReader>();
     assert_send_sync::<blocking::BlockingUnifiedSearchStream>();
+    assert_send_sync::<blocking::BlockingStructuredSearchStream>();
 }
 
 fn ts() -> &'static str {
@@ -8027,4 +8034,124 @@ mod collection_destinations {
         }
         verify!(client, transport, send);
     }
+}
+
+fn structured_search_request() -> StructuredSearchRequest {
+    StructuredSearchRequest::new(StructuredSearchTarget::Object { class: None })
+        .filter(StructuredSearchFieldPredicate::new(
+            StructuredSearchField::Name,
+            StructuredSearchOperator::IContains,
+            "server",
+        ))
+        .limit(2)
+        .cursor("opaque-cursor")
+        .include_total(true)
+}
+
+fn structured_search_expected_body() -> serde_json::Value {
+    json!({"version":1,"target":{"kind":"object"},"filter":{"op":"field","predicate":{"field":"name","operator":"icontains","value":"server"}},"limit":2,"cursor":"opaque-cursor","include_total":true})
+}
+
+#[test]
+fn sync_structured_search_posts_json_and_decodes_results_and_events() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let resource = object_json(41, 7, "server-one");
+    let result = json!({"kind":"object","resource":resource});
+    let search = server.mock(|when, then| {
+        when.method(POST).path("/api/v1/search")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .header("content-type", "application/json")
+            .json_body(structured_search_expected_body());
+        then.status(200).json_body(json!({"version":1,"kind":"object","results":[result.clone()],"next":"next-cursor","total":3}));
+    });
+    let stream =
+        server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/v1/search/stream")
+                .header("authorization", format!("Bearer {}", TOKEN))
+                .header("content-type", "application/json")
+                .json_body(structured_search_expected_body());
+            then.status(200).header("content-type", "text/event-stream").body(format!(
+            "event: started\ndata: {}\n\nevent: result\ndata: {}\n\nevent: done\ndata: {}\n\n",
+            json!({"version":1,"kind":"object"}), result,
+            json!({"version":1,"kind":"object","next":"next-cursor","total":3,"page_limit":2})
+        ));
+        });
+    let client = sync_client(&server);
+    let response = client
+        .structured_search(structured_search_request())
+        .send()
+        .unwrap();
+    assert!(
+        matches!(&response.results[0], StructuredSearchResult::Object(object) if object.id == 41)
+    );
+    assert_eq!(response.next.as_deref(), Some("next-cursor"));
+    assert_eq!(response.total, Some(3));
+    let events = client
+        .structured_search(structured_search_request())
+        .collect_stream()
+        .unwrap();
+    assert!(matches!(&events[0], StructuredSearchEvent::Started(_)));
+    assert!(
+        matches!(&events[1], StructuredSearchEvent::Result(StructuredSearchResult::Object(object)) if object.id == 41)
+    );
+    assert!(
+        matches!(&events[2], StructuredSearchEvent::Done(event) if event.total == Some(3) && event.next.as_deref() == Some("next-cursor"))
+    );
+    search.assert_calls(1);
+    stream.assert_calls(1);
+}
+
+#[tokio::test]
+async fn async_structured_search_posts_json_and_decodes_results_and_events() {
+    let server = MockServer::start();
+    mock_login(&server);
+    let resource = object_json(41, 7, "server-one");
+    let result = json!({"kind":"object","resource":resource});
+    let search = server.mock(|when, then| {
+        when.method(POST).path("/api/v1/search")
+            .header("authorization", format!("Bearer {}", TOKEN))
+            .header("content-type", "application/json")
+            .json_body(structured_search_expected_body());
+        then.status(200).json_body(json!({"version":1,"kind":"object","results":[result.clone()],"next":"next-cursor","total":3}));
+    });
+    let stream =
+        server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/v1/search/stream")
+                .header("authorization", format!("Bearer {}", TOKEN))
+                .header("content-type", "application/json")
+                .json_body(structured_search_expected_body());
+            then.status(200).header("content-type", "text/event-stream").body(format!(
+            "event: started\ndata: {}\n\nevent: result\ndata: {}\n\nevent: done\ndata: {}\n\n",
+            json!({"version":1,"kind":"object"}), result,
+            json!({"version":1,"kind":"object","next":"next-cursor","total":3,"page_limit":2})
+        ));
+        });
+    let client = async_client(&server).await;
+    let response = client
+        .structured_search(structured_search_request())
+        .send()
+        .await
+        .unwrap();
+    assert!(
+        matches!(&response.results[0], StructuredSearchResult::Object(object) if object.id == 41)
+    );
+    assert_eq!(response.next.as_deref(), Some("next-cursor"));
+    assert_eq!(response.total, Some(3));
+    let events = client
+        .structured_search(structured_search_request())
+        .collect_stream()
+        .await
+        .unwrap();
+    assert!(matches!(&events[0], StructuredSearchEvent::Started(_)));
+    assert!(
+        matches!(&events[1], StructuredSearchEvent::Result(StructuredSearchResult::Object(object)) if object.id == 41)
+    );
+    assert!(
+        matches!(&events[2], StructuredSearchEvent::Done(event) if event.total == Some(3) && event.next.as_deref() == Some("next-cursor"))
+    );
+    search.assert_calls(1);
+    stream.assert_calls(1);
 }

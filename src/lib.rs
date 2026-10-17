@@ -129,6 +129,15 @@ pub use types::{
     UnifiedSearchNext, UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent,
     UpdateEventSink, UpdateEventSubscription, UserParams, ValidatedExportScope,
 };
+pub use types::{
+    StructuredClassSelector, StructuredRelatedPredicate, StructuredSearchDoneEvent,
+    StructuredSearchErrorEvent, StructuredSearchEvent, StructuredSearchExpression,
+    StructuredSearchField, StructuredSearchFieldPredicate, StructuredSearchOperator,
+    StructuredSearchRequest, StructuredSearchResourceKind, StructuredSearchResponse,
+    StructuredSearchResult, StructuredSearchSort, StructuredSearchSortDirection,
+    StructuredSearchStartedEvent, StructuredSearchTarget,
+};
+
 pub use types::{CredentialApprovalId, CredentialApprovalRecord, CredentialOperation};
 
 #[cfg(feature = "blocking")]

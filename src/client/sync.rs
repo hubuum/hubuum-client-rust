@@ -3,6 +3,7 @@ use crate::types::{
     ImportPermissionPolicy, SchemaWorkKind, SchemaWorkStatus, TaskOutputDiscoveryState,
     TaskRemoteSideEffectState, TaskTerminalReason, TaskTraceId,
 };
+use crate::types::{StructuredSearchEvent, StructuredSearchRequest, StructuredSearchResponse};
 use crate::{ClassRelationId, ObjectRelationId};
 use crate::{CollectionEventSink, EventSinkId};
 use log::{debug, trace};
@@ -49,10 +50,10 @@ use crate::types::{
     ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability, RestoreConfirmRequest,
     RestoreId, RestoreStageResponse, Revisioned, RunningConfig, SchemaActivationRequest,
     SchemaActivationResponse, SchemaCompliancePage, SchemaPageOptions, SchemaRepairReportRequest,
-    SchemaRevision, SchemaRevisionResponse, SchemaStageRequest, SchemaWorkResponse, SortDirection,
-    TaskCancelRequest, TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse,
-    TaskStatus, Token, TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
-    UnifiedSearchSseDecoder, UpdateEventSubscription,
+    SchemaRevision, SchemaRevisionResponse, SchemaStageRequest, SchemaWorkResponse,
+    SearchSseDecoder, SortDirection, TaskCancelRequest, TaskEventResponse, TaskId, TaskKind,
+    TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject, UnifiedSearchEvent,
+    UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
 };
 use crate::types::{
     CredentialApprovalId, CredentialApprovalRecord, CredentialApprovalRequest, CredentialOperation,
@@ -1092,33 +1093,30 @@ impl Client<Authenticated> {
         )
     }
 
-    fn request_stream_with_endpoint(
+    fn request_stream_with_endpoint<T: Serialize>(
         &self,
+        method: reqwest::Method,
         endpoint: &Endpoint,
         url_params: UrlParams,
         query_params: Vec<QueryFilter>,
+        post_params: T,
     ) -> Result<StreamingResponse, ApiError> {
         let base_url = self.build_url(endpoint, &url_params);
-        let request_url =
-            shared::build_request_url(&reqwest::Method::GET, base_url, &url_params, query_params)?;
-        debug!("GET {}", shared::redacted_url_for_log(&request_url));
+        let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
+        debug!("{} {}", method, shared::redacted_url_for_log(&request_url));
 
         if let Some(transport) = self.transport() {
             let plan = shared::build_request_plan(
-                &reqwest::Method::GET,
+                &method,
                 &request_url,
-                &EmptyPostParams,
+                &post_params,
                 self.state.token(),
                 &[],
             )?;
-            let response = self.execute_transport_with_retry(
-                &reqwest::Method::GET,
-                false,
-                transport.as_ref(),
-                plan,
-            )?;
+            let response =
+                self.execute_transport_with_retry(&method, false, transport.as_ref(), plan)?;
             let response = shared::check_transport_response_success(
-                &reqwest::Method::GET,
+                &method,
                 &request_url,
                 response,
                 self.options().max_error_body_bytes,
@@ -1135,10 +1133,15 @@ impl Client<Authenticated> {
         let request = self
             .runtime
             .http_client
-            .get(&request_url)
+            .request(method.clone(), &request_url)
             .bearer_auth(self.state.token());
-        let response = self.send_with_retry(&reqwest::Method::GET, false, request)?;
-        let response = self.check_success(&reqwest::Method::GET, &request_url, response)?;
+        let request = if method == reqwest::Method::POST {
+            request.json(&post_params)
+        } else {
+            request
+        };
+        let response = self.send_with_retry(&method, false, request)?;
+        let response = self.check_success(&method, &request_url, response)?;
         let headers = response.headers().clone();
         let content_length = response.content_length();
         Ok(StreamingResponse {
@@ -1946,6 +1949,14 @@ impl Client<Authenticated> {
 
     pub fn object_relation(&self) -> Resource<ObjectRelation> {
         Resource::new(self.clone(), UrlParams::default())
+    }
+
+    /// Execute version 1 structured POST search with typed results or SSE events.
+    pub fn structured_search(&self, request: StructuredSearchRequest) -> StructuredSearchOp {
+        StructuredSearchOp {
+            client: self.clone(),
+            request,
+        }
     }
 
     pub fn search(&self, query: impl Into<String>) -> UnifiedSearchRequest {
@@ -3973,9 +3984,11 @@ impl Exports {
     ) -> Result<ExportOutputReader, ApiError> {
         let task_id = task_id.into();
         let response = self.client.request_stream_with_endpoint(
+            reqwest::Method::GET,
             &Endpoint::ExportOutput,
             vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
             vec![],
+            EmptyPostParams,
         )?;
         let content_type = response
             .headers()
@@ -4993,19 +5006,23 @@ pub struct UnifiedSearchRequest {
     query_params: Vec<QueryFilter>,
 }
 
-pub struct BlockingUnifiedSearchStream {
+struct BlockingSearchStream<T> {
     response: StreamingResponse,
-    decoder: UnifiedSearchSseDecoder,
-    pending_events: std::collections::VecDeque<Result<UnifiedSearchEvent, ApiError>>,
+    decoder: SearchSseDecoder<T>,
+    pending_events: std::collections::VecDeque<Result<T, ApiError>>,
     buffer: Box<[u8; 8192]>,
     finished: bool,
 }
 
-impl BlockingUnifiedSearchStream {
-    fn new(response: StreamingResponse, max_event_bytes: usize) -> Self {
+impl<T> BlockingSearchStream<T> {
+    fn new(
+        response: StreamingResponse,
+        max_event_bytes: usize,
+        parse_event: fn(String, String) -> Result<T, ApiError>,
+    ) -> Self {
         Self {
             response,
-            decoder: UnifiedSearchSseDecoder::with_max_event_bytes(max_event_bytes),
+            decoder: SearchSseDecoder::new(max_event_bytes, parse_event),
             pending_events: std::collections::VecDeque::new(),
             buffer: Box::new([0; 8192]),
             finished: false,
@@ -5013,8 +5030,8 @@ impl BlockingUnifiedSearchStream {
     }
 }
 
-impl Iterator for BlockingUnifiedSearchStream {
-    type Item = Result<UnifiedSearchEvent, ApiError>;
+impl<T> Iterator for BlockingSearchStream<T> {
+    type Item = Result<T, ApiError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.finished {
@@ -5050,6 +5067,48 @@ impl Iterator for BlockingUnifiedSearchStream {
                 }
             }
         }
+    }
+}
+
+pub struct BlockingUnifiedSearchStream {
+    inner: BlockingSearchStream<UnifiedSearchEvent>,
+}
+impl BlockingUnifiedSearchStream {
+    fn new(response: StreamingResponse, max_event_bytes: usize) -> Self {
+        Self {
+            inner: BlockingSearchStream::new(
+                response,
+                max_event_bytes,
+                UnifiedSearchEvent::from_sse_parts,
+            ),
+        }
+    }
+}
+impl Iterator for BlockingUnifiedSearchStream {
+    type Item = Result<UnifiedSearchEvent, ApiError>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+pub struct BlockingStructuredSearchStream {
+    inner: BlockingSearchStream<StructuredSearchEvent>,
+}
+impl BlockingStructuredSearchStream {
+    fn new(response: StreamingResponse, max_event_bytes: usize) -> Self {
+        Self {
+            inner: BlockingSearchStream::new(
+                response,
+                max_event_bytes,
+                StructuredSearchEvent::from_sse_parts,
+            ),
+        }
+    }
+}
+impl Iterator for BlockingStructuredSearchStream {
+    type Item = Result<StructuredSearchEvent, ApiError>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
     }
 }
 
@@ -5146,15 +5205,58 @@ impl UnifiedSearchRequest {
         query_params.push(QueryFilter::raw("q", self.query));
 
         let response = self.client.request_stream_with_endpoint(
+            reqwest::Method::GET,
             &Endpoint::SearchStream,
             UrlParams::default(),
             query_params,
+            EmptyPostParams,
         )?;
 
         Ok(BlockingUnifiedSearchStream::new(response, max_event_bytes))
     }
 
     pub fn collect_stream(self) -> Result<Vec<UnifiedSearchEvent>, ApiError> {
+        self.stream()?.collect()
+    }
+}
+
+/// An authenticated structured search operation.
+pub struct StructuredSearchOp {
+    client: Client<Authenticated>,
+    request: StructuredSearchRequest,
+}
+
+impl StructuredSearchOp {
+    pub fn send(self) -> Result<StructuredSearchResponse, ApiError> {
+        self.request.validate()?;
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::Search,
+                UrlParams::default(),
+                vec![],
+                self.request,
+            )?
+            .ok_or_else(|| ApiError::EmptyResult("Structured search returned empty result".into()))
+    }
+
+    /// Decode SSE incrementally, bounding each event by `max_response_body_bytes`.
+    pub fn stream(self) -> Result<BlockingStructuredSearchStream, ApiError> {
+        self.request.validate()?;
+        let response = self.client.request_stream_with_endpoint(
+            reqwest::Method::POST,
+            &Endpoint::SearchStream,
+            UrlParams::default(),
+            vec![],
+            self.request,
+        )?;
+        Ok(BlockingStructuredSearchStream::new(
+            response,
+            self.client.options().max_response_body_bytes,
+        ))
+    }
+
+    pub fn collect_stream(self) -> Result<Vec<StructuredSearchEvent>, ApiError> {
         self.stream()?.collect()
     }
 }

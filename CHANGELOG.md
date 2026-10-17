@@ -6,6 +6,14 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Typed structured POST search in async and blocking clients, including all seven
+  resource targets, boolean and related-object predicates, sorting, cursor
+  pagination, optional totals, and incremental SSE events. Requests validate the
+  version 1 DSL and body limits locally; query values and cursors are redacted
+  from debug output. Existing GET search remains available.
+
 ### Changed
 
 - Completed the async quick-start prerequisites, clarified collection parents, and pinned Atlas examples to the declared server target.

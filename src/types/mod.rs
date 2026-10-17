@@ -22,6 +22,7 @@ mod revision;
 mod schema;
 mod search;
 mod settings;
+mod structured_search;
 mod task;
 mod token;
 mod typed_object;
@@ -125,12 +126,21 @@ pub use schema::{
     SchemaWorkKind, SchemaWorkResponse, SchemaWorkStatus,
 };
 #[cfg(any(feature = "async", feature = "blocking"))]
-pub(crate) use search::UnifiedSearchSseDecoder;
+pub(crate) use search::SearchSseDecoder;
 pub use search::{
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
     UnifiedSearchResults, UnifiedSearchStartedEvent,
 };
+pub use structured_search::{
+    StructuredClassSelector, StructuredRelatedPredicate, StructuredSearchDoneEvent,
+    StructuredSearchErrorEvent, StructuredSearchEvent, StructuredSearchExpression,
+    StructuredSearchField, StructuredSearchFieldPredicate, StructuredSearchOperator,
+    StructuredSearchRequest, StructuredSearchResourceKind, StructuredSearchResponse,
+    StructuredSearchResult, StructuredSearchSort, StructuredSearchSortDirection,
+    StructuredSearchStartedEvent, StructuredSearchTarget,
+};
+
 pub use settings::{
     PrincipalSettings, PrincipalSettingsPatchDocument, PrincipalSettingsPatchOperation,
     PrincipalSettingsResponse,

@@ -43,11 +43,6 @@ Rust wire models:
 
 ## Intentional client limitations
 
-- `POST /api/v1/search` and `POST /api/v1/search/stream` accept the new structured
-  search DSL. This release retains the existing typed GET search and SSE APIs;
-  POST search is available through authenticated `raw()` requests. POST SSE
-  responses can be read through the bounded `raw().send_text()` API, but there is no typed
-  incremental structured-search stream yet.
 - Class object lists' `related.<alias>` filter groups have no dedicated typed
   builders. Use `raw_param` with the server's documented query keys.
 - Database diagnostics can return 404 for storage backends that do not provide

@@ -86,6 +86,9 @@ pub enum ApiError {
     #[error("Task trace ID must be a nonzero 32-digit hexadecimal value")]
     InvalidTaskTraceId,
 
+    #[error("Invalid structured search: {reason}")]
+    InvalidStructuredSearch { reason: &'static str },
+
     #[error("Invalid task query: {reason}")]
     InvalidTaskQuery { reason: &'static str },
 
@@ -237,6 +240,10 @@ impl std::fmt::Debug for ApiError {
                 .field(value)
                 .finish(),
             Self::InvalidTaskTraceId => f.write_str("InvalidTaskTraceId"),
+            Self::InvalidStructuredSearch { reason } => f
+                .debug_struct("InvalidStructuredSearch")
+                .field("reason", reason)
+                .finish(),
             Self::InvalidTaskQuery { reason } => f
                 .debug_struct("InvalidTaskQuery")
                 .field("reason", reason)

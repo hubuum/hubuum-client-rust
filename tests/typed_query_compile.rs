@@ -3,6 +3,9 @@
 #[test]
 fn typed_query_operator_contract() {
     let tests = trybuild::TestCases::new();
+    tests.pass("tests/trybuild/structured_search_types_pass.rs");
+    tests.compile_fail("tests/trybuild/structured_search_fail_wrong_id.rs");
+    tests.compile_fail("tests/trybuild/structured_search_fail_unauthenticated.rs");
     tests.pass("tests/trybuild/credential_approval_types_pass.rs");
     tests.compile_fail("tests/trybuild/credential_approval_fail_reuse.rs");
     tests.pass("tests/trybuild/task_discovery_types_pass.rs");
