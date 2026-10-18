@@ -1,0 +1,5 @@
+error[E0308]: mismatched types
+ --> tests/trybuild/structured_search_fail_wrong_id.rs:4:47
+  |
+4 |     let _ = StructuredClassSelector::Id { id: ObjectId::new(7) };
+  |                                               ^^^^^^^^^^^^^^^^ expected `ClassId`, found `ObjectId`

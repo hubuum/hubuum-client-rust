@@ -230,6 +230,54 @@ let search = client
     .await?;
 ```
 
+Structured search uses the version 1 DSL through `client.structured_search(...)`:
+
+```rust
+use hubuum_client::{
+    StructuredClassSelector, StructuredSearchField, StructuredSearchFieldPredicate,
+    StructuredSearchOperator, StructuredSearchRequest, StructuredSearchResult,
+    StructuredSearchTarget,
+};
+
+let request = StructuredSearchRequest::new(StructuredSearchTarget::Object {
+    class: Some(StructuredClassSelector::Id { id: class_id }),
+})
+.filter(StructuredSearchFieldPredicate::new(
+    StructuredSearchField::Name,
+    StructuredSearchOperator::IContains,
+    "server",
+))
+.limit(25)
+.include_total(true);
+
+let page = client.structured_search(request.clone()).send().await?;
+for result in page.results {
+    if let StructuredSearchResult::Object(object) = result {
+        println!("{}", object.name);
+    }
+}
+if let Some(cursor) = page.next {
+    let next_page = client.structured_search(request.cursor(cursor)).send().await?;
+}
+```
+
+Targets also include collections, classes, audit events, users, groups, and
+service accounts. `StructuredSearchExpression` supports `And`, `Or`, `Not`,
+field predicates, and related-object predicates. JSON predicates use
+`.path(JsonPath::new(["hardware", "cpu", "count"])?)`. Sorting uses
+`StructuredSearchSort` with `StructuredSearchSortDirection`.
+
+Use `.stream().await?` for incremental `StructuredSearchEvent` values, or
+`.collect_stream().await?` to collect them. Events are `Started`, `Result`,
+`Done` (including the next cursor and optional total), `Error`, or `Unknown`.
+Handle `Error` events as server failures after streaming has begun; HTTP and
+stream decoding failures return `ApiError`. Each event is bounded by the
+client's configured response-body limit; collecting retains all events in memory.
+The blocking client provides the same operations without `.await`, with an iterator
+for streaming. Reuse the identical request and authentication context when
+continuing with a cursor. Local validation covers DSL fields, operators and
+limits; the server checks permissions, cursor validity and query work limits.
+
 Principal settings preserve arbitrary JSON below an object root and expose the
 server's replace, merge-patch, and reset behavior directly:
 

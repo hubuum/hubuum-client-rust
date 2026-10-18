@@ -1,0 +1,7 @@
+error[E0599]: no method named `structured_search` found for struct `hubuum_client::Client<Unauthenticated>` in the current scope
+ --> tests/trybuild/structured_search_fail_unauthenticated.rs:5:20
+  |
+5 |     let _ = client.structured_search(StructuredSearchRequest::new(StructuredSearchTarget::Collection));
+  |                    ^^^^^^^^^^^^^^^^^ method not found in `hubuum_client::Client<Unauthenticated>`
+  |
+  = note: the method was found for `hubuum_client::Client<Authenticated>`

@@ -376,6 +376,18 @@ mod parity_contract {
         };
     }
 
+    macro_rules! assert_structured_search_surface {
+        ($module:ident) => {
+            let _: fn(
+                &$module::Client<Authenticated>,
+                crate::StructuredSearchRequest,
+            ) -> $module::StructuredSearchOp = $module::Client::<Authenticated>::structured_search;
+            let _ = $module::StructuredSearchOp::send;
+            let _ = $module::StructuredSearchOp::stream;
+            let _ = $module::StructuredSearchOp::collect_stream;
+        };
+    }
+
     macro_rules! assert_v002_surface {
         ($module:ident) => {
             let _ = $module::Backups::submit;
@@ -592,6 +604,8 @@ mod parity_contract {
         assert_filter_builder_surface!(async_client);
         assert_cursor_request_surface!(sync_client);
         assert_cursor_request_surface!(async_client);
+        assert_structured_search_surface!(sync_client);
+        assert_structured_search_surface!(async_client);
         assert_v002_surface!(sync_client);
         assert_v002_surface!(async_client);
         assert_v003_surface!(sync_client);

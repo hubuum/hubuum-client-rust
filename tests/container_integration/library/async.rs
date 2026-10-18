@@ -7,6 +7,12 @@ use hubuum_client::{
     PersonalComputedFieldDefinitionRequest, QueryFilter, Token, UserPatch,
     types::{FilterOperator, Permissions, SortDirection},
 };
+use hubuum_client::{
+    StructuredClassSelector, StructuredSearchEvent, StructuredSearchField,
+    StructuredSearchFieldPredicate, StructuredSearchOperator, StructuredSearchRequest,
+    StructuredSearchResult, StructuredSearchSort, StructuredSearchSortDirection,
+    StructuredSearchTarget,
+};
 use rstest::rstest;
 use serde_json::json;
 
@@ -1568,4 +1574,81 @@ fn async_query_json_path_lt_filters_json_schema() {
 
     assert!(matched.iter().any(|class| class.id == south.id));
     assert!(!matched.iter().any(|class| class.id == north.id));
+}
+
+#[test]
+#[ignore = "requires Docker and hubuum server image"]
+fn async_structured_search_paginates_and_streams_typed_resources() {
+    let harness = AsyncHarness::start().unwrap();
+    let run = async {
+        let client = &harness.client;
+        let (_, group_id) = async_admin_context(client).await.unwrap();
+        let (collection_id, class_id) =
+            create_async_permission_sandbox(client, group_id, "async-structured-search")
+                .await
+                .unwrap();
+        let (_, first_id) =
+            create_async_object(client, collection_id, class_id, "async-search-first")
+                .await
+                .unwrap();
+        let (_, second_id) =
+            create_async_object(client, collection_id, class_id, "async-search-second")
+                .await
+                .unwrap();
+        let request = StructuredSearchRequest::new(StructuredSearchTarget::Object {
+            class: Some(StructuredClassSelector::Id { id: class_id }),
+        })
+        .filter(StructuredSearchFieldPredicate::new(
+            StructuredSearchField::Description,
+            StructuredSearchOperator::Equals,
+            "integration object",
+        ))
+        .sort([StructuredSearchSort {
+            field: StructuredSearchField::Id,
+            direction: StructuredSearchSortDirection::Asc,
+        }])
+        .limit(1)
+        .include_total(true);
+        let page = client
+            .structured_search(request.clone())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(page.total, Some(2));
+        assert_eq!(page.results.len(), 1);
+        assert!(
+            matches!(&page.results[0], StructuredSearchResult::Object(object) if object.id == first_id)
+        );
+        let events = client
+            .structured_search(request.cursor(page.next.unwrap()))
+            .collect_stream()
+            .await
+            .unwrap();
+        assert!(matches!(&events[0], StructuredSearchEvent::Started(_)));
+        assert!(
+            matches!(&events[1], StructuredSearchEvent::Result(StructuredSearchResult::Object(object)) if object.id == second_id)
+        );
+        assert!(
+            matches!(&events[2], StructuredSearchEvent::Done(event) if event.next.is_none() && event.total == Some(2) && event.page_limit == 1)
+        );
+        // Decode the public list projection for every resource catalog.
+        for target in [
+            StructuredSearchTarget::Collection,
+            StructuredSearchTarget::Class,
+            StructuredSearchTarget::Object { class: None },
+            StructuredSearchTarget::AuditEvent,
+            StructuredSearchTarget::User,
+            StructuredSearchTarget::Group,
+            StructuredSearchTarget::ServiceAccount,
+        ] {
+            let kind = target.kind();
+            let page = client
+                .structured_search(StructuredSearchRequest::new(target).limit(1))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(page.kind, kind);
+        }
+    };
+    harness.block_on(run);
 }

@@ -6,6 +6,19 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Typed structured POST search in async and blocking clients, including all seven
+  resource targets, boolean and related-object predicates, sorting, cursor
+  pagination, optional totals, and incremental SSE events. Requests validate the
+  version 1 DSL and body limits locally; query values and cursors are redacted
+  from debug output. Existing GET search remains available.
+
+### Security
+
+- Update the locked Rustls dependency from 0.23.45 to 0.23.46 to address
+  RUSTSEC-2026-0346, RUSTSEC-2026-0347, RUSTSEC-2026-0348, and RUSTSEC-2026-0349.
+
 ### Changed
 
 - Completed the async quick-start prerequisites, clarified collection parents, and pinned Atlas examples to the declared server target.

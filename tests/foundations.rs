@@ -1,5 +1,7 @@
 #![cfg(all(feature = "async", feature = "blocking", feature = "typed-schemas"))]
 
+use hubuum_client::{StructuredSearchEvent, StructuredSearchRequest, StructuredSearchTarget};
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -2106,4 +2108,230 @@ fn scoped_create_requests_serialize_identity_scope() {
         serde_json::to_value(service_account).unwrap()["identity_scope"],
         "local"
     );
+}
+
+fn structured_transport() -> MockTransport {
+    let transport = MockTransport::default();
+    transport.push_response(
+        TransportResponse::json(
+            StatusCode::OK,
+            &json!({"version":1,"kind":"collection","results":[],"next":"secret-cursor","total":0}),
+        )
+        .unwrap(),
+    );
+    transport.push_response(streaming_transport_response(
+        "text/event-stream",
+        concat!(
+            "event: started\ndata: {\"version\":1,\"kind\":\"collection\"}\n\n",
+            "event: done\ndata: {\"version\":1,\"kind\":\"collection\",\"page_limit\":1}\n\n"
+        ),
+    ));
+    transport
+}
+
+fn assert_structured_transport(transport: &MockTransport) {
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 2);
+    for (index, request) in requests.iter().enumerate() {
+        assert_eq!(request.method, Method::POST);
+        assert_eq!(
+            request.url.path(),
+            if index == 0 {
+                "/api/v1/search"
+            } else {
+                "/api/v1/search/stream"
+            }
+        );
+        assert!(request.url.query().is_none());
+        assert_eq!(request.headers["content-type"], "application/json");
+        assert!(request.headers["authorization"].is_sensitive());
+        assert_eq!(request.headers["authorization"], "Bearer consumer-secret");
+        let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
+        assert_eq!(body["version"], 1);
+        assert_eq!(body["target"]["kind"], "collection");
+    }
+}
+
+#[test]
+fn blocking_structured_search_uses_transport_and_validates_before_io() {
+    let transport = structured_transport();
+    let client = blocking_mock_client(transport.clone(), 128);
+    let invalid = StructuredSearchRequest::new(StructuredSearchTarget::Collection).limit(0);
+    assert!(matches!(
+        client.structured_search(invalid.clone()).send(),
+        Err(ApiError::InvalidStructuredSearch { .. })
+    ));
+    assert!(matches!(
+        client.structured_search(invalid).stream(),
+        Err(ApiError::InvalidStructuredSearch { .. })
+    ));
+    assert!(transport.requests().is_empty());
+    let request = StructuredSearchRequest::new(StructuredSearchTarget::Collection).limit(1);
+    let response = client.structured_search(request.clone()).send().unwrap();
+    assert_eq!(response.next.as_deref(), Some("secret-cursor"));
+    let events = client.structured_search(request).collect_stream().unwrap();
+    assert_eq!(events.len(), 2);
+    assert_structured_transport(&transport);
+}
+
+#[test]
+fn blocking_structured_search_stream_bounds_events_and_preserves_prior_events() {
+    let transport = MockTransport::default();
+    transport.push_response(streaming_transport_response("text/event-stream", concat!(
+        "event: started\ndata: {\"version\":1,\"kind\":\"object\"}\n\n",
+        "event: unknown\ndata: ",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n"
+    )));
+    let client = blocking_mock_client(transport.clone(), 128);
+    let mut stream = client
+        .structured_search(StructuredSearchRequest::new(
+            StructuredSearchTarget::Object { class: None },
+        ))
+        .stream()
+        .unwrap();
+    assert!(matches!(
+        stream.next().unwrap().unwrap(),
+        StructuredSearchEvent::Started(_)
+    ));
+    assert!(matches!(
+        stream.next().unwrap(),
+        Err(ApiError::ResponseTooLarge { limit: 128, .. })
+    ));
+    assert!(stream.next().is_none());
+}
+
+#[test]
+fn blocking_structured_search_preserves_http_errors_without_retrying_post() {
+    let transport = MockTransport::default();
+    for _ in 0..2 {
+        transport.push_response(
+            TransportResponse::json(
+                StatusCode::SERVICE_UNAVAILABLE,
+                &json!({"error":"Unavailable","message":"try later","reason":"busy"}),
+            )
+            .unwrap(),
+        );
+    }
+    let client = blocking_mock_client(transport.clone(), 128);
+    let request = StructuredSearchRequest::new(StructuredSearchTarget::Collection);
+    let send = client.structured_search(request.clone()).send();
+    assert!(matches!(
+        send,
+        Err(ApiError::HttpWithBody {
+            status: StatusCode::SERVICE_UNAVAILABLE, ref body, ..
+        }) if body.contains("busy")
+    ));
+    let stream = client.structured_search(request).stream();
+    assert!(matches!(
+        stream,
+        Err(ApiError::HttpWithBody {
+            status: StatusCode::SERVICE_UNAVAILABLE,
+            ..
+        })
+    ));
+    assert_eq!(transport.requests().len(), 2);
+}
+
+#[tokio::test]
+async fn async_structured_search_uses_transport_and_validates_before_io() {
+    let transport = structured_transport();
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .max_response_body_bytes(128)
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+    let invalid = StructuredSearchRequest::new(StructuredSearchTarget::Collection).limit(0);
+    assert!(matches!(
+        client.structured_search(invalid.clone()).send().await,
+        Err(ApiError::InvalidStructuredSearch { .. })
+    ));
+    assert!(matches!(
+        client.structured_search(invalid).stream().await,
+        Err(ApiError::InvalidStructuredSearch { .. })
+    ));
+    assert!(transport.requests().is_empty());
+    let request = StructuredSearchRequest::new(StructuredSearchTarget::Collection).limit(1);
+    let response = client
+        .structured_search(request.clone())
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.next.as_deref(), Some("secret-cursor"));
+    let events = client
+        .structured_search(request)
+        .collect_stream()
+        .await
+        .unwrap();
+    assert_eq!(events.len(), 2);
+    assert_structured_transport(&transport);
+}
+
+#[tokio::test]
+async fn async_structured_search_stream_bounds_events_and_preserves_prior_events() {
+    let transport = MockTransport::default();
+    transport.push_response(streaming_transport_response("text/event-stream", concat!(
+        "event: started\ndata: {\"version\":1,\"kind\":\"object\"}\n\n",
+        "event: unknown\ndata: ",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n"
+    )));
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .max_response_body_bytes(128)
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+    let mut stream = client
+        .structured_search(StructuredSearchRequest::new(
+            StructuredSearchTarget::Object { class: None },
+        ))
+        .stream()
+        .await
+        .unwrap();
+    assert!(matches!(
+        stream.next().await.unwrap().unwrap(),
+        StructuredSearchEvent::Started(_)
+    ));
+    assert!(matches!(
+        stream.next().await.unwrap(),
+        Err(ApiError::ResponseTooLarge { limit: 128, .. })
+    ));
+    assert!(stream.next().await.is_none());
+}
+
+#[tokio::test]
+async fn async_structured_search_preserves_http_errors_without_retrying_post() {
+    let transport = MockTransport::default();
+    for _ in 0..2 {
+        transport.push_response(
+            TransportResponse::json(
+                StatusCode::SERVICE_UNAVAILABLE,
+                &json!({"error":"Unavailable","message":"try later","reason":"busy"}),
+            )
+            .unwrap(),
+        );
+    }
+    let client = hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .max_response_body_bytes(128)
+        .build()
+        .unwrap()
+        .authenticate(Token::new("consumer-secret"));
+    let request = StructuredSearchRequest::new(StructuredSearchTarget::Collection);
+    let send = client.structured_search(request.clone()).send().await;
+    assert!(matches!(
+        send,
+        Err(ApiError::HttpWithBody {
+            status: StatusCode::SERVICE_UNAVAILABLE, ref body, ..
+        }) if body.contains("busy")
+    ));
+    let stream = client.structured_search(request).stream().await;
+    assert!(matches!(
+        stream,
+        Err(ApiError::HttpWithBody {
+            status: StatusCode::SERVICE_UNAVAILABLE,
+            ..
+        })
+    ));
+    assert_eq!(transport.requests().len(), 2);
 }

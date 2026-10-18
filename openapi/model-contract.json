@@ -605,6 +605,46 @@
       "requiredness_exceptions": {
         "config": "The client always serializes an object for legacy import construction; the server defaults an omitted config."
       }
+    },
+    {
+      "openapi_schema": "StructuredSearchRequest",
+      "rust_file": "src/types/structured_search.rs",
+      "rust_type": "StructuredSearchRequest",
+      "direction": "request",
+      "requiredness_exceptions": {
+        "include_total": "The client explicitly serializes the server-defaulted field."
+      }
+    },
+    {
+      "openapi_schema": "StructuredSearchFieldPredicate",
+      "rust_file": "src/types/structured_search.rs",
+      "rust_type": "StructuredSearchFieldPredicate",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "StructuredRelatedPredicate",
+      "rust_file": "src/types/structured_search.rs",
+      "rust_type": "StructuredRelatedPredicate",
+      "direction": "request",
+      "requiredness_exceptions": {
+        "depth": "The client explicitly serializes the server-defaulted field.",
+        "filters": "The client explicitly serializes the server-defaulted field."
+      }
+    },
+    {
+      "openapi_schema": "StructuredSearchSort",
+      "rust_file": "src/types/structured_search.rs",
+      "rust_type": "StructuredSearchSort",
+      "direction": "request",
+      "requiredness_exceptions": {
+        "direction": "The client explicitly serializes the server-defaulted field."
+      }
+    },
+    {
+      "openapi_schema": "StructuredSearchResponse",
+      "rust_file": "src/types/structured_search.rs",
+      "rust_type": "StructuredSearchResponse",
+      "direction": "response"
     }
   ]
 }

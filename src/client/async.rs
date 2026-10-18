@@ -3,6 +3,7 @@ use crate::types::{
     ImportPermissionPolicy, SchemaWorkKind, SchemaWorkStatus, TaskOutputDiscoveryState,
     TaskRemoteSideEffectState, TaskTerminalReason, TaskTraceId,
 };
+use crate::types::{StructuredSearchEvent, StructuredSearchRequest, StructuredSearchResponse};
 use crate::{ClassRelationId, ObjectRelationId};
 use crate::{CollectionEventSink, EventSinkId};
 use log::{debug, trace};
@@ -49,10 +50,10 @@ use crate::types::{
     ReleaseRateLimitResponse, RemoteTargetHistory, RestoreCapability, RestoreConfirmRequest,
     RestoreId, RestoreStageResponse, Revisioned, RunningConfig, SchemaActivationRequest,
     SchemaActivationResponse, SchemaCompliancePage, SchemaPageOptions, SchemaRepairReportRequest,
-    SchemaRevision, SchemaRevisionResponse, SchemaStageRequest, SchemaWorkResponse, SortDirection,
-    TaskCancelRequest, TaskEventResponse, TaskId, TaskKind, TaskQueueStateResponse, TaskResponse,
-    TaskStatus, Token, TypedObject, UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchResponse,
-    UnifiedSearchSseDecoder, UpdateEventSubscription,
+    SchemaRevision, SchemaRevisionResponse, SchemaStageRequest, SchemaWorkResponse,
+    SearchSseDecoder, SortDirection, TaskCancelRequest, TaskEventResponse, TaskId, TaskKind,
+    TaskQueueStateResponse, TaskResponse, TaskStatus, Token, TypedObject, UnifiedSearchEvent,
+    UnifiedSearchKind, UnifiedSearchResponse, UpdateEventSubscription,
 };
 use crate::types::{
     CredentialApprovalId, CredentialApprovalRecord, CredentialApprovalRequest, CredentialOperation,
@@ -1154,37 +1155,33 @@ impl Client<Authenticated> {
         .await
     }
 
-    async fn request_stream_with_endpoint(
+    async fn request_stream_with_endpoint<T: Serialize>(
         &self,
+        method: reqwest::Method,
         endpoint: &Endpoint,
         url_params: UrlParams,
         query_params: Vec<QueryFilter>,
+        post_params: T,
     ) -> Result<StreamingResponse, ApiError> {
         use futures_util::StreamExt;
 
         let base_url = self.build_url(endpoint, &url_params);
-        let request_url =
-            shared::build_request_url(&reqwest::Method::GET, base_url, &url_params, query_params)?;
-        debug!("GET {}", shared::redacted_url_for_log(&request_url));
+        let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
+        debug!("{} {}", method, shared::redacted_url_for_log(&request_url));
 
         if let Some(transport) = self.transport() {
             let plan = shared::build_request_plan(
-                &reqwest::Method::GET,
+                &method,
                 &request_url,
-                &EmptyPostParams,
+                &post_params,
                 self.state.token(),
                 &[],
             )?;
             let response = self
-                .execute_transport_with_retry(
-                    &reqwest::Method::GET,
-                    false,
-                    transport.as_ref(),
-                    plan,
-                )
+                .execute_transport_with_retry(&method, false, transport.as_ref(), plan)
                 .await?;
             let response = shared::check_transport_response_success(
-                &reqwest::Method::GET,
+                &method,
                 &request_url,
                 response,
                 self.options().max_error_body_bytes,
@@ -1204,14 +1201,15 @@ impl Client<Authenticated> {
         let request = self
             .runtime
             .http_client
-            .get(&request_url)
+            .request(method.clone(), &request_url)
             .bearer_auth(self.state.token());
-        let response = self
-            .send_with_retry(&reqwest::Method::GET, false, request)
-            .await?;
-        let response = self
-            .check_success(&reqwest::Method::GET, &request_url, response)
-            .await?;
+        let request = if method == reqwest::Method::POST {
+            request.json(&post_params)
+        } else {
+            request
+        };
+        let response = self.send_with_retry(&method, false, request).await?;
+        let response = self.check_success(&method, &request_url, response).await?;
         let headers = response.headers().clone();
         let content_length = response.content_length();
         let body = response
@@ -2056,6 +2054,14 @@ impl Client<Authenticated> {
 
     pub fn object_relation(&self) -> Resource<ObjectRelation> {
         Resource::new(self.clone(), UrlParams::default())
+    }
+
+    /// Execute version 1 structured POST search with typed results or SSE events.
+    pub fn structured_search(&self, request: StructuredSearchRequest) -> StructuredSearchOp {
+        StructuredSearchOp {
+            client: self.clone(),
+            request,
+        }
     }
 
     pub fn search(&self, query: impl Into<String>) -> UnifiedSearchRequest {
@@ -4223,9 +4229,11 @@ impl Exports {
         let response = self
             .client
             .request_stream_with_endpoint(
+                reqwest::Method::GET,
                 &Endpoint::ExportOutput,
                 vec![(Cow::Borrowed("task_id"), task_id.to_string().into())],
                 vec![],
+                EmptyPostParams,
             )
             .await?;
         let content_type = response
@@ -5418,38 +5426,95 @@ impl UnifiedSearchRequest {
     }
 
     pub async fn stream(self) -> Result<UnifiedSearchEventStream, ApiError> {
-        use futures_util::StreamExt;
-
         let mut query_params = self.query_params;
         query_params.push(QueryFilter::raw("q", self.query));
 
         let response = self
             .client
             .request_stream_with_endpoint(
+                reqwest::Method::GET,
                 &Endpoint::SearchStream,
                 UrlParams::default(),
                 query_params,
+                EmptyPostParams,
             )
             .await?;
 
-        let max_event_bytes = self.client.options().max_response_body_bytes;
-        let mut bytes = response.into_body();
-        Ok(Box::pin(async_stream::try_stream! {
-            let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(max_event_bytes);
-            while let Some(chunk) = bytes.next().await {
-                for event in decoder.push_bytes(&chunk?) {
-                    yield event?;
-                }
-            }
-            for event in decoder.finish() {
-                yield event?;
-            }
-        }))
+        Ok(search_event_stream(
+            response,
+            self.client.options().max_response_body_bytes,
+            UnifiedSearchEvent::from_sse_parts,
+        ))
     }
 
     pub async fn collect_stream(self) -> Result<Vec<UnifiedSearchEvent>, ApiError> {
         use futures_util::TryStreamExt;
 
+        self.stream().await?.try_collect().await
+    }
+}
+
+fn search_event_stream<T: Send + 'static>(
+    response: StreamingResponse,
+    max_event_bytes: usize,
+    parse_event: fn(String, String) -> Result<T, ApiError>,
+) -> ItemStream<T> {
+    use futures_util::StreamExt;
+    let mut bytes = response.into_body();
+    Box::pin(async_stream::try_stream! {
+        let mut decoder = SearchSseDecoder::new(max_event_bytes, parse_event);
+        while let Some(chunk) = bytes.next().await {
+            for event in decoder.push_bytes(&chunk?) { yield event?; }
+        }
+        for event in decoder.finish() { yield event?; }
+    })
+}
+
+pub type StructuredSearchEventStream = ItemStream<StructuredSearchEvent>;
+
+/// An authenticated structured search operation.
+pub struct StructuredSearchOp {
+    client: Client<Authenticated>,
+    request: StructuredSearchRequest,
+}
+
+impl StructuredSearchOp {
+    pub async fn send(self) -> Result<StructuredSearchResponse, ApiError> {
+        self.request.validate()?;
+        self.client
+            .request_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::Search,
+                UrlParams::default(),
+                vec![],
+                self.request,
+            )
+            .await?
+            .ok_or_else(|| ApiError::EmptyResult("Structured search returned empty result".into()))
+    }
+
+    /// Decode SSE incrementally, bounding each event by `max_response_body_bytes`.
+    pub async fn stream(self) -> Result<StructuredSearchEventStream, ApiError> {
+        self.request.validate()?;
+        let response = self
+            .client
+            .request_stream_with_endpoint(
+                reqwest::Method::POST,
+                &Endpoint::SearchStream,
+                UrlParams::default(),
+                vec![],
+                self.request,
+            )
+            .await?;
+        Ok(search_event_stream(
+            response,
+            self.client.options().max_response_body_bytes,
+            StructuredSearchEvent::from_sse_parts,
+        ))
+    }
+
+    pub async fn collect_stream(self) -> Result<Vec<StructuredSearchEvent>, ApiError> {
+        use futures_util::TryStreamExt;
         self.stream().await?.try_collect().await
     }
 }

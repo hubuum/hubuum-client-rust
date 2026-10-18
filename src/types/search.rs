@@ -94,7 +94,7 @@ impl UnifiedSearchEvent {
     }
 
     pub fn parse_sse_stream(body: &str) -> Result<Vec<Self>, ApiError> {
-        let mut decoder = UnifiedSearchSseDecoder::default();
+        let mut decoder = SearchSseDecoder::new(usize::MAX, UnifiedSearchEvent::from_sse_parts);
         let mut events = decoder.push_bytes(body.as_bytes());
         events.extend(decoder.finish());
         events.into_iter().collect()
@@ -102,7 +102,8 @@ impl UnifiedSearchEvent {
 }
 
 #[derive(Debug)]
-pub(crate) struct UnifiedSearchSseDecoder {
+pub(crate) struct SearchSseDecoder<T> {
+    parse_event: fn(String, String) -> Result<T, ApiError>,
     event_name: Option<String>,
     data_lines: Vec<String>,
     pending_line: Vec<u8>,
@@ -112,15 +113,13 @@ pub(crate) struct UnifiedSearchSseDecoder {
     first_line: bool,
 }
 
-impl Default for UnifiedSearchSseDecoder {
-    fn default() -> Self {
-        Self::with_max_event_bytes(usize::MAX)
-    }
-}
-
-impl UnifiedSearchSseDecoder {
-    pub(crate) fn with_max_event_bytes(max_event_bytes: usize) -> Self {
+impl<T> SearchSseDecoder<T> {
+    pub(crate) fn new(
+        max_event_bytes: usize,
+        parse_event: fn(String, String) -> Result<T, ApiError>,
+    ) -> Self {
         Self {
+            parse_event,
             event_name: None,
             data_lines: Vec::new(),
             pending_line: Vec::new(),
@@ -131,7 +130,7 @@ impl UnifiedSearchSseDecoder {
         }
     }
 
-    pub(crate) fn push_bytes(&mut self, bytes: &[u8]) -> Vec<Result<UnifiedSearchEvent, ApiError>> {
+    pub(crate) fn push_bytes(&mut self, bytes: &[u8]) -> Vec<Result<T, ApiError>> {
         let mut events = Vec::new();
         for &byte in bytes {
             if self.pending_cr {
@@ -168,7 +167,7 @@ impl UnifiedSearchSseDecoder {
         events
     }
 
-    fn push_line(&mut self, line: &str) -> Option<Result<UnifiedSearchEvent, ApiError>> {
+    fn push_line(&mut self, line: &str) -> Option<Result<T, ApiError>> {
         let line = if self.first_line {
             self.first_line = false;
             line.strip_prefix('\u{feff}').unwrap_or(line)
@@ -195,7 +194,7 @@ impl UnifiedSearchSseDecoder {
         None
     }
 
-    pub(crate) fn finish(&mut self) -> Vec<Result<UnifiedSearchEvent, ApiError>> {
+    pub(crate) fn finish(&mut self) -> Vec<Result<T, ApiError>> {
         let mut events = Vec::new();
         if self.pending_cr {
             self.pending_cr = false;
@@ -222,7 +221,7 @@ impl UnifiedSearchSseDecoder {
         Ok(())
     }
 
-    fn finish_line(&mut self) -> Result<Option<UnifiedSearchEvent>, ApiError> {
+    fn finish_line(&mut self) -> Result<Option<T>, ApiError> {
         let line = std::mem::take(&mut self.pending_line);
         let line = std::str::from_utf8(&line).map_err(|error| {
             ApiError::DeserializationError(format!("invalid UTF-8 in SSE frame: {error}"))
@@ -236,8 +235,8 @@ impl UnifiedSearchSseDecoder {
     }
 
     fn push_finished_line(
-        events: &mut Vec<Result<UnifiedSearchEvent, ApiError>>,
-        event: Result<Option<UnifiedSearchEvent>, ApiError>,
+        events: &mut Vec<Result<T, ApiError>>,
+        event: Result<Option<T>, ApiError>,
     ) -> bool {
         match event {
             Ok(Some(event)) => events.push(Ok(event)),
@@ -250,7 +249,7 @@ impl UnifiedSearchSseDecoder {
         false
     }
 
-    fn dispatch(&mut self) -> Option<Result<UnifiedSearchEvent, ApiError>> {
+    fn dispatch(&mut self) -> Option<Result<T, ApiError>> {
         if self.data_lines.is_empty() {
             self.event_name = None;
             return None;
@@ -259,15 +258,15 @@ impl UnifiedSearchSseDecoder {
         let event = self.event_name.take().unwrap_or_default();
         let data = self.data_lines.join("\n");
         self.data_lines.clear();
-        Some(UnifiedSearchEvent::from_sse_parts(event, data))
+        Some((self.parse_event)(event, data))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchEvent,
-        UnifiedSearchSseDecoder, UnifiedSearchStartedEvent,
+        SearchSseDecoder, UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchEvent,
+        UnifiedSearchStartedEvent,
     };
 
     #[test]
@@ -339,7 +338,7 @@ mod tests {
 
     #[test]
     fn byte_decoder_handles_fragmented_utf8() {
-        let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(128);
+        let mut decoder = SearchSseDecoder::new(128, UnifiedSearchEvent::from_sse_parts);
         let payload = "data: grøsser\n\n".as_bytes();
         let split = payload
             .windows(2)
@@ -366,7 +365,7 @@ mod tests {
     #[test]
     fn byte_decoder_accepts_standard_line_endings() {
         for payload in ["data: ok\n\n", "data: ok\r\n\r\n", "data: ok\r\r"] {
-            let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(128);
+            let mut decoder = SearchSseDecoder::new(128, UnifiedSearchEvent::from_sse_parts);
             let events = decoder
                 .push_bytes(payload.as_bytes())
                 .into_iter()
@@ -386,7 +385,7 @@ mod tests {
     #[test]
     fn byte_decoder_discards_unterminated_event_at_eof() {
         for payload in ["data: incomplete", "data: incomplete\n"] {
-            let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(128);
+            let mut decoder = SearchSseDecoder::new(128, UnifiedSearchEvent::from_sse_parts);
             let events = decoder
                 .push_bytes(payload.as_bytes())
                 .into_iter()
@@ -400,7 +399,7 @@ mod tests {
 
     #[test]
     fn byte_decoder_preserves_events_before_size_error() {
-        let mut decoder = UnifiedSearchSseDecoder::with_max_event_bytes(32);
+        let mut decoder = SearchSseDecoder::new(32, UnifiedSearchEvent::from_sse_parts);
         let payload = format!("data: ok\n\ndata: {}", "x".repeat(40));
         let events = decoder.push_bytes(payload.as_bytes());
 
