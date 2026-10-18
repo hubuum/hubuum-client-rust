@@ -16,6 +16,7 @@ nav = [
   { "Guides" = [
     { "Client setup" = "client-setup.md" },
     { "Queries and pagination" = "querying.md" },
+    { "JSON query usage and analysis" = "query-usage.md" },
     { "Scoped authentication" = "scoped-auth.md" },
     { "Credential approvals" = "credential-approvals.md" },
     { "Principal settings" = "principal-settings.md" },
