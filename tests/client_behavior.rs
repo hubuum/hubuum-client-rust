@@ -8155,3 +8155,8 @@ async fn async_structured_search_posts_json_and_decodes_results_and_events() {
     search.assert_calls(1);
     stream.assert_calls(1);
 }
+
+mod client_behavior {
+    mod notifications;
+    mod query_usage;
+}

@@ -2,15 +2,15 @@ use std::borrow::Cow;
 
 #[cfg(feature = "async")]
 use crate::client::r#async::{
-    ClassSchema as AsyncClassSchema, CursorRequest as AsyncCursorRequest,
-    EmptyPostParams as AsyncEmptyPostParams, GraphRequest as AsyncGraphRequest,
-    Handle as AsyncHandle, QueryOp as AsyncQueryOp,
+    ClassQueryUsage as AsyncClassQueryUsage, ClassSchema as AsyncClassSchema,
+    CursorRequest as AsyncCursorRequest, EmptyPostParams as AsyncEmptyPostParams,
+    GraphRequest as AsyncGraphRequest, Handle as AsyncHandle, QueryOp as AsyncQueryOp,
 };
 #[cfg(feature = "blocking")]
 use crate::client::sync::{
-    ClassSchema as SyncClassSchema, CursorRequest as SyncCursorRequest,
-    EmptyPostParams as SyncEmptyPostParams, GraphRequest as SyncGraphRequest, Handle as SyncHandle,
-    QueryOp as SyncQueryOp, one_or_err,
+    ClassQueryUsage as SyncClassQueryUsage, ClassSchema as SyncClassSchema,
+    CursorRequest as SyncCursorRequest, EmptyPostParams as SyncEmptyPostParams,
+    GraphRequest as SyncGraphRequest, Handle as SyncHandle, QueryOp as SyncQueryOp, one_or_err,
 };
 use crate::{
     ApiError, CollectionId, GroupPermissionsResult, Object, ObjectRelationLimit,
@@ -112,6 +112,10 @@ pub struct RelatedClassGraph {
 
 #[cfg(feature = "blocking")]
 impl SyncHandle<Class> {
+    pub fn query_usage(&self) -> SyncClassQueryUsage {
+        self.client().class_query_usage(self.id())
+    }
+
     pub fn schema(&self) -> SyncClassSchema {
         self.client().class_schema(self.id())
     }
@@ -291,6 +295,10 @@ impl SyncHandle<Class> {
 
 #[cfg(feature = "async")]
 impl AsyncHandle<Class> {
+    pub fn query_usage(&self) -> AsyncClassQueryUsage {
+        self.client().class_query_usage(self.id())
+    }
+
     pub fn schema(&self) -> AsyncClassSchema {
         self.client().class_schema(self.id())
     }

@@ -183,6 +183,9 @@ print_server_diagnostics() {
 }
 
 cleanup() {
+    if [[ -n "${QUERY_USAGE_PROBE_FILE:-}" ]]; then
+        rm -f -- "${QUERY_USAGE_PROBE_FILE}"
+    fi
     if [[ -n "${RESTORE_PROBE_FILE:-}" ]]; then
         rm -f -- "${RESTORE_PROBE_FILE}"
     fi
@@ -424,6 +427,8 @@ container run -d \
     -e "HUBUUM_BIND_PORT=8080" \
     -e "HUBUUM_CLIENT_ALLOWLIST=${CLIENT_ALLOWLIST}" \
     -e "HUBUUM_LOG_LEVEL=debug" \
+    -e "HUBUUM_QUERY_OBSERVATIONS_ENABLED=true" \
+    -e "HUBUUM_QUERY_OBSERVATIONS_SAMPLE_EVERY=1" \
     -e "HUBUUM_AUTH_CONFIG_PATH=/etc/hubuum/auth-providers.toml" \
     -e "HUBUUM_DATABASE_URL=${DATABASE_URL}" \
     -e "DATABASE_URL=${DATABASE_URL}" \
@@ -490,6 +495,20 @@ if [[ "${RUN_E2E_CLIENT}" == "1" ]]; then
     fi
 
     "${E2E_CMD[@]}"
+
+    # Exercise native preparation and cleanup outside the API using the same
+    # pinned image. Each phase observes the result through the public client API.
+    QUERY_USAGE_PROBE_FILE="$(mktemp)"
+    export HUBUUM_INTEGRATION_QUERY_USAGE_PROBE_FILE="${QUERY_USAGE_PROBE_FILE}"
+    for query_usage_phase in prepare inspect_and_withdraw inspect_cleanup; do
+        cargo test --locked -p e2e_client --features query-usage-native-tests \
+            --test query_usage_native -- --ignored --exact "${query_usage_phase}" --test-threads=1
+        if [[ "${query_usage_phase}" != "inspect_cleanup" ]]; then
+            container run --rm --network "${NETWORK_NAME}" \
+                -e "HUBUUM_DATABASE_URL=${DATABASE_URL}" --entrypoint hubuum-admin \
+                "${SERVER_IMAGE}" --reconcile-query-usage
+        fi
+    done
 
     # These tests replace the entire database. Run them only after all ordinary
     # suites finish, and only against the disposable stack created above.

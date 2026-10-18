@@ -4,9 +4,32 @@ use crate::ApiError;
 use crate::resources::{CollectionId, EventSinkId, UserId};
 
 use super::{
-    EventDeliveryId, EventSubscriptionId, HubuumDateTime, PrincipalId, Provenance,
+    EventDeliveryId, EventSubscriptionId, HubuumDateTime, PrincipalId, PrincipalKind, Provenance,
     ResourceRevision, TaskKind,
 };
+
+/// Immutable identity captured when an authentication event occurred.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
+pub struct EventSubject {
+    pub principal_id: PrincipalId,
+    pub name: String,
+    pub kind: PrincipalKind,
+    pub identity_scope: String,
+    pub authentication_provider_kind: String,
+    pub is_admin: bool,
+}
+
+impl EventResponse {
+    /// Decode the optional event-time subject, independently of the event actor.
+    pub fn subject(&self) -> Result<Option<EventSubject>, ApiError> {
+        self.metadata
+            .get("subject")
+            .filter(|subject| !subject.is_null())
+            .map(|subject| serde_json::from_value(subject.clone()).map_err(ApiError::from))
+            .transpose()
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
@@ -191,6 +214,12 @@ pub struct EventSinkGet {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct EventSubscriptionFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject_principal_ids: Option<Vec<PrincipalId>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject_identity_scopes: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject_is_admin: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub task_kinds: Option<Vec<TaskKind>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actor_kinds: Option<Vec<String>>,
@@ -229,6 +258,48 @@ pub struct EventSubscription {
     pub created_at: HubuumDateTime,
     pub updated_at: HubuumDateTime,
     pub revision: ResourceRevision,
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
+pub struct SystemEventSubscription {
+    pub id: EventSubscriptionId,
+    pub sink_id: EventSinkId,
+    pub name: String,
+    pub description: String,
+    pub entity_types: Vec<String>,
+    pub actions: Vec<String>,
+    pub routing: serde_json::Value,
+    pub enabled: bool,
+    #[serde(default)]
+    pub filter: Option<EventSubscriptionFilter>,
+    pub created_at: HubuumDateTime,
+    pub updated_at: HubuumDateTime,
+    pub revision: ResourceRevision,
+}
+
+/// Source event UUID and subscription used for administrative preview or test delivery.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct EventNotificationRequest {
+    pub subscription_id: EventSubscriptionId,
+    pub event_id: String,
+}
+
+/// Rendered notification payload; treat it as potentially sensitive.
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
+pub struct EventNotificationPreview {
+    pub sink_kind: EventSinkKind,
+    pub payload: serde_json::Value,
+}
+
+impl std::fmt::Debug for EventNotificationPreview {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EventNotificationPreview")
+            .field("sink_kind", &self.sink_kind)
+            .field("payload", &"[REDACTED]")
+            .finish()
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -315,6 +386,24 @@ impl std::fmt::Debug for EventSubscription {
         f.debug_struct("EventSubscription")
             .field("id", &self.id)
             .field("collection_id", &self.collection_id)
+            .field("sink_id", &self.sink_id)
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .field("entity_types", &self.entity_types)
+            .field("actions", &self.actions)
+            .field("routing", &"[REDACTED]")
+            .field("enabled", &self.enabled)
+            .field("filter", &self.filter)
+            .field("created_at", &self.created_at)
+            .field("updated_at", &self.updated_at)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for SystemEventSubscription {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SystemEventSubscription")
+            .field("id", &self.id)
             .field("sink_id", &self.sink_id)
             .field("name", &self.name)
             .field("description", &self.description)

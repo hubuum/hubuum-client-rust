@@ -80,7 +80,7 @@ fn e2e_admin_config_backup_and_restore_staging() {
     assert!(discovered.iter().any(|task| task.id == completed.id));
     let document = harness.client.backups().output(completed.id).unwrap();
     assert!(document.has_supported_version());
-    // The pinned v0.0.18 server must emit the current collection-integration format.
+    // The pinned v0.0.19 server must emit the current query-usage format.
     assert_eq!(
         document.backup_version,
         hubuum_client::CURRENT_BACKUP_VERSION

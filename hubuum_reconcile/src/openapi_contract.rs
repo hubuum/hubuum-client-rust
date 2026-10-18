@@ -350,7 +350,7 @@ fn parse_fields(item: ItemStruct) -> Result<Vec<RustField>, DynError> {
                         parsed.wire_name = meta.value()?.parse::<syn::LitStr>()?.value();
                     } else if meta.path.is_ident("default") {
                         parsed.serde_default = true;
-                        if !meta.input.is_empty() {
+                        if meta.input.peek(syn::Token![=]) {
                             let _ = meta.value()?.parse::<syn::Expr>()?;
                         }
                     } else if meta.path.is_ident("skip") {
@@ -429,6 +429,23 @@ mod tests {
         assert!(!fields[1].required_in(Direction::Response));
         assert!(!fields[2].visible_in(Direction::Request));
         assert!(fields[2].visible_in(Direction::Response));
+    }
+
+    #[test]
+    fn parses_default_followed_by_other_attributes() {
+        let item = syn::parse_quote! {
+            struct Example {
+                #[serde(default, skip_serializing_if = "Vec::is_empty")]
+                proposed: Vec<String>,
+                #[serde(default = "default_count", rename = "count")]
+                total: usize,
+            }
+        };
+        let fields = parse_fields(item).unwrap();
+        assert!(!fields[0].required_in(Direction::Request));
+        assert!(!fields[0].required_in(Direction::Response));
+        assert_eq!(fields[1].wire_name, "count");
+        assert!(!fields[1].required_in(Direction::Response));
     }
 
     #[test]

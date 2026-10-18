@@ -1,0 +1,15 @@
+error[E0599]: no method named `class_query_usage` found for struct `hubuum_client::Client<Unauthenticated>` in the current scope
+ --> tests/trybuild/query_usage_fail_unauthenticated.rs:4:12
+  |
+4 |     client.class_query_usage(42);
+  |            ^^^^^^^^^^^^^^^^^ method not found in `hubuum_client::Client<Unauthenticated>`
+  |
+  = note: the method was found for `hubuum_client::Client<Authenticated>`
+
+error[E0599]: no method named `system_event_subscriptions` found for struct `hubuum_client::blocking::Client<Unauthenticated>` in the current scope
+ --> tests/trybuild/query_usage_fail_unauthenticated.rs:6:12
+  |
+6 |     client.system_event_subscriptions();
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `hubuum_client::blocking::Client<Unauthenticated>`
+  |
+  = note: the method was found for `hubuum_client::blocking::Client<Authenticated>`

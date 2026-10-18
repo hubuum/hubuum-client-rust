@@ -89,6 +89,9 @@ pub enum ApiError {
     #[error("Invalid structured search: {reason}")]
     InvalidStructuredSearch { reason: &'static str },
 
+    #[error("Invalid query usage: {reason}")]
+    InvalidQueryUsage { reason: &'static str },
+
     #[error("Invalid task query: {reason}")]
     InvalidTaskQuery { reason: &'static str },
 
@@ -242,6 +245,10 @@ impl std::fmt::Debug for ApiError {
             Self::InvalidTaskTraceId => f.write_str("InvalidTaskTraceId"),
             Self::InvalidStructuredSearch { reason } => f
                 .debug_struct("InvalidStructuredSearch")
+                .field("reason", reason)
+                .finish(),
+            Self::InvalidQueryUsage { reason } => f
+                .debug_struct("InvalidQueryUsage")
                 .field("reason", reason)
                 .finish(),
             Self::InvalidTaskQuery { reason } => f

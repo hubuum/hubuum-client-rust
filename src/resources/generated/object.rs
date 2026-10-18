@@ -182,7 +182,7 @@ impl crate::resources::ApiResource for Object {
         }
         if let Some(value) = params.data {
             queries.push(crate::types::QueryFilter {
-                key: stringify!(data).to_string(),
+                key: "json_data".to_string(),
                 value: value.to_string(),
                 operator: crate::types::FilterOperator::Equals { is_negated: false },
             });
@@ -451,7 +451,7 @@ impl crate::client::sync::QueryOp<Object> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(description))
     }
     pub fn data(self) -> crate::client::QueryJsonField<Self> {
-        <crate::client::QueryJsonField<Self>>::new(self, stringify!(data))
+        <crate::client::QueryJsonField<Self>>::new(self, "json_data")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))
@@ -481,7 +481,7 @@ impl crate::client::r#async::QueryOp<Object> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(description))
     }
     pub fn data(self) -> crate::client::QueryJsonField<Self> {
-        <crate::client::QueryJsonField<Self>>::new(self, stringify!(data))
+        <crate::client::QueryJsonField<Self>>::new(self, "json_data")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))
@@ -511,7 +511,7 @@ impl crate::client::sync::Resource<Object> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(description))
     }
     pub fn data(self) -> crate::client::QueryJsonField<Self> {
-        <crate::client::QueryJsonField<Self>>::new(self, stringify!(data))
+        <crate::client::QueryJsonField<Self>>::new(self, "json_data")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))
@@ -541,7 +541,7 @@ impl crate::client::r#async::Resource<Object> {
         <crate::client::QueryTextField<Self>>::new(self, stringify!(description))
     }
     pub fn data(self) -> crate::client::QueryJsonField<Self> {
-        <crate::client::QueryJsonField<Self>>::new(self, stringify!(data))
+        <crate::client::QueryJsonField<Self>>::new(self, "json_data")
     }
     pub fn created_at(self) -> crate::client::QueryNumericField<Self, HubuumDateTime> {
         <crate::client::QueryNumericField<Self, HubuumDateTime>>::new(self, stringify!(created_at))

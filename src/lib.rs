@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.14.1 targets Hubuum server v0.0.18. See the repository's
+//! Version 0.15.0 targets Hubuum server v0.0.19. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -45,7 +45,7 @@ pub mod types;
 mod endpoints;
 
 /// Hubuum server release targeted by this client release.
-pub const TARGET_SERVER_VERSION: &str = "0.0.18";
+pub const TARGET_SERVER_VERSION: &str = "0.0.19";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
@@ -54,9 +54,9 @@ pub use client::AsyncTransport;
 pub use client::BlockingTransport;
 #[cfg(feature = "async")]
 pub use client::{
-    ApprovedCredentialOperation, ClassNameObjects, ClassNameScope, ClassSchema, Client,
-    CollectionScope, CredentialApprovals, ExportOutputStream, ItemStream, ObjectNameScope,
-    PageStream, TypedClass,
+    ApprovedCredentialOperation, ClassNameObjects, ClassNameScope, ClassQueryUsage, ClassSchema,
+    Client, CollectionScope, CredentialApprovals, ExportOutputStream, ItemStream, ObjectNameScope,
+    PageStream, SystemEventSubscriptions, TypedClass,
 };
 pub use client::{
     Authenticated, IntoQueryFilters, MockTransport, Page, QueryBoolField, QueryJsonField,
@@ -81,22 +81,23 @@ pub use types::{
     DatabaseConfig, DbStateResponse, EntityTag, EventConfig, EventDelivery,
     EventDeliveryHealthResponse, EventDeliveryId, EventDeliveryPolicy, EventDeliveryPurpose,
     EventDeliveryQueueHealth, EventDeliveryStatus, EventDeliveryStatusCounts,
-    EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse, EventSink,
-    EventSinkDeliveryHealth, EventSinkGet, EventSinkKey, EventSinkKind, EventSinkRouting,
-    EventSubscription, EventSubscriptionDeliveryHealth, EventSubscriptionFilter,
-    EventSubscriptionId, EventWorkerHealth, EventWorkerWakeupStats, ExportConfig,
-    ExportContentType, ExportInclude, ExportIncludeRelatedDirection, ExportIncludeRelatedObject,
-    ExportIncludeRelatedSort, ExportJsonResponse, ExportLimits, ExportMeta,
-    ExportMissingDataPolicy, ExportRelationContext, ExportRequest, ExportResult, ExportScope,
-    ExportScopeKind, ExportTaskDetails, ExportTemplateHistory, ExportTemplateKind,
-    ExportTemplateRunRequest, ExportWarning, FullCollectionHistory, FullDbStateResponse,
-    FullImportClassRelationInput, FullImportGraph, FullImportRequest, GroupKey, HistoryId,
-    HistoryMetadata, IdentityScopeKey, ImportAtomicity, ImportClassInput, ImportClassRelationInput,
-    ImportCollectionInput, ImportCollectionPermissionInput, ImportCollisionPolicy,
-    ImportComputedFieldInput, ImportComputedFieldVisibility, ImportEventSinkInput,
-    ImportEventSubscriptionInput, ImportExportTemplateInput, ImportGraph, ImportGroupInput,
-    ImportGroupMembershipInput, ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode,
-    ImportObjectInput, ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
+    EventDeliveryUpdateResponse, EventFanoutHealth, EventNotificationPreview,
+    EventNotificationRequest, EventResponse, EventSink, EventSinkDeliveryHealth, EventSinkGet,
+    EventSinkKey, EventSinkKind, EventSinkRouting, EventSubject, EventSubscription,
+    EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventSubscriptionId,
+    EventWorkerHealth, EventWorkerWakeupStats, ExportConfig, ExportContentType, ExportInclude,
+    ExportIncludeRelatedDirection, ExportIncludeRelatedObject, ExportIncludeRelatedSort,
+    ExportJsonResponse, ExportLimits, ExportMeta, ExportMissingDataPolicy, ExportRelationContext,
+    ExportRequest, ExportResult, ExportScope, ExportScopeKind, ExportTaskDetails,
+    ExportTemplateHistory, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning,
+    FullCollectionHistory, FullDbStateResponse, FullImportClassRelationInput, FullImportGraph,
+    FullImportRequest, GroupKey, HistoryId, HistoryMetadata, IdentityScopeKey, ImportAtomicity,
+    ImportClassInput, ImportClassRelationInput, ImportCollectionInput,
+    ImportCollectionPermissionInput, ImportCollisionPolicy, ImportComputedFieldInput,
+    ImportComputedFieldVisibility, ImportEventSinkInput, ImportEventSubscriptionInput,
+    ImportExportTemplateInput, ImportGraph, ImportGroupInput, ImportGroupMembershipInput,
+    ImportIdentityScopeInput, ImportMembershipSourceInput, ImportMode, ImportObjectInput,
+    ImportObjectRelationInput, ImportPermissionPolicy, ImportPrincipalInput,
     ImportPrincipalSubtype, ImportRemoteTargetInput, ImportRequest, ImportResultId,
     ImportRunResult, ImportSchemaActivation, ImportTaskDetails, ImportTaskResultResponse,
     ImportWriteCondition, JsonPath, LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND,
@@ -104,13 +105,19 @@ pub use types::{
     NetworkConfig, NewEventSink, NewEventSubscription, ObjectComplianceResponse, ObjectHistory,
     ObjectKey, ObjectRelationLimit, ObjectSchemaEvidence, PaginationConfig, PermissionConfig,
     PermissionId, Permissions, PersonalComputedFieldDefinitionRequest, PrincipalId, PrincipalKey,
-    PrincipalSettings, PrincipalSettingsPatchDocument, PrincipalSettingsPatchOperation,
-    PrincipalSettingsResponse, ProbeResponse, Provenance, ProvenanceActor, ProvenancePrincipal,
-    RESTORE_CONFIRMATION_PHRASE, RebuildTaskDetails, ReleaseRateLimitResponse, RemoteCallConfig,
-    RemoteCallResultId, RemoteCallTaskDetails, RemoteTargetHistory, ResourceRevision,
-    RestoreCapability, RestoreConfig, RestoreConfirmRequest, RestoreId, RestoreJobStatus,
-    RestoreStageResponse, RestoreTimestamps, RestoreValidationSummary, RetainedBackupDetails,
-    RetainedExportDetails, RetainedImportDetails, Revisioned, RunningConfig,
+    PrincipalKind, PrincipalSettings, PrincipalSettingsPatchDocument,
+    PrincipalSettingsPatchOperation, PrincipalSettingsResponse, ProbeResponse, Provenance,
+    ProvenanceActor, ProvenancePrincipal, QueryObservationConfig, QueryObservationSettings,
+    QueryObservationSnapshot, QueryPatternObservation, QueryUsageAdapterProgress,
+    QueryUsageAnalysisRequest, QueryUsageAnalysisResponse, QueryUsageAnalysisStatus,
+    QueryUsageAssessment, QueryUsageCompatibility, QueryUsageCreateRequest,
+    QueryUsageDeclarationId, QueryUsageOperation, QueryUsagePattern, QueryUsageReplaceRequest,
+    QueryUsageResource, QueryUsageResourceOwnership, QueryUsageResponse, QueryUsageSuggestion,
+    QueryUsageValueType, RESTORE_CONFIRMATION_PHRASE, RebuildTaskDetails, ReleaseRateLimitResponse,
+    RemoteCallConfig, RemoteCallResultId, RemoteCallTaskDetails, RemoteTargetHistory,
+    ResourceRevision, RestoreCapability, RestoreConfig, RestoreConfirmRequest, RestoreId,
+    RestoreJobStatus, RestoreStageResponse, RestoreTimestamps, RestoreValidationSummary,
+    RetainedBackupDetails, RetainedExportDetails, RetainedImportDetails, Revisioned, RunningConfig,
     RunningLoginRateLimitConfig, SamplingRatio, SchemaActivationPolicy, SchemaActivationRequest,
     SchemaActivationResponse, SchemaActualValue, SchemaComplianceCounts, SchemaCompliancePage,
     SchemaDiagnosticOmission, SchemaDiagnosticSnapshotResponse, SchemaDiagnostics,
@@ -120,14 +127,15 @@ pub use types::{
     SchemaRevision, SchemaRevisionResponse, SchemaRevisionStatus, SchemaStageRequest,
     SchemaTaskDetails, SchemaValidationConfig, SchemaWorkKind, SchemaWorkResponse,
     SchemaWorkStatus, SecretSourceConfig, SecretStatus, ServerConfig, SharedComputedScope,
-    TaskCancelRequest, TaskCancellationReason, TaskConfig, TaskDetails, TaskDiscoveryTarget,
-    TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks, TaskOutputDiscoveryState,
-    TaskProgress, TaskQueueStateResponse, TaskRemoteSideEffectState, TaskResponse, TaskStatus,
-    TaskTerminalReason, TaskTraceId, TlsConfig, Token, TokenId, TokenListState, TokenResourceScope,
-    TokenScopeDetails, TracingConfig, TypedObject, UnifiedSearchBatchResponse,
-    UnifiedSearchDoneEvent, UnifiedSearchErrorEvent, UnifiedSearchEvent, UnifiedSearchKind,
-    UnifiedSearchNext, UnifiedSearchResponse, UnifiedSearchResults, UnifiedSearchStartedEvent,
-    UpdateEventSink, UpdateEventSubscription, UserParams, ValidatedExportScope,
+    SystemEventSubscription, TaskCancelRequest, TaskCancellationReason, TaskConfig, TaskDetails,
+    TaskDiscoveryTarget, TaskEventId, TaskEventResponse, TaskId, TaskKind, TaskLinks,
+    TaskOutputDiscoveryState, TaskProgress, TaskQueueStateResponse, TaskRemoteSideEffectState,
+    TaskResponse, TaskStatus, TaskTerminalReason, TaskTraceId, TlsConfig, Token, TokenId,
+    TokenListState, TokenResourceScope, TokenScopeDetails, TracingConfig, TypedObject,
+    UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
+    UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
+    UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
+    UserParams, ValidatedExportScope,
 };
 pub use types::{
     StructuredClassSelector, StructuredRelatedPredicate, StructuredSearchDoneEvent,

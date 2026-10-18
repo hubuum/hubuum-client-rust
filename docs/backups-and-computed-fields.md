@@ -9,10 +9,11 @@ blocking equivalents.
 
 Backups are administrator-only task operations. `run()` submits the task, waits
 for a successful terminal state, and decodes the resulting versioned backup
-document. Hubuum v0.0.18 produces backup format 8 and accepts formats 6 and 7
-with legacy sink-grant backfill. `CURRENT_BACKUP_VERSION` is 8, and
-`has_supported_version()` accepts 6, 7, and 8. Older servers cannot restore
-format 8. Format 5 and earlier artifacts must be restored with their matching
+document. Hubuum v0.0.19 produces backup format 9 and accepts formats 6–8.
+`CURRENT_BACKUP_VERSION` is 9, and `has_supported_version()` accepts 6–9.
+Format 9 retains logical query-usage declarations and their provenance; native
+indexes and ownership records are excluded. Older servers cannot restore
+format 9. Format 5 and earlier artifacts must be restored with their matching
 older server before database migration and creation of a new backup. No artifact
 converter is provided. Preserve the server-assigned `created_at`
 instant when saving or staging a backup; the client serializes it as RFC 3339 UTC.
@@ -47,7 +48,7 @@ assert!(document.has_supported_version());
 ```
 
 Use `submit()`, `get()`, and `output()` separately when an application needs to
-persist task IDs or control polling. Formats 6, 7, and 8 contain privileged integration configuration but exclude
+persist task IDs or control polling. Formats 6–9 contain privileged integration configuration but exclude
 password hashes, bearer tokens, and token scopes. Their debug output is redacted,
 but applications
 must still protect serialized documents at rest and in transit. Large documents

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, de};
 
+use super::QueryObservationConfig;
 use crate::ApiError;
 
 /// Default path of the Hubuum Prometheus scrape endpoint.
@@ -51,6 +52,9 @@ pub struct RunningConfig {
     pub secrets: SecretSourceConfig,
     pub tracing: TracingConfig,
     pub schema_validation: SchemaValidationConfig,
+    /// Servers before 0.0.19 do not collect workload observations.
+    #[serde(default)]
+    pub query_observations: QueryObservationConfig,
 }
 
 #[non_exhaustive]

@@ -8,11 +8,26 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Complete typed Hubuum server v0.0.19 query-usage management and administrative
+  analysis in async and blocking clients: validated patterns, revision-checked
+  replacement and deletion, schema assessments, bounded observations, suggestions,
+  native resource ownership, and adapter progress.
+- Typed system event subscription CRUD and notification preview/test operations.
+  Authentication events expose typed event-time subjects and subscription filters.
+  Class, object, and selected global audit queries support `include_relations`.
+- Typed observation settings in administrative configuration and backup format 9
+  support, preserving query-usage declarations through backup and restore.
+
 - Typed structured POST search in async and blocking clients, including all seven
   resource targets, boolean and related-object predicates, sorting, cursor
   pagination, optional totals, and incremental SSE events. Requests validate the
   version 1 DSL and body limits locally; query values and cursors are redacted
   from debug output. Existing GET search remains available.
+
+### Fixed
+
+- Object `.data().path(...)` filters now use the server's `json_data` query key.
+  Revision-checked DELETE requests preserve query parameters.
 
 ### Security
 
@@ -20,6 +35,16 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   RUSTSEC-2026-0346, RUSTSEC-2026-0347, RUSTSEC-2026-0348, and RUSTSEC-2026-0349.
 
 ### Changed
+
+- Target server v0.0.19 and its immutable released image, with a reconciled
+  240-operation contract. Rust 1.88 and public feature combinations are unchanged.
+- **Breaking Rust API:** `EventSubscriptionFilter` adds subject principal,
+  identity-scope, and administrator-status fields. Add these fields to exhaustive
+  literals or use `..Default::default()`. This change requires client 0.15.0.
+- **Server upgrade:** format 9 backups require server v0.0.19 or newer to restore;
+  formats 6–8 remain recognized. Upgrade the restore server before using new
+  backups, retain a pre-upgrade backup for rollback, and replace blank principal
+  names before upgrading. Direct server connections use HTTP/1.1.
 
 - Completed the async quick-start prerequisites, clarified collection parents, and pinned Atlas examples to the declared server target.
 

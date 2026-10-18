@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.18 OpenAPI gaps
+# Known Hubuum server v0.0.19 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.18
+The pinned client contract records these limitations in the server v0.0.19
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not
@@ -30,6 +30,8 @@ Rust wire models:
 - The `identity_scope` and `managed_by` group fields and the
   `provider_managed` user field retain Serde defaults for compatibility with
   older server responses.
+- `RunningConfig.query_observations` defaults to disabled collection for servers
+  before v0.0.19.
 - `Object.data` remains optional for compatibility and serializes an explicit
   null when absent.
 - `TaskResponse.unattempted_items` defaults to zero for older responses that
@@ -54,7 +56,7 @@ Rust wire models:
 
 ## Credential approval coverage
 
-The pinned v0.0.18 contract includes both approval endpoints and the approval
+The pinned v0.0.19 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return `reauthentication_required`; applications
@@ -62,24 +64,19 @@ must use the [approval workflow](../docs/credential-approvals.md).
 
 ## v0.0.17 notifications
 
-All seven newly declared operations are available through authenticated `raw()`
-requests in both client modes; this release has no dedicated typed route helpers:
+All seven operations have typed helpers in both modes:
+`system_event_subscriptions().list/get/create/update/delete`,
+`preview_event_notification`, and `test_event_notification`.
+`SystemEventSubscription` models system scope without a collection ID.
+`EventNotificationRequest` identifies a subscription and source event UUID;
+`EventNotificationPreview` redacts rendered payloads in debug output. Test
+responses use `EventDelivery` with purpose `Test`.
 
-| Operations | Route |
-| --- | --- |
-| GET, POST | `/api/v1/system-event-subscriptions` |
-| GET, PATCH, DELETE | `/api/v1/system-event-subscriptions/{subscription_id}` |
-| POST | `/api/v1/event-sinks/{sink_id}/preview` |
-| POST | `/api/v1/event-sinks/{sink_id}/test` |
-
-System subscriptions reuse `NewEventSubscription` and `UpdateEventSubscription`
-request models. Decode their responses as application-owned models or
-`serde_json::Value`: `EventSubscription` is collection-scoped and requires a
-collection ID. Preview and test requests take `subscription_id` and the source
-`event_id` UUID string. Preview returns a sink kind and a rendered JSON payload;
-test returns an `EventDelivery` with purpose `Test`. These administrator-only
-operations can bypass disabled flags and subscription filters to test a real
-source event. Protect rendered payloads as potentially sensitive data.
+These administrator-only operations can bypass disabled flags and subscription
+filters to test a real source event. Protect rendered payloads as potentially
+sensitive data. Version 0.0.19 also supports authentication-event subject filters
+and typed subject access through `EventResponse::subject()`; the server embeds
+that object inside the otherwise extensible `metadata` property.
 
 Existing typed sink CRUD and imports now preserve `delivery_policy`; a policy
 with `min_interval_ms` limits admission pacing, and an empty policy clears it.
@@ -90,13 +87,13 @@ task lifecycle notifications. Delivery responses preserve `purpose` and
 `deferred_reason`; debug output redacts the latter. System subscription health
 uses `collection_id: None`.
 
-The combined live suite covers all seven routes through both async and blocking
+The combined live suite covers all seven routes through typed async and blocking
 public clients, including typed pacing, filter serialization, nullable health,
 and test-delivery decoding.
 
 ## Collection integrations
 
-The pinned v0.0.18 snapshot includes all eight collection destination and
+The pinned v0.0.19 snapshot includes all eight collection destination and
 administrator grant operations. Both client modes provide typed helpers, and
 `CollectionEventSink` preserves safe metadata while omitting configuration,
 URLs, and credentials. The canonical live suite requires delegated collection
