@@ -645,6 +645,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../query-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  JSON query usage and analysis
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../scoped-auth/" class="md-nav__link">
         
   
@@ -1457,10 +1484,11 @@ blocking equivalents.</p>
 <h2 id="full-system-backups">Full-System Backups<a class="headerlink" href="#full-system-backups" title="Permanent link">&para;</a></h2>
 <p>Backups are administrator-only task operations. <code>run()</code> submits the task, waits
 for a successful terminal state, and decodes the resulting versioned backup
-document. Hubuum v0.0.18 produces backup format 8 and accepts formats 6 and 7
-with legacy sink-grant backfill. <code>CURRENT_BACKUP_VERSION</code> is 8, and
-<code>has_supported_version()</code> accepts 6, 7, and 8. Older servers cannot restore
-format 8. Format 5 and earlier artifacts must be restored with their matching
+document. Hubuum v0.0.19 produces backup format 9 and accepts formats 6–8.
+<code>CURRENT_BACKUP_VERSION</code> is 9, and <code>has_supported_version()</code> accepts 6–9.
+Format 9 retains logical query-usage declarations and their provenance; native
+indexes and ownership records are excluded. Older servers cannot restore
+format 9. Format 5 and earlier artifacts must be restored with their matching
 older server before database migration and creation of a new backup. No artifact
 converter is provided. Preserve the server-assigned <code>created_at</code>
 instant when saving or staging a backup; the client serializes it as RFC 3339 UTC.</p>
@@ -1489,7 +1517,7 @@ Deploy consistent limits across the API, workers, and administrator tools.</p>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="fm">assert!</span><span class="p">(</span><span class="n">document</span><span class="p">.</span><span class="n">has_supported_version</span><span class="p">());</span>
 </code></pre></div>
 <p>Use <code>submit()</code>, <code>get()</code>, and <code>output()</code> separately when an application needs to
-persist task IDs or control polling. Formats 6, 7, and 8 contain privileged integration configuration but exclude
+persist task IDs or control polling. Formats 6–9 contain privileged integration configuration but exclude
 password hashes, bearer tokens, and token scopes. Their debug output is redacted,
 but applications
 must still protect serialized documents at rest and in transit. Large documents

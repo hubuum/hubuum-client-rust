@@ -79,7 +79,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#known-hubuum-server-v0018-openapi-gaps" class="md-skip">
+        <a href="#known-hubuum-server-v0019-openapi-gaps" class="md-skip">
           Skip to content
         </a>
       
@@ -621,6 +621,33 @@
     
   
   Queries and pagination
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../query-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  JSON query usage and analysis
 
     
   </span>
@@ -1449,8 +1476,8 @@
   
 
 
-<h1 id="known-hubuum-server-v0018-openapi-gaps">Known Hubuum server v0.0.18 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0018-openapi-gaps" title="Permanent link">&para;</a></h1>
-<p>The pinned client contract records these limitations in the server v0.0.18
+<h1 id="known-hubuum-server-v0019-openapi-gaps">Known Hubuum server v0.0.19 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0019-openapi-gaps" title="Permanent link">&para;</a></h1>
+<p>The pinned client contract records these limitations in the server v0.0.19
 specification explicitly:</p>
 <ul>
 <li><code>GET /api/v1/search/stream</code> declares <code>text/event-stream</code> but does not
@@ -1478,6 +1505,8 @@ Rust wire models:</p>
 <li>The <code>identity_scope</code> and <code>managed_by</code> group fields and the
   <code>provider_managed</code> user field retain Serde defaults for compatibility with
   older server responses.</li>
+<li><code>RunningConfig.query_observations</code> defaults to disabled collection for servers
+  before v0.0.19.</li>
 <li><code>Object.data</code> remains optional for compatibility and serializes an explicit
   null when absent.</li>
 <li><code>TaskResponse.unattempted_items</code> defaults to zero for older responses that
@@ -1501,48 +1530,24 @@ Rust wire models:</p>
   callers must narrow queries or reduce traversal depth and template workloads.</li>
 </ul>
 <h2 id="credential-approval-coverage">Credential approval coverage<a class="headerlink" href="#credential-approval-coverage" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.18 contract includes both approval endpoints and the approval
+<p>The pinned v0.0.19 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return <code>reauthentication_required</code>; applications
 must use the <a href="../credential-approvals/">approval workflow</a>.</p>
 <h2 id="v0017-notifications">v0.0.17 notifications<a class="headerlink" href="#v0017-notifications" title="Permanent link">&para;</a></h2>
-<p>All seven newly declared operations are available through authenticated <code>raw()</code>
-requests in both client modes; this release has no dedicated typed route helpers:</p>
-<table>
-<thead>
-<tr>
-<th>Operations</th>
-<th>Route</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>GET, POST</td>
-<td><code>/api/v1/system-event-subscriptions</code></td>
-</tr>
-<tr>
-<td>GET, PATCH, DELETE</td>
-<td><code>/api/v1/system-event-subscriptions/{subscription_id}</code></td>
-</tr>
-<tr>
-<td>POST</td>
-<td><code>/api/v1/event-sinks/{sink_id}/preview</code></td>
-</tr>
-<tr>
-<td>POST</td>
-<td><code>/api/v1/event-sinks/{sink_id}/test</code></td>
-</tr>
-</tbody>
-</table>
-<p>System subscriptions reuse <code>NewEventSubscription</code> and <code>UpdateEventSubscription</code>
-request models. Decode their responses as application-owned models or
-<code>serde_json::Value</code>: <code>EventSubscription</code> is collection-scoped and requires a
-collection ID. Preview and test requests take <code>subscription_id</code> and the source
-<code>event_id</code> UUID string. Preview returns a sink kind and a rendered JSON payload;
-test returns an <code>EventDelivery</code> with purpose <code>Test</code>. These administrator-only
-operations can bypass disabled flags and subscription filters to test a real
-source event. Protect rendered payloads as potentially sensitive data.</p>
+<p>All seven operations have typed helpers in both modes:
+<code>system_event_subscriptions().list/get/create/update/delete</code>,
+<code>preview_event_notification</code>, and <code>test_event_notification</code>.
+<code>SystemEventSubscription</code> models system scope without a collection ID.
+<code>EventNotificationRequest</code> identifies a subscription and source event UUID;
+<code>EventNotificationPreview</code> redacts rendered payloads in debug output. Test
+responses use <code>EventDelivery</code> with purpose <code>Test</code>.</p>
+<p>These administrator-only operations can bypass disabled flags and subscription
+filters to test a real source event. Protect rendered payloads as potentially
+sensitive data. Version 0.0.19 also supports authentication-event subject filters
+and typed subject access through <code>EventResponse::subject()</code>; the server embeds
+that object inside the otherwise extensible <code>metadata</code> property.</p>
 <p>Existing typed sink CRUD and imports now preserve <code>delivery_policy</code>; a policy
 with <code>min_interval_ms</code> limits admission pacing, and an empty policy clears it.
 The server retains provider cooldowns when pacing changes. Webhook payload,
@@ -1551,11 +1556,11 @@ the existing JSON <code>config</code> model. <code>EventSubscriptionFilter.task_
 task lifecycle notifications. Delivery responses preserve <code>purpose</code> and
 <code>deferred_reason</code>; debug output redacts the latter. System subscription health
 uses <code>collection_id: None</code>.</p>
-<p>The combined live suite covers all seven routes through both async and blocking
+<p>The combined live suite covers all seven routes through typed async and blocking
 public clients, including typed pacing, filter serialization, nullable health,
 and test-delivery decoding.</p>
 <h2 id="collection-integrations">Collection integrations<a class="headerlink" href="#collection-integrations" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.18 snapshot includes all eight collection destination and
+<p>The pinned v0.0.19 snapshot includes all eight collection destination and
 administrator grant operations. Both client modes provide typed helpers, and
 <code>CollectionEventSink</code> preserves safe metadata while omitting configuration,
 URLs, and credentials. The canonical live suite requires delegated collection

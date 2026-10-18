@@ -640,6 +640,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../query-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  JSON query usage and analysis
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../scoped-auth/" class="md-nav__link">
         
   
@@ -1141,6 +1168,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0019-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.19 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0018-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1432,6 +1470,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0019-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.19 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0018-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1556,6 +1605,12 @@ coverage evolves.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.15.0</td>
+<td>0.0.19</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225</code></td>
+<td>240-operation contract and 111 wire-model mappings. Canonical run passed with approval enforcement: 99 library tests, 38 ordinary consumer cases (four legacy cases gated by server version), three native-resource phases, and four full restore/recovery pairs (2026-10-19).</td>
+</tr>
 <tr>
 <td>0.14.1</td>
 <td>0.0.18</td>
@@ -1755,6 +1810,40 @@ released artifact and reviewed contract as described below.</p>
 jobs separately compare the contract and run the integration suites against the
 server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.</p>
+<h2 id="v0019-target">v0.0.19 target<a class="headerlink" href="#v0019-target" title="Permanent link">&para;</a></h2>
+<p>Client 0.15.0 targets the released server v0.0.19 image recorded above. Its
+240-operation snapshot matches the authoritative tag. All five new query-usage
+operations have typed async and blocking helpers, as do the seven system
+notification operations previously available only through <code>raw()</code>.</p>
+<p>Observation settings, event-time authentication subjects, subject subscription
+filters, relation-inclusive audit queries, and backup format 9 are covered.
+Existing structured search remains available. Native index preparation and
+cleanup run through the separate server <code>hubuum-admin --reconcile-query-usage</code>
+command; the HTTP analysis route only reports evidence and suggestions.</p>
+<p><strong>Rust migration:</strong> exhaustive <code>EventSubscriptionFilter</code> literals must include
+<code>subject_principal_ids</code>, <code>subject_identity_scopes</code>, and <code>subject_is_admin</code>, or use
+<code>..Default::default()</code>. Rust 1.88 and feature definitions are unchanged.</p>
+<p><strong>Server migration:</strong> follow the release's migration procedure and preserve a
+pre-upgrade backup for rollback. Format 9 contains logical query-usage declarations;
+physical native resources and ownership records are not portable backup content.
+Older restore servers cannot read format 9. The client recognizes formats 6–9.
+Replace empty or whitespace-only principal names before upgrading. Direct server
+connections require HTTP/1.1; HTTP/2 may terminate at a reverse proxy.</p>
+<p>The canonical combined integration command passed on 2026-10-19 against the
+released image's Linux amd64 build, source revision
+<code>59faad2641620e457d5b0d9d7e112ee395b151ff</code>, with credential approval enforcement.
+All 99 library tests passed. The ordinary consumer runner reported 38 passing
+cases; four historical v0.0.8/v0.0.9 cases return early for this newer server.
+Both modes exercised query declarations, observations, suggestions, revision
+conflicts, typed system notifications, and backup format 9. The three additional
+native-resource phases verified preparation, ownership, introspection, and
+cleanup: the administrator executor prepared one index and removed it after
+declaration withdrawal. All four blocking/async restores with and without history
+and their recovery runs passed, preserving logical query declarations.</p>
+<p>The complete non-container workspace suite, five public feature combinations,
+Rust 1.88 workspace/all-target check, formatting, Clippy, documentation,
+resource/model reconciliation, pinned OpenAPI comparison, and supply-chain checks
+also passed. The contract contains 240 operations and 111 reconciled model mappings.</p>
 <h2 id="v0018-target">v0.0.18 target<a class="headerlink" href="#v0018-target" title="Permanent link">&para;</a></h2>
 <p>Client 0.14.1 targets server v0.0.18. The pinned contract grows from 227 to
 235 operations and includes the collection sink and grant APIs already exposed

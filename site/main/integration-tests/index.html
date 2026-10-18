@@ -640,6 +640,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../query-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  JSON query usage and analysis
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../scoped-auth/" class="md-nav__link">
         
   
@@ -1467,7 +1494,8 @@ digests. It generates a short-lived test CA and hostname-verified LDAPS
 certificate, configures the server with the scoped <code>planet-express</code> provider,
 runs <code>hubuum-admin --migrate</code> before starting the server, starts a separate
 <code>hubuum-admin --restore-executor</code>, waits for readiness, optionally applies SQL seed
-data, and tears everything down in a shell <code>trap</code> unless keep mode is enabled.</p>
+data, exercises native query-usage preparation and cleanup between consumer phases,
+enables query observations with one sample per request, and tears everything down in a shell <code>trap</code> unless keep mode is enabled.</p>
 <p>Provider coverage discovers the unauthenticated provider list, rejects invalid LDAP credentials, logs in real directory users through both async and blocking clients, verifies synchronized user and group metadata, and exercises settings replace, merge-patch, get, and reset operations as an external user. The fixture configuration lives at <code>tests/container_integration/fixtures/auth-providers.toml</code>.</p>
 <p>Mutating integration tests use unique <code>itest-&lt;case&gt;-&lt;ts&gt;</code> resource name prefixes, so they are safe to run with default parallel test threads.</p>
 <h2 id="seed-behavior">Seed Behavior<a class="headerlink" href="#seed-behavior" title="Permanent link">&para;</a></h2>
@@ -1483,6 +1511,8 @@ data, and tears everything down in a shell <code>trap</code> unless keep mode is
 <li><code>HUBUUM_INTEGRATION_ADMIN_PASSWORD</code></li>
 </ul>
 <p>This is what the wrapper script exports internally before running tests.
+An external stack must enable <code>HUBUUM_QUERY_OBSERVATIONS_ENABLED=true</code> and
+<code>HUBUUM_QUERY_OBSERVATIONS_SAMPLE_EVERY=1</code> for query-usage evidence tests.
 An external stack must expose the same <code>planet-express</code> provider and fixture users to run the provider-specific tests.</p>
 <h2 id="optional-environment-variables">Optional Environment Variables<a class="headerlink" href="#optional-environment-variables" title="Permanent link">&para;</a></h2>
 <ul>
