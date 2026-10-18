@@ -387,6 +387,6 @@ URLs in collection discovery are write-only, and credentials cannot be redirecte
 by subscription routing. Provision a fixed destination for credential-bearing
 webhooks before using the newer server. Grants do not inherit to child collections.
 
-The client recognizes backup formats 6, 7, and 8. `CURRENT_BACKUP_VERSION` is 8,
-matching the pinned v0.0.18 server. Server v0.0.17 emits format 7 and cannot
+Client 0.14.1 recognized backup formats 6, 7, and 8. Its `CURRENT_BACKUP_VERSION`
+was 8, matching its pinned v0.0.18 server. Server v0.0.17 emits format 7 and cannot
 restore format 8. The server validates restore support.
