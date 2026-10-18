@@ -24,7 +24,7 @@ use crate::types::{
     CredentialOperationPayload, EntityTag, ExportContentType, HubuumDateTime, IntoQueryTuples,
     Revisioned, SchemaPageOptions, SchemaRevision, TaskId, TaskResponse,
 };
-use crate::types::{FilterOperator, JsonPath};
+use crate::types::{FilterOperator, JsonPath, QueryUsageDeclarationId};
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";
@@ -1056,9 +1056,15 @@ pub(crate) fn build_request_url(
         let id = url_param(url_params, "patch_id").ok_or(ApiError::MissingUrlIdentifier)?;
         Ok(append_identifier(url, id))
     } else if *method == reqwest::Method::DELETE {
-        match url_param(url_params, "delete_id") {
-            Some(id) => Ok(append_identifier(url, id)),
-            None => Ok(url),
+        let url = match url_param(url_params, "delete_id") {
+            Some(id) => append_identifier(url, id),
+            None => url,
+        };
+        let query = query_params.into_query_string()?;
+        if query.is_empty() {
+            Ok(url)
+        } else {
+            Ok(format!("{url}?{query}"))
         }
     } else {
         Err(ApiError::UnsupportedHttpOperation(method.to_string()))
@@ -1845,6 +1851,18 @@ pub(crate) fn select_name_lookup_params<T: ApiResource>(
     )
 }
 
+#[cfg(any(feature = "async", feature = "blocking"))]
+pub(crate) fn query_usage_url_params(
+    class_id: ClassId,
+    declaration_id: Option<QueryUsageDeclarationId>,
+) -> UrlParams {
+    let mut params = vec![("class_id".into(), class_id.to_string().into())];
+    if let Some(id) = declaration_id {
+        params.push(("declaration_id".into(), id.to_string().into()));
+    }
+    params
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -2009,6 +2027,23 @@ mod test {
 
         assert!(capability.is_sensitive());
         assert!(!format!("{capability:?}").contains("restore-secret"));
+    }
+
+    #[rstest::rstest]
+    #[case(None, "https://example.test/items?expected_revision=3")]
+    #[case(Some("7"), "https://example.test/items/7?expected_revision=3")]
+    fn delete_preserves_revision_query(#[case] id: Option<&str>, #[case] expected: &str) {
+        let params = id
+            .map(|id| vec![("delete_id".into(), id.to_string().into())])
+            .unwrap_or_default();
+        let actual = build_request_url(
+            &reqwest::Method::DELETE,
+            "https://example.test/items".into(),
+            &params,
+            vec![QueryFilter::raw("expected_revision", "3")],
+        )
+        .unwrap();
+        assert_eq!(actual, expected);
     }
 
     #[test]

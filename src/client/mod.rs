@@ -13,9 +13,9 @@ pub mod transport;
 
 #[cfg(feature = "async")]
 pub use self::r#async::{
-    ApprovedCredentialOperation, ClassNameObjects, ClassNameScope, ClassSchema, Client,
-    CollectionScope, CredentialApprovals, ExportOutputStream, ItemStream, ObjectNameScope,
-    PageStream, PrincipalSettingsScope, TypedClass,
+    ApprovedCredentialOperation, ClassNameObjects, ClassNameScope, ClassQueryUsage, ClassSchema,
+    Client, CollectionScope, CredentialApprovals, ExportOutputStream, ItemStream, ObjectNameScope,
+    PageStream, PrincipalSettingsScope, SystemEventSubscriptions, TypedClass,
 };
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryJsonPathField, QueryNumericField, QueryTextField,
@@ -185,6 +185,29 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::tasks;
             let _: fn(&$module::Client<Authenticated>, ClassId) -> $module::ClassSchema =
                 $module::Client::<Authenticated>::class_schema;
+            let _: fn(&$module::Client<Authenticated>, ClassId) -> $module::ClassQueryUsage =
+                $module::Client::<Authenticated>::class_query_usage;
+            let _ = $module::ClassQueryUsage::class_id;
+            let _ = $module::ClassQueryUsage::list;
+            let _ = $module::ClassQueryUsage::create;
+            let _ = $module::ClassQueryUsage::replace;
+            let _ = $module::ClassQueryUsage::delete;
+            let _ = $module::ClassQueryUsage::analyze;
+            let _ = $module::Handle::<Class>::query_usage;
+            let _ = $module::Client::<Authenticated>::system_event_subscriptions;
+            let _ = $module::SystemEventSubscriptions::list;
+            let _ = $module::SystemEventSubscriptions::create;
+            let _ = |scope: &$module::SystemEventSubscriptions,
+                     request: crate::UpdateEventSubscription| {
+                std::mem::drop(scope.get(1));
+                std::mem::drop(scope.update(1, request));
+                std::mem::drop(scope.delete(1));
+            };
+            let _ = |client: &$module::Client<Authenticated>,
+                     request: crate::EventNotificationRequest| {
+                std::mem::drop(client.preview_event_notification(1, request.clone()));
+                std::mem::drop(client.test_event_notification(1, request));
+            };
             let _ = $module::ClassSchema::get;
             let _ = $module::ClassSchema::revisions;
             let _ = $module::ClassSchema::objects;
@@ -326,6 +349,7 @@ mod parity_contract {
         ($module:ident) => {
             let _ = $module::EventListRequest::all;
             let _ = $module::EventListRequest::include_total;
+            let _ = $module::EventListRequest::include_relations;
             let _ = $module::HistoryRequest::<crate::types::ClassHistory>::all;
             let _ = $module::HistoryRequest::<crate::types::ClassHistory>::include_total;
             let _ = $module::TaskListRequest::all;

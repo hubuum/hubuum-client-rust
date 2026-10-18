@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.15.0 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | 240-operation contract and 111 wire-model mappings. Canonical run passed with approval enforcement: 99 library tests, 38 ordinary consumer cases (four legacy cases gated by server version), three native-resource phases, and four full restore/recovery pairs (2026-10-19). |
 | 0.14.1 | 0.0.18 | `ghcr.io/hubuum/hubuum-server@sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4` | Declared target; 235-operation contract and 88 wire-model mappings. Canonical released-image run passed with approval enforcement: 93 library tests, 35 consumer tests including delegated setup in both modes, four full restores, and four recovery runs (2026-10-06). |
 | 0.14.0 | 0.0.17 | `ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302` | Declared target retained; canonical library, consumer, LDAP, and all four restore/recovery suites passed (2026-10-06). Optional collection integrations were separately verified against the updated server in both client modes. |
 | 0.13.0 | 0.0.17 | `ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302` | Declared target; 227-operation contract and 87 wire-model mappings. Canonical run passed with approval enforcement: 93 library tests, 33 consumer tests including both notification modes, and all four full restore/recovery variants (2026-10-05). |
@@ -82,6 +83,47 @@ Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
+
+## v0.0.19 target
+
+Client 0.15.0 targets the released server v0.0.19 image recorded above. Its
+240-operation snapshot matches the authoritative tag. All five new query-usage
+operations have typed async and blocking helpers, as do the seven system
+notification operations previously available only through `raw()`.
+
+Observation settings, event-time authentication subjects, subject subscription
+filters, relation-inclusive audit queries, and backup format 9 are covered.
+Existing structured search remains available. Native index preparation and
+cleanup run through the separate server `hubuum-admin --reconcile-query-usage`
+command; the HTTP analysis route only reports evidence and suggestions.
+
+**Rust migration:** exhaustive `EventSubscriptionFilter` literals must include
+`subject_principal_ids`, `subject_identity_scopes`, and `subject_is_admin`, or use
+`..Default::default()`. Rust 1.88 and feature definitions are unchanged.
+
+**Server migration:** follow the release's migration procedure and preserve a
+pre-upgrade backup for rollback. Format 9 contains logical query-usage declarations;
+physical native resources and ownership records are not portable backup content.
+Older restore servers cannot read format 9. The client recognizes formats 6–9.
+Replace empty or whitespace-only principal names before upgrading. Direct server
+connections require HTTP/1.1; HTTP/2 may terminate at a reverse proxy.
+
+The canonical combined integration command passed on 2026-10-19 against the
+released image's Linux amd64 build, source revision
+`59faad2641620e457d5b0d9d7e112ee395b151ff`, with credential approval enforcement.
+All 99 library tests passed. The ordinary consumer runner reported 38 passing
+cases; four historical v0.0.8/v0.0.9 cases return early for this newer server.
+Both modes exercised query declarations, observations, suggestions, revision
+conflicts, typed system notifications, and backup format 9. The three additional
+native-resource phases verified preparation, ownership, introspection, and
+cleanup: the administrator executor prepared one index and removed it after
+declaration withdrawal. All four blocking/async restores with and without history
+and their recovery runs passed, preserving logical query declarations.
+
+The complete non-container workspace suite, five public feature combinations,
+Rust 1.88 workspace/all-target check, formatting, Clippy, documentation,
+resource/model reconciliation, pinned OpenAPI comparison, and supply-chain checks
+also passed. The contract contains 240 operations and 111 reconciled model mappings.
 
 ## v0.0.18 target
 

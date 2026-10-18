@@ -121,6 +121,9 @@ pub enum Endpoint {
     Tasks,
     TasksById,
     TaskEvents,
+    ClassQueryUsage,
+    ClassQueryUsageById,
+    ClassQueryUsageAnalysis,
     ClassSchema,
     ClassSchemaObjects,
     ClassSchemaRevisions,
@@ -348,6 +351,11 @@ impl Endpoint {
             Endpoint::Tasks => "/api/v1/tasks",
             Endpoint::TasksById => "/api/v1/tasks/{task_id}",
             Endpoint::TaskEvents => "/api/v1/tasks/{task_id}/events",
+            Endpoint::ClassQueryUsage => "/api/v1/classes/{class_id}/query-usage",
+            Endpoint::ClassQueryUsageById => {
+                "/api/v1/classes/{class_id}/query-usage/{declaration_id}"
+            }
+            Endpoint::ClassQueryUsageAnalysis => "/api/v1/classes/{class_id}/query-usage/analysis",
             Endpoint::ClassSchema => "/api/v1/classes/{class_id}/schema",
             Endpoint::ClassSchemaObjects => "/api/v1/classes/{class_id}/schema/objects",
             Endpoint::ClassSchemaRevisions => "/api/v1/classes/{class_id}/schema/revisions",
@@ -445,7 +453,7 @@ mod test {
             .collect::<std::collections::BTreeSet<_>>();
 
         assert_eq!(client_paths, spec_paths);
-        assert_eq!(contract["operation_count"], 235);
+        assert_eq!(contract["operation_count"], 240);
     }
     use std::str::FromStr;
     use yare::parameterized;

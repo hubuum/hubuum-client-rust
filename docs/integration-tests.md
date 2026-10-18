@@ -28,7 +28,8 @@ digests. It generates a short-lived test CA and hostname-verified LDAPS
 certificate, configures the server with the scoped `planet-express` provider,
 runs `hubuum-admin --migrate` before starting the server, starts a separate
 `hubuum-admin --restore-executor`, waits for readiness, optionally applies SQL seed
-data, and tears everything down in a shell `trap` unless keep mode is enabled.
+data, exercises native query-usage preparation and cleanup between consumer phases,
+enables query observations with one sample per request, and tears everything down in a shell `trap` unless keep mode is enabled.
 
 Provider coverage discovers the unauthenticated provider list, rejects invalid LDAP credentials, logs in real directory users through both async and blocking clients, verifies synchronized user and group metadata, and exercises settings replace, merge-patch, get, and reset operations as an external user. The fixture configuration lives at `tests/container_integration/fixtures/auth-providers.toml`.
 
@@ -48,6 +49,8 @@ Tests can reuse an externally managed stack when both env vars are set:
 - `HUBUUM_INTEGRATION_ADMIN_PASSWORD`
 
 This is what the wrapper script exports internally before running tests.
+An external stack must enable `HUBUUM_QUERY_OBSERVATIONS_ENABLED=true` and
+`HUBUUM_QUERY_OBSERVATIONS_SAMPLE_EVERY=1` for query-usage evidence tests.
 An external stack must expose the same `planet-express` provider and fixture users to run the provider-specific tests.
 
 ## Optional Environment Variables

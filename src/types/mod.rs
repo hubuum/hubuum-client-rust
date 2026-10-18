@@ -16,6 +16,7 @@ mod json_path;
 mod meta;
 mod params;
 mod provenance;
+mod query_usage;
 mod relation;
 mod remote;
 mod revision;
@@ -61,11 +62,12 @@ pub use datetime::HubuumDateTime;
 pub use event::{
     CollectionEventSink, CollectionEventSinkGet, EventDelivery, EventDeliveryHealthResponse,
     EventDeliveryPolicy, EventDeliveryPurpose, EventDeliveryQueueHealth, EventDeliveryStatus,
-    EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth, EventResponse,
-    EventSink, EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSinkRouting,
+    EventDeliveryStatusCounts, EventDeliveryUpdateResponse, EventFanoutHealth,
+    EventNotificationPreview, EventNotificationRequest, EventResponse, EventSink,
+    EventSinkDeliveryHealth, EventSinkGet, EventSinkKind, EventSinkRouting, EventSubject,
     EventSubscription, EventSubscriptionDeliveryHealth, EventSubscriptionFilter, EventWorkerHealth,
-    EventWorkerWakeupStats, NewEventSink, NewEventSubscription, UpdateEventSink,
-    UpdateEventSubscription,
+    EventWorkerWakeupStats, NewEventSink, NewEventSubscription, SystemEventSubscription,
+    UpdateEventSink, UpdateEventSubscription,
 };
 pub use export::{
     ExportContentType, ExportInclude, ExportIncludeRelatedDirection, ExportIncludeRelatedObject,
@@ -85,7 +87,7 @@ pub use id::{
     TaskEventId, TaskId, TokenId,
 };
 pub(crate) use identity::default_local_identity_value;
-pub use identity::{LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND};
+pub use identity::{LDAP_PROVIDER_KIND, LOCAL_IDENTITY_SCOPE, LOCAL_PROVIDER_KIND, PrincipalKind};
 pub(crate) use import::ImportRequestPayload;
 pub use import::{
     CURRENT_IMPORT_VERSION, ClassKey, CollectionKey, EventSinkKey, FullImportClassRelationInput,
@@ -107,6 +109,14 @@ pub use meta::{
 };
 pub use params::{ClassParams, CollectionPermissionsGrantParams, UserParams};
 pub use provenance::{Provenance, ProvenanceActor, ProvenancePrincipal};
+pub use query_usage::{
+    QueryObservationConfig, QueryObservationSettings, QueryObservationSnapshot,
+    QueryPatternObservation, QueryUsageAdapterProgress, QueryUsageAnalysisRequest,
+    QueryUsageAnalysisResponse, QueryUsageAnalysisStatus, QueryUsageAssessment,
+    QueryUsageCompatibility, QueryUsageCreateRequest, QueryUsageDeclarationId, QueryUsageOperation,
+    QueryUsagePattern, QueryUsageReplaceRequest, QueryUsageResource, QueryUsageResourceOwnership,
+    QueryUsageResponse, QueryUsageSuggestion, QueryUsageValueType,
+};
 pub use relation::ObjectRelationLimit;
 pub use remote::{
     NewRemoteTarget, RemoteAuthConfig, RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject,

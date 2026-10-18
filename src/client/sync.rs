@@ -3,6 +3,11 @@ use crate::types::{
     ImportPermissionPolicy, SchemaWorkKind, SchemaWorkStatus, TaskOutputDiscoveryState,
     TaskRemoteSideEffectState, TaskTerminalReason, TaskTraceId,
 };
+use crate::types::{
+    EventNotificationPreview, EventNotificationRequest, QueryUsageAnalysisRequest,
+    QueryUsageAnalysisResponse, QueryUsageCreateRequest, QueryUsageDeclarationId,
+    QueryUsageReplaceRequest, QueryUsageResponse, ResourceRevision, SystemEventSubscription,
+};
 use crate::types::{StructuredSearchEvent, StructuredSearchRequest, StructuredSearchResponse};
 use crate::{ClassRelationId, ObjectRelationId};
 use crate::{CollectionEventSink, EventSinkId};
@@ -850,6 +855,53 @@ impl Client<Unauthenticated> {
 }
 
 impl Client<Authenticated> {
+    /// Advisory declarations and read-only administrative analysis for one class.
+    pub fn class_query_usage(&self, class_id: impl Into<ClassId>) -> ClassQueryUsage {
+        ClassQueryUsage {
+            client: self.clone(),
+            class_id: class_id.into(),
+        }
+    }
+
+    /// Administrator-only system notification subscriptions.
+    pub fn system_event_subscriptions(&self) -> SystemEventSubscriptions {
+        SystemEventSubscriptions {
+            client: self.clone(),
+        }
+    }
+
+    /// Render a source event without sending it. Requires administrator access.
+    pub fn preview_event_notification(
+        &self,
+        sink_id: impl Into<EventSinkId>,
+        request: EventNotificationRequest,
+    ) -> Result<EventNotificationPreview, ApiError> {
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::EventSinkPreview,
+            vec![("sink_id".into(), sink_id.into().to_string().into())],
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
+    /// Queue a real test delivery, bypassing enabled flags and subscription filters.
+    pub fn test_event_notification(
+        &self,
+        sink_id: impl Into<EventSinkId>,
+        request: EventNotificationRequest,
+    ) -> Result<EventDelivery, ApiError> {
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::EventSinkTest,
+            vec![("sink_id".into(), sink_id.into().to_string().into())],
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+
     /// Access optional fresh password approvals for credential management.
     pub fn credential_approvals(&self) -> CredentialApprovals {
         CredentialApprovals {
@@ -2970,6 +3022,12 @@ impl EventListRequest {
         }
     }
 
+    /// Include direct class/object relation activity for the selected entity.
+    pub fn include_relations(mut self, include: bool) -> Self {
+        self.inner = self.inner.set_query_param("include_relations", include);
+        self
+    }
+
     pub fn action(mut self, action: impl Into<String>) -> Self {
         self.inner = self.inner.set_query_param("action", action.into());
         self
@@ -3120,6 +3178,160 @@ where
 
     pub fn items(self) -> CursorItemIterator<T> {
         self.inner.items()
+    }
+}
+
+/// Class-scoped advisory query usage. Declarations do not change query semantics.
+#[derive(Debug, Clone)]
+pub struct ClassQueryUsage {
+    client: Client<Authenticated>,
+    class_id: ClassId,
+}
+
+impl ClassQueryUsage {
+    pub fn class_id(&self) -> ClassId {
+        self.class_id
+    }
+    pub fn list(&self) -> Result<Vec<QueryUsageResponse>, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassQueryUsage,
+            shared::query_usage_url_params(self.class_id, None),
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+    pub fn create(&self, request: QueryUsageCreateRequest) -> Result<QueryUsageResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::ClassQueryUsage,
+            shared::query_usage_url_params(self.class_id, None),
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+    pub fn replace(
+        &self,
+        declaration_id: QueryUsageDeclarationId,
+        request: QueryUsageReplaceRequest,
+    ) -> Result<QueryUsageResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::PUT,
+            &Endpoint::ClassQueryUsageById,
+            shared::query_usage_url_params(self.class_id, Some(declaration_id)),
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+    pub fn delete(
+        &self,
+        declaration_id: QueryUsageDeclarationId,
+        expected_revision: ResourceRevision,
+    ) -> Result<(), ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::DELETE,
+            &Endpoint::ClassQueryUsageById,
+            shared::query_usage_url_params(self.class_id, Some(declaration_id)),
+            vec![QueryFilter::raw(
+                "expected_revision",
+                expected_revision.to_string(),
+            )],
+            EmptyPostParams,
+        )?;
+        drop(raw);
+        Ok(())
+    }
+    /// Requires an unscoped administrator with class read access. Never allocates native resources.
+    pub fn analyze(
+        &self,
+        request: QueryUsageAnalysisRequest,
+    ) -> Result<QueryUsageAnalysisResponse, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::ClassQueryUsageAnalysis,
+            shared::query_usage_url_params(self.class_id, None),
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+}
+
+/// Administrator-only subscriptions for events outside collection scope.
+pub struct SystemEventSubscriptions {
+    client: Client<Authenticated>,
+}
+
+impl SystemEventSubscriptions {
+    pub fn list(&self) -> Result<Vec<SystemEventSubscription>, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::SystemEventSubscriptions,
+            vec![],
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+    pub fn get(
+        &self,
+        subscription_id: impl Into<EventSubscriptionId>,
+    ) -> Result<SystemEventSubscription, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::SystemEventSubscriptionsById,
+            vec![(
+                "subscription_id".into(),
+                subscription_id.into().to_string().into(),
+            )],
+            vec![],
+            EmptyPostParams,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+    pub fn create(
+        &self,
+        request: NewEventSubscription,
+    ) -> Result<SystemEventSubscription, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::POST,
+            &Endpoint::SystemEventSubscriptions,
+            vec![],
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+    pub fn update(
+        &self,
+        subscription_id: impl Into<EventSubscriptionId>,
+        request: UpdateEventSubscription,
+    ) -> Result<SystemEventSubscription, ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::PATCH,
+            &Endpoint::SystemEventSubscriptions,
+            vec![("patch_id".into(), subscription_id.into().to_string().into())],
+            vec![],
+            request,
+        )?;
+        shared::decode_json_body(&raw.body)
+    }
+    pub fn delete(&self, subscription_id: impl Into<EventSubscriptionId>) -> Result<(), ApiError> {
+        let raw = self.client.request_with_endpoint_raw(
+            reqwest::Method::DELETE,
+            &Endpoint::SystemEventSubscriptionsById,
+            vec![(
+                "subscription_id".into(),
+                subscription_id.into().to_string().into(),
+            )],
+            vec![],
+            EmptyPostParams,
+        )?;
+        drop(raw);
+        Ok(())
     }
 }
 

@@ -277,7 +277,10 @@
       "openapi_schema": "RunningConfig",
       "rust_file": "src/types/config.rs",
       "rust_type": "RunningConfig",
-      "direction": "response"
+      "direction": "response",
+      "requiredness_exceptions": {
+        "query_observations": "Servers before 0.0.19 omit observation configuration; the client defaults to disabled collection."
+      }
     },
     {
       "openapi_schema": "DatabaseConfig",
@@ -644,6 +647,114 @@
       "openapi_schema": "StructuredSearchResponse",
       "rust_file": "src/types/structured_search.rs",
       "rust_type": "StructuredSearchResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryUsageCreateRequest",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsageCreateRequest",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "QueryUsageReplaceRequest",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsageReplaceRequest",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "QueryUsageAnalysisRequest",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsageAnalysisRequest",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "QueryUsageResponse",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsageResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryUsageResource",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsageResource",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryUsageAssessment",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsageAssessment",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryPatternObservation",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryPatternObservation",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryObservationSettings",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryObservationSettings",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryObservationSnapshot",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryObservationSnapshot",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryUsageSuggestion",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsageSuggestion",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryUsageAnalysisResponse",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsageAnalysisResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryUsageAdapterProgress",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsageAdapterProgress",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryUsagePatternSchema",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsagePattern",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "QueryUsagePatternSchema",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryUsagePattern",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "QueryObservationConfig",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryObservationSettings",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SystemEventSubscription",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "SystemEventSubscription",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "EventNotificationRequest",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "EventNotificationRequest",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "EventNotificationPreview",
+      "rust_file": "src/types/event.rs",
+      "rust_type": "EventNotificationPreview",
       "direction": "response"
     }
   ]

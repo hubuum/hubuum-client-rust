@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.18",
+  "api_version": "0.0.19",
   "openapi": "3.1.0",
-  "operation_count": 235,
+  "operation_count": 240,
   "operations": [
     {
       "method": "POST",
@@ -688,6 +688,7 @@
         "NetworkConfig",
         "PaginationConfig",
         "PermissionConfig",
+        "QueryObservationConfig",
         "RemoteCallConfig",
         "RestoreConfig",
         "RunningConfig",
@@ -2971,6 +2972,7 @@
         "query:actor_user_id",
         "query:collection_id",
         "query:cursor",
+        "query:include_relations",
         "query:include_total",
         "query:initiator_user_id",
         "query:limit",
@@ -3485,6 +3487,389 @@
           "application/json"
         ],
         "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdQueryUsage",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/query-usage",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "PrincipalID",
+        "QueryUsageCompatibility",
+        "QueryUsageOperation",
+        "QueryUsagePatternSchema",
+        "QueryUsageResponse",
+        "QueryUsageValueType",
+        "ResourceID",
+        "ResourceRevision"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "items": {
+              "$ref": "#/components/schemas/QueryUsageResponse"
+            },
+            "type": "array"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdQueryUsage",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/query-usage",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "QueryUsageCreateRequest",
+        "QueryUsageOperation",
+        "QueryUsagePatternSchema",
+        "QueryUsageValueType"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/QueryUsageCreateRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "PrincipalID",
+        "QueryUsageCompatibility",
+        "QueryUsageOperation",
+        "QueryUsagePatternSchema",
+        "QueryUsageResponse",
+        "QueryUsageValueType",
+        "ResourceID",
+        "ResourceRevision"
+      ],
+      "response_schemas": {
+        "201": {
+          "application/json": {
+            "$ref": "#/components/schemas/QueryUsageResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdQueryUsageAnalysis",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/query-usage/analysis",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "QueryUsageAnalysisRequest",
+        "QueryUsageOperation",
+        "QueryUsagePatternSchema",
+        "QueryUsageValueType"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/QueryUsageAnalysisRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "QueryObservationSettings",
+        "QueryObservationSnapshot",
+        "QueryPatternObservation",
+        "QueryUsageAdapterProgress",
+        "QueryUsageAnalysisResponse",
+        "QueryUsageAnalysisStatus",
+        "QueryUsageAssessment",
+        "QueryUsageCompatibility",
+        "QueryUsageOperation",
+        "QueryUsagePatternSchema",
+        "QueryUsageResource",
+        "QueryUsageResourceOwnership",
+        "QueryUsageSuggestion",
+        "QueryUsageValueType",
+        "ResourceID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/QueryUsageAnalysisResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1ClassesByClassIdQueryUsageByDeclarationId",
+      "parameters": [
+        "path:class_id",
+        "path:declaration_id",
+        "query:expected_revision"
+      ],
+      "path": "/api/v1/classes/{class_id}/query-usage/{declaration_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "204": {},
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "204": [],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1ClassesByClassIdQueryUsageByDeclarationId",
+      "parameters": [
+        "path:class_id",
+        "path:declaration_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/query-usage/{declaration_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "QueryUsageOperation",
+        "QueryUsagePatternSchema",
+        "QueryUsageReplaceRequest",
+        "QueryUsageValueType",
+        "ResourceRevision"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/QueryUsageReplaceRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassID",
+        "PrincipalID",
+        "QueryUsageCompatibility",
+        "QueryUsageOperation",
+        "QueryUsagePatternSchema",
+        "QueryUsageResponse",
+        "QueryUsageValueType",
+        "ResourceID",
+        "ResourceRevision"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/QueryUsageResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
           "application/json"
         ]
       },
@@ -5298,6 +5683,7 @@
         "query:actor_user_id",
         "query:collection_id",
         "query:cursor",
+        "query:include_relations",
         "query:include_total",
         "query:initiator_user_id",
         "query:limit",
@@ -8436,6 +8822,7 @@
         "query:cursor",
         "query:entity_id",
         "query:entity_type",
+        "query:include_relations",
         "query:include_total",
         "query:initiator_user_id",
         "query:limit",
@@ -15269,8 +15656,8 @@
       "security": []
     }
   ],
-  "path_count": 159,
-  "schema_count": 338,
+  "path_count": 162,
+  "schema_count": 359,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -15341,6 +15728,7 @@
     "EventSinkKey",
     "EventSinkKind",
     "EventSinkRouting",
+    "EventSubject",
     "EventSubscription",
     "EventSubscriptionDeliveryHealth",
     "EventSubscriptionFilter",
@@ -15482,6 +15870,25 @@
     "Provenance",
     "ProvenanceActor",
     "ProvenancePrincipal",
+    "QueryObservationConfig",
+    "QueryObservationSettings",
+    "QueryObservationSnapshot",
+    "QueryPatternObservation",
+    "QueryUsageAdapterProgress",
+    "QueryUsageAnalysisRequest",
+    "QueryUsageAnalysisResponse",
+    "QueryUsageAnalysisStatus",
+    "QueryUsageAssessment",
+    "QueryUsageCompatibility",
+    "QueryUsageCreateRequest",
+    "QueryUsageOperation",
+    "QueryUsagePatternSchema",
+    "QueryUsageReplaceRequest",
+    "QueryUsageResource",
+    "QueryUsageResourceOwnership",
+    "QueryUsageResponse",
+    "QueryUsageSuggestion",
+    "QueryUsageValueType",
     "RebuildTaskDetails",
     "RelatedClassGraph",
     "RelatedObjectGraph",
@@ -15502,6 +15909,7 @@
     "RemoveOperation",
     "RenewTokenRequest",
     "ReplaceOperation",
+    "ResourceID",
     "ResourceRevision",
     "RestoreConfig",
     "RestoreConfirmRequest",
@@ -17823,6 +18231,37 @@
       ],
       "type": "string"
     },
+    "EventSubject": {
+      "properties": {
+        "authentication_provider_kind": {
+          "type": "string"
+        },
+        "identity_scope": {
+          "type": "string"
+        },
+        "is_admin": {
+          "type": "boolean"
+        },
+        "kind": {
+          "$ref": "#/components/schemas/PrincipalKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "principal_id": {
+          "$ref": "#/components/schemas/PrincipalID"
+        }
+      },
+      "required": [
+        "authentication_provider_kind",
+        "identity_scope",
+        "is_admin",
+        "kind",
+        "name",
+        "principal_id"
+      ],
+      "type": "object"
+    },
     "EventSubscription": {
       "properties": {
         "actions": {
@@ -18004,6 +18443,24 @@
           "items": {
             "format": "uuid",
             "type": "string"
+          },
+          "type": "array"
+        },
+        "subject_identity_scopes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "subject_is_admin": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "subject_principal_ids": {
+          "items": {
+            "$ref": "#/components/schemas/PrincipalID"
           },
           "type": "array"
         },
@@ -24084,6 +24541,502 @@
       ],
       "type": "object"
     },
+    "QueryObservationConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "max_patterns": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_patterns_per_class": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_predicates_per_query": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "retention_seconds": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sample_every": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "enabled",
+        "max_patterns",
+        "max_patterns_per_class",
+        "max_predicates_per_query",
+        "retention_seconds",
+        "sample_every"
+      ],
+      "type": "object"
+    },
+    "QueryObservationSettings": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "max_patterns": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_patterns_per_class": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_predicates_per_query": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "retention_seconds": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sample_every": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "enabled",
+        "max_patterns",
+        "max_patterns_per_class",
+        "max_predicates_per_query",
+        "retention_seconds",
+        "sample_every"
+      ],
+      "type": "object"
+    },
+    "QueryObservationSnapshot": {
+      "properties": {
+        "capacity_drops": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "patterns": {
+          "items": {
+            "$ref": "#/components/schemas/QueryPatternObservation"
+          },
+          "type": "array"
+        },
+        "process_started_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/components/schemas/QueryObservationSettings"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "capacity_drops",
+        "captured_at",
+        "patterns",
+        "process_started_at",
+        "settings",
+        "source"
+      ],
+      "type": "object"
+    },
+    "QueryPatternObservation": {
+      "properties": {
+        "first_observed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "last_observed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "pattern": {
+          "$ref": "#/components/schemas/QueryUsagePatternSchema"
+        },
+        "sampled_queries": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "whole_query_duration_micros": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "first_observed_at",
+        "last_observed_at",
+        "pattern",
+        "sampled_queries",
+        "whole_query_duration_micros"
+      ],
+      "type": "object"
+    },
+    "QueryUsageAdapterProgress": {
+      "properties": {
+        "declaration_owners": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "last_error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reference": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "declaration_owners",
+        "reference",
+        "state",
+        "updated_at"
+      ],
+      "type": "object"
+    },
+    "QueryUsageAnalysisRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "proposed": {
+          "items": {
+            "$ref": "#/components/schemas/QueryUsagePatternSchema"
+          },
+          "maxItems": 32,
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "QueryUsageAnalysisResponse": {
+      "properties": {
+        "assessed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "assessments": {
+          "items": {
+            "$ref": "#/components/schemas/QueryUsageAssessment"
+          },
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "observations": {
+          "$ref": "#/components/schemas/QueryObservationSnapshot"
+        },
+        "status": {
+          "$ref": "#/components/schemas/QueryUsageAnalysisStatus"
+        },
+        "suggestions": {
+          "items": {
+            "$ref": "#/components/schemas/QueryUsageSuggestion"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "assessed_at",
+        "assessments",
+        "limitations",
+        "observations",
+        "status",
+        "suggestions"
+      ],
+      "type": "object"
+    },
+    "QueryUsageAnalysisStatus": {
+      "enum": [
+        "unavailable",
+        "insufficient_evidence",
+        "complete"
+      ],
+      "type": "string"
+    },
+    "QueryUsageAssessment": {
+      "properties": {
+        "adapter_progress": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/QueryUsageAdapterProgress"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "can_prepare": {
+          "type": "boolean"
+        },
+        "declaration_id": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ResourceID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pattern": {
+          "$ref": "#/components/schemas/QueryUsagePatternSchema"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "resources": {
+          "items": {
+            "$ref": "#/components/schemas/QueryUsageResource"
+          },
+          "type": "array"
+        },
+        "schema_compatibility": {
+          "$ref": "#/components/schemas/QueryUsageCompatibility"
+        }
+      },
+      "required": [
+        "can_prepare",
+        "pattern",
+        "rationale",
+        "resources",
+        "schema_compatibility"
+      ],
+      "type": "object"
+    },
+    "QueryUsageCompatibility": {
+      "enum": [
+        "compatible",
+        "incompatible",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "QueryUsageCreateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "$ref": "#/components/schemas/QueryUsagePatternSchema"
+        }
+      },
+      "required": [
+        "pattern"
+      ],
+      "type": "object"
+    },
+    "QueryUsageOperation": {
+      "enum": [
+        "equals",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "between"
+      ],
+      "type": "string"
+    },
+    "QueryUsagePatternSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "operations": {
+          "items": {
+            "$ref": "#/components/schemas/QueryUsageOperation"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "value_type": {
+          "$ref": "#/components/schemas/QueryUsageValueType"
+        }
+      },
+      "required": [
+        "operations",
+        "path",
+        "value_type"
+      ],
+      "type": "object"
+    },
+    "QueryUsageReplaceRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "pattern": {
+          "$ref": "#/components/schemas/QueryUsagePatternSchema"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "pattern"
+      ],
+      "type": "object"
+    },
+    "QueryUsageResource": {
+      "properties": {
+        "bytes": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cleanup_eligible_if_removed": {
+          "type": "boolean"
+        },
+        "declaration_owners": {
+          "format": "int64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "native_scan_count": {
+          "format": "int64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "ownership": {
+          "$ref": "#/components/schemas/QueryUsageResourceOwnership"
+        },
+        "reference": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bytes",
+        "cleanup_eligible_if_removed",
+        "ownership",
+        "reference"
+      ],
+      "type": "object"
+    },
+    "QueryUsageResourceOwnership": {
+      "enum": [
+        "independently_managed",
+        "declaration_managed"
+      ],
+      "type": "string"
+    },
+    "QueryUsageResponse": {
+      "properties": {
+        "class_id": {
+          "$ref": "#/components/schemas/HubuumClassID"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "created_by": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "$ref": "#/components/schemas/ResourceID"
+        },
+        "pattern": {
+          "$ref": "#/components/schemas/QueryUsagePatternSchema"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "schema_compatibility": {
+          "$ref": "#/components/schemas/QueryUsageCompatibility"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "updated_by": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "class_id",
+        "created_at",
+        "id",
+        "pattern",
+        "revision",
+        "schema_compatibility",
+        "updated_at"
+      ],
+      "type": "object"
+    },
+    "QueryUsageSuggestion": {
+      "properties": {
+        "observations": {
+          "items": {
+            "$ref": "#/components/schemas/QueryPatternObservation"
+          },
+          "type": "array"
+        },
+        "proposed": {
+          "$ref": "#/components/schemas/QueryUsagePatternSchema"
+        },
+        "rationale": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "observations",
+        "proposed",
+        "rationale"
+      ],
+      "type": "object"
+    },
+    "QueryUsageValueType": {
+      "enum": [
+        "string",
+        "numeric",
+        "boolean"
+      ],
+      "type": "string"
+    },
     "RebuildTaskDetails": {
       "properties": {
         "class_id": {
@@ -24744,6 +25697,11 @@
       ],
       "type": "object"
     },
+    "ResourceID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
     "ResourceRevision": {
       "format": "int64",
       "minimum": 1,
@@ -25105,6 +26063,9 @@
         "permissions": {
           "$ref": "#/components/schemas/PermissionConfig"
         },
+        "query_observations": {
+          "$ref": "#/components/schemas/QueryObservationConfig"
+        },
         "remote_calls": {
           "$ref": "#/components/schemas/RemoteCallConfig"
         },
@@ -25136,6 +26097,7 @@
         "network",
         "pagination",
         "permissions",
+        "query_observations",
         "remote_calls",
         "restores",
         "schema_validation",
@@ -28633,5 +29595,5 @@
       "type": "object"
     }
   },
-  "spec_sha256": "7995a12420b8843103666e1530cc6f3da782f63842478004b74db0840887173a"
+  "spec_sha256": "6ab21f9548fc4519dfef0ee0cfa30267b06c1bb6a688e9ec61993af1353d6fa0"
 }

@@ -7,7 +7,7 @@ pub struct ObjectResource {
     #[api(post_optional)]
     pub hubuum_class_id: ClassId,
     pub description: String,
-    #[api(optional)]
+    #[api(optional, query_key = "json_data")]
     pub data: serde_json::Value,
     #[api(read_only)]
     pub created_at: HubuumDateTime,

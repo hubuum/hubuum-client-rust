@@ -4,14 +4,15 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.14.1 targets Hubuum server v0.0.18. The pinned image,
+`hubuum_client` 0.15.0 targets Hubuum server v0.0.19. The pinned image,
 verification evidence, and history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
-[Version 0.14.1](https://github.com/hubuum/hubuum-client-rust/releases/tag/v0.14.1)
-(2026-10-06) targets the released server collection integrations, including
-collection-owned webhooks, explicit shared-sink grants, and backup format 8.
-Both client modes retain their public API and Rust 1.88 requirement.
+The upcoming 0.15.0 release adds typed query-usage analysis and management,
+system notification subscriptions, authentication-event subjects, and backup
+format 9. Both client modes support the same workflows on Rust 1.88. Applications
+with exhaustive `EventSubscriptionFilter` literals must add the new subject
+fields or use `..Default::default()`.
 See the [release notes](CHANGELOG.md).
 
 ## Features
@@ -25,6 +26,7 @@ See the [release notes](CHANGELOG.md).
 - **Safe extension points**: inject a custom or mock transport, issue authenticated requests to newly added relative routes, and configure retries and response-size limits.
 - **Typed object payloads**: decode object `data` into application structs and optionally derive JSON Schema with the `typed-schemas` feature.
 - **Exports, complete graph imports, and full-system backups**: submit asynchronous work, poll task state, and fetch typed outputs with high-level helpers.
+- **JSON workload analysis**: declare expected query patterns, inspect observations and native index coverage, and explicitly adopt suggestions with [typed query-usage APIs](docs/query-usage.md).
 - **Administrative recovery**: inspect redacted runtime configuration and stage, confirm, or inspect destructive restores with explicit capability handling.
 - **Computed fields**: manage shared class definitions and personal definitions, preview expressions, request rebuilds, and read enriched objects.
 - **Schema evolution**: stage immutable policies, inspect impact diagnostics and retained HTML reports, activate policies explicitly, and revalidate objects. See [the schema guide](docs/schema-evolution.md).
@@ -46,7 +48,7 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.14.1"
+hubuum_client = "0.15.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -54,7 +56,7 @@ Async support is enabled by default. Blocking applications can opt into only the
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.14.1", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.15.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
@@ -304,7 +306,7 @@ let config = admin_client.admin_config().await?;
 let configured_metrics = client.metrics_at(&config.server.metrics_path).await?;
 ```
 
-Hubuum v0.0.18 requires [fresh password approvals](docs/credential-approvals.md)
+Hubuum v0.0.19 requires [fresh password approvals](docs/credential-approvals.md)
 for credential management. Use the async or blocking approval APIs before
 deploying an enforcing server; ordinary mutation calls do not prompt or retry
 automatically. See [task discovery](docs/task-discovery.md) for typed filters, cursor pagination,

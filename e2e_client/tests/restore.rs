@@ -46,6 +46,10 @@ macro_rules! prepare_schema {
             )
             .unwrap();
         }
+        $send!($client.class_query_usage($class_id).create(hubuum_client::QueryUsageCreateRequest {
+            pattern:hubuum_client::QueryUsagePattern::new(hubuum_client::JsonPath::new(["source"]).unwrap(),
+                hubuum_client::QueryUsageValueType::String, [hubuum_client::QueryUsageOperation::Equals]).unwrap(),
+        })).unwrap();
         staged.revision
     }};
 }
@@ -287,6 +291,11 @@ fn restore_recovery() {
         ResourceRevision,
         SchemaRevision,
     ) = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let declarations = recovered.client.class_query_usage(class_id).list().unwrap();
+    assert_eq!(declarations.len(), 1);
+    assert_eq!(declarations[0].pattern.path(), "source");
+    assert_eq!(declarations[0].revision, ResourceRevision::INITIAL);
+    assert!(declarations[0].created_by.is_some());
     let object = recovered.client.objects(class_id).get(object_id).unwrap();
     assert_eq!(object.id(), object_id);
     assert_eq!(object.revision, revision);

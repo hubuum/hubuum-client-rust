@@ -8,6 +8,11 @@ publish = false
 [features]
 integration-tests = []
 restore-tests = ["integration-tests"]
+query-usage-native-tests = ["integration-tests"]
+
+[[test]]
+name = "query_usage_native"
+required-features = ["query-usage-native-tests"]
 
 [[test]]
 name = "restore"
