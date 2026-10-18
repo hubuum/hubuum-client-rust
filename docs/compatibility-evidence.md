@@ -125,6 +125,17 @@ Rust 1.88 workspace/all-target check, formatting, Clippy, documentation,
 resource/model reconciliation, pinned OpenAPI comparison, and supply-chain checks
 also passed. The contract contains 240 operations and 111 reconciled model mappings.
 
+Release preparation refreshed 25 packages, including the `rstest` 0.28 constraint,
+and repeated the complete workspace, feature, Rust 1.88, supply-chain, contract,
+and canonical integration checks on 2026-10-19. All passed with the same coverage
+counts above. One earlier local run returned HTTP 503 during restore setup; the
+server journal identified a PostgreSQL connection-pool acquisition timeout during
+authorization. A fresh complete run passed all four restore/recovery pairs.
+The lockfile selects the latest compatible releases. `generic-array` remains at
+0.14.7 because `crypto-common` 0.1.7 requires that exact version through the
+`httpmock` development dependency; a Rust minimum increase does not change that
+upstream constraint.
+
 ## v0.0.18 target
 
 Client 0.14.1 targets server v0.0.18. The pinned contract grows from 227 to
