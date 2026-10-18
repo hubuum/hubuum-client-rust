@@ -6,6 +6,17 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-19
+
+### Compatibility
+
+- This release explicitly targets Hubuum server v0.0.19 and its immutable
+  released image, with a reconciled 240-operation contract. Rust 1.88 and public
+  feature combinations are unchanged.
+- Refresh all compatible direct and transitive dependencies, including Tokio,
+  AWS-LC, Serde JSON, Schemars, Syn, and Trybuild. Upgrade the test dependency
+  Rstest to 0.28, which remains compatible with the declared Rust minimum.
+
 ### Added
 
 - Complete typed Hubuum server v0.0.19 query-usage management and administrative
@@ -36,8 +47,6 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Changed
 
-- Target server v0.0.19 and its immutable released image, with a reconciled
-  240-operation contract. Rust 1.88 and public feature combinations are unchanged.
 - **Breaking Rust API:** `EventSubscriptionFilter` adds subject principal,
   identity-scope, and administrator-status fields. Add these fields to exhaustive
   literals or use `..Default::default()`. This change requires client 0.15.0.

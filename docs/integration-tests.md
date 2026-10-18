@@ -65,11 +65,10 @@ An external stack must expose the same `planet-express` provider and fixture use
 - `HUBUUM_INTEGRATION_LDAP_IMAGE` overrides the LDAP fixture image.
 - `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1` makes credential approval
   scenarios assert that the selected server enforces fresh authentication.
-  Use this with a server image containing PR 423 and the `credential_approvals`
-  test filter for focused forward compatibility coverage. Without it, those
-  scenarios also verify ordinary credential operations on the pinned older
-  server. Full restore scenarios adapt to either policy. The focused run does
-  not replace the complete pinned library plus consumer suite.
+  Required CI and local release verification must set it. Focused legacy-server
+  runs may omit it to verify the original credential operations; full restore
+  scenarios adapt to either policy. A focused run does not replace the complete
+  pinned library plus consumer suite.
 - `HUBUUM_INTEGRATION_AUTH_CONFIG` overrides the server auth-provider configuration file.
 - `HUBUUM_INTEGRATION_CONTAINER_RUNTIME` forces `docker` or `podman`.
 - `HUBUUM_INTEGRATION_STACK_TIMEOUT_SECS` overrides startup timeout. The default is `300`.
@@ -77,12 +76,12 @@ An external stack must expose the same `planet-express` provider and fixture use
 - `HUBUUM_INTEGRATION_SEED_SQL` overrides the default seed SQL file.
 
 The canonical suite includes delegated collection webhook setup in both async
-and blocking modes. These cases are mandatory for the v0.0.18 target and need
+and blocking modes. These cases are mandatory for the v0.0.19 target and need
 no separate opt-in variable.
 
 Required CI runs integration tests against an immutable server image digest.
-For client 0.14.1, that image is Hubuum server v0.0.18 at
-`sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4`.
+For client 0.15.0, that image is Hubuum server v0.0.19 at
+`sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225`.
 Required CI sets `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`; set the
 same variable for local release verification so missing enforcement fails.
 A scheduled compatibility workflow separately runs against
@@ -90,7 +89,8 @@ A scheduled compatibility workflow separately runs against
 making otherwise unrelated pull requests nondeterministic. The forward suite
 requires credential approval enforcement. User fixtures obtain operation-bound
 approval only after `reauthentication_required`; other failures propagate without
-retry. The same fixtures retain their original calls on the pinned server.
+retry. The fixtures retain compatibility paths for optional runs against older
+server releases.
 
 Dependabot checks the PostgreSQL fixture Dockerfile weekly. Review proposed
 digest updates for supported `linux/amd64` and `linux/arm64` manifests and run

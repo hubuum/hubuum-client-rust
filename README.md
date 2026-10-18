@@ -8,7 +8,7 @@ A Rust client library for the Hubuum API. It provides synchronous and asynchrono
 verification evidence, and history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
-The upcoming 0.15.0 release adds typed query-usage analysis and management,
+Version 0.15.0 adds typed query-usage analysis and management,
 system notification subscriptions, authentication-event subjects, and backup
 format 9. Both client modes support the same workflows on Rust 1.88. Applications
 with exhaustive `EventSubscriptionFilter` literals must add the new subject
