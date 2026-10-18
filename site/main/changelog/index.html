@@ -1068,8 +1068,30 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0150-2026-10-19" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.15.0] - 2026-10-19
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.15.0] - 2026-10-19">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compatibility
+      </span>
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
@@ -1133,7 +1155,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#compatibility" class="md-nav__link">
+  <a href="#compatibility_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Compatibility
@@ -1161,7 +1183,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#compatibility_1" class="md-nav__link">
+  <a href="#compatibility_2" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Compatibility
@@ -1222,7 +1244,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#compatibility_2" class="md-nav__link">
+  <a href="#compatibility_3" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Compatibility
@@ -2669,8 +2691,30 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0150-2026-10-19" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.15.0] - 2026-10-19
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.15.0] - 2026-10-19">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compatibility
+      </span>
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
@@ -2734,7 +2778,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#compatibility" class="md-nav__link">
+  <a href="#compatibility_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Compatibility
@@ -2762,7 +2806,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#compatibility_1" class="md-nav__link">
+  <a href="#compatibility_2" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Compatibility
@@ -2823,7 +2867,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#compatibility_2" class="md-nav__link">
+  <a href="#compatibility_3" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Compatibility
@@ -4016,6 +4060,16 @@
 <p>All notable changes to this project will be documented in this file.</p>
 <p>The format is based on Keep a Changelog, and this project aims to follow Semantic Versioning.</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="0150-2026-10-19">[0.15.0] - 2026-10-19<a class="headerlink" href="#0150-2026-10-19" title="Permanent link">&para;</a></h2>
+<h3 id="compatibility">Compatibility<a class="headerlink" href="#compatibility" title="Permanent link">&para;</a></h3>
+<ul>
+<li>This release explicitly targets Hubuum server v0.0.19 and its immutable
+  released image, with a reconciled 240-operation contract. Rust 1.88 and public
+  feature combinations are unchanged.</li>
+<li>Refresh all compatible direct and transitive dependencies, including Tokio,
+  AWS-LC, Serde JSON, Schemars, Syn, and Trybuild. Upgrade the test dependency
+  Rstest to 0.28, which remains compatible with the declared Rust minimum.</li>
+</ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Complete typed Hubuum server v0.0.19 query-usage management and administrative
@@ -4049,8 +4103,6 @@
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Target server v0.0.19 and its immutable released image, with a reconciled
-  240-operation contract. Rust 1.88 and public feature combinations are unchanged.</li>
 <li><strong>Breaking Rust API:</strong> <code>EventSubscriptionFilter</code> adds subject principal,
   identity-scope, and administrator-status fields. Add these fields to exhaustive
   literals or use <code>..Default::default()</code>. This change requires client 0.15.0.</li>
@@ -4065,7 +4117,7 @@
 </li>
 </ul>
 <h2 id="0141-2026-10-06">[0.14.1] - 2026-10-06<a class="headerlink" href="#0141-2026-10-06" title="Permanent link">&para;</a></h2>
-<h3 id="compatibility">Compatibility<a class="headerlink" href="#compatibility" title="Permanent link">&para;</a></h3>
+<h3 id="compatibility_1">Compatibility<a class="headerlink" href="#compatibility_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Refresh compatible dependencies to Hyper 1.12, h2 0.4.20, and zeroize 1.9.1.</li>
 <li>This release explicitly targets Hubuum server v0.0.18. Reconcile its
@@ -4085,7 +4137,7 @@
   enabling delivery. These server requirements do not change the Rust API.</li>
 </ul>
 <h2 id="0140-2026-10-06">[0.14.0] - 2026-10-06<a class="headerlink" href="#0140-2026-10-06" title="Permanent link">&para;</a></h2>
-<h3 id="compatibility_1">Compatibility<a class="headerlink" href="#compatibility_1" title="Permanent link">&para;</a></h3>
+<h3 id="compatibility_2">Compatibility<a class="headerlink" href="#compatibility_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>This release explicitly targets Hubuum server v0.0.17 and its immutable tested
   image. The new collection integration methods are optional extensions requiring
@@ -4111,7 +4163,7 @@
   Safe collection destination models omit configuration, URLs and credentials.</li>
 </ul>
 <h2 id="0130-2026-10-05">[0.13.0] - 2026-10-05<a class="headerlink" href="#0130-2026-10-05" title="Permanent link">&para;</a></h2>
-<h3 id="compatibility_2">Compatibility<a class="headerlink" href="#compatibility_2" title="Permanent link">&para;</a></h3>
+<h3 id="compatibility_3">Compatibility<a class="headerlink" href="#compatibility_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>This release explicitly targets Hubuum server v0.0.17, with its 227-operation,
   336-schema OpenAPI contract and immutable multi-platform image

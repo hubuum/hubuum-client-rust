@@ -1844,6 +1844,16 @@ and their recovery runs passed, preserving logical query declarations.</p>
 Rust 1.88 workspace/all-target check, formatting, Clippy, documentation,
 resource/model reconciliation, pinned OpenAPI comparison, and supply-chain checks
 also passed. The contract contains 240 operations and 111 reconciled model mappings.</p>
+<p>Release preparation refreshed 25 packages, including the <code>rstest</code> 0.28 constraint,
+and repeated the complete workspace, feature, Rust 1.88, supply-chain, contract,
+and canonical integration checks on 2026-10-19. All passed with the same coverage
+counts above. One earlier local run returned HTTP 503 during restore setup; the
+server journal identified a PostgreSQL connection-pool acquisition timeout during
+authorization. A fresh complete run passed all four restore/recovery pairs.
+The lockfile selects the latest compatible releases. <code>generic-array</code> remains at
+0.14.7 because <code>crypto-common</code> 0.1.7 requires that exact version through the
+<code>httpmock</code> development dependency; a Rust minimum increase does not change that
+upstream constraint.</p>
 <h2 id="v0018-target">v0.0.18 target<a class="headerlink" href="#v0018-target" title="Permanent link">&para;</a></h2>
 <p>Client 0.14.1 targets server v0.0.18. The pinned contract grows from 227 to
 235 operations and includes the collection sink and grant APIs already exposed
@@ -2052,8 +2062,8 @@ Use <code>client.event_subscriptions(id)</code> to select events. Writes require
 URLs in collection discovery are write-only, and credentials cannot be redirected
 by subscription routing. Provision a fixed destination for credential-bearing
 webhooks before using the newer server. Grants do not inherit to child collections.</p>
-<p>The client recognizes backup formats 6, 7, and 8. <code>CURRENT_BACKUP_VERSION</code> is 8,
-matching the pinned v0.0.18 server. Server v0.0.17 emits format 7 and cannot
+<p>Client 0.14.1 recognized backup formats 6, 7, and 8. Its <code>CURRENT_BACKUP_VERSION</code>
+was 8, matching its pinned v0.0.18 server. Server v0.0.17 emits format 7 and cannot
 restore format 8. The server validates restore support.</p>
 
 
