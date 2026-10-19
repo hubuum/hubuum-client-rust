@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | [Evidence](docs/compatibility-evidence.md#compatibility-history) |
 | --- | --- | --- | --- |
+| 0.15.1 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | Tracing release reverified on 2026-10-19: 99 library tests, 38 ordinary consumer cases, three native-resource phases, and four full restore/recovery pairs; unchanged 240-operation contract and 111 model mappings. |
 | 0.15.0 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | Pinned combined suite reverified after the complete release dependency refresh (2026-10-19): 99 library tests, consumer workflows, native preparation/cleanup, and four restore/recovery pairs; see [0.0.19 evidence](docs/compatibility-evidence.md#v0019-target). |
 | 0.14.1 | 0.0.18 | `ghcr.io/hubuum/hubuum-server@sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4` | [Evidence](docs/compatibility-evidence.md#compatibility-history) |
 | 0.14.0 | 0.0.17 | `ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302` | [Evidence](docs/compatibility-evidence.md#compatibility-history) |
@@ -47,7 +48,7 @@ versioned Hubuum server v0.0.2 release.
 
 ## Before upgrading
 
-Client 0.15.0 targets server v0.0.19. Use fresh credential approvals for protected
+Client 0.15.1 targets server v0.0.19. Use fresh credential approvals for protected
 mutations, and review [known typed API gaps](openapi/known-gaps.md). The client
 accepts backup formats 6, 7, 8, and 9; the server decides whether it can restore one.
 For older Rust releases, check the linked migration notes before upgrading:

@@ -2335,3 +2335,408 @@ async fn async_structured_search_preserves_http_errors_without_retrying_post() {
     ));
     assert_eq!(transport.requests().len(), 2);
 }
+
+mod tracing_diagnostics {
+    use std::collections::BTreeMap;
+    use std::fmt;
+    use std::io::Read;
+    use std::sync::{Arc, Mutex};
+
+    use tracing::field::{Field, Visit};
+    use tracing::instrument::WithSubscriber;
+    use tracing::span::{Attributes, Id, Record};
+    use tracing::{Dispatch, Event, Subscriber};
+    use tracing_subscriber::layer::{Context, Layer};
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::registry::LookupSpan;
+
+    use super::*;
+
+    #[derive(Clone, Debug, Default)]
+    struct TraceRecord {
+        name: &'static str,
+        fields: BTreeMap<String, String>,
+        closed: bool,
+    }
+    impl Visit for TraceRecord {
+        fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
+            self.fields
+                .insert(field.name().into(), format!("{value:?}"));
+        }
+        fn record_str(&mut self, field: &Field, value: &str) {
+            self.fields.insert(field.name().into(), value.into());
+        }
+    }
+
+    #[derive(Clone, Default)]
+    struct Capture(Arc<Mutex<Vec<TraceRecord>>>);
+    struct RecordIndex(usize);
+
+    impl Capture {
+        fn dispatch(&self) -> Dispatch {
+            Dispatch::new(tracing_subscriber::registry().with(self.clone()))
+        }
+        fn records(&self, name: &str) -> Vec<TraceRecord> {
+            self.0
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|record| record.name == name)
+                .cloned()
+                .collect()
+        }
+        fn assert_no_secrets(&self) {
+            let records = self.0.lock().unwrap();
+            let text = format!("{records:?}");
+            assert!(!text.contains("private-"), "{text}");
+            assert!(!text.contains("consumer-secret"), "{text}");
+        }
+    }
+    impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for Capture {
+        fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+            if attrs.metadata().target() != "hubuum_client::diagnostics" {
+                return;
+            }
+            let mut record = TraceRecord {
+                name: attrs.metadata().name(),
+                ..Default::default()
+            };
+            attrs.record(&mut record);
+            let mut records = self.0.lock().unwrap();
+            let index = records.len();
+            records.push(record);
+            ctx.span(id)
+                .unwrap()
+                .extensions_mut()
+                .insert(RecordIndex(index));
+        }
+        fn on_record(&self, id: &Id, values: &Record<'_>, ctx: Context<'_, S>) {
+            let span = ctx.span(id).unwrap();
+            if let Some(index) = span.extensions().get::<RecordIndex>() {
+                values.record(&mut self.0.lock().unwrap()[index.0]);
+            }
+        }
+        fn on_close(&self, id: Id, ctx: Context<'_, S>) {
+            let span = ctx.span(&id).unwrap();
+            if let Some(index) = span.extensions().get::<RecordIndex>() {
+                self.0.lock().unwrap()[index.0].closed = true;
+            }
+        }
+        fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
+            if event.metadata().target() != "hubuum_client::diagnostics" {
+                return;
+            }
+            let mut record = TraceRecord {
+                name: event.metadata().name(),
+                closed: true,
+                ..Default::default()
+            };
+            event.record(&mut record);
+            self.0.lock().unwrap().push(record);
+        }
+    }
+
+    fn retry_policy() -> RetryPolicy {
+        RetryPolicy {
+            max_attempts: 2,
+            initial_delay: Duration::ZERO,
+            max_delay: Duration::ZERO,
+        }
+    }
+
+    fn retry_transport() -> MockTransport {
+        let transport = MockTransport::default();
+        transport.push_response(TransportResponse::empty(StatusCode::SERVICE_UNAVAILABLE));
+        transport.push_response(
+            TransportResponse::json(StatusCode::OK, &json!({"secret":"private-response"})).unwrap(),
+        );
+        transport
+    }
+
+    fn assert_retry_trace(capture: &Capture, transport: &str, final_status: &str) {
+        let requests = capture.records("hubuum.request");
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].fields["http.route"], "(custom route)");
+        assert!(requests[0].closed);
+        let attempts = capture.records("hubuum.http_attempt");
+        assert_eq!(attempts.len(), 2);
+        for (index, attempt) in attempts.iter().enumerate() {
+            assert_eq!(attempt.fields["attempt"], (index + 1).to_string());
+            assert_eq!(attempt.fields["transport"], transport);
+            assert_eq!(attempt.fields["http.request.method"], "GET");
+            assert!(attempt.fields["duration_ms"].parse::<f64>().unwrap() >= 0.0);
+            assert!(attempt.closed);
+        }
+        assert_eq!(attempts[0].fields["http.response.status_code"], "503");
+        assert_eq!(attempts[0].fields["outcome"], "error");
+        assert_eq!(
+            attempts[1].fields["http.response.status_code"],
+            final_status
+        );
+        assert_eq!(capture.records("hubuum.retry").len(), 1);
+        capture.assert_no_secrets();
+    }
+
+    #[test]
+    fn blocking_custom_attempts_retries_and_fields() {
+        let capture = Capture::default();
+        let client = blocking_mock_client(retry_transport(), 4096);
+        tracing::dispatcher::with_default(&capture.dispatch(), || {
+            let _: serde_json::Value = client
+                .raw(Method::GET, "private-path")
+                .header("X-Secret", "private-header")
+                .json(&json!({"secret":"private-body"}))
+                .unwrap()
+                .send()
+                .unwrap();
+        });
+        assert_retry_trace(&capture, "custom", "200");
+        assert_eq!(capture.records("hubuum.request")[0].fields["outcome"], "ok");
+    }
+
+    #[tokio::test]
+    async fn async_custom_attempts_retries_and_fields() {
+        let capture = Capture::default();
+        let client =
+            hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+                .with_transport(Arc::new(retry_transport()))
+                .retry_policy(retry_policy())
+                .build()
+                .unwrap()
+                .authenticate(Token::new("consumer-secret"));
+        async {
+            let _: serde_json::Value = client
+                .raw(Method::GET, "private-path")
+                .header("X-Secret", "private-header")
+                .json(&json!({"secret":"private-body"}))
+                .unwrap()
+                .send()
+                .await
+                .unwrap();
+        }
+        .with_subscriber(capture.dispatch())
+        .await;
+        assert_retry_trace(&capture, "custom", "200");
+    }
+
+    #[test]
+    fn blocking_http_attempts_and_failure_are_visible() {
+        let server = MockServer::start();
+        let request = server.mock(|when, then| {
+            when.method("GET");
+            then.status(503).body("private-response");
+        });
+        let capture = Capture::default();
+        let client = blocking::Client::builder(BaseUrl::new(server.base_url()).unwrap())
+            .retry_policy(retry_policy())
+            .build()
+            .unwrap()
+            .authenticate(Token::new("consumer-secret"));
+        tracing::dispatcher::with_default(&capture.dispatch(), || {
+            assert!(
+                client
+                    .raw(Method::GET, "private-path")
+                    .send::<serde_json::Value>()
+                    .is_err()
+            );
+        });
+        request.assert_calls(2);
+        assert_retry_trace(&capture, "reqwest", "503");
+        assert_eq!(
+            capture.records("hubuum.request")[0].fields["outcome"],
+            "error"
+        );
+    }
+
+    #[tokio::test]
+    async fn async_http_attempts_and_failure_are_visible() {
+        let server = MockServer::start_async().await;
+        let request = server
+            .mock_async(|when, then| {
+                when.method("GET");
+                then.status(503).body("private-response");
+            })
+            .await;
+        let capture = Capture::default();
+        let client = hubuum_client::Client::builder(BaseUrl::new(server.base_url()).unwrap())
+            .retry_policy(retry_policy())
+            .build()
+            .unwrap()
+            .authenticate(Token::new("consumer-secret"));
+        async {
+            assert!(
+                client
+                    .raw(Method::GET, "private-path")
+                    .send::<serde_json::Value>()
+                    .await
+                    .is_err()
+            );
+        }
+        .with_subscriber(capture.dispatch())
+        .await;
+        request.assert_calls_async(2).await;
+        assert_retry_trace(&capture, "reqwest", "503");
+    }
+
+    fn stream_transport() -> MockTransport {
+        let transport = MockTransport::default();
+        for _ in 0..2 {
+            transport.push_response(streaming_transport_response("text/csv", "private-response"));
+        }
+        transport
+    }
+
+    fn assert_stream_trace(capture: &Capture) {
+        let streams = capture.records("hubuum.stream");
+        assert_eq!(streams.len(), 2);
+        assert_eq!(streams[0].fields["outcome"], "ok");
+        assert_eq!(streams[1].fields["outcome"], "cancelled");
+        for stream in streams {
+            assert!(stream.closed);
+            assert!(stream.fields["duration_ms"].parse::<f64>().unwrap() >= 0.0);
+        }
+        capture.assert_no_secrets();
+    }
+
+    #[test]
+    fn blocking_stream_spans_follow_eof_and_drop() {
+        let capture = Capture::default();
+        let client = blocking_mock_client(stream_transport(), 4096);
+        tracing::dispatcher::with_default(&capture.dispatch(), || {
+            let mut stream = client.exports().output_stream(7).unwrap();
+            // A zero-length read does not mean EOF.
+            assert_eq!(stream.read(&mut []).unwrap(), 0);
+            assert_eq!(
+                capture.records("hubuum.stream")[0].fields["outcome"],
+                "cancelled"
+            );
+            let mut body = Vec::new();
+            stream.read_to_end(&mut body).unwrap();
+            drop(stream);
+            drop(client.exports().output_stream(7).unwrap());
+        });
+        assert_stream_trace(&capture);
+    }
+
+    #[tokio::test]
+    async fn async_stream_spans_follow_eof_and_drop() {
+        let capture = Capture::default();
+        let client =
+            hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+                .with_transport(Arc::new(stream_transport()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("consumer-secret"));
+        async {
+            client
+                .exports()
+                .output_stream(7)
+                .await
+                .unwrap()
+                .try_collect::<Vec<_>>()
+                .await
+                .unwrap();
+            drop(client.exports().output_stream(7).await.unwrap());
+        }
+        .with_subscriber(capture.dispatch())
+        .await;
+        assert_stream_trace(&capture);
+    }
+
+    fn pagination_transport() -> MockTransport {
+        let transport = MockTransport::default();
+        transport.push_response(paginated_response(
+            json!([exact_name_class_json("private-name")]),
+            Some("private-cursor"),
+        ));
+        transport.push_response(paginated_response(json!([]), None));
+        transport
+    }
+
+    fn assert_page_trace(capture: &Capture) {
+        let pages = capture.records("hubuum.page");
+        assert_eq!(pages.len(), 2);
+        assert_eq!(pages[0].fields["page"], "1");
+        assert_eq!(pages[0].fields["items"], "1");
+        assert_eq!(pages[1].fields["page"], "2");
+        assert_eq!(pages[1].fields["items"], "0");
+        assert_eq!(pages[0].fields["diagnostics.version"], "1");
+        assert_eq!(capture.records("hubuum.http_attempt").len(), 2);
+        capture.assert_no_secrets();
+    }
+
+    #[test]
+    fn blocking_pagination_events_exclude_cursor_and_result_values() {
+        let capture = Capture::default();
+        let client = blocking_mock_client(pagination_transport(), 4096);
+        tracing::dispatcher::with_default(&capture.dispatch(), || {
+            client
+                .classes()
+                .pages()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+        });
+        assert_page_trace(&capture);
+    }
+
+    #[tokio::test]
+    async fn async_pagination_events_exclude_cursor_and_result_values() {
+        let capture = Capture::default();
+        let client =
+            hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+                .with_transport(Arc::new(pagination_transport()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("consumer-secret"));
+        async {
+            client
+                .classes()
+                .pages()
+                .try_collect::<Vec<_>>()
+                .await
+                .unwrap();
+        }
+        .with_subscriber(capture.dispatch())
+        .await;
+        assert_page_trace(&capture);
+    }
+
+    #[tokio::test]
+    async fn cancelling_an_async_request_finishes_both_request_and_attempt_spans() {
+        #[derive(Debug)]
+        struct PendingTransport;
+        impl hubuum_client::AsyncTransport for PendingTransport {
+            fn execute<'a>(
+                &'a self,
+                _request: hubuum_client::RequestPlan,
+            ) -> std::pin::Pin<
+                Box<dyn Future<Output = Result<TransportResponse, ApiError>> + Send + 'a>,
+            > {
+                Box::pin(std::future::pending())
+            }
+        }
+        let capture = Capture::default();
+        let client =
+            hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+                .with_transport(Arc::new(PendingTransport))
+                .build()
+                .unwrap();
+        async {
+            assert!(
+                tokio::time::timeout(Duration::from_millis(10), client.config())
+                    .await
+                    .is_err()
+            );
+        }
+        .with_subscriber(capture.dispatch())
+        .await;
+        for name in ["hubuum.request", "hubuum.http_attempt"] {
+            let records = capture.records(name);
+            assert_eq!(records.len(), 1);
+            assert!(records[0].closed);
+            assert_eq!(records[0].fields["outcome"], "cancelled");
+            assert!(records[0].fields["duration_ms"].parse::<f64>().unwrap() > 0.0);
+            assert!(!records[0].fields.contains_key("http.response.status_code"));
+        }
+    }
+}

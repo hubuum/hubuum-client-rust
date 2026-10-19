@@ -478,6 +478,8 @@ impl AutoPaginationGuard {
     pub(crate) fn record_page(&mut self, items: usize) -> Result<(), ApiError> {
         self.pages = self.pages.saturating_add(1);
         self.items = self.items.saturating_add(items);
+        #[cfg(any(feature = "async", feature = "blocking"))]
+        super::diagnostics::page(self.pages, items);
         if self.items > self.max_items {
             return Err(self.limit_error());
         }

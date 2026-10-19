@@ -4,7 +4,7 @@ resolver = "3"
 
 [package]
 name = "hubuum_client"
-version = "0.15.0"
+version = "0.15.1"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
@@ -51,6 +51,7 @@ chrono = { version = "0.4", features = ["serde"] }
 url = "2"
 serde_urlencoded = "0.7"
 log = "0.4"
+tracing = { version = "0.1", default-features = false, features = ["std"] }
 percent-encoding = "2"
 secrecy = { version = "0.10", features = ["serde"] }
 serde_path_to_error = "0.1"
@@ -71,3 +72,4 @@ yare = "3"
 httpmock = "0.8"
 rstest = "0.28"
 trybuild = "1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"] }

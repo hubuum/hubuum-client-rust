@@ -19,6 +19,7 @@ use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::sync::{Arc, OnceLock};
 
+use super::diagnostics::{self, TraceSpan};
 use super::{
     Authenticated, ClientCore, GetID, IntoQueryFilters, Unauthenticated, UrlParams, shared,
 };
@@ -384,42 +385,52 @@ impl<S> Client<S> {
 
     /// Fetch the server's unauthenticated client capability configuration.
     pub fn config(&self) -> Result<ClientConfig, ApiError> {
-        let url = self.build_url(&Endpoint::ClientConfig, &UrlParams::default());
-        let raw = if let Some(transport) = self.transport() {
-            let plan =
-                shared::build_unauthenticated_request_plan(&reqwest::Method::GET, &url, &[])?;
-            let response = self.execute_transport_with_retry(
-                &reqwest::Method::GET,
-                false,
-                transport.as_ref(),
-                plan,
-            )?;
-            shared::process_transport_response(
-                &reqwest::Method::GET,
-                &url,
-                response,
-                self.options(),
-            )?
-        } else {
-            let response =
-                self.send_with_retry(&reqwest::Method::GET, false, self.http_client().get(&url))?;
-            let response = self.check_success(&reqwest::Method::GET, &url, response)?;
-            let status = response.status();
-            let body =
-                shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
-            shared::RawResponse {
-                status,
-                body,
-                etag: None,
-                next_cursor: None,
-                total_count: None,
-                page_limit: None,
-                content_type: None,
-            }
-        };
+        TraceSpan::request(
+            "config",
+            &reqwest::Method::GET,
+            Endpoint::ClientConfig.path(),
+        )
+        .run(|| {
+            let url = self.build_url(&Endpoint::ClientConfig, &UrlParams::default());
+            let raw = if let Some(transport) = self.transport() {
+                let plan =
+                    shared::build_unauthenticated_request_plan(&reqwest::Method::GET, &url, &[])?;
+                let response = self.execute_transport_with_retry(
+                    &reqwest::Method::GET,
+                    false,
+                    transport.as_ref(),
+                    plan,
+                )?;
+                shared::process_transport_response(
+                    &reqwest::Method::GET,
+                    &url,
+                    response,
+                    self.options(),
+                )?
+            } else {
+                let response = self.send_with_retry(
+                    &reqwest::Method::GET,
+                    false,
+                    self.http_client().get(&url),
+                )?;
+                let response = self.check_success(&reqwest::Method::GET, &url, response)?;
+                let status = response.status();
+                let body =
+                    shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
+                shared::RawResponse {
+                    status,
+                    body,
+                    etag: None,
+                    next_cursor: None,
+                    total_count: None,
+                    page_limit: None,
+                    content_type: None,
+                }
+            };
 
-        shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?.ok_or_else(|| {
-            ApiError::EmptyResult("Client configuration returned an empty response".into())
+            shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?.ok_or_else(|| {
+                ApiError::EmptyResult("Client configuration returned an empty response".into())
+            })
         })
     }
 
@@ -436,35 +447,37 @@ impl<S> Client<S> {
     /// its default `/metrics` path. The path remains constrained to the
     /// configured base URL.
     pub fn metrics_at(&self, path: impl AsRef<str>) -> Result<String, ApiError> {
-        let url = shared::build_relative_url(self.base_url(), path.as_ref(), &[])?;
-        let request_url = url.to_string();
+        TraceSpan::request("metrics", &reqwest::Method::GET, "(custom metrics route)").run(|| {
+            let url = shared::build_relative_url(self.base_url(), path.as_ref(), &[])?;
+            let request_url = url.to_string();
 
-        if let Some(transport) = self.transport() {
-            let plan = shared::build_unauthenticated_request_plan(
-                &reqwest::Method::GET,
-                &request_url,
-                &[],
-            )?;
-            let response = self.execute_transport_with_retry(
-                &reqwest::Method::GET,
-                false,
-                transport.as_ref(),
-                plan,
-            )?;
-            return Ok(shared::process_transport_response(
-                &reqwest::Method::GET,
-                &request_url,
-                response,
-                self.options(),
-            )?
-            .body);
-        }
+            if let Some(transport) = self.transport() {
+                let plan = shared::build_unauthenticated_request_plan(
+                    &reqwest::Method::GET,
+                    &request_url,
+                    &[],
+                )?;
+                let response = self.execute_transport_with_retry(
+                    &reqwest::Method::GET,
+                    false,
+                    transport.as_ref(),
+                    plan,
+                )?;
+                return Ok(shared::process_transport_response(
+                    &reqwest::Method::GET,
+                    &request_url,
+                    response,
+                    self.options(),
+                )?
+                .body);
+            }
 
-        debug!("GET {}", shared::redacted_url_for_log(&request_url));
-        let request = self.http_client().get(&request_url);
-        let response = self.send_with_retry(&reqwest::Method::GET, false, request)?;
-        let response = self.check_success(&reqwest::Method::GET, &request_url, response)?;
-        shared::read_blocking_body(response, self.options().max_response_body_bytes)
+            debug!("GET {}", shared::redacted_url_for_log(&request_url));
+            let request = self.http_client().get(&request_url);
+            let response = self.send_with_retry(&reqwest::Method::GET, false, request)?;
+            let response = self.check_success(&reqwest::Method::GET, &request_url, response)?;
+            shared::read_blocking_body(response, self.options().max_response_body_bytes)
+        })
     }
 
     /// Inspect a staged restore using only its one-time capability.
@@ -476,65 +489,72 @@ impl<S> Client<S> {
         restore_id: impl Into<RestoreId>,
         capability: &RestoreCapability,
     ) -> Result<RestoreStageResponse, ApiError> {
-        let restore_id = restore_id.into();
-        let url_params = vec![(Cow::Borrowed("restore_id"), restore_id.to_string().into())];
-        let request_url = shared::build_request_url(
+        TraceSpan::request(
+            "restore_status",
             &reqwest::Method::GET,
-            self.build_url(&Endpoint::RestoreStatus, &url_params),
-            &url_params,
-            vec![],
-        )?;
-        let headers = [(
-            "X-Hubuum-Restore-Capability",
-            capability.as_str().to_owned(),
-        )];
-
-        let raw = if let Some(transport) = self.transport() {
-            let plan = shared::build_unauthenticated_request_plan(
+            Endpoint::RestoreStatus.path(),
+        )
+        .run(|| {
+            let restore_id = restore_id.into();
+            let url_params = vec![(Cow::Borrowed("restore_id"), restore_id.to_string().into())];
+            let request_url = shared::build_request_url(
                 &reqwest::Method::GET,
-                &request_url,
-                &headers,
+                self.build_url(&Endpoint::RestoreStatus, &url_params),
+                &url_params,
+                vec![],
             )?;
-            let response = self.execute_transport_with_retry(
-                &reqwest::Method::GET,
-                false,
-                transport.as_ref(),
-                plan,
-            )?;
-            shared::process_transport_response(
-                &reqwest::Method::GET,
-                &request_url,
-                response,
-                self.options(),
-            )?
-        } else {
-            debug!("GET {}", shared::redacted_url_for_log(&request_url));
-            let request = self
-                .runtime
-                .http_client
-                .get(&request_url)
-                .header(headers[0].0, shared::sensitive_header_value(&headers[0].1)?);
-            let response = self.send_with_retry(&reqwest::Method::GET, false, request)?;
-            let response = self.check_success(&reqwest::Method::GET, &request_url, response)?;
-            let status = response.status();
-            let (next_cursor, total_count, page_limit, content_type) =
-                shared::response_metadata(response.headers());
-            let etag = shared::response_etag(response.headers())?;
-            let body =
-                shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
-            shared::RawResponse {
-                status,
-                body,
-                etag,
-                next_cursor,
-                total_count,
-                page_limit,
-                content_type,
-            }
-        };
+            let headers = [(
+                "X-Hubuum-Restore-Capability",
+                capability.as_str().to_owned(),
+            )];
 
-        shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?
-            .ok_or_else(|| ApiError::EmptyResult("Restore status returned empty result".into()))
+            let raw = if let Some(transport) = self.transport() {
+                let plan = shared::build_unauthenticated_request_plan(
+                    &reqwest::Method::GET,
+                    &request_url,
+                    &headers,
+                )?;
+                let response = self.execute_transport_with_retry(
+                    &reqwest::Method::GET,
+                    false,
+                    transport.as_ref(),
+                    plan,
+                )?;
+                shared::process_transport_response(
+                    &reqwest::Method::GET,
+                    &request_url,
+                    response,
+                    self.options(),
+                )?
+            } else {
+                debug!("GET {}", shared::redacted_url_for_log(&request_url));
+                let request = self
+                    .runtime
+                    .http_client
+                    .get(&request_url)
+                    .header(headers[0].0, shared::sensitive_header_value(&headers[0].1)?);
+                let response = self.send_with_retry(&reqwest::Method::GET, false, request)?;
+                let response = self.check_success(&reqwest::Method::GET, &request_url, response)?;
+                let status = response.status();
+                let (next_cursor, total_count, page_limit, content_type) =
+                    shared::response_metadata(response.headers());
+                let etag = shared::response_etag(response.headers())?;
+                let body =
+                    shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
+                shared::RawResponse {
+                    status,
+                    body,
+                    etag,
+                    next_cursor,
+                    total_count,
+                    page_limit,
+                    content_type,
+                }
+            };
+
+            shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?
+                .ok_or_else(|| ApiError::EmptyResult("Restore status returned empty result".into()))
+        })
     }
 }
 
@@ -587,19 +607,19 @@ impl<S> Client<S> {
 
         for attempt in 1..=attempts {
             let Some(attempt_request) = request.try_clone() else {
-                return Ok(request.send()?);
+                return Ok(TraceSpan::attempt(method, attempt, "reqwest").send(|| request.send())?);
             };
-            match attempt_request.send() {
+            match TraceSpan::attempt(method, attempt, "reqwest").send(|| attempt_request.send()) {
                 Ok(response)
                     if attempt < attempts && policy.should_retry_status(response.status()) =>
                 {
                     let delay = policy.delay(attempt, Some(response.headers()));
-                    std::thread::sleep(delay);
+                    diagnostics::backoff(attempt, delay);
                 }
                 Ok(response) => return Ok(response),
                 Err(_error) if attempt < attempts => {
                     let delay = policy.delay(attempt, None);
-                    std::thread::sleep(delay);
+                    diagnostics::backoff(attempt, delay);
                 }
                 Err(error) => {
                     return Err(ApiError::retry_exhausted(attempts, error));
@@ -625,15 +645,17 @@ impl<S> Client<S> {
         };
 
         for attempt in 1..=attempts {
-            match transport.execute(request.clone()) {
+            match TraceSpan::attempt(method, attempt, "custom")
+                .send(|| transport.execute(request.clone()))
+            {
                 Ok(response)
                     if attempt < attempts && policy.should_retry_status(response.status) =>
                 {
-                    std::thread::sleep(policy.delay(attempt, Some(&response.headers)));
+                    diagnostics::backoff(attempt, policy.delay(attempt, Some(&response.headers)));
                 }
                 Ok(response) => return Ok(response),
                 Err(_error) if attempt < attempts => {
-                    std::thread::sleep(policy.delay(attempt, None));
+                    diagnostics::backoff(attempt, policy.delay(attempt, None));
                 }
                 Err(error) => {
                     return Err(ApiError::RetryExhausted {
@@ -702,42 +724,47 @@ impl Client<Unauthenticated> {
         endpoint: &Endpoint,
         empty_message: &str,
     ) -> Result<T, ApiError> {
-        let url = self.build_url(endpoint, &UrlParams::default());
-        let raw = if let Some(transport) = self.transport() {
-            let plan =
-                shared::build_unauthenticated_request_plan(&reqwest::Method::GET, &url, &[])?;
-            let response = self.execute_transport_with_retry(
-                &reqwest::Method::GET,
-                false,
-                transport.as_ref(),
-                plan,
-            )?;
-            shared::process_transport_response(
-                &reqwest::Method::GET,
-                &url,
-                response,
-                self.options(),
-            )?
-        } else {
-            let response =
-                self.send_with_retry(&reqwest::Method::GET, false, self.http_client().get(&url))?;
-            let response = self.check_success(&reqwest::Method::GET, &url, response)?;
-            let status = response.status();
-            let body =
-                shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
-            shared::RawResponse {
-                status,
-                body,
-                etag: None,
-                next_cursor: None,
-                total_count: None,
-                page_limit: None,
-                content_type: None,
-            }
-        };
+        TraceSpan::request("public_get", &reqwest::Method::GET, endpoint.path()).run(|| {
+            let url = self.build_url(endpoint, &UrlParams::default());
+            let raw = if let Some(transport) = self.transport() {
+                let plan =
+                    shared::build_unauthenticated_request_plan(&reqwest::Method::GET, &url, &[])?;
+                let response = self.execute_transport_with_retry(
+                    &reqwest::Method::GET,
+                    false,
+                    transport.as_ref(),
+                    plan,
+                )?;
+                shared::process_transport_response(
+                    &reqwest::Method::GET,
+                    &url,
+                    response,
+                    self.options(),
+                )?
+            } else {
+                let response = self.send_with_retry(
+                    &reqwest::Method::GET,
+                    false,
+                    self.http_client().get(&url),
+                )?;
+                let response = self.check_success(&reqwest::Method::GET, &url, response)?;
+                let status = response.status();
+                let body =
+                    shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
+                shared::RawResponse {
+                    status,
+                    body,
+                    etag: None,
+                    next_cursor: None,
+                    total_count: None,
+                    page_limit: None,
+                    content_type: None,
+                }
+            };
 
-        shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?
-            .ok_or_else(|| ApiError::EmptyResult(empty_message.into()))
+            shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?
+                .ok_or_else(|| ApiError::EmptyResult(empty_message.into()))
+        })
     }
 
     /// List authentication providers available for login without authenticating.
@@ -749,86 +776,98 @@ impl Client<Unauthenticated> {
     }
 
     pub fn login(&self, credentials: Credentials) -> Result<Client<Authenticated>, ApiError> {
-        let login_url = self.build_url(&Endpoint::Login, &UrlParams::default());
-        let raw = if let Some(transport) = self.transport() {
-            let plan = shared::build_unauthenticated_json_request_plan(
-                &reqwest::Method::POST,
-                &login_url,
-                &credentials,
-                &[],
-            )?;
-            let response = self.execute_transport_with_retry(
-                &reqwest::Method::POST,
-                false,
-                transport.as_ref(),
-                plan,
-            )?;
-            shared::process_transport_response(
-                &reqwest::Method::POST,
-                &login_url,
-                response,
-                self.options(),
-            )?
-        } else {
-            let response = self
-                .http_client()
-                .post(&login_url)
-                .json(&credentials)
-                .send()?;
-            let response = self.check_success(&reqwest::Method::POST, &login_url, response)?;
-            let status = response.status();
-            let body =
-                shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
-            shared::RawResponse {
-                status,
-                body,
-                etag: None,
-                next_cursor: None,
-                total_count: None,
-                page_limit: None,
-                content_type: None,
-            }
-        };
-        let token: Token = shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?
-            .ok_or_else(|| ApiError::EmptyResult("Login returned no token".into()))?;
+        TraceSpan::request("login", &reqwest::Method::POST, Endpoint::Login.path()).run(|| {
+            let login_url = self.build_url(&Endpoint::Login, &UrlParams::default());
+            let raw = if let Some(transport) = self.transport() {
+                let plan = shared::build_unauthenticated_json_request_plan(
+                    &reqwest::Method::POST,
+                    &login_url,
+                    &credentials,
+                    &[],
+                )?;
+                let response = self.execute_transport_with_retry(
+                    &reqwest::Method::POST,
+                    false,
+                    transport.as_ref(),
+                    plan,
+                )?;
+                shared::process_transport_response(
+                    &reqwest::Method::POST,
+                    &login_url,
+                    response,
+                    self.options(),
+                )?
+            } else {
+                let response =
+                    TraceSpan::attempt(&reqwest::Method::POST, 1, "reqwest").send(|| {
+                        self.http_client()
+                            .post(&login_url)
+                            .json(&credentials)
+                            .send()
+                    })?;
+                let response = self.check_success(&reqwest::Method::POST, &login_url, response)?;
+                let status = response.status();
+                let body =
+                    shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
+                shared::RawResponse {
+                    status,
+                    body,
+                    etag: None,
+                    next_cursor: None,
+                    total_count: None,
+                    page_limit: None,
+                    content_type: None,
+                }
+            };
+            let token: Token =
+                shared::parse_response(&reqwest::Method::POST, raw.status, raw.body)?
+                    .ok_or_else(|| ApiError::EmptyResult("Login returned no token".into()))?;
 
-        Ok(Client {
-            runtime: self.runtime.clone(),
-            state: Authenticated::new(token),
+            Ok(Client {
+                runtime: self.runtime.clone(),
+                state: Authenticated::new(token),
+            })
         })
     }
 
     pub fn login_with_token(&self, token: Token) -> Result<Client<Authenticated>, ApiError> {
-        let url = self.build_url(&Endpoint::LoginWithToken, &UrlParams::default());
-        if let Some(transport) = self.transport() {
-            let plan = shared::build_request_plan(
-                &reqwest::Method::GET,
-                &url,
-                &EmptyPostParams,
-                token.as_str(),
-                &[],
-            )?;
-            let response = self.execute_transport_with_retry(
-                &reqwest::Method::GET,
-                false,
-                transport.as_ref(),
-                plan,
-            )?;
-            shared::check_transport_response_success(
-                &reqwest::Method::GET,
-                &url,
-                response,
-                self.options().max_error_body_bytes,
-            )?;
-        } else {
-            let request = self.http_client().get(&url).bearer_auth(token.as_str());
-            let response = self.send_with_retry(&reqwest::Method::GET, false, request)?;
-            self.check_success(&reqwest::Method::GET, &url, response)?;
-        }
+        TraceSpan::request(
+            "login_with_token",
+            &reqwest::Method::GET,
+            Endpoint::LoginWithToken.path(),
+        )
+        .run(|| {
+            let url = self.build_url(&Endpoint::LoginWithToken, &UrlParams::default());
+            if let Some(transport) = self.transport() {
+                let plan = shared::build_request_plan(
+                    &reqwest::Method::GET,
+                    &url,
+                    &EmptyPostParams,
+                    token.as_str(),
+                    &[],
+                )?;
+                let response = self.execute_transport_with_retry(
+                    &reqwest::Method::GET,
+                    false,
+                    transport.as_ref(),
+                    plan,
+                )?;
+                shared::check_transport_response_success(
+                    &reqwest::Method::GET,
+                    &url,
+                    response,
+                    self.options().max_error_body_bytes,
+                )?;
+            } else {
+                let request = self.http_client().get(&url).bearer_auth(token.as_str());
+                let response = self.send_with_retry(&reqwest::Method::GET, false, request)?;
+                self.check_success(&reqwest::Method::GET, &url, response)?;
+            }
 
-        Ok(Client {
-            runtime: self.runtime.clone(),
-            state: Authenticated::new(token),
+            Ok(Client {
+                runtime: self.runtime.clone(),
+                state: Authenticated::new(token),
+            })
         })
     }
 
@@ -1153,53 +1192,56 @@ impl Client<Authenticated> {
         query_params: Vec<QueryFilter>,
         post_params: T,
     ) -> Result<StreamingResponse, ApiError> {
-        let base_url = self.build_url(endpoint, &url_params);
-        let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
-        debug!("{} {}", method, shared::redacted_url_for_log(&request_url));
+        TraceSpan::request("stream", &method, endpoint.path()).run(|| {
+            let base_url = self.build_url(endpoint, &url_params);
+            let request_url =
+                shared::build_request_url(&method, base_url, &url_params, query_params)?;
+            debug!("{} {}", method, shared::redacted_url_for_log(&request_url));
 
-        if let Some(transport) = self.transport() {
-            let plan = shared::build_request_plan(
-                &method,
-                &request_url,
-                &post_params,
-                self.state.token(),
-                &[],
-            )?;
-            let response =
-                self.execute_transport_with_retry(&method, false, transport.as_ref(), plan)?;
-            let response = shared::check_transport_response_success(
-                &method,
-                &request_url,
-                response,
-                self.options().max_error_body_bytes,
-            )?;
-            let content_length =
-                shared::transport_content_length(&response.headers, response.body.len());
-            return Ok(StreamingResponse {
-                headers: response.headers,
+            if let Some(transport) = self.transport() {
+                let plan = shared::build_request_plan(
+                    &method,
+                    &request_url,
+                    &post_params,
+                    self.state.token(),
+                    &[],
+                )?;
+                let response =
+                    self.execute_transport_with_retry(&method, false, transport.as_ref(), plan)?;
+                let response = shared::check_transport_response_success(
+                    &method,
+                    &request_url,
+                    response,
+                    self.options().max_error_body_bytes,
+                )?;
+                let content_length =
+                    shared::transport_content_length(&response.headers, response.body.len());
+                return Ok(StreamingResponse {
+                    headers: response.headers,
+                    content_length,
+                    body: diagnostics::reader(Box::new(std::io::Cursor::new(response.body))),
+                });
+            }
+
+            let request = self
+                .runtime
+                .http_client
+                .request(method.clone(), &request_url)
+                .bearer_auth(self.state.token());
+            let request = if method == reqwest::Method::POST {
+                request.json(&post_params)
+            } else {
+                request
+            };
+            let response = self.send_with_retry(&method, false, request)?;
+            let response = self.check_success(&method, &request_url, response)?;
+            let headers = response.headers().clone();
+            let content_length = response.content_length();
+            Ok(StreamingResponse {
+                headers,
                 content_length,
-                body: Box::new(std::io::Cursor::new(response.body)),
-            });
-        }
-
-        let request = self
-            .runtime
-            .http_client
-            .request(method.clone(), &request_url)
-            .bearer_auth(self.state.token());
-        let request = if method == reqwest::Method::POST {
-            request.json(&post_params)
-        } else {
-            request
-        };
-        let response = self.send_with_retry(&method, false, request)?;
-        let response = self.check_success(&method, &request_url, response)?;
-        let headers = response.headers().clone();
-        let content_length = response.content_length();
-        Ok(StreamingResponse {
-            headers,
-            content_length,
-            body: Box::new(response),
+                body: diagnostics::reader(Box::new(response)),
+            })
         })
     }
 
@@ -1212,86 +1254,90 @@ impl Client<Authenticated> {
         post_params: T,
         headers: &[(&str, String)],
     ) -> Result<shared::RawResponse, ApiError> {
-        let base_url = self.build_url(endpoint, &url_params);
-        let request_url = shared::build_request_url(&method, base_url, &url_params, query_params)?;
-        let has_idempotency_key = shared::has_valid_idempotency_key(
-            headers.iter().map(|(name, value)| (*name, value.as_str())),
-        )?;
-
-        if let Some(transport) = self.transport() {
-            let plan = shared::build_request_plan(
-                &method,
-                &request_url,
-                &post_params,
-                self.state.token(),
-                headers,
+        TraceSpan::request("request", &method, endpoint.path()).run(|| {
+            let base_url = self.build_url(endpoint, &url_params);
+            let request_url =
+                shared::build_request_url(&method, base_url, &url_params, query_params)?;
+            let has_idempotency_key = shared::has_valid_idempotency_key(
+                headers.iter().map(|(name, value)| (*name, value.as_str())),
             )?;
-            let response = self.execute_transport_with_retry(
-                &method,
-                has_idempotency_key,
-                transport.as_ref(),
-                plan,
-            )?;
-            return shared::process_transport_response(
-                &method,
-                &request_url,
-                response,
-                self.options(),
-            );
-        }
 
-        let log_url = shared::redacted_url_for_log(&request_url);
-        let request = if method == reqwest::Method::GET {
-            debug!("GET {}", log_url);
-            self.http_client().get(&request_url)
-        } else if method == reqwest::Method::POST {
-            debug!("POST {}", log_url);
-            self.runtime
-                .http_client
-                .post(&request_url)
-                .json(&post_params)
-        } else if method == reqwest::Method::PUT {
-            debug!("PUT {}", log_url);
-            self.runtime
-                .http_client
-                .put(&request_url)
-                .json(&post_params)
-        } else if method == reqwest::Method::PATCH {
-            debug!("PATCH {}", log_url);
-            self.runtime
-                .http_client
-                .patch(&request_url)
-                .json(&post_params)
-        } else if method == reqwest::Method::DELETE {
-            debug!("DELETE {}", log_url);
-            self.http_client().delete(&request_url)
-        } else {
-            return Err(ApiError::UnsupportedHttpOperation(method.to_string()));
-        };
-        let mut request = request.bearer_auth(self.state.token());
-        for (name, value) in headers {
-            request = request.header(*name, shared::sensitive_header_value(value)?);
-        }
+            if let Some(transport) = self.transport() {
+                let plan = shared::build_request_plan(
+                    &method,
+                    &request_url,
+                    &post_params,
+                    self.state.token(),
+                    headers,
+                )?;
+                let response = self.execute_transport_with_retry(
+                    &method,
+                    has_idempotency_key,
+                    transport.as_ref(),
+                    plan,
+                )?;
+                return shared::process_transport_response(
+                    &method,
+                    &request_url,
+                    response,
+                    self.options(),
+                );
+            }
 
-        let now = std::time::Instant::now();
-        let response = self.send_with_retry(&method, has_idempotency_key, request)?;
-        trace!("Request took {:?}", now.elapsed());
-        let response = self.check_success(&method, &request_url, response)?;
-        let status = response.status();
-        let (next_cursor, total_count, page_limit, content_type) =
-            shared::response_metadata(response.headers());
-        let etag = shared::response_etag(response.headers())?;
-        let body = shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
-        debug!("Response: {} ({} bytes)", status, body.len());
+            let log_url = shared::redacted_url_for_log(&request_url);
+            let request = if method == reqwest::Method::GET {
+                debug!("GET {}", log_url);
+                self.http_client().get(&request_url)
+            } else if method == reqwest::Method::POST {
+                debug!("POST {}", log_url);
+                self.runtime
+                    .http_client
+                    .post(&request_url)
+                    .json(&post_params)
+            } else if method == reqwest::Method::PUT {
+                debug!("PUT {}", log_url);
+                self.runtime
+                    .http_client
+                    .put(&request_url)
+                    .json(&post_params)
+            } else if method == reqwest::Method::PATCH {
+                debug!("PATCH {}", log_url);
+                self.runtime
+                    .http_client
+                    .patch(&request_url)
+                    .json(&post_params)
+            } else if method == reqwest::Method::DELETE {
+                debug!("DELETE {}", log_url);
+                self.http_client().delete(&request_url)
+            } else {
+                return Err(ApiError::UnsupportedHttpOperation(method.to_string()));
+            };
+            let mut request = request.bearer_auth(self.state.token());
+            for (name, value) in headers {
+                request = request.header(*name, shared::sensitive_header_value(value)?);
+            }
 
-        Ok(shared::RawResponse {
-            status,
-            body,
-            etag,
-            next_cursor,
-            total_count,
-            page_limit,
-            content_type,
+            let now = std::time::Instant::now();
+            let response = self.send_with_retry(&method, has_idempotency_key, request)?;
+            trace!("Request took {:?}", now.elapsed());
+            let response = self.check_success(&method, &request_url, response)?;
+            let status = response.status();
+            let (next_cursor, total_count, page_limit, content_type) =
+                shared::response_metadata(response.headers());
+            let etag = shared::response_etag(response.headers())?;
+            let body =
+                shared::read_blocking_body(response, self.options().max_response_body_bytes)?;
+            debug!("Response: {} ({} bytes)", status, body.len());
+
+            Ok(shared::RawResponse {
+                status,
+                body,
+                etag,
+                next_cursor,
+                total_count,
+                page_limit,
+                content_type,
+            })
         })
     }
 
@@ -2307,104 +2353,108 @@ impl RawRequest {
     }
 
     fn execute(self) -> Result<shared::RawResponse, ApiError> {
-        if self
-            .headers
-            .iter()
-            .any(|(name, _)| name.eq_ignore_ascii_case("authorization"))
-        {
-            return Err(ApiError::Transport(
-                "raw requests cannot override the Authorization header".into(),
-            ));
-        }
-        let has_content_type = self
-            .headers
-            .iter()
-            .any(|(name, _)| name.eq_ignore_ascii_case("content-type"));
-        let has_idempotency_key = shared::has_valid_idempotency_key(
-            self.headers
+        TraceSpan::request("raw", &self.method, "(custom route)").run(|| {
+            if self
+                .headers
                 .iter()
-                .map(|(name, value)| (name.as_str(), value.as_str())),
-        )?;
-        let url = if self.path_has_encoded_segments {
-            shared::build_encoded_relative_url(self.client.base_url(), &self.path, &self.query)?
-        } else {
-            shared::build_relative_url(self.client.base_url(), &self.path, &self.query)?
-        };
-        let request_url = url.to_string();
+                .any(|(name, _)| name.eq_ignore_ascii_case("authorization"))
+            {
+                return Err(ApiError::Transport(
+                    "raw requests cannot override the Authorization header".into(),
+                ));
+            }
+            let has_content_type = self
+                .headers
+                .iter()
+                .any(|(name, _)| name.eq_ignore_ascii_case("content-type"));
+            let has_idempotency_key = shared::has_valid_idempotency_key(
+                self.headers
+                    .iter()
+                    .map(|(name, value)| (name.as_str(), value.as_str())),
+            )?;
+            let url = if self.path_has_encoded_segments {
+                shared::build_encoded_relative_url(self.client.base_url(), &self.path, &self.query)?
+            } else {
+                shared::build_relative_url(self.client.base_url(), &self.path, &self.query)?
+            };
+            let request_url = url.to_string();
 
-        if let Some(transport) = self.client.transport() {
-            let mut plan = super::transport::RequestPlan::new(self.method.clone(), url);
-            plan.headers.insert(
-                reqwest::header::AUTHORIZATION,
-                shared::bearer_header_value(self.client.state.token())?,
-            );
-            for (name, value) in &self.headers {
+            if let Some(transport) = self.client.transport() {
+                let mut plan = super::transport::RequestPlan::new(self.method.clone(), url);
                 plan.headers.insert(
-                    reqwest::header::HeaderName::from_bytes(name.as_bytes())
-                        .map_err(|error| ApiError::Transport(error.to_string()))?,
-                    shared::sensitive_header_value(value)?,
+                    reqwest::header::AUTHORIZATION,
+                    shared::bearer_header_value(self.client.state.token())?,
                 );
+                for (name, value) in &self.headers {
+                    plan.headers.insert(
+                        reqwest::header::HeaderName::from_bytes(name.as_bytes())
+                            .map_err(|error| ApiError::Transport(error.to_string()))?,
+                        shared::sensitive_header_value(value)?,
+                    );
+                }
+                if let Some(body) = self.body {
+                    plan.headers.entry(reqwest::header::CONTENT_TYPE).or_insert(
+                        reqwest::header::HeaderValue::from_static("application/json"),
+                    );
+                    plan = plan.with_body(body);
+                }
+                let response = self.client.execute_transport_with_retry(
+                    &self.method,
+                    has_idempotency_key,
+                    transport.as_ref(),
+                    plan,
+                )?;
+                return shared::process_transport_response(
+                    &self.method,
+                    &request_url,
+                    response,
+                    self.client.options(),
+                );
+            }
+
+            debug!(
+                "{} {}",
+                self.method,
+                shared::redacted_url_for_log(&request_url)
+            );
+            let mut request = self
+                .client
+                .runtime
+                .http_client
+                .request(self.method.clone(), &request_url)
+                .bearer_auth(self.client.state.token());
+            for (name, value) in &self.headers {
+                request = request.header(name, shared::sensitive_header_value(value)?);
             }
             if let Some(body) = self.body {
-                plan.headers.entry(reqwest::header::CONTENT_TYPE).or_insert(
-                    reqwest::header::HeaderValue::from_static("application/json"),
-                );
-                plan = plan.with_body(body);
+                if !has_content_type {
+                    request = request.header(reqwest::header::CONTENT_TYPE, "application/json");
+                }
+                request = request.body(body);
             }
-            let response = self.client.execute_transport_with_retry(
-                &self.method,
-                has_idempotency_key,
-                transport.as_ref(),
-                plan,
-            )?;
-            return shared::process_transport_response(
-                &self.method,
-                &request_url,
+            let response =
+                self.client
+                    .send_with_retry(&self.method, has_idempotency_key, request)?;
+            let response = self
+                .client
+                .check_success(&self.method, &request_url, response)?;
+            let status = response.status();
+            let (next_cursor, total_count, page_limit, content_type) =
+                shared::response_metadata(response.headers());
+            let etag = shared::response_etag(response.headers())?;
+            let body = shared::read_blocking_body(
                 response,
-                self.client.options(),
-            );
-        }
-
-        debug!(
-            "{} {}",
-            self.method,
-            shared::redacted_url_for_log(&request_url)
-        );
-        let mut request = self
-            .client
-            .runtime
-            .http_client
-            .request(self.method.clone(), &request_url)
-            .bearer_auth(self.client.state.token());
-        for (name, value) in &self.headers {
-            request = request.header(name, shared::sensitive_header_value(value)?);
-        }
-        if let Some(body) = self.body {
-            if !has_content_type {
-                request = request.header(reqwest::header::CONTENT_TYPE, "application/json");
-            }
-            request = request.body(body);
-        }
-        let response = self
-            .client
-            .send_with_retry(&self.method, has_idempotency_key, request)?;
-        let response = self
-            .client
-            .check_success(&self.method, &request_url, response)?;
-        let status = response.status();
-        let (next_cursor, total_count, page_limit, content_type) =
-            shared::response_metadata(response.headers());
-        let etag = shared::response_etag(response.headers())?;
-        let body =
-            shared::read_blocking_body(response, self.client.options().max_response_body_bytes)?;
-        Ok(shared::RawResponse {
-            status,
-            body,
-            etag,
-            next_cursor,
-            total_count,
-            page_limit,
-            content_type,
+                self.client.options().max_response_body_bytes,
+            )?;
+            Ok(shared::RawResponse {
+                status,
+                body,
+                etag,
+                next_cursor,
+                total_count,
+                page_limit,
+                content_type,
+            })
         })
     }
 

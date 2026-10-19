@@ -4,11 +4,13 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.15.0 targets Hubuum server v0.0.19. The pinned image,
+`hubuum_client` 0.15.1 targets Hubuum server v0.0.19. The pinned image,
 verification evidence, and history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
-Version 0.15.0 adds typed query-usage analysis and management,
+Version 0.15.1 adds [structured client tracing](docs/tracing.md), including
+request attempts, retries, pagination, and stream lifetimes. Version 0.15.0
+added typed query-usage analysis and management,
 system notification subscriptions, authentication-event subjects, and backup
 format 9. Both client modes support the same workflows on Rust 1.88. Applications
 with exhaustive `EventSubscriptionFilter` literals must add the new subject
@@ -48,7 +50,7 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.15.0"
+hubuum_client = "0.15.1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -56,7 +58,7 @@ Async support is enabled by default. Blocking applications can opt into only the
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.15.0", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.15.1", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
