@@ -8,6 +8,7 @@ application.
 
 - [Install and make your first request](getting-started.md).
 - [Configure clients and transports](client-setup.md).
+- [Inspect client tracing diagnostics](tracing.md).
 - [Query and paginate resources](querying.md).
 - [Check supported server versions](compatibility.md).
 
