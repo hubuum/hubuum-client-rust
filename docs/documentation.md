@@ -34,3 +34,7 @@ Keep interface-specific examples here and link to a matching server edition for
 shared concepts and the [Atlas dataset](example-dataset.md). Update the tooling
 SHA in `.github/docs-tools.env` and both reusable-workflow pins together when
 adopting shared build changes.
+
+## Diagnostics
+
+See [client tracing](tracing.md) for request, retry, pagination, and streaming spans.

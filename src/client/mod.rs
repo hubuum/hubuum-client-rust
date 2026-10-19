@@ -4,6 +4,8 @@ use crate::QueryFilter;
 use crate::endpoints::Endpoint;
 #[cfg(feature = "async")]
 pub mod r#async;
+#[cfg(any(feature = "async", feature = "blocking"))]
+mod diagnostics;
 mod shared;
 #[cfg(feature = "blocking")]
 pub mod sync;

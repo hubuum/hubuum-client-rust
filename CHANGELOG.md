@@ -6,6 +6,25 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-10-19
+
+This release explicitly targets Hubuum server v0.0.19.
+
+### Added
+
+- Emit versioned tracing spans for requests, HTTP/custom-transport attempts,
+  retries, and streamed body lifetimes in both async and blocking clients.
+  Automatic pagination emits page events. Fields exclude credentials, URLs,
+  query values, bodies, and error text; applications control their subscriber.
+  See [the diagnostics contract](docs/tracing.md).
+
+### Changed
+
+- Refresh build dependencies `cc` to 1.9.0 and `find-msvc-tools` to 0.1.15.
+- Add `tracing` 0.1 as a direct dependency and `tracing-subscriber` 0.3 as a
+  test dependency. Feature availability, Rust 1.88 MSRV, public method signatures,
+  and the declared Hubuum server v0.0.19 target remain unchanged.
+
 ## [0.15.0] - 2026-10-19
 
 ### Compatibility

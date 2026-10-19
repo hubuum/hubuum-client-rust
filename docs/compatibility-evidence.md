@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.15.1 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | Tracing release reverified on 2026-10-19: 99 library tests, 38 ordinary consumer cases, three native-resource phases, and four full restore/recovery pairs; unchanged 240-operation contract and 111 model mappings. |
 | 0.15.0 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | 240-operation contract and 111 wire-model mappings. Canonical run passed with approval enforcement: 99 library tests, 38 ordinary consumer cases (four legacy cases gated by server version), three native-resource phases, and four full restore/recovery pairs (2026-10-19). |
 | 0.14.1 | 0.0.18 | `ghcr.io/hubuum/hubuum-server@sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4` | Declared target; 235-operation contract and 88 wire-model mappings. Canonical released-image run passed with approval enforcement: 93 library tests, 35 consumer tests including delegated setup in both modes, four full restores, and four recovery runs (2026-10-06). |
 | 0.14.0 | 0.0.17 | `ghcr.io/hubuum/hubuum-server@sha256:cc0518167816bfddb38853b8b7217c4a347511318d51e1abca93ca418f31b302` | Declared target retained; canonical library, consumer, LDAP, and all four restore/recovery suites passed (2026-10-06). Optional collection integrations were separately verified against the updated server in both client modes. |
@@ -85,6 +86,17 @@ server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
 
 ## v0.0.19 target
+
+Client 0.15.1 retains this target and adds the versioned tracing contract. On
+2026-10-19, the canonical combined integration command passed against the same
+immutable server image: 99 library tests, 38 ordinary consumer cases (including
+four historical version gates), three native-resource phases, and all four
+blocking/async restore-and-recovery pairs. The release also passed 774 workspace
+tests, every supported feature combination, Rust 1.88 across all workspace
+targets and features, Clippy, documentation, generated-code and OpenAPI checks,
+and dependency advisory/license/source checks. No endpoint or wire-model changes
+were introduced. Temporary Podman fixture mounts used SELinux relabeling on the
+local verification host; required CI continues to use the pinned Docker setup.
 
 Client 0.15.0 targets the released server v0.0.19 image recorded above. Its
 240-operation snapshot matches the authoritative tag. All five new query-usage
