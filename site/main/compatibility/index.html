@@ -797,6 +797,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../tracing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Tracing diagnostics
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../querying/" class="md-nav__link">
         
   
@@ -1650,6 +1677,12 @@ coverage evolves.</p>
 </thead>
 <tbody>
 <tr>
+<td>0.15.1</td>
+<td>0.0.19</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225</code></td>
+<td>Tracing release reverified on 2026-10-19: 99 library tests, 38 ordinary consumer cases, three native-resource phases, and four full restore/recovery pairs; unchanged 240-operation contract and 111 model mappings.</td>
+</tr>
+<tr>
 <td>0.15.0</td>
 <td>0.0.19</td>
 <td><code>ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225</code></td>
@@ -1822,7 +1855,7 @@ coverage evolves.</p>
 <p>The client version 0.0.2 row predates and is unrelated to the independently
 versioned Hubuum server v0.0.2 release.</p>
 <h2 id="before-upgrading">Before upgrading<a class="headerlink" href="#before-upgrading" title="Permanent link">&para;</a></h2>
-<p>Client 0.15.0 targets server v0.0.19. Use fresh credential approvals for protected
+<p>Client 0.15.1 targets server v0.0.19. Use fresh credential approvals for protected
 mutations, and review <a href="../known-gaps/">known typed API gaps</a>. The client
 accepts backup formats 6, 7, 8, and 9; the server decides whether it can restore one.
 For older Rust releases, check the linked migration notes before upgrading:
