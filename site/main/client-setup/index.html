@@ -682,6 +682,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rotating-interactive-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Rotating interactive sessions
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1430,6 +1441,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rotating-interactive-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Rotating interactive sessions
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1534,6 +1556,36 @@ and collect that human's current password when a mutation error's
 <code>is_reauthentication_required()</code> method returns <code>true</code>. Token login alone does not satisfy
 fresh authentication. The guide includes async and blocking flows that also
 work with older servers.</p>
+<h2 id="rotating-interactive-sessions">Rotating interactive sessions<a class="headerlink" href="#rotating-interactive-sessions" title="Permanent link">&para;</a></h2>
+<p>For a server implementing the versioned session API, opt in explicitly:</p>
+<p>```rust,ignore
+use hubuum_client::{Client, Credentials, SessionClientId};</p>
+<p>let client = Client::builder_from_url("https://hubuum.example")?.build()?
+    .login_session(Credentials::new("admin", password), SessionClientId::default())
+    .await?;
+let me = client.me().await?;
+```</p>
+<p>The blocking client exposes the same methods without <code>.await</code>. Clones share
+credentials and serialize refresh. Every ordinary, raw, and streaming request
+refreshes before the access deadline; the fixed absolute deadline never slides.
+A failed or cancelled single-use exchange clears the usable pair, including
+across clones, and returns <code>ApiError::SessionExpired</code> on later requests. Sign in
+again rather than retrying an old refresh token. No password is retained, and
+no credentials are persisted automatically. External persistence requires an
+explicit secure-storage design; this API exposes no refresh-secret exporter.</p>
+<p><code>session_info()</code> returns non-secret metadata. <code>token()</code> now returns a redacted,
+owned <code>Result&lt;Token, ApiError&gt;</code> snapshot because rotation cannot safely expose a
+stable borrowed token. Use <code>client.token()?.as_str()</code> only where raw access is
+necessary, and do not cache that snapshot across refresh. <code>token_expires_at()</code>
+returns an owned timestamp. During refresh the synchronous snapshot accessor
+can return <code>SessionExpired</code>; normal API calls wait for the coordinated result.</p>
+<p>Legacy <code>login()</code> remains the single-token flow for the declared v0.0.19 target.
+Explicit <code>authenticate(Token::new(...))</code> remains appropriate for PATs and service
+credentials. Session login requires the newer <code>/api/v1/auth</code> server contract;
+there is no silent password-based fallback or automatic downgrade. Logout of a
+session revokes its family, and logout-all preserves independent PATs according
+to the new server contract. Credential creation still uses fresh password
+approval through <code>credential_approvals()</code>.</p>
 
 
 

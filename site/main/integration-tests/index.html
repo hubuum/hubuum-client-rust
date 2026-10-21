@@ -1254,6 +1254,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#candidate-rotating-session-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Candidate rotating-session contract
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1474,6 +1485,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#candidate-rotating-session-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Candidate rotating-session contract
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1604,6 +1626,17 @@ wrapper-owned <code>HUBUUM_INTEGRATION_DISPOSABLE_BASE_URL</code> marker. It is 
 of ordinary tests against an externally managed stack; full restore replaces
 all data and invalidates tokens. The complete non-container workspace suite
 compiles these tests but leaves them ignored.</p>
+<h2 id="candidate-rotating-session-contract">Candidate rotating-session contract<a class="headerlink" href="#candidate-rotating-session-contract" title="Permanent link">&para;</a></h2>
+<p>Keep the canonical pinned compatibility run above. Additionally, run the
+independent consumer against a disposable server implementing <code>/api/v1/auth</code>,
+configured with <code>HUBUUM_SESSION_ACCESS_SECONDS=2</code>. Supply its address and
+administrator password through the existing integration environment variables:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--locked<span class="w"> </span>-p<span class="w"> </span>e2e_client<span class="w"> </span>--features<span class="w"> </span>session-tests<span class="w"> </span>--test<span class="w"> </span>sessions<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--<span class="w"> </span>--ignored<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+<p>Both runtimes cross a real access deadline, rotate, retain the original absolute
+deadline, and verify logout invalidates clones. The short deadline is required
+by this focused test; it does not change production defaults.</p>
 
 
 

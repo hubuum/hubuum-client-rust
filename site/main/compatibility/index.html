@@ -693,6 +693,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Collection integration APIs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional-rotating-session-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Optional rotating-session extension
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1626,6 +1643,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Collection integration APIs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional-rotating-session-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Optional rotating-session extension
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1888,6 +1922,12 @@ backup compatibility, migration guidance, and pinned integration evidence.</p>
 <p>See <a href="../compatibility-evidence/#v0015-target">v0.0.15 target</a> in the historical evidence.</p>
 <h2 id="collection-integration-apis">Collection integration APIs<a class="headerlink" href="#collection-integration-apis" title="Permanent link">&para;</a></h2>
 <p>See <a href="../compatibility-evidence/#collection-integration-apis">collection integration apis</a> in the historical evidence.</p>
+<h3 id="optional-rotating-session-extension">Optional rotating-session extension<a class="headerlink" href="#optional-rotating-session-extension" title="Permanent link">&para;</a></h3>
+<p>The unreleased <code>login_session</code> and <code>session_providers</code> APIs require the versioned
+<code>/api/v1/auth</code> contract introduced by hubuum/hubuum#178. They do not change the
+pinned v0.0.19 target or its normalized OpenAPI snapshot. Legacy login remains
+available. Migrating Rust consumers must adapt token snapshot accessors as
+recorded in the Unreleased changelog.</p>
 
 
 

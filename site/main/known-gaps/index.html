@@ -1114,6 +1114,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#optional-session-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Optional session extension
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1474,6 +1485,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#optional-session-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Optional session extension
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1594,6 +1616,11 @@ URLs, and credentials. The canonical live suite requires delegated collection
 setup in both modes and exercises global sink use through an explicit collection
 grant. These APIs require <code>ManageEventSubscription</code> and <code>ReadAudit</code>; grants do
 not inherit to child collections.</p>
+<h2 id="optional-session-extension">Optional session extension<a class="headerlink" href="#optional-session-extension" title="Permanent link">&para;</a></h2>
+<p><code>SessionLogin</code>, <code>SessionRefresh</code>, <code>SessionProviders</code>, and the <code>SessionLogout*</code>
+endpoints describe the versioned rotating-session API from hubuum/hubuum#178.
+These opt-in operations are outside the pinned v0.0.19 snapshot and are tested
+separately against the candidate server. The baseline snapshot is unchanged.</p>
 
 
 

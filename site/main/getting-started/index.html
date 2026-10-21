@@ -1575,6 +1575,11 @@
 <p><code>hubuum_client</code> 0.15.1 targets Hubuum server v0.0.19. The pinned image,
 verification evidence, and history for earlier client releases are recorded in
 <a href="../compatibility/">COMPATIBILITY.md</a>.</p>
+<p>The development version is <strong>0.16.0 (unreleased)</strong>. It adds opt-in rotating
+interactive sessions and changes token accessors to owned, fallible snapshots.
+See <a href="../client-setup/#rotating-interactive-sessions">the migration and session guide</a>.
+The published 0.15.1 examples below remain available for the pinned server;
+rotating sessions additionally require the newer versioned authentication API.</p>
 <p>Version 0.15.1 adds <a href="../tracing/">structured client tracing</a>, including
 request attempts, retries, pagination, and stream lifetimes. Version 0.15.0
 added typed query-usage analysis and management,
