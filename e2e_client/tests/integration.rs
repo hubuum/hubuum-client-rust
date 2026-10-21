@@ -95,7 +95,7 @@ fn e2e_probe_meta_and_auth_admin_endpoints() {
             harness.admin_password.clone(),
         ))
         .expect("second admin login should succeed");
-    let second_token = second_session.token().to_string();
+    let second_token = second_session.token().unwrap().as_str().to_string();
 
     harness
         .client

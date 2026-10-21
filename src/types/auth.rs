@@ -112,6 +112,14 @@ pub struct Token {
 }
 
 impl Token {
+    #[cfg(any(feature = "async", feature = "blocking"))]
+    pub(crate) fn issued(token: SecretString, expires_at: crate::types::HubuumDateTime) -> Self {
+        Self {
+            token,
+            expires_at: Some(expires_at),
+        }
+    }
+
     pub fn new(token: impl Into<String>) -> Self {
         Self {
             token: SecretString::from(token.into()),

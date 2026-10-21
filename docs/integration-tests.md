@@ -125,3 +125,19 @@ wrapper-owned `HUBUUM_INTEGRATION_DISPOSABLE_BASE_URL` marker. It is never part
 of ordinary tests against an externally managed stack; full restore replaces
 all data and invalidates tokens. The complete non-container workspace suite
 compiles these tests but leaves them ignored.
+
+## Candidate rotating-session contract
+
+Keep the canonical pinned compatibility run above. Additionally, run the
+independent consumer against a disposable server implementing `/api/v1/auth`,
+configured with `HUBUUM_SESSION_ACCESS_SECONDS=2`. Supply its address and
+administrator password through the existing integration environment variables:
+
+```bash
+cargo test --locked -p e2e_client --features session-tests --test sessions \
+  -- --ignored --test-threads=1
+```
+
+Both runtimes cross a real access deadline, rotate, retain the original absolute
+deadline, and verify logout invalidates clones. The short deadline is required
+by this focused test; it does not change production defaults.

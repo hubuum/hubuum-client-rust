@@ -670,6 +670,39 @@ impl<S> Client<S> {
     }
 }
 
+impl<S> Client<S> {
+    // Session exchange requests never enter the retry pipeline. A lost response
+    // may already have consumed the single-use credential.
+    fn exchange_session<T: Serialize>(
+        &self,
+        endpoint: &Endpoint,
+        body: &T,
+    ) -> Result<super::sessions::SessionPair, ApiError> {
+        let url = self.build_url(endpoint, &UrlParams::default());
+        let bytes = if let Some(transport) = self.transport() {
+            let plan = shared::build_unauthenticated_json_request_plan(
+                &reqwest::Method::POST,
+                &url,
+                body,
+                &[],
+            )?;
+            let response = transport.execute(plan)?;
+            shared::process_transport_response(
+                &reqwest::Method::POST,
+                &url,
+                response,
+                self.options(),
+            )?
+            .body
+        } else {
+            let response = self.http_client().post(&url).json(body).send()?;
+            let response = self.check_success(&reqwest::Method::POST, &url, response)?;
+            shared::read_blocking_body(response, self.options().max_response_body_bytes)?
+        };
+        super::sessions::SessionPair::decode(bytes.as_bytes())
+    }
+}
+
 impl Client<Unauthenticated> {
     pub fn builder(base_url: BaseUrl) -> ClientBuilder {
         ClientBuilder::new(base_url)
@@ -775,6 +808,32 @@ impl Client<Unauthenticated> {
         )
     }
 
+    /// Start a rotating interactive session on servers implementing `/api/v1/auth`.
+    /// Passwords are discarded after this exchange. Clones share refresh state.
+    pub fn login_session(
+        &self,
+        credentials: Credentials,
+        client_id: crate::SessionClientId,
+    ) -> Result<Client<Authenticated>, ApiError> {
+        let request = super::sessions::SessionLogin {
+            credentials: &credentials,
+            client_id: &client_id,
+        };
+        let pair = self.exchange_session(&Endpoint::SessionLogin, &request)?;
+        Ok(Client {
+            runtime: self.runtime.clone(),
+            state: Authenticated::with_session(pair, client_id),
+        })
+    }
+
+    /// Discover login providers on the versioned session API.
+    pub fn session_providers(&self) -> Result<AuthProvidersResponse, ApiError> {
+        self.public_get(
+            &Endpoint::SessionProviders,
+            "Provider discovery returned no response",
+        )
+    }
+
     pub fn login(&self, credentials: Credentials) -> Result<Client<Authenticated>, ApiError> {
         TraceSpan::request("login", &reqwest::Method::POST, Endpoint::Login.path()).run(|| {
             let login_url = self.build_url(&Endpoint::Login, &UrlParams::default());
@@ -831,44 +890,29 @@ impl Client<Unauthenticated> {
     }
 
     pub fn login_with_token(&self, token: Token) -> Result<Client<Authenticated>, ApiError> {
-        TraceSpan::request(
-            "login_with_token",
-            &reqwest::Method::GET,
-            Endpoint::LoginWithToken.path(),
-        )
-        .run(|| {
-            let url = self.build_url(&Endpoint::LoginWithToken, &UrlParams::default());
-            if let Some(transport) = self.transport() {
-                let plan = shared::build_request_plan(
-                    &reqwest::Method::GET,
-                    &url,
-                    &EmptyPostParams,
-                    token.as_str(),
-                    &[],
-                )?;
-                let response = self.execute_transport_with_retry(
-                    &reqwest::Method::GET,
-                    false,
-                    transport.as_ref(),
-                    plan,
-                )?;
-                shared::check_transport_response_success(
-                    &reqwest::Method::GET,
-                    &url,
-                    response,
-                    self.options().max_error_body_bytes,
-                )?;
-            } else {
-                let request = self.http_client().get(&url).bearer_auth(token.as_str());
-                let response = self.send_with_retry(&reqwest::Method::GET, false, request)?;
-                self.check_success(&reqwest::Method::GET, &url, response)?;
-            }
-
-            Ok(Client {
-                runtime: self.runtime.clone(),
-                state: Authenticated::new(token),
-            })
-        })
+        let client = self.authenticate(token);
+        let result = client.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+            reqwest::Method::GET,
+            &Endpoint::LoginWithToken,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        );
+        if result
+            .as_ref()
+            .is_err_and(|error| error.is_status(reqwest::StatusCode::NOT_FOUND))
+        {
+            client.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+                reqwest::Method::GET,
+                &Endpoint::SessionValidate,
+                UrlParams::default(),
+                vec![],
+                EmptyPostParams,
+            )?;
+        } else {
+            result?;
+        }
+        Ok(client)
     }
 
     /// Attach a token without making a validation request. This is useful with
@@ -894,6 +938,33 @@ impl Client<Unauthenticated> {
 }
 
 impl Client<Authenticated> {
+    fn ready_token(&self) -> Result<Token, ApiError> {
+        let Some(session) = self.state.session() else {
+            return self.state.token();
+        };
+        let _guard = session
+            .blocking_lock
+            .lock()
+            .map_err(|_| ApiError::SessionExpired)?;
+        if let Some(previous) = session.take_if_due()? {
+            let pair = self
+                .exchange_session(
+                    &Endpoint::SessionRefresh,
+                    &previous.request(&session.client_id),
+                )
+                .map_err(|_| ApiError::SessionExpired)?;
+            pair.validate_successor(&previous)
+                .map_err(|_| ApiError::SessionExpired)?;
+            session.install(pair)?;
+        }
+        session.token()
+    }
+
+    /// Non-secret metadata for the current interactive session, if available.
+    pub fn session_info(&self) -> Option<crate::SessionInfo> {
+        self.state.session()?.info()
+    }
+
     /// Advisory declarations and read-only administrative analysis for one class.
     pub fn class_query_usage(&self, class_id: impl Into<ClassId>) -> ClassQueryUsage {
         ClassQueryUsage {
@@ -948,8 +1019,11 @@ impl Client<Authenticated> {
         }
     }
 
-    /// Bearer token held by this authenticated client.
-    pub fn token(&self) -> &str {
+    /// Snapshot of the current bearer credential, with redacted `Debug` output.
+    ///
+    /// A session that has failed or is currently rotating returns `SessionExpired`.
+    /// Ordinary requests coordinate refresh automatically; this accessor does not.
+    pub fn token(&self) -> Result<Token, ApiError> {
         self.state.token()
     }
 
@@ -957,7 +1031,7 @@ impl Client<Authenticated> {
     ///
     /// This is `None` when the client was authenticated from a caller-supplied
     /// [`Token`] that does not carry issuance metadata.
-    pub fn token_expires_at(&self) -> Option<&HubuumDateTime> {
+    pub fn token_expires_at(&self) -> Option<HubuumDateTime> {
         self.state.token_expires_at()
     }
 
@@ -990,7 +1064,7 @@ impl Client<Authenticated> {
     }
 
     #[deprecated(since = "0.3.0", note = "use token()")]
-    pub fn get_token(&self) -> &str {
+    pub fn get_token(&self) -> Result<Token, ApiError> {
         self.token()
     }
 
@@ -1011,15 +1085,54 @@ impl Client<Authenticated> {
         .ok_or(ApiError::EmptyResult(empty_message.into()))
     }
 
-    pub fn logout(self) -> Result<Client<Unauthenticated>, ApiError> {
-        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+    fn auth_mutation<T: Serialize>(
+        &self,
+        legacy: Endpoint,
+        versioned: Endpoint,
+        url_params: UrlParams,
+        params: T,
+    ) -> Result<(), ApiError> {
+        let endpoint = if self.state.session().is_some() {
+            &versioned
+        } else {
+            &legacy
+        };
+        let result = self.request_with_endpoint::<&T, serde_json::Value>(
             reqwest::Method::POST,
-            &Endpoint::Logout,
-            UrlParams::default(),
+            endpoint,
+            url_params.clone(),
             vec![],
-            EmptyPostParams,
-        )?;
+            &params,
+        );
+        if self.state.session().is_none()
+            && result
+                .as_ref()
+                .is_err_and(|error| error.is_status(reqwest::StatusCode::NOT_FOUND))
+        {
+            self.request_with_endpoint::<T, serde_json::Value>(
+                reqwest::Method::POST,
+                &versioned,
+                url_params,
+                vec![],
+                params,
+            )
+            .map(|_| ())
+        } else {
+            result.map(|_| ())
+        }
+    }
 
+    pub fn logout(self) -> Result<Client<Unauthenticated>, ApiError> {
+        let result = self.auth_mutation(
+            Endpoint::Logout,
+            Endpoint::SessionLogout,
+            UrlParams::default(),
+            EmptyPostParams,
+        );
+        if let Some(session) = self.state.session() {
+            session.clear();
+        }
+        result?;
         Ok(Client {
             runtime: self.runtime,
             state: Unauthenticated,
@@ -1027,37 +1140,35 @@ impl Client<Authenticated> {
     }
 
     pub fn logout_token(&self, token: &str) -> Result<(), ApiError> {
-        self.request_with_endpoint::<LogoutTokenRequest, serde_json::Value>(
-            reqwest::Method::POST,
-            &Endpoint::LogoutToken,
+        self.auth_mutation(
+            Endpoint::LogoutToken,
+            Endpoint::SessionLogoutToken,
             UrlParams::default(),
-            vec![],
             LogoutTokenRequest::new(token),
         )
-        .map(|_| ())
     }
 
     pub fn logout_user<I: Into<UserId>>(&self, user_id: I) -> Result<(), ApiError> {
         let user_id = user_id.into();
-        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::POST,
-            &Endpoint::LogoutUser,
+        self.auth_mutation(
+            Endpoint::LogoutUser,
+            Endpoint::SessionLogoutUser,
             vec![(Cow::Borrowed("user_id"), user_id.to_string().into())],
-            vec![],
             EmptyPostParams,
         )
-        .map(|_| ())
     }
 
     pub fn logout_all(&self) -> Result<(), ApiError> {
-        self.request_with_endpoint::<EmptyPostParams, serde_json::Value>(
-            reqwest::Method::POST,
-            &Endpoint::LogoutAll,
+        let result = self.auth_mutation(
+            Endpoint::LogoutAll,
+            Endpoint::SessionLogoutAll,
             UrlParams::default(),
-            vec![],
             EmptyPostParams,
-        )
-        .map(|_| ())
+        );
+        if let Some(session) = self.state.session() {
+            session.clear();
+        }
+        result
     }
 
     pub fn meta_counts(&self) -> Result<CountsResponse, ApiError> {
@@ -1192,6 +1303,7 @@ impl Client<Authenticated> {
         query_params: Vec<QueryFilter>,
         post_params: T,
     ) -> Result<StreamingResponse, ApiError> {
+        let token = self.ready_token()?;
         TraceSpan::request("stream", &method, endpoint.path()).run(|| {
             let base_url = self.build_url(endpoint, &url_params);
             let request_url =
@@ -1203,7 +1315,7 @@ impl Client<Authenticated> {
                     &method,
                     &request_url,
                     &post_params,
-                    self.state.token(),
+                    token.as_str(),
                     &[],
                 )?;
                 let response =
@@ -1227,7 +1339,7 @@ impl Client<Authenticated> {
                 .runtime
                 .http_client
                 .request(method.clone(), &request_url)
-                .bearer_auth(self.state.token());
+                .bearer_auth(token.as_str());
             let request = if method == reqwest::Method::POST {
                 request.json(&post_params)
             } else {
@@ -1254,6 +1366,7 @@ impl Client<Authenticated> {
         post_params: T,
         headers: &[(&str, String)],
     ) -> Result<shared::RawResponse, ApiError> {
+        let token = self.ready_token()?;
         TraceSpan::request("request", &method, endpoint.path()).run(|| {
             let base_url = self.build_url(endpoint, &url_params);
             let request_url =
@@ -1267,7 +1380,7 @@ impl Client<Authenticated> {
                     &method,
                     &request_url,
                     &post_params,
-                    self.state.token(),
+                    token.as_str(),
                     headers,
                 )?;
                 let response = self.execute_transport_with_retry(
@@ -1312,7 +1425,7 @@ impl Client<Authenticated> {
             } else {
                 return Err(ApiError::UnsupportedHttpOperation(method.to_string()));
             };
-            let mut request = request.bearer_auth(self.state.token());
+            let mut request = request.bearer_auth(token.as_str());
             for (name, value) in headers {
                 request = request.header(*name, shared::sensitive_header_value(value)?);
             }
@@ -2353,6 +2466,7 @@ impl RawRequest {
     }
 
     fn execute(self) -> Result<shared::RawResponse, ApiError> {
+        let token = self.client.ready_token()?;
         TraceSpan::request("raw", &self.method, "(custom route)").run(|| {
             if self
                 .headers
@@ -2383,7 +2497,7 @@ impl RawRequest {
                 let mut plan = super::transport::RequestPlan::new(self.method.clone(), url);
                 plan.headers.insert(
                     reqwest::header::AUTHORIZATION,
-                    shared::bearer_header_value(self.client.state.token())?,
+                    shared::bearer_header_value(token.as_str())?,
                 );
                 for (name, value) in &self.headers {
                     plan.headers.insert(
@@ -2422,7 +2536,7 @@ impl RawRequest {
                 .runtime
                 .http_client
                 .request(self.method.clone(), &request_url)
-                .bearer_auth(self.client.state.token());
+                .bearer_auth(token.as_str());
             for (name, value) in &self.headers {
                 request = request.header(name, shared::sensitive_header_value(value)?);
             }

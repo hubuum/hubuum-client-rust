@@ -16,6 +16,13 @@ pub struct ApiErrorResponse {
 #[non_exhaustive]
 #[derive(Error)]
 pub enum ApiError {
+    #[error("Session expired or refresh outcome uncertain; sign in again")]
+    SessionExpired,
+    #[error("Invalid interactive session response")]
+    InvalidSessionResponse,
+    #[error("Client ID must contain 1-128 ASCII letters, digits, or -._:")]
+    InvalidSessionClientId,
+
     #[error("HTTP error: {0}")]
     Http(#[source] reqwest::Error),
 
@@ -209,6 +216,9 @@ pub enum ApiError {
 impl std::fmt::Debug for ApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::SessionExpired => f.write_str("SessionExpired"),
+            Self::InvalidSessionResponse => f.write_str("InvalidSessionResponse"),
+            Self::InvalidSessionClientId => f.write_str("InvalidSessionClientId"),
             Self::Http(error) => f.debug_tuple("Http").field(error).finish(),
             Self::Json(error) => f
                 .debug_struct("Json")

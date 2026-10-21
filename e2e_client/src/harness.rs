@@ -191,7 +191,7 @@ impl AsyncE2EHarness {
     }
 }
 
-fn integration_connection() -> Result<(BaseUrl, String), String> {
+pub fn integration_connection() -> Result<(BaseUrl, String), String> {
     let base_url = std::env::var(EXTERNAL_BASE_URL_ENV)
         .map_err(|_| format!("{EXTERNAL_BASE_URL_ENV} must be set"))?;
     let admin_password = std::env::var(EXTERNAL_ADMIN_PASSWORD_ENV)

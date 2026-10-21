@@ -7,8 +7,13 @@ publish = false
 
 [features]
 integration-tests = []
+session-tests = ["integration-tests"]
 restore-tests = ["integration-tests"]
 query-usage-native-tests = ["integration-tests"]
+
+[[test]]
+name = "sessions"
+required-features = ["session-tests"]
 
 [[test]]
 name = "query_usage_native"

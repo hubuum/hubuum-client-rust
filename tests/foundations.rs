@@ -424,14 +424,18 @@ fn blocking_public_and_auth_calls_use_custom_transport() {
         client
             .login(Credentials::new("alice", "login-secret"))
             .unwrap()
-            .token(),
+            .token()
+            .unwrap()
+            .as_str(),
         "minted-secret"
     );
     assert_eq!(
         client
             .login_with_token(Token::new("attached-secret"))
             .unwrap()
-            .token(),
+            .token()
+            .unwrap()
+            .as_str(),
         "attached-secret"
     );
     assert_eq!(client.healthz().unwrap().status, "healthy");
@@ -454,7 +458,9 @@ async fn async_public_and_auth_calls_use_custom_transport() {
             .login(Credentials::new("alice", "login-secret"))
             .await
             .unwrap()
-            .token(),
+            .token()
+            .unwrap()
+            .as_str(),
         "minted-secret"
     );
     assert_eq!(
@@ -462,7 +468,9 @@ async fn async_public_and_auth_calls_use_custom_transport() {
             .login_with_token(Token::new("attached-secret"))
             .await
             .unwrap()
-            .token(),
+            .token()
+            .unwrap()
+            .as_str(),
         "attached-secret"
     );
     assert_eq!(client.healthz().await.unwrap().status, "healthy");

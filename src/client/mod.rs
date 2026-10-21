@@ -6,6 +6,8 @@ use crate::endpoints::Endpoint;
 pub mod r#async;
 #[cfg(any(feature = "async", feature = "blocking"))]
 mod diagnostics;
+#[cfg(any(feature = "async", feature = "blocking"))]
+mod sessions;
 mod shared;
 #[cfg(feature = "blocking")]
 pub mod sync;
@@ -76,30 +78,58 @@ pub struct Unauthenticated;
 
 #[derive(Clone)]
 pub struct Authenticated {
-    token: Arc<crate::types::Token>,
+    credentials: CredentialSource,
+}
+
+#[derive(Clone)]
+enum CredentialSource {
+    Static(Arc<crate::Token>),
+    #[cfg(any(feature = "async", feature = "blocking"))]
+    Session(Arc<sessions::SessionState>),
 }
 
 impl std::fmt::Debug for Authenticated {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Authenticated")
-            .field("token", &"[REDACTED]")
+            .field("credentials", &"[REDACTED]")
             .finish()
     }
 }
 
 impl Authenticated {
-    fn new(token: crate::types::Token) -> Self {
+    fn new(token: crate::Token) -> Self {
         Self {
-            token: Arc::new(token),
+            credentials: CredentialSource::Static(Arc::new(token)),
         }
     }
 
-    fn token(&self) -> &str {
-        self.token.as_str()
+    #[cfg(any(feature = "async", feature = "blocking"))]
+    fn with_session(pair: sessions::SessionPair, client_id: crate::SessionClientId) -> Self {
+        Self {
+            credentials: CredentialSource::Session(Arc::new(sessions::SessionState::new(
+                pair, client_id,
+            ))),
+        }
     }
 
-    fn token_expires_at(&self) -> Option<&crate::types::HubuumDateTime> {
-        self.token.expires_at()
+    #[cfg(any(feature = "async", feature = "blocking"))]
+    fn session(&self) -> Option<&Arc<sessions::SessionState>> {
+        match &self.credentials {
+            CredentialSource::Session(session) => Some(session),
+            CredentialSource::Static(_) => None,
+        }
+    }
+
+    fn token(&self) -> Result<crate::Token, crate::ApiError> {
+        match &self.credentials {
+            CredentialSource::Static(token) => Ok((**token).clone()),
+            #[cfg(any(feature = "async", feature = "blocking"))]
+            CredentialSource::Session(session) => session.token(),
+        }
+    }
+
+    fn token_expires_at(&self) -> Option<crate::types::HubuumDateTime> {
+        self.token().ok()?.expires_at().cloned()
     }
 }
 
@@ -115,8 +145,13 @@ mod authenticated_state_tests {
         let state = Authenticated::new(Token::new("shared-secret"));
         let cloned = state.clone();
 
-        assert!(Arc::ptr_eq(&state.token, &cloned.token));
-        assert_eq!(cloned.token(), "shared-secret");
+        let (super::CredentialSource::Static(first), super::CredentialSource::Static(second)) =
+            (&state.credentials, &cloned.credentials)
+        else {
+            panic!("expected static credentials")
+        };
+        assert!(Arc::ptr_eq(first, second));
+        assert_eq!(cloned.token().unwrap().as_str(), "shared-secret");
         assert!(!format!("{cloned:?}").contains("shared-secret"));
     }
 }
@@ -250,6 +285,9 @@ mod parity_contract {
             let _ = |op: $module::ApprovedCredentialOperation<crate::TaskResponse>| {
                 std::mem::drop(op.idempotency_key("key"));
             };
+            let _ = $module::Client::<Unauthenticated>::login_session;
+            let _ = $module::Client::<Unauthenticated>::session_providers;
+            let _ = $module::Client::<Authenticated>::session_info;
             let _ = $module::Client::<Authenticated>::token;
             let _ = $module::Client::<Authenticated>::token_expires_at;
             let _ = $module::Client::<Authenticated>::logout;

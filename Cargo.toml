@@ -4,7 +4,7 @@ resolver = "3"
 
 [package]
 name = "hubuum_client"
-version = "0.15.1"
+version = "0.16.0"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
@@ -56,7 +56,7 @@ percent-encoding = "2"
 secrecy = { version = "0.10", features = ["serde"] }
 serde_path_to_error = "0.1"
 strum = { version = "0.28", features = ["derive", "strum_macros"] }
-tokio = { version = "1", features = ["fs", "io-util", "rt", "time"], optional = true }
+tokio = { version = "1", features = ["fs", "io-util", "rt", "time", "sync"], optional = true }
 async-stream = { version = "0.3", optional = true }
 bytes = { version = "1", optional = true }
 fastrand = "2"

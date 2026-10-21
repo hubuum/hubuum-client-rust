@@ -102,3 +102,11 @@ See [v0.0.15 target](docs/compatibility-evidence.md#v0015-target) in the histori
 ## Collection integration APIs
 
 See [collection integration apis](docs/compatibility-evidence.md#collection-integration-apis) in the historical evidence.
+
+### Optional rotating-session extension
+
+The unreleased `login_session` and `session_providers` APIs require the versioned
+`/api/v1/auth` contract introduced by hubuum/hubuum#178. They do not change the
+pinned v0.0.19 target or its normalized OpenAPI snapshot. Legacy login remains
+available. Migrating Rust consumers must adapt token snapshot accessors as
+recorded in the Unreleased changelog.
