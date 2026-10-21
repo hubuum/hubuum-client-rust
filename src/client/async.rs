@@ -874,7 +874,8 @@ impl Client<Unauthenticated> {
         };
         let pair = self
             .exchange_session(&Endpoint::SessionLogin, &request)
-            .await?;
+            .await
+            .map_err(super::sessions::login_error)?;
         Ok(Client {
             runtime: self.runtime.clone(),
             state: Authenticated::with_session(pair, client_id),

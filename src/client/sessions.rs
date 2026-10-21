@@ -165,3 +165,24 @@ impl SessionState {
         }
     }
 }
+
+// Authentication errors must not retain reflected credentials, including errors
+// supplied by custom transports. Preserve useful HTTP status without the body.
+pub(super) fn login_error(error: ApiError) -> ApiError {
+    match error {
+        ApiError::HttpWithBody {
+            method,
+            url,
+            status,
+            ..
+        } => ApiError::HttpWithBody {
+            method,
+            url,
+            status,
+            message: "Interactive session login failed".into(),
+            body: String::new(),
+        },
+        ApiError::InvalidSessionResponse => ApiError::InvalidSessionResponse,
+        _ => ApiError::Api("Interactive session login failed".into()),
+    }
+}

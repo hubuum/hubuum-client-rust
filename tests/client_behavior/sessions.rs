@@ -401,3 +401,45 @@ fn blocking_pat_authentication_falls_back_only_when_the_legacy_route_is_absent(
         ]
     );
 }
+
+#[rstest]
+#[case::asynchronous(true)]
+#[case::blocking(false)]
+#[tokio::test]
+async fn session_login_errors_discard_reflected_secrets(#[case] asynchronous: bool) {
+    let transport = Arc::new(MockTransport::default());
+    push(
+        &transport,
+        StatusCode::UNAUTHORIZED,
+        json!({"message":"password-secret", "refresh_token":"refresh-secret"}),
+    );
+    let error = if asynchronous {
+        Client::builder(BaseUrl::new("https://hubuum.test").unwrap())
+            .with_transport(transport)
+            .build()
+            .unwrap()
+            .login_session(
+                Credentials::new("admin", "password-secret"),
+                SessionClientId::default(),
+            )
+            .await
+            .unwrap_err()
+    } else {
+        tokio::task::spawn_blocking(move || {
+            blocking::Client::builder(BaseUrl::new("https://hubuum.test").unwrap())
+                .with_transport(transport)
+                .build()
+                .unwrap()
+                .login_session(
+                    Credentials::new("admin", "password-secret"),
+                    SessionClientId::default(),
+                )
+                .unwrap_err()
+        })
+        .await
+        .unwrap()
+    };
+    assert!(error.is_status(StatusCode::UNAUTHORIZED));
+    assert_eq!(error.response_body(), Some(""));
+    assert!(!error.api_message().unwrap().contains("password-secret"));
+}
