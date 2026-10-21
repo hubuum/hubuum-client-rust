@@ -552,14 +552,14 @@ fn sync_auth_login_with_token_accepts_valid_token() {
         logged_in.token_expires_at().is_some(),
         "target server login should preserve the authoritative default expiry"
     );
-    let token = logged_in.token().to_string();
+    let token = logged_in.token().unwrap().as_str().to_string();
 
     let validated = blocking::Client::try_new(base_url)
         .expect("client should build")
         .login_with_token(Token::new(token.clone()))
         .expect("sync login_with_token(valid) failed");
 
-    assert_eq!(validated.token(), token);
+    assert_eq!(validated.token().unwrap().as_str(), token);
 }
 
 #[test]
@@ -614,7 +614,7 @@ fn sync_auth_logout_token_revokes_target_token() {
         .expect("failed to login revocation target");
 
     controller
-        .logout_token(revoked.token())
+        .logout_token(revoked.token().unwrap().as_str())
         .expect("sync logout_token failed");
 
     let err = revoked

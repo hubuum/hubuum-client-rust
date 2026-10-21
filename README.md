@@ -8,6 +8,12 @@ A Rust client library for the Hubuum API. It provides synchronous and asynchrono
 verification evidence, and history for earlier client releases are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
+The development version is **0.16.0 (unreleased)**. It adds opt-in rotating
+interactive sessions and changes token accessors to owned, fallible snapshots.
+See [the migration and session guide](docs/client-setup.md#rotating-interactive-sessions).
+The published 0.15.1 examples below remain available for the pinned server;
+rotating sessions additionally require the newer versioned authentication API.
+
 Version 0.15.1 adds [structured client tracing](docs/tracing.md), including
 request attempts, retries, pagination, and stream lifetimes. Version 0.15.0
 added typed query-usage analysis and management,

@@ -100,3 +100,10 @@ URLs, and credentials. The canonical live suite requires delegated collection
 setup in both modes and exercises global sink use through an explicit collection
 grant. These APIs require `ManageEventSubscription` and `ReadAudit`; grants do
 not inherit to child collections.
+
+## Optional session extension
+
+`SessionLogin`, `SessionRefresh`, `SessionProviders`, and the `SessionLogout*`
+endpoints describe the versioned rotating-session API from hubuum/hubuum#178.
+These opt-in operations are outside the pinned v0.0.19 snapshot and are tested
+separately against the candidate server. The baseline snapshot is unchanged.

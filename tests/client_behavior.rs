@@ -1269,7 +1269,7 @@ fn sync_client_can_be_built_from_a_url_string_and_inspected() {
     let client = client
         .login(Credentials::new(USERNAME, PASSWORD))
         .expect("login should succeed");
-    assert_eq!(client.token(), TOKEN);
+    assert_eq!(client.token().unwrap().as_str(), TOKEN);
     assert!(!format!("{client:?}").contains(TOKEN));
 }
 
@@ -6702,7 +6702,7 @@ fn sync_login_preserves_authoritative_token_expiry() {
     assert_eq!(
         client
             .token_expires_at()
-            .map(ToString::to_string)
+            .map(|expiry| expiry.to_string())
             .as_deref(),
         Some("2026-07-27T05:17:17+00:00")
     );
@@ -8159,4 +8159,5 @@ async fn async_structured_search_posts_json_and_decodes_results_and_events() {
 mod client_behavior {
     mod notifications;
     mod query_usage;
+    mod sessions;
 }

@@ -4,6 +4,14 @@ use strum::EnumIter;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum Endpoint {
     Login,
+    SessionLogin,
+    SessionRefresh,
+    SessionLogout,
+    SessionLogoutAll,
+    SessionLogoutToken,
+    SessionLogoutUser,
+    SessionProviders,
+    SessionValidate,
     AuthProviders,
     CredentialApprovals,
     CredentialApprovalById,
@@ -171,6 +179,14 @@ pub enum Endpoint {
 impl Endpoint {
     pub fn path(&self) -> &'static str {
         match self {
+            Endpoint::SessionLogin => "/api/v1/auth/login",
+            Endpoint::SessionRefresh => "/api/v1/auth/refresh",
+            Endpoint::SessionLogout => "/api/v1/auth/logout",
+            Endpoint::SessionLogoutAll => "/api/v1/auth/logout_all",
+            Endpoint::SessionLogoutToken => "/api/v1/auth/logout/token",
+            Endpoint::SessionLogoutUser => "/api/v1/auth/logout/uid/{user_id}",
+            Endpoint::SessionProviders => "/api/v1/auth/providers",
+            Endpoint::SessionValidate => "/api/v1/auth/validate",
             Endpoint::Login => "/api/v0/auth/login",
             Endpoint::AuthProviders => "/api/v0/auth/providers",
             Endpoint::CredentialApprovals => "/api/v1/iam/credential-approvals",
@@ -452,7 +468,24 @@ mod test {
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();
 
-        assert_eq!(client_paths, spec_paths);
+        // Optional session APIs are forward extensions, not part of the pinned
+        // v0.0.19 compatibility claim or its authoritative operation snapshot.
+        let session_paths = [
+            "/api/v1/auth/login",
+            "/api/v1/auth/refresh",
+            "/api/v1/auth/providers",
+            "/api/v1/auth/validate",
+            "/api/v1/auth/logout",
+            "/api/v1/auth/logout_all",
+            "/api/v1/auth/logout/token",
+            "/api/v1/auth/logout/uid/{user_id}",
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            client_paths,
+            spec_paths.union(&session_paths).copied().collect()
+        );
         assert_eq!(contract["operation_count"], 240);
     }
     use std::str::FromStr;

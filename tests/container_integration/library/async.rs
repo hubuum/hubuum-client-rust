@@ -713,7 +713,7 @@ fn async_auth_login_with_token_accepts_valid_token() {
         logged_in.token_expires_at().is_some(),
         "target server login should preserve the authoritative default expiry"
     );
-    let token = logged_in.token().to_string();
+    let token = logged_in.token().unwrap().as_str().to_string();
 
     let validated = runtime
         .block_on(
@@ -723,7 +723,7 @@ fn async_auth_login_with_token_accepts_valid_token() {
         )
         .expect("async login_with_token(valid) failed");
 
-    assert_eq!(validated.token(), token);
+    assert_eq!(validated.token().unwrap().as_str(), token);
 }
 
 #[test]
@@ -787,7 +787,7 @@ fn async_auth_logout_token_revokes_target_token() {
         .expect("failed to login revocation target");
 
     runtime
-        .block_on(controller.logout_token(revoked.token()))
+        .block_on(controller.logout_token(revoked.token().unwrap().as_str()))
         .expect("async logout_token failed");
 
     let err = runtime

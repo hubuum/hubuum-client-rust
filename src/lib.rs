@@ -137,6 +137,7 @@ pub use types::{
     UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
     UserParams, ValidatedExportScope,
 };
+pub use types::{SessionClientId, SessionInfo};
 pub use types::{
     StructuredClassSelector, StructuredRelatedPredicate, StructuredSearchDoneEvent,
     StructuredSearchErrorEvent, StructuredSearchEvent, StructuredSearchExpression,

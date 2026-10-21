@@ -6,6 +6,34 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Security
+
+- Update `rustls-webpki` to 0.103.16 and `webpki-root-certs` to 1.0.10 for
+  RUSTSEC-2026-0382 and RUSTSEC-2026-0383.
+
+### Added
+
+- Opt-in `login_session(credentials, client_id)` for the server's versioned
+  interactive session API, with sync/async parity. Cloned clients serialize
+  refresh and atomically replace both credentials. Passwords are not retained;
+  refresh credentials remain in memory and are never automatically retried.
+- `session_info()` exposes non-secret deadlines; `session_providers()` discovers
+  providers on the versioned API. Legacy login and explicit PAT injection remain
+  available against the declared v0.0.19 server target.
+
+### Changed
+
+- Prepare the next breaking client version, 0.16.0, without publishing a release.
+- **Breaking:** Client `token()` and deprecated `get_token()` now return
+  `Result<Token, ApiError>` snapshots instead of borrowed strings, and
+  `token_expires_at()` returns an owned timestamp. Callers must handle unavailable
+  session credentials and use `client.token()?.as_str()` when raw bearer access
+  is necessary. A refresh failure, cancellation, or ambiguous response requires
+  login again; logout clears session credentials across clones.
+- Enable Tokio's `sync` feature for async refresh coordination. The MSRV, pinned
+  server image, and baseline OpenAPI snapshot are unchanged. Rotating sessions
+  require a newer server implementing `/api/v1/auth`.
+
 ## [0.15.1] - 2026-10-19
 
 This release explicitly targets Hubuum server v0.0.19.

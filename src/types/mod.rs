@@ -22,6 +22,7 @@ mod remote;
 mod revision;
 mod schema;
 mod search;
+mod session;
 mod settings;
 mod structured_search;
 mod task;
@@ -142,6 +143,7 @@ pub use search::{
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
     UnifiedSearchResults, UnifiedSearchStartedEvent,
 };
+pub use session::{SessionClientId, SessionInfo};
 pub use structured_search::{
     StructuredClassSelector, StructuredRelatedPredicate, StructuredSearchDoneEvent,
     StructuredSearchErrorEvent, StructuredSearchEvent, StructuredSearchExpression,

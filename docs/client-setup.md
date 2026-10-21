@@ -93,3 +93,40 @@ and collect that human's current password when a mutation error's
 `is_reauthentication_required()` method returns `true`. Token login alone does not satisfy
 fresh authentication. The guide includes async and blocking flows that also
 work with older servers.
+
+## Rotating interactive sessions
+
+For a server implementing the versioned session API, opt in explicitly:
+
+```rust,ignore
+use hubuum_client::{Client, Credentials, SessionClientId};
+
+let client = Client::builder_from_url("https://hubuum.example")?.build()?
+    .login_session(Credentials::new("admin", password), SessionClientId::default())
+    .await?;
+let me = client.me().await?;
+```
+
+The blocking client exposes the same methods without `.await`. Clones share
+credentials and serialize refresh. Every ordinary, raw, and streaming request
+refreshes before the access deadline; the fixed absolute deadline never slides.
+A failed or cancelled single-use exchange clears the usable pair, including
+across clones, and returns `ApiError::SessionExpired` on later requests. Sign in
+again rather than retrying an old refresh token. No password is retained, and
+no credentials are persisted automatically. External persistence requires an
+explicit secure-storage design; this API exposes no refresh-secret exporter.
+
+`session_info()` returns non-secret metadata. `token()` now returns a redacted,
+owned `Result<Token, ApiError>` snapshot because rotation cannot safely expose a
+stable borrowed token. Use `client.token()?.as_str()` only where raw access is
+necessary, and do not cache that snapshot across refresh. `token_expires_at()`
+returns an owned timestamp. During refresh the synchronous snapshot accessor
+can return `SessionExpired`; normal API calls wait for the coordinated result.
+
+Legacy `login()` remains the single-token flow for the declared v0.0.19 target.
+Explicit `authenticate(Token::new(...))` remains appropriate for PATs and service
+credentials. Session login requires the newer `/api/v1/auth` server contract;
+there is no silent password-based fallback or automatic downgrade. Logout of a
+session revokes its family, and logout-all preserves independent PATs according
+to the new server contract. Credential creation still uses fresh password
+approval through `credential_approvals()`.
