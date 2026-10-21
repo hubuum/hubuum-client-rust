@@ -9,6 +9,10 @@ use reqwest::{Method, StatusCode};
 use rstest::rstest;
 use serde_json::{Value, json};
 
+fn fixture_password() -> String {
+    format!("fixture-{:032x}", fastrand::u128(..))
+}
+
 fn pair() -> Value {
     let now = Utc::now();
     json!({
@@ -35,9 +39,10 @@ fn push(transport: &MockTransport, status: StatusCode, body: Value) {
 macro_rules! scenario {
     ($client:ident, $transport:ident, $finish:ident, $pause:ident, $case:expr) => {{
         let mut initial = pair();
+        let password = fixture_password();
         if $case == "expired" { initial["refresh_expires_at"] = initial["access_expires_at"].clone(); }
         push(&$transport, StatusCode::OK, initial.clone());
-        let client = $finish!($client.login_session(Credentials::new("admin", "password-secret"), SessionClientId::default())).unwrap();
+        let client = $finish!($client.login_session(Credentials::new("admin", password.clone()), SessionClientId::default())).unwrap();
         let clone = client.clone();
         assert!(!format!("{client:?}").contains("first-refresh"));
         assert_eq!(client.session_info().unwrap().id(), initial["session_id"]);
@@ -82,7 +87,7 @@ macro_rules! scenario {
         for request in requests {
             let debug = format!("{request:?}");
             assert!(!debug.contains("first-refresh"));
-            assert!(!debug.contains("password-secret"));
+            assert!(!debug.contains(&password));
         }
     }};
 }
@@ -179,7 +184,7 @@ async fn concurrent_async_clones_rotate_once() {
         .build()
         .unwrap()
         .login_session(
-            Credentials::new("admin", "password"),
+            Credentials::new("admin", fixture_password()),
             SessionClientId::default(),
         )
         .await
@@ -213,7 +218,7 @@ fn concurrent_blocking_clones_rotate_once() {
         .build()
         .unwrap()
         .login_session(
-            Credentials::new("admin", "password"),
+            Credentials::new("admin", fixture_password()),
             SessionClientId::default(),
         )
         .unwrap();
@@ -276,7 +281,7 @@ async fn cancellation_never_reuses_the_refresh_credential() {
         .build()
         .unwrap()
         .login_session(
-            Credentials::new("admin", "password"),
+            Credentials::new("admin", fixture_password()),
             SessionClientId::default(),
         )
         .await
@@ -407,11 +412,13 @@ fn blocking_pat_authentication_falls_back_only_when_the_legacy_route_is_absent(
 #[case::blocking(false)]
 #[tokio::test]
 async fn session_login_errors_discard_reflected_secrets(#[case] asynchronous: bool) {
+    let password = fixture_password();
+    let expected_secret = password.clone();
     let transport = Arc::new(MockTransport::default());
     push(
         &transport,
         StatusCode::UNAUTHORIZED,
-        json!({"message":"password-secret", "refresh_token":"refresh-secret"}),
+        json!({"message":password, "refresh_token":"refresh-secret"}),
     );
     let error = if asynchronous {
         Client::builder(BaseUrl::new("https://hubuum.test").unwrap())
@@ -419,7 +426,7 @@ async fn session_login_errors_discard_reflected_secrets(#[case] asynchronous: bo
             .build()
             .unwrap()
             .login_session(
-                Credentials::new("admin", "password-secret"),
+                Credentials::new("admin", password),
                 SessionClientId::default(),
             )
             .await
@@ -431,7 +438,7 @@ async fn session_login_errors_discard_reflected_secrets(#[case] asynchronous: bo
                 .build()
                 .unwrap()
                 .login_session(
-                    Credentials::new("admin", "password-secret"),
+                    Credentials::new("admin", password),
                     SessionClientId::default(),
                 )
                 .unwrap_err()
@@ -441,5 +448,5 @@ async fn session_login_errors_discard_reflected_secrets(#[case] asynchronous: bo
     };
     assert!(error.is_status(StatusCode::UNAUTHORIZED));
     assert_eq!(error.response_body(), Some(""));
-    assert!(!error.api_message().unwrap().contains("password-secret"));
+    assert!(!error.api_message().unwrap().contains(&expected_secret));
 }
