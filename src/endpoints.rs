@@ -24,6 +24,7 @@ pub enum Endpoint {
     MetaDb,
     MetaTasks,
     ClientConfig,
+    SearchHydration,
     AdminConfig,
     AdminQueryObservations,
     Backups,
@@ -202,6 +203,7 @@ impl Endpoint {
             Endpoint::MetaDb => "/api/v0/meta/db",
             Endpoint::MetaTasks => "/api/v0/meta/tasks",
             Endpoint::ClientConfig => "/api/v1/config",
+            Endpoint::SearchHydration => "/api/v1/search/hydrate",
             Endpoint::AdminQueryObservations => "/api/v1/admin/query-observations",
             Endpoint::AdminConfig => "/api/v1/admin/config",
             Endpoint::Backups => "/api/v1/backups",
@@ -499,7 +501,6 @@ mod test {
             "/api/v1/classes/{class_id}/{object_id}/history/timeline",
             "/api/v1/classes/{class_id}/{object_id}/relations/history",
             "/api/v1/classes/{class_id}/{object_id}/relations/history/as-of",
-            "/api/v1/search/hydrate",
         ]
         .into_iter()
         .collect();

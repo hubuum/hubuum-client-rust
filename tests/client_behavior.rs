@@ -8161,5 +8161,6 @@ mod client_behavior {
     mod notifications;
     mod query_usage;
     mod relation_labels;
+    mod search_hydration;
     mod sessions;
 }

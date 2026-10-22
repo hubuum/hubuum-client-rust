@@ -147,6 +147,28 @@ now reconciles 115 Rust model mappings. Semver checking against `74349ba` passed
 all 202 applicable checks; no dependency, MSRV, or declared server-target change
 was needed.
 
+### Unreleased bounded search hydration
+
+On 2026-10-23, typed search hydration passed the canonical combined suite against
+the pinned v0.0.20 image above with credential approval enforcement: 103 library
+tests, 44 ordinary consumer cases, three native-resource phases, and all four
+restore/recovery pairs. Both modes verify root authorization, empty neighborhoods,
+bounded paths and truncation, intermediate objects, relation/path correspondence,
+and equivalent target selection by exact class name or typed ID.
+
+The full workspace suite passed 856 tests with `RUST_TEST_THREADS=1`, including
+compile-fail checks for incorrect resource IDs and unauthenticated calls.
+Formatting, strict Clippy, rustdoc, all five public feature combinations,
+Rust 1.88 across all targets/features, pinned OpenAPI comparison, and model
+reconciliation (118 mappings) passed. All 202 applicable API compatibility checks
+passed against `fd12c8a`. Dependencies, MSRV, and the declared server target are
+unchanged. Hydration is bounded independently of root-search pagination; callers
+must inspect `truncated` and preserve server authorization/concurrency errors.
+
+Local verification used a separate Cargo target directory and the existing
+Podman SELinux wrapper with a container-readable public provider fixture.
+The container setup and immutable server image were unchanged.
+
 ### Unreleased directional relation labels
 
 On 2026-10-23, typed relation labels passed the canonical combined suite against

@@ -23,6 +23,7 @@ mod remote;
 mod revision;
 mod schema;
 mod search;
+mod search_hydration;
 mod session;
 mod settings;
 mod structured_search;
@@ -214,3 +215,5 @@ pub enum Permissions {
     #[serde(other)]
     Unknown,
 }
+
+pub use search_hydration::{SearchHydrationPath, SearchHydrationRequest, SearchHydrationResponse};

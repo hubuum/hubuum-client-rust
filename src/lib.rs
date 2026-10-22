@@ -174,3 +174,5 @@ pub mod model {
     pub use crate::resources::*;
     pub use crate::types::*;
 }
+
+pub use types::{SearchHydrationPath, SearchHydrationRequest, SearchHydrationResponse};
