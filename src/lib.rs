@@ -176,3 +176,14 @@ pub mod model {
 }
 
 pub use types::{SearchHydrationPath, SearchHydrationRequest, SearchHydrationResponse};
+
+pub use types::{
+    HistoricalClassObjects, HistoricalComputationMode, HistoricalComputedField,
+    HistoricalComputedFieldResult, HistoricalComputedObjectSource,
+    HistoricalComputedUnavailableReason, HistoricalComputedValues, HistoricalEndpointContext,
+    HistoricalEndpointUnavailableReason, HistoricalPersonalFields, HistoricalPopulationCoverage,
+    HistoricalRelation, HistoricalRelationEndpoint, HistoricalRelationValue,
+    HistoricalRelationships, HistoricalSharedComputedFields, HistoryDirection, HistoryMarker,
+    HistoryPage, HistoryPageOptions, HistorySortField, HistoryTimelineOptions,
+    ObjectHistoryOptions, RelationHistoryOptions,
+};

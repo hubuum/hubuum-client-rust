@@ -75,6 +75,17 @@ pub enum Endpoint {
     ClassEvents,
     ClassHistory,
     ClassHistoryAsOf,
+    ClassHistoryEntry,
+    ClassHistoryTimeline,
+    ObjectHistoryByName,
+    ClassObjectsHistoryAsOf,
+    ClassRelationHistory,
+    ClassRelationHistoryAsOf,
+    ObjectComputedHistoryAsOf,
+    ObjectHistoryEntry,
+    ObjectHistoryTimeline,
+    ObjectRelationHistory,
+    ObjectRelationHistoryAsOf,
     ClassRelatedClasses,
     ClassRelatedRelations,
     ClassRelatedGraph,
@@ -277,6 +288,31 @@ impl Endpoint {
             Endpoint::ClassPermissions => "/api/v1/classes/{class_id}/permissions",
             Endpoint::ClassEvents => "/api/v1/classes/{class_id}/events",
             Endpoint::ClassHistory => "/api/v1/classes/{class_id}/history",
+            Endpoint::ClassHistoryEntry => {
+                "/api/v1/classes/{class_id}/history/entries/{history_id}"
+            }
+            Endpoint::ClassHistoryTimeline => "/api/v1/classes/{class_id}/history/timeline",
+            Endpoint::ObjectHistoryByName => "/api/v1/classes/{class_id}/objects/history",
+            Endpoint::ClassObjectsHistoryAsOf => "/api/v1/classes/{class_id}/objects/history/as-of",
+            Endpoint::ClassRelationHistory => "/api/v1/classes/{class_id}/relations/history",
+            Endpoint::ClassRelationHistoryAsOf => {
+                "/api/v1/classes/{class_id}/relations/history/as-of"
+            }
+            Endpoint::ObjectComputedHistoryAsOf => {
+                "/api/v1/classes/{class_id}/{object_id}/history/computed/as-of"
+            }
+            Endpoint::ObjectHistoryEntry => {
+                "/api/v1/classes/{class_id}/{object_id}/history/entries/{history_id}"
+            }
+            Endpoint::ObjectHistoryTimeline => {
+                "/api/v1/classes/{class_id}/{object_id}/history/timeline"
+            }
+            Endpoint::ObjectRelationHistory => {
+                "/api/v1/classes/{class_id}/{object_id}/relations/history"
+            }
+            Endpoint::ObjectRelationHistoryAsOf => {
+                "/api/v1/classes/{class_id}/{object_id}/relations/history/as-of"
+            }
             Endpoint::ClassHistoryAsOf => "/api/v1/classes/{class_id}/history/as-of",
             Endpoint::ClassRelatedClasses => "/api/v1/classes/{class_id}/related/classes",
             Endpoint::ClassRelatedRelations => "/api/v1/classes/{class_id}/related/relations",
@@ -476,8 +512,8 @@ mod test {
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();
 
-        // Legacy login remains available for older servers. New server surfaces
-        // without typed helpers are explicit raw() gaps, documented in known-gaps.md.
+        // Legacy login remains available for older servers. Every pinned route
+        // has a centralized endpoint and a typed client helper.
         let legacy_paths = [
             "/api/v0/auth/login",
             "/api/v0/auth/logout",
@@ -486,21 +522,6 @@ mod test {
             "/api/v0/auth/logout_all",
             "/api/v0/auth/providers",
             "/api/v0/auth/validate",
-        ]
-        .into_iter()
-        .collect();
-        let raw_paths = [
-            "/api/v1/classes/{class_id}/history/entries/{history_id}",
-            "/api/v1/classes/{class_id}/history/timeline",
-            "/api/v1/classes/{class_id}/objects/history",
-            "/api/v1/classes/{class_id}/objects/history/as-of",
-            "/api/v1/classes/{class_id}/relations/history",
-            "/api/v1/classes/{class_id}/relations/history/as-of",
-            "/api/v1/classes/{class_id}/{object_id}/history/computed/as-of",
-            "/api/v1/classes/{class_id}/{object_id}/history/entries/{history_id}",
-            "/api/v1/classes/{class_id}/{object_id}/history/timeline",
-            "/api/v1/classes/{class_id}/{object_id}/relations/history",
-            "/api/v1/classes/{class_id}/{object_id}/relations/history/as-of",
         ]
         .into_iter()
         .collect();
@@ -516,7 +537,7 @@ mod test {
                 .difference(&client_paths)
                 .copied()
                 .collect::<std::collections::BTreeSet<_>>(),
-            raw_paths
+            std::collections::BTreeSet::new()
         );
         assert_eq!(contract["operation_count"], 257);
     }

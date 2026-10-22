@@ -5,9 +5,9 @@ a server release when its pinned OpenAPI contract comes from that server tag and
 the complete Docker-backed library and consumer integration suites pass against
 an immutable image for the same release.
 
-Dedicated typed helpers do not necessarily exist for every server operation.
-Authenticated relative routes remain available through `raw()` while typed
-coverage evolves.
+The unreleased client provides typed helpers for every route in the pinned
+v0.0.20 contract. Authenticated relative routes remain available through `raw()`
+as an extension point for additional operations.
 
 ## Compatibility history
 

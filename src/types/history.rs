@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -75,7 +77,7 @@ impl From<FullCollectionHistory> for CollectionHistory {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct ClassHistory {
     pub id: ClassId,
     pub name: String,
@@ -91,7 +93,7 @@ pub struct ClassHistory {
     pub history: HistoryMetadata,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct ObjectHistory {
     pub id: ObjectId,
     pub name: String,
@@ -161,8 +163,8 @@ pub struct RemoteTargetHistory {
     pub history: HistoryMetadata,
 }
 
-impl std::fmt::Debug for RemoteTargetHistory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for RemoteTargetHistory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RemoteTargetHistory")
             .field("id", &self.id)
             .field("collection_id", &self.collection_id)
@@ -188,6 +190,26 @@ impl std::fmt::Debug for RemoteTargetHistory {
             .field("revision", &self.revision)
             .field("history", &self.history)
             .finish()
+    }
+}
+
+impl fmt::Debug for ClassHistory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClassHistory")
+            .field("id", &self.id)
+            .field("revision", &self.revision)
+            .field("history_id", &self.history.history_id)
+            .finish_non_exhaustive()
+    }
+}
+
+impl fmt::Debug for ObjectHistory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ObjectHistory")
+            .field("id", &self.id)
+            .field("revision", &self.revision)
+            .field("history_id", &self.history.history_id)
+            .finish_non_exhaustive()
     }
 }
 

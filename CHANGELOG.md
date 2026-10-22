@@ -8,6 +8,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Typed coverage for all eleven remaining Hubuum v0.0.20 history routes in async
+  and blocking clients: class/object timelines and entry lookup, exact-name
+  history across identities, historical class populations, direct relationship
+  history and as-of views, and historical computed values. Validated options
+  preserve cursor metadata, retained-history coverage, and explicit unavailability.
+
 - Typed bounded search hydration in both client modes, with validated roots,
   target class selectors, depth/path limits, typed paths, and truncation metadata.
 
@@ -26,6 +32,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Session lifetime and retention settings in public and administrator configuration,
   plus administrator credential-activity settings. These fields are optional so
   older server responses preserve unavailable values as `None`.
+
+### Fixed
+
+- Redact pagination cursors and class/object history snapshot contents from
+  `Debug` output.
 
 ## [0.16.0] - 2026-10-22
 
