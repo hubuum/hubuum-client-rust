@@ -806,6 +806,24 @@
       "rust_file": "src/types/credential_activity.rs",
       "rust_type": "CredentialSourceResponse",
       "direction": "response"
+    },
+    {
+      "openapi_schema": "SearchHydrationRequest",
+      "rust_file": "src/types/search_hydration.rs",
+      "rust_type": "SearchHydrationRequest",
+      "direction": "request"
+    },
+    {
+      "openapi_schema": "SearchHydrationPath",
+      "rust_file": "src/types/search_hydration.rs",
+      "rust_type": "SearchHydrationPath",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SearchHydrationResponse",
+      "rust_file": "src/types/search_hydration.rs",
+      "rust_type": "SearchHydrationResponse",
+      "direction": "response"
     }
   ]
 }

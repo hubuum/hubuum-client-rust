@@ -453,6 +453,7 @@ mod parity_contract {
                 &$module::Client<Authenticated>,
                 crate::StructuredSearchRequest,
             ) -> $module::StructuredSearchOp = $module::Client::<Authenticated>::structured_search;
+            let _ = $module::Client::<Authenticated>::hydrate_search;
             let _ = $module::StructuredSearchOp::send;
             let _ = $module::StructuredSearchOp::stream;
             let _ = $module::StructuredSearchOp::collect_stream;

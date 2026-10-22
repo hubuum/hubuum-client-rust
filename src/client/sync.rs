@@ -12,6 +12,7 @@ use crate::types::{StructuredSearchEvent, StructuredSearchRequest, StructuredSea
 use crate::{ClassRelationId, ObjectRelationId};
 use crate::{CollectionEventSink, EventSinkId};
 use crate::{CredentialActivityPageOptions, CredentialActivityResponse, TokenId};
+use crate::{SearchHydrationRequest, SearchHydrationResponse};
 use log::{debug, trace};
 use reqwest::blocking::Response;
 use secrecy::SecretString;
@@ -2187,6 +2188,26 @@ impl Client<Authenticated> {
     }
 
     /// Execute version 1 structured POST search with typed results or SSE events.
+    /// Expand a root object's visible neighborhood without changing search results.
+    /// The server can reject traversal work or report concurrent changes; no cursor is returned.
+    pub fn hydrate_search(
+        &self,
+        request: SearchHydrationRequest,
+    ) -> Result<SearchHydrationResponse, ApiError> {
+        self.request_with_endpoint::<SearchHydrationRequest, SearchHydrationResponse>(
+            reqwest::Method::POST,
+            &Endpoint::SearchHydration,
+            UrlParams::default(),
+            vec![],
+            request,
+        )
+        .and_then(|value| {
+            value.ok_or_else(|| {
+                ApiError::EmptyResult("Search hydration returned empty result".into())
+            })
+        })
+    }
+
     pub fn structured_search(&self, request: StructuredSearchRequest) -> StructuredSearchOp {
         StructuredSearchOp {
             client: self.clone(),

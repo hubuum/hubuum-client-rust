@@ -109,7 +109,7 @@ and session-aware logout. Legacy single-token login is only for older servers.
 
 The following newer surfaces intentionally use authenticated `raw()` requests:
 history timeline and entry lookup, relationship and computed-field historical
-views, exact-name history across object identities, bounded search hydration,
+views, exact-name history across object identities,
 and observation-management mutations.
 Existing typed resource and administrative models retain their earlier projections:
 
@@ -131,3 +131,10 @@ Public and administrator authentication configuration expose session settings;
 administrator configuration also exposes credential-activity settings. These
 additions use `Option` to distinguish unavailable fields on older servers from
 actual configured values. See [credential activity usage](../docs/scoped-auth.md#credential-activity).
+
+Search hydration has typed `hydrate_search(SearchHydrationRequest)` methods in both
+client modes. Requests use typed root IDs and an exact class ID/name selector,
+depth 1–10, and a limit of 1–50 visible paths. Results preserve unique objects,
+relations, paths, and `truncated`; hydration does not paginate or change root
+search results. Intermediate objects can belong to other classes. Server
+authorization, traversal-bound errors, and concurrent-change errors are preserved.

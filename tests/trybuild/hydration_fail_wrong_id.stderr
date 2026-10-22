@@ -1,0 +1,18 @@
+error[E0308]: arguments to this function are incorrect
+ --> tests/trybuild/hydration_fail_wrong_id.rs:3:13
+  |
+3 |     let _ = SearchHydrationRequest::new(ObjectId::new(1), ClassId::new(2), StructuredClassSelector::Id { id: ClassId::new(3) }, 1, 10);
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ ----------------  --------------- expected `ObjectId`, found `ClassId`
+  |                                         |
+  |                                         expected `ClassId`, found `ObjectId`
+  |
+note: associated function defined here
+ --> src/types/search_hydration.rs
+  |
+  |     pub fn new(
+  |            ^^^
+help: swap these arguments
+  |
+3 -     let _ = SearchHydrationRequest::new(ObjectId::new(1), ClassId::new(2), StructuredClassSelector::Id { id: ClassId::new(3) }, 1, 10);
+3 +     let _ = SearchHydrationRequest::new(ClassId::new(2), ObjectId::new(1), StructuredClassSelector::Id { id: ClassId::new(3) }, 1, 10);
+  |
