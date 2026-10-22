@@ -190,6 +190,9 @@ pub enum ApiError {
     #[error("Invalid object aggregate JSON path: {reason}")]
     InvalidObjectAggregateJsonPath { reason: &'static str },
 
+    #[error("Relation labels require 1–128 characters, no controls, and no surrounding whitespace")]
+    InvalidRelationLabel,
+
     #[error("Object relation limit must be positive, got {value}")]
     InvalidObjectRelationLimit { value: i32 },
 
@@ -375,6 +378,7 @@ impl std::fmt::Debug for ApiError {
                 .debug_struct("InvalidObjectAggregateJsonPath")
                 .field("reason", reason)
                 .finish(),
+            Self::InvalidRelationLabel => f.write_str("InvalidRelationLabel"),
             Self::InvalidObjectRelationLimit { value } => f
                 .debug_struct("InvalidObjectRelationLimit")
                 .field("value", value)

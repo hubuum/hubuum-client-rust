@@ -13,7 +13,7 @@ use crate::client::sync::{
     GraphRequest as SyncGraphRequest, Handle as SyncHandle, QueryOp as SyncQueryOp, one_or_err,
 };
 use crate::{
-    ApiError, CollectionId, GroupPermissionsResult, Object, ObjectRelationLimit,
+    ApiError, CollectionId, GroupPermissionsResult, Object, ObjectRelationLimit, RelationLabel,
     endpoints::Endpoint,
     types::{HubuumDateTime, ResourceRevision},
 };
@@ -22,9 +22,13 @@ use crate::{FilterOperator, QueryFilter};
 
 use super::Collection;
 
-/// Optional aliases and per-side cardinality limits for a class relation.
+/// Optional directional labels, aliases, and per-side cardinality limits for a class relation.
 #[derive(Default, Debug, Clone, serde::Serialize, PartialEq, Eq)]
 pub struct ClassRelationCreateOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    forward_label: Option<RelationLabel>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reverse_label: Option<RelationLabel>,
     #[serde(skip_serializing_if = "Option::is_none")]
     forward_template_alias: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -36,6 +40,25 @@ pub struct ClassRelationCreateOptions {
 }
 
 impl ClassRelationCreateOptions {
+    /// Wording from the source class to the target class.
+    pub fn with_forward_label(mut self, label: RelationLabel) -> Self {
+        self.forward_label = Some(label);
+        self
+    }
+
+    /// Wording from the target class to the source class.
+    pub fn with_reverse_label(mut self, label: RelationLabel) -> Self {
+        self.reverse_label = Some(label);
+        self
+    }
+
+    pub fn forward_label(&self) -> Option<&RelationLabel> {
+        self.forward_label.as_ref()
+    }
+    pub fn reverse_label(&self) -> Option<&RelationLabel> {
+        self.reverse_label.as_ref()
+    }
+
     pub fn with_forward_template_alias(mut self, alias: impl Into<String>) -> Self {
         self.forward_template_alias = Some(alias.into());
         self

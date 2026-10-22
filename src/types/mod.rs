@@ -124,7 +124,7 @@ pub use query_usage::{
     QueryUsageResource, QueryUsageResourceOwnership, QueryUsageResponse, QueryUsageSuggestion,
     QueryUsageValueType,
 };
-pub use relation::ObjectRelationLimit;
+pub use relation::{ObjectRelationLimit, RelationLabel};
 pub use remote::{
     NewRemoteTarget, RemoteAuthConfig, RemoteCallResult, RemoteHttpMethod, RemoteInvocationSubject,
     RemoteTarget, RemoteTargetGet, RemoteTargetInvokeRequest, RemoteTargetSubjectType,

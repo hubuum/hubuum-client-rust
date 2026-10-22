@@ -147,6 +147,29 @@ now reconciles 115 Rust model mappings. Semver checking against `74349ba` passed
 all 202 applicable checks; no dependency, MSRV, or declared server-target change
 was needed.
 
+### Unreleased directional relation labels
+
+On 2026-10-23, typed relation labels passed the canonical combined suite against
+the pinned v0.0.20 image above with credential approval enforcement: 101 library
+tests, 43 ordinary consumer cases, three native-resource phases, and all four
+restore/recovery pairs. Both modes verify label creation and reads, including
+server normalization that swaps labels when it sorts the supplied class IDs.
+
+The full workspace suite passed 844 tests with `RUST_TEST_THREADS=1`. Formatting,
+strict Clippy, rustdoc, all five public feature combinations, Rust 1.88 across
+all targets/features, pinned OpenAPI comparison, and model reconciliation
+(116 mappings) passed. All 202 applicable API compatibility checks passed against
+`fd12c8a`. `ClassRelationPost` literals retain their existing fields; labeled
+creation uses the class handle's typed options. Dependencies, MSRV, and the server
+target are unchanged.
+
+Local verification used an isolated Cargo target directory after shared worktree
+artifacts caused an initial MSRV check to resolve another branch's library.
+The fresh complete integration run used the disposable Podman SELinux wrapper
+and a container-readable copy of the public provider fixture; an earlier stack
+could not read that temporary checkout's fixture. Repository fixture contents
+and server/container configuration were unchanged.
+
 ### Unreleased query-observation management
 
 On 2026-10-22, typed observation reads and enable/disable updates passed the

@@ -8,6 +8,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Added
 
+- Validated directional relation labels through `RelationLabel`, class-relation
+  responses, and class-handle creation options in both client modes. Labels
+  preserve the server's stored direction independently of template aliases.
+
 - Typed administrator query-observation reads and enable/disable updates in both
   client modes, including the effective shared `runtime_override`.
 
