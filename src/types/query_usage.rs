@@ -249,6 +249,10 @@ pub struct QueryUsageResponse {
 #[non_exhaustive]
 pub struct QueryObservationSettings {
     pub enabled: bool,
+    /// Shared administrator override, when returned by a configuration endpoint.
+    /// Absent for analysis snapshots and servers without runtime control.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_override: Option<bool>,
     pub sample_every: u32,
     pub max_patterns: usize,
     pub max_patterns_per_class: usize,
@@ -260,6 +264,7 @@ impl Default for QueryObservationSettings {
     fn default() -> Self {
         Self {
             enabled: false,
+            runtime_override: None,
             sample_every: 16,
             max_patterns: 2048,
             max_patterns_per_class: 64,
@@ -271,6 +276,14 @@ impl Default for QueryObservationSettings {
 
 /// Effective observation settings returned by `admin_config()`.
 pub type QueryObservationConfig = QueryObservationSettings;
+
+/// Enable or disable observation collection across server replicas.
+/// Other replicas reconcile the committed override asynchronously.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct QueryObservationUpdateRequest {
+    pub enabled: bool,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]

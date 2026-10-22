@@ -224,6 +224,8 @@ mod parity_contract {
                 $module::Client::<Authenticated>::class_schema;
             let _: fn(&$module::Client<Authenticated>, ClassId) -> $module::ClassQueryUsage =
                 $module::Client::<Authenticated>::class_query_usage;
+            let _ = $module::Client::<Authenticated>::query_observations;
+            let _ = $module::Client::<Authenticated>::set_query_observations;
             let _ = $module::ClassQueryUsage::class_id;
             let _ = $module::ClassQueryUsage::list;
             let _ = $module::ClassQueryUsage::create;
