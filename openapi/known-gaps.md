@@ -113,8 +113,6 @@ views, exact-name history across object identities, bounded search hydration,
 and observation-management mutations.
 Existing typed resource and administrative models retain their earlier projections:
 
-- Class-relation read/create models do not expose `forward_label` or
-  `reverse_label`; use raw JSON to preserve or set directional labels.
 - Query-observation configuration models omit `runtime_override`; use raw
   administrator configuration to inspect the effective override.
 
@@ -131,3 +129,11 @@ Public and administrator authentication configuration expose session settings;
 administrator configuration also exposes credential-activity settings. These
 additions use `Option` to distinguish unavailable fields on older servers from
 actual configured values. See [credential activity usage](../docs/scoped-auth.md#credential-activity).
+
+Class-relation responses preserve `forward_label` and `reverse_label` as validated
+`RelationLabel` values. Create labeled relations with a class handle's
+`create_relation_with_options` and `ClassRelationCreateOptions::with_forward_label`
+or `with_reverse_label`. Labels describe the supplied source/target direction;
+the server sorts class IDs and swaps labels when necessary. Existing
+`ClassRelationPost` literals remain compatible; use the handle options for labels.
+Labels require 1–128 Unicode characters, no controls, and no surrounding whitespace.

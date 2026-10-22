@@ -651,6 +651,8 @@ impl crate::resources::ResourceId for ClassRelationId {
 #[derive(Default, Debug, serde :: Serialize, serde :: Deserialize, Clone, PartialEq)]
 #[non_exhaustive]
 pub struct ClassRelation {
+    pub forward_label: Option<RelationLabel>,
+    pub reverse_label: Option<RelationLabel>,
     pub id: ClassRelationId,
     pub from_hubuum_class_id: ClassId,
     pub to_hubuum_class_id: ClassId,
