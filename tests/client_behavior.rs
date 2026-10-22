@@ -8162,5 +8162,6 @@ mod client_behavior {
     mod query_usage;
     mod relation_labels;
     mod search_hydration;
+    mod session_storage;
     mod sessions;
 }

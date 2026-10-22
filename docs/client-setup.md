@@ -113,8 +113,28 @@ refreshes before the access deadline; the fixed absolute deadline never slides.
 A failed or cancelled single-use exchange clears the usable pair, including
 across clones, and returns `ApiError::SessionExpired` on later requests. Sign in
 again rather than retrying an old refresh token. No password is retained, and
-no credentials are persisted automatically. External persistence requires an
-explicit secure-storage design; this API exposes no refresh-secret exporter.
+`login_session` keeps credentials only in memory. For persistence, explicitly
+supply an application-owned `SessionStore` to `login_session_with_store`, then use
+`resume_session` on subsequent starts. Both methods are available in async and
+blocking modes. `resume_session` validates the access token and refreshes it when
+needed; an empty or expired store returns `None`.
+
+The store must isolate identities, protect serialized `StoredSession` values as
+secrets, and provide an exclusive cross-process `SessionStoreGuard`. Its `save`
+operation must atomically and durably replace the current value. The SDK binds
+snapshots to the API base URL and client ID; the application must additionally
+separate usernames and identity providers. Async clients acquire the store lock
+on a blocking worker so a contended filesystem lock cannot block the runtime.
+Guard reads and writes are synchronous and should be brief.
+
+Every authenticated request reloads the latest stored state under that lock.
+Before refresh, the SDK durably removes the old credential; after successful
+exchange it durably saves the successor before using it. Crash, cancellation,
+refresh rejection, or an uncertain exchange leaves no reusable refresh secret
+and requires sign-in again. Logout clears the matching saved session. Transient
+validation errors preserve the cache; rejected credentials clear it. Store
+failures are returned to the caller and must not expose credential contents.
+Passwords are never included in snapshots, and `Debug` redacts all session data.
 
 `session_info()` returns non-secret metadata. `token()` now returns a redacted,
 owned `Result<Token, ApiError>` snapshot because rotation cannot safely expose a

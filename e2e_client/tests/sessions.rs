@@ -108,3 +108,79 @@ async fn async_session_rotates_and_logout_invalidates_clones() {
     client.logout().await.unwrap();
     assert!(clone.me().await.is_err());
 }
+
+mod persistence {
+    use hubuum_client::{ApiError, SessionStore, SessionStoreGuard, StoredSession};
+    use std::sync::Arc;
+    use tokio::sync::{Mutex, OwnedMutexGuard};
+
+    #[derive(Default)]
+    pub struct Store(Arc<Mutex<Option<Vec<u8>>>>);
+    impl std::fmt::Debug for Store {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Store").finish_non_exhaustive()
+        }
+    }
+    struct Guard(OwnedMutexGuard<Option<Vec<u8>>>);
+    impl SessionStore for Store {
+        fn lock(&self) -> Result<Box<dyn SessionStoreGuard>, ApiError> {
+            Ok(Box::new(Guard(self.0.clone().blocking_lock_owned())))
+        }
+    }
+    impl SessionStoreGuard for Guard {
+        fn load(&self) -> Result<Option<StoredSession>, ApiError> {
+            self.0
+                .as_ref()
+                .map(|bytes| serde_json::from_slice(bytes).map_err(ApiError::Json))
+                .transpose()
+        }
+        fn save(&mut self, session: Option<&StoredSession>) -> Result<(), ApiError> {
+            *self.0 = session
+                .map(serde_json::to_vec)
+                .transpose()
+                .map_err(ApiError::Json)?;
+            Ok(())
+        }
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires the pinned disposable server with session access lifetime set to 30 seconds"]
+async fn persisted_session_survives_client_recreation_and_access_expiry() {
+    use std::sync::Arc;
+    let (base, password) = integration_connection().unwrap();
+    let store = Arc::new(persistence::Store::default());
+    let client = Client::try_new(base.clone())
+        .unwrap()
+        .login_session_with_store(
+            Credentials::new("admin", password),
+            SessionClientId::new("persistent-e2e").unwrap(),
+            store.clone(),
+        )
+        .await
+        .unwrap();
+    let before = client.session_info().unwrap();
+    assert_eq!(client.me().await.unwrap().principal.name, "admin");
+    drop(client);
+    tokio::time::sleep(expiry_wait(&before)).await;
+    let restarted = Client::try_new(base.clone())
+        .unwrap()
+        .resume_session(
+            SessionClientId::new("persistent-e2e").unwrap(),
+            store.clone(),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(restarted.me().await.unwrap().principal.name, "admin");
+    assert_eq!(restarted.session_info().unwrap().id(), before.id());
+    restarted.logout().await.unwrap();
+    assert!(
+        Client::try_new(base)
+            .unwrap()
+            .resume_session(SessionClientId::new("persistent-e2e").unwrap(), store)
+            .await
+            .unwrap()
+            .is_none()
+    );
+}
