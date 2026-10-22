@@ -182,7 +182,7 @@ fn e2e_history_navigation_names_and_population(asynchronous: bool) {
                 )
             )
             .unwrap();
-            assert_eq!(timeline.items[0].history.op.to_lowercase(), "delete");
+            assert_eq!(timeline.items[0].history.op, "D");
             let deleted = $send!($client.object_history_entry(
                 class,
                 object,
@@ -370,7 +370,7 @@ fn e2e_relationship_history_retains_deleted_edges_and_endpoint_names(asynchronou
         ($client:ident,$send:ident) => {{
             let changes=$send!($client.class_relation_history(class,RelationHistoryOptions::default())).unwrap();
             assert!(changes.data.at.is_none());
-            assert!(changes.data.relations.iter().any(|v|v.history.op.to_lowercase()=="delete"));
+            assert!(changes.data.relations.iter().any(|v|v.history.op=="D"));
             let edges=$send!($client.class_relations_as_of(class,at.clone(),RelationHistoryOptions::default())).unwrap();
             assert_eq!(edges.data.relations.len(),1);
             let edge=&edges.data.relations[0];
@@ -378,9 +378,9 @@ fn e2e_relationship_history_retains_deleted_edges_and_endpoint_names(asynchronou
             assert!(matches!(&edge.to,HistoricalEndpointContext::Available {snapshot} if snapshot.name==peer.name));
             let changes=$send!($client.object_relation_history(class,object,RelationHistoryOptions::default().page(HistoryPageOptions::default().limit(1).unwrap().include_total(true)))).unwrap();
             assert_eq!(changes.total_count,Some(2));
-            assert_eq!(changes.data.relations[0].history.op.to_lowercase(),"delete");
+            assert_eq!(changes.data.relations[0].history.op,"D");
             let next=$send!($client.object_relation_history(class,object,RelationHistoryOptions::default().page(HistoryPageOptions::default().limit(1).unwrap().include_total(true).cursor(changes.next_cursor.unwrap())))).unwrap();
-            assert_eq!(next.data.relations[0].history.op.to_lowercase(),"insert");
+            assert_eq!(next.data.relations[0].history.op,"I");
             assert!(next.next_cursor.is_none());
             let edges=$send!($client.object_relations_as_of(class,object,at.clone(),RelationHistoryOptions::default())).unwrap();
             assert_eq!(edges.data.relations.len(),1);

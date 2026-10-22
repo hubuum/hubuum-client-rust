@@ -8224,7 +8224,7 @@ mod typed_history {
             "class_timeline" | "object_timeline" => json!([{
                 "id":if case == "class_timeline" {42} else {99}, "collection_id":7,
                 "hubuum_class_id":if case == "class_timeline" {Value::Null} else {json!(42)},
-                "name":"private-name","revision":2,"history_id":9001,"op":"DELETE",
+                "name":"private-name","revision":2,"history_id":9001,"op":"D",
                 "valid_from":AT,"valid_to":null
             }]),
             "class_entry" => class(),
@@ -8391,7 +8391,7 @@ mod typed_history {
         };
         match case {
             "class_timeline" | "object_timeline" => {
-                assert_eq!(value[0]["op"], "DELETE");
+                assert_eq!(value[0]["op"], "D");
                 assert_eq!(value[0]["history_id"], 9001);
             }
             "class_entry" | "object_entry" => assert_eq!(value["history_id"], 9001),

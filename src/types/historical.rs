@@ -531,13 +531,13 @@ mod tests {
         } else {
             json!({"id":12,"from_hubuum_object_id":4,"to_hubuum_object_id":5,"class_relation_id":11,"revision":3,"created_at":at,"updated_at":at})
         };
-        let wire = json!({"kind":kind,"relation":relation,"history_id":123,"revision":3,"op":"DELETE",
+        let wire = json!({"kind":kind,"relation":relation,"history_id":123,"revision":3,"op":"D",
             "valid_from":at,"valid_to":null,"context_at":at,
             "from":{"status":"available","snapshot":{"id":1,"hubuum_class_id":null,"collection_id":2,"name":"private-name","history_id":122,"revision":2,"valid_from":at,"valid_to":null}},
             "to":{"status":"unavailable","reason":"history_unavailable"}});
         let result: HistoricalRelation = serde_json::from_value(wire).unwrap();
         assert_eq!(result.history.history_id, 123);
-        assert_eq!(result.history.op, "DELETE");
+        assert_eq!(result.history.op, "D");
         assert!(matches!(
             result.to,
             HistoricalEndpointContext::Unavailable {
