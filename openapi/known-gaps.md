@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.19 OpenAPI gaps
+# Known Hubuum server v0.0.20 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.19
+The pinned client contract records these limitations in the server v0.0.20
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not
@@ -56,7 +56,7 @@ Rust wire models:
 
 ## Credential approval coverage
 
-The pinned v0.0.19 contract includes both approval endpoints and the approval
+The pinned v0.0.20 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return `reauthentication_required`; applications
@@ -93,7 +93,7 @@ and test-delivery decoding.
 
 ## Collection integrations
 
-The pinned v0.0.19 snapshot includes all eight collection destination and
+The pinned v0.0.20 snapshot includes all eight collection destination and
 administrator grant operations. Both client modes provide typed helpers, and
 `CollectionEventSink` preserves safe metadata while omitting configuration,
 URLs, and credentials. The canonical live suite requires delegated collection
@@ -101,9 +101,25 @@ setup in both modes and exercises global sink use through an explicit collection
 grant. These APIs require `ManageEventSubscription` and `ReadAudit`; grants do
 not inherit to child collections.
 
-## Optional session extension
+## v0.0.20 coverage
 
-`SessionLogin`, `SessionRefresh`, `SessionProviders`, and the `SessionLogout*`
-endpoints describe the versioned rotating-session API from hubuum/hubuum#178.
-These opt-in operations are outside the pinned v0.0.19 snapshot and are tested
-separately against the candidate server. The baseline snapshot is unchanged.
+The pinned 257-operation contract includes the versioned session API. Both
+client modes provide `login_session`, `session_providers`, automatic refresh,
+and session-aware logout. Legacy single-token login is only for older servers.
+
+The following newer surfaces intentionally use authenticated `raw()` requests:
+history timeline and entry lookup, relationship and computed-field historical
+views, exact-name history across object identities, bounded search hydration,
+credential-activity administration, and observation-management mutations.
+Existing typed resource and administrative models retain their earlier projections:
+
+- Class-relation read/create models do not expose `forward_label` or
+  `reverse_label`; use raw JSON to preserve or set directional labels.
+- `AuthenticationConfig` does not expose the session lifetime/retention or
+  credential-activity configuration fields. Read the raw administrator config
+  when those settings are needed.
+- Query-observation configuration models omit `runtime_override`; use raw
+  administrator configuration to inspect the effective override.
+
+`openapi/model-contract.json` records these field-level exceptions explicitly.
+Backup format 10 is recognized without discarding the extensible backup payload.

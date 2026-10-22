@@ -31,6 +31,7 @@ enum SyncMutationCase {
 
 fn assert_auth_token_revoked(err: ApiError) {
     match err {
+        ApiError::SessionExpired => {}
         ApiError::HttpWithBody { status, .. }
             if status == reqwest::StatusCode::UNAUTHORIZED
                 || status == reqwest::StatusCode::FORBIDDEN => {}
@@ -147,7 +148,7 @@ fn sync_external_provider_login_materializes_groups_and_supports_settings() {
         .expect("failed to construct unauthenticated sync client");
 
     let providers = client
-        .auth_providers()
+        .session_providers()
         .expect("sync auth provider discovery failed");
     assert_eq!(
         providers.iter().collect::<Vec<_>>(),
@@ -155,12 +156,18 @@ fn sync_external_provider_login_materializes_groups_and_supports_settings() {
     );
 
     let err = client
-        .login(Credentials::scoped("planet-express", "fry", "wrong"))
+        .login_session(
+            Credentials::scoped("planet-express", "fry", "wrong"),
+            Default::default(),
+        )
         .expect_err("LDAP login should reject an invalid password");
     assert_auth_token_revoked(err);
 
     let external = client
-        .login(Credentials::scoped("planet-express", "fry", "fry"))
+        .login_session(
+            Credentials::scoped("planet-express", "fry", "fry"),
+            Default::default(),
+        )
         .expect("LDAP login for fry failed");
     let me = external.me().expect("external user me lookup failed");
     assert_eq!(me.principal.identity_scope, "planet-express");
@@ -239,11 +246,10 @@ fn sync_scoped_identity_and_principal_settings_roundtrip() {
         .expect("stack base URL should parse as BaseUrl");
     let client = blocking::Client::try_new(base_url)
         .expect("failed to construct sync client")
-        .login(Credentials::scoped(
-            LOCAL_IDENTITY_SCOPE,
-            ADMIN_USERNAME,
-            &stack.admin_password,
-        ))
+        .login_session(
+            Credentials::scoped(LOCAL_IDENTITY_SCOPE, ADMIN_USERNAME, &stack.admin_password),
+            Default::default(),
+        )
         .expect("explicit local-scope login failed");
 
     let admin = client

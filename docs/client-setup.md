@@ -13,7 +13,7 @@ use hubuum_client::{Client, Credentials, Token};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::from_url("https://server.example.com:443")?;
     let client = client
-        .login(Credentials::new("foo", "secret"))
+        .login_session(Credentials::new("foo", "secret"), Default::default())
         .await?;
 
     // Token login is also supported:
@@ -30,7 +30,7 @@ use hubuum_client::{blocking, Credentials, Token};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = blocking::Client::from_url("https://server.example.com:443")?;
-    let client = client.login(Credentials::new("foo", "secret"))?;
+    let client = client.login_session(Credentials::new("foo", "secret"), Default::default())?;
 
     // Token login is also supported:
     // let client = client.login_with_token(Token::new("my-token"))?;
@@ -123,9 +123,10 @@ necessary, and do not cache that snapshot across refresh. `token_expires_at()`
 returns an owned timestamp. During refresh the synchronous snapshot accessor
 can return `SessionExpired`; normal API calls wait for the coordinated result.
 
-Legacy `login()` remains the single-token flow for the declared v0.0.19 target.
+Legacy `login()` remains available only for older servers. The declared
+v0.0.20 target requires `login_session()` for interactive password login.
 Explicit `authenticate(Token::new(...))` remains appropriate for PATs and service
-credentials. Session login requires the newer `/api/v1/auth` server contract;
+credentials. Session login uses the supported `/api/v1/auth` server contract;
 there is no silent password-based fallback or automatic downgrade. Logout of a
 session revokes its family, and logout-all preserves independent PATs according
 to the new server contract. Credential creation still uses fresh password

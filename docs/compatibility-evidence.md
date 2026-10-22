@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.16.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | 99 library tests, 40 consumer cases including two real rotation tests and four historical version gates, three native-resource phases, and four full restore/recovery pairs passed with approval enforcement on 2026-10-22; 257 operations and 111 model mappings. |
 | 0.15.1 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | Tracing release reverified on 2026-10-19: 99 library tests, 38 ordinary consumer cases, three native-resource phases, and four full restore/recovery pairs; unchanged 240-operation contract and 111 model mappings. |
 | 0.15.0 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | 240-operation contract and 111 wire-model mappings. Canonical run passed with approval enforcement: 99 library tests, 38 ordinary consumer cases (four legacy cases gated by server version), three native-resource phases, and four full restore/recovery pairs (2026-10-19). |
 | 0.14.1 | 0.0.18 | `ghcr.io/hubuum/hubuum-server@sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4` | Declared target; 235-operation contract and 88 wire-model mappings. Canonical released-image run passed with approval enforcement: 93 library tests, 35 consumer tests including delegated setup in both modes, four full restores, and four recovery runs (2026-10-06). |
@@ -84,6 +85,42 @@ Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
+
+## v0.0.20 target
+
+Client 0.16.0 targets the immutable v0.0.20 image recorded above. Both Linux
+architectures identify server commit `3bede6e5b815585f3ac5372cc829734b2ae14a68`.
+The upstream OpenAPI document has SHA-256
+`7ad82a5d64f7c01966eb34b9b82009955c2d5d246206190d2210c6bdf03e8dbb`; its 257
+operations across 177 paths match the normalized snapshot. All 111 wire-model
+mappings reconcile, with explicit projections recorded in
+[known typed API gaps](../openapi/known-gaps.md#v0020-coverage).
+
+On 2026-10-22, the canonical combined suite passed against the released Linux
+AMD64 image with `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`: 99 library
+tests and 40 consumer cases, including two real rotation/clone-invalidation
+tests. Four historical v0.0.8/v0.0.9 cases intentionally return early for the
+newer target. Three native-resource phases and all four blocking/async full
+restore-and-recovery pairs also passed. The disposable server used two-second
+access tokens, so normal consumer workflows exercised automatic rotation too.
+Local Podman fixture mounts used SELinux relabeling; CI retains its Docker setup.
+
+The complete non-container workspace suite, all five supported feature
+combinations, Rust 1.88 across every workspace target and feature, strict Clippy,
+formatting, rustdoc, generated-code checks, upstream OpenAPI comparison, and
+advisory/license/source checks passed on the combined dependency set.
+
+**Breaking Rust API:** token accessors return owned, fallible snapshots. Use
+`client.token()?.as_str()` only for immediate access and sign in again after
+`SessionExpired`. Clones share rotating session state; refresh uncertainty
+invalidates that state rather than replaying the single-use credential.
+
+**Breaking server target:** use `login_session(credentials, client_id)` and
+`session_providers()`. Legacy login remains only for older servers, while PAT
+injection remains supported. Upgrade all API, worker, and restore binaries
+together during the server's offline migration, retain a pre-upgrade PostgreSQL
+snapshot, and sign in again. Backup format 10 preserves shared computed-definition
+history; the client recognizes formats 6–10 and preserves section contents.
 
 ## v0.0.19 target
 

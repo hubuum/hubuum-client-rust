@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use crate::support::naming::unique_suffix;
 
@@ -328,14 +328,10 @@ fn collect_stack_diagnostics(
     .unwrap_or_else(|err| format!("logs-error: {err}"));
 
     let probe = match reqwest::blocking::Client::new()
-        .post(format!("{base_url}/api/v0/auth/login"))
-        .json(&json!({ "name": "__readiness__", "password": "__readiness__" }))
+        .get(format!("{base_url}/readyz"))
         .send()
     {
-        Ok(response) => format!(
-            "probe-status={} (POST /api/v0/auth/login)",
-            response.status()
-        ),
+        Ok(response) => format!("probe-status={} (GET /readyz)", response.status()),
         Err(err) => format!("probe-error={err}"),
     };
 
@@ -655,13 +651,10 @@ impl StackInner {
 
         if let Err(err) = wait_until(timeout, || {
             match reqwest::blocking::Client::new()
-                .post(format!("{base_url}/api/v0/auth/login"))
-                .json(&json!({ "name": "__readiness__", "password": "__readiness__" }))
+                .get(format!("{base_url}/readyz"))
                 .send()
             {
-                Ok(response) => {
-                    Ok(response.status().is_success() || response.status().is_client_error())
-                }
+                Ok(response) => Ok(response.status().is_success()),
                 Err(_) => Ok(false),
             }
         })

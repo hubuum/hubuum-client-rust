@@ -2,8 +2,8 @@ use std::time::{Duration, Instant};
 
 use e2e_client::harness::{AsyncE2EHarness, E2EHarness, admin_context, async_admin_context};
 use hubuum_client::{
-    BackupRequest, BaseUrl, ClassId, Client, ComplianceStatus, CredentialOperation, ObjectId,
-    ResourceRevision, RestoreConfirmRequest, RestoreJobStatus, SchemaActivationPolicy,
+    ApiError, BackupRequest, BaseUrl, ClassId, Client, ComplianceStatus, CredentialOperation,
+    ObjectId, ResourceRevision, RestoreConfirmRequest, RestoreJobStatus, SchemaActivationPolicy,
     SchemaActivationRequest, SchemaPageOptions, SchemaRevision, SchemaStageRequest, blocking,
 };
 use yare::parameterized;
@@ -142,17 +142,13 @@ fn blocking_restore_confirmation(include_history: bool) {
         assert!(Instant::now() < deadline, "restore executor did not finish");
         std::thread::sleep(Duration::from_millis(100));
     }
-    assert_eq!(
+    assert_pre_restore_session_revoked(
         harness
             .client
             .objects(class_id)
             .get(object_id)
             .err()
-            .expect("the pre-restore token must be invalid")
-            .status()
-            .unwrap()
-            .as_u16(),
-        401
+            .expect("the pre-restore session must be invalid"),
     );
     record_restored_object(class_id, object_id, revision, schema_revision);
 }
@@ -247,20 +243,24 @@ async fn async_restore_confirmation(include_history: bool) {
         assert!(Instant::now() < deadline, "restore executor did not finish");
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    assert_eq!(
+    assert_pre_restore_session_revoked(
         harness
             .client
             .objects(class_id)
             .get(object_id)
             .await
             .err()
-            .expect("the pre-restore token must be invalid")
-            .status()
-            .unwrap()
-            .as_u16(),
-        401
+            .expect("the pre-restore session must be invalid"),
     );
     record_restored_object(class_id, object_id, revision, schema_revision);
+}
+
+fn assert_pre_restore_session_revoked(error: ApiError) {
+    assert!(
+        matches!(&error, ApiError::SessionExpired)
+            || error.status().is_some_and(|status| status.as_u16() == 401),
+        "expected a revoked session after restore, got {error}"
+    );
 }
 
 fn record_restored_object(

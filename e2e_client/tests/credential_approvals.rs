@@ -56,7 +56,10 @@ fn credential_approvals_user_password_workflow() {
     }
     let user_session = blocking::Client::try_new(harness.base_url.clone())
         .unwrap()
-        .login(Credentials::new(&name, initial_password))
+        .login_session(
+            Credentials::new(&name, initial_password),
+            Default::default(),
+        )
         .unwrap();
     let change = harness
         .client
@@ -88,7 +91,10 @@ fn credential_approvals_user_password_workflow() {
     );
     let new_session = blocking::Client::try_new(harness.base_url.clone())
         .unwrap()
-        .login(Credentials::new(&name, replacement_password))
+        .login_session(
+            Credentials::new(&name, replacement_password),
+            Default::default(),
+        )
         .unwrap();
     assert_eq!(
         new_session.me().unwrap().principal.principal_id.get(),

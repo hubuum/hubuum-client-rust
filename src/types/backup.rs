@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{HubuumDateTime, PrincipalId, RestoreId};
 
-/// Latest recognized backup version; format 9 includes query usage declarations.
-pub const CURRENT_BACKUP_VERSION: i32 = 9;
+/// Latest recognized backup version; format 10 preserves shared computed-definition history.
+pub const CURRENT_BACKUP_VERSION: i32 = 10;
 
 /// Exact phrase required to confirm a destructive full-system restore.
 pub const RESTORE_CONFIRMATION_PHRASE: &str = "REPLACE ALL HUBUUM DATA";
@@ -112,7 +112,7 @@ impl std::fmt::Debug for BackupDocument {
 }
 
 impl BackupDocument {
-    /// Whether the client recognizes this format. Format 9 requires server v0.0.19 or newer.
+    /// Whether the client recognizes this format. Format 10 requires server v0.0.20 or newer.
     pub const fn has_supported_version(&self) -> bool {
         matches!(self.backup_version, 6..=CURRENT_BACKUP_VERSION)
     }
@@ -351,7 +351,8 @@ mod tests {
     #[case(7, true)]
     #[case(8, true)]
     #[case(9, true)]
-    #[case(10, false)]
+    #[case(10, true)]
+    #[case(11, false)]
     fn supported_backup_formats(#[case] version: i32, #[case] supported: bool) {
         let document: BackupDocument = serde_json::from_value(serde_json::json!({
             "backup_version": version,

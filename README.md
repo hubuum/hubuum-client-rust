@@ -4,24 +4,21 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.15.1 targets Hubuum server v0.0.19. The pinned image,
-verification evidence, and history for earlier client releases are recorded in
+`hubuum_client` 0.16.0 targets Hubuum server v0.0.20. Released **2026-10-22**.
+The pinned image and verification evidence are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
-The development version is **0.16.0 (unreleased)**. It adds opt-in rotating
-interactive sessions and changes token accessors to owned, fallible snapshots.
-See [the migration and session guide](docs/client-setup.md#rotating-interactive-sessions).
-The published 0.15.1 examples below remain available for the pinned server;
-rotating sessions additionally require the newer versioned authentication API.
+Use rotating interactive sessions for password login. Async and blocking clones
+coordinate refresh, keep credentials in memory, and require sign-in again after
+an expired or uncertain refresh. Explicit personal access tokens remain supported.
+The release also updates all dependencies and GitHub Actions, records the
+257-operation server contract, and recognizes backup format 10. Rust 1.88 remains
+the minimum supported compiler.
 
-Version 0.15.1 adds [structured client tracing](docs/tracing.md), including
-request attempts, retries, pagination, and stream lifetimes. Version 0.15.0
-added typed query-usage analysis and management,
-system notification subscriptions, authentication-event subjects, and backup
-format 9. Both client modes support the same workflows on Rust 1.88. Applications
-with exhaustive `EventSubscriptionFilter` literals must add the new subject
-fields or use `..Default::default()`.
-See the [release notes](CHANGELOG.md).
+**Breaking:** migrate password login to `login_session`, handle the fallible
+`token()` snapshot, and upgrade the server and restore executor together.
+See [session migration](docs/client-setup.md#rotating-interactive-sessions),
+[typed API limitations](openapi/known-gaps.md), and [release notes](CHANGELOG.md).
 
 ## Features
 
@@ -56,7 +53,7 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.15.1"
+hubuum_client = "0.16.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -64,7 +61,7 @@ Async support is enabled by default. Blocking applications can opt into only the
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.15.1", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.16.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
@@ -87,7 +84,7 @@ use hubuum_client::{Client, Credentials};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::from_url("https://server.example.com:443")?
-        .login(Credentials::new("foo", "secret"))
+        .login_session(Credentials::new("foo", "secret"), Default::default())
         .await?;
 
     let atlas = client
@@ -314,7 +311,7 @@ let config = admin_client.admin_config().await?;
 let configured_metrics = client.metrics_at(&config.server.metrics_path).await?;
 ```
 
-Hubuum v0.0.19 requires [fresh password approvals](docs/credential-approvals.md)
+Hubuum v0.0.20 requires [fresh password approvals](docs/credential-approvals.md)
 for credential management. Use the async or blocking approval APIs before
 deploying an enforcing server; ordinary mutation calls do not prompt or retry
 automatically. See [task discovery](docs/task-discovery.md) for typed filters, cursor pagination,

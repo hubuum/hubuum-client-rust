@@ -13,6 +13,7 @@ coverage evolves.
 
 | Client version | Server target | Tested server image | [Evidence](docs/compatibility-evidence.md#compatibility-history) |
 | --- | --- | --- | --- |
+| 0.16.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Pinned session, library/consumer, native-resource, and restore/recovery verification](docs/compatibility-evidence.md#v0020-target) on 2026-10-22. |
 | 0.15.1 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | Tracing release reverified on 2026-10-19: 99 library tests, 38 ordinary consumer cases, three native-resource phases, and four full restore/recovery pairs; unchanged 240-operation contract and 111 model mappings. |
 | 0.15.0 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | Pinned combined suite reverified after the complete release dependency refresh (2026-10-19): 99 library tests, consumer workflows, native preparation/cleanup, and four restore/recovery pairs; see [0.0.19 evidence](docs/compatibility-evidence.md#v0019-target). |
 | 0.14.1 | 0.0.18 | `ghcr.io/hubuum/hubuum-server@sha256:5b54248f19171200dfa497174d385a48f90666a415cb31732797043d5e182fc4` | [Evidence](docs/compatibility-evidence.md#compatibility-history) |
@@ -48,9 +49,9 @@ versioned Hubuum server v0.0.2 release.
 
 ## Before upgrading
 
-Client 0.15.1 targets server v0.0.19. Use fresh credential approvals for protected
+Client 0.16.0 targets server v0.0.20. Use fresh credential approvals for protected
 mutations, and review [known typed API gaps](openapi/known-gaps.md). The client
-accepts backup formats 6, 7, 8, and 9; the server decides whether it can restore one.
+accepts backup formats 6, 7, 8, 9, and 10; the server decides whether it can restore one.
 For older Rust releases, check the linked migration notes before upgrading:
 added fields can break exhaustive struct literals and patterns.
 
@@ -69,6 +70,11 @@ image identities, dates, suite results, and earlier compatibility limits.
 ## Forward compatibility
 
 See [forward compatibility](docs/compatibility-evidence.md#forward-compatibility) in the historical evidence.
+
+## v0.0.20 target
+
+See [v0.0.20 evidence](docs/compatibility-evidence.md#v0020-target) for source
+provenance, session migration, typed API limits, and pinned integration results.
 
 ## v0.0.19 target
 
@@ -103,10 +109,16 @@ See [v0.0.15 target](docs/compatibility-evidence.md#v0015-target) in the histori
 
 See [collection integration apis](docs/compatibility-evidence.md#collection-integration-apis) in the historical evidence.
 
-### Optional rotating-session extension
+## v0.0.20 authentication migration
 
-The unreleased `login_session` and `session_providers` APIs require the versioned
-`/api/v1/auth` contract introduced by hubuum/hubuum#178. They do not change the
-pinned v0.0.19 target or its normalized OpenAPI snapshot. Legacy login remains
-available. Migrating Rust consumers must adapt token snapshot accessors as
-recorded in the Unreleased changelog.
+Use `login_session(credentials, client_id)` and `session_providers()` on the
+supported server. Legacy `login()` is retained only for older servers; there is
+no automatic authentication downgrade. Handle `client.token()?` as a short-lived,
+owned snapshot. After refresh failure, sign in again instead of retrying an old
+refresh credential. PAT injection remains supported and independent of sessions.
+
+Upgrade the server and restore executor together using the
+[offline upgrade guide](https://hubuum.github.io/hubuum/v0.0.20/deployment/).
+Retain a pre-upgrade backup and matching binaries for rollback. See the
+[typed API gaps](openapi/known-gaps.md#v0020-coverage) before relying on newly
+introduced server fields or operations.

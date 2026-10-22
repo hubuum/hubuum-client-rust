@@ -2,7 +2,7 @@
 
 Hubuum v0.0.16 and newer require fresh password authentication for token creation and renewal, local user
 creation, password changes, credential-bearing imports (including dry runs), and
-restore confirmation. Client 0.15.0 targets v0.0.19; the approval helpers
+restore confirmation. Client 0.16.0 targets v0.0.20; the approval helpers
 have been available since client 0.11.1.
 
 ## Authenticate the acting human
@@ -21,7 +21,7 @@ async fn login_human(
     password: String,
 ) -> Result<Client<Authenticated>, ApiError> {
     Client::from_url(base_url)?
-        .login(Credentials::new(username, password))
+        .login_session(Credentials::new(username, password), Default::default())
         .await
 }
 ```
