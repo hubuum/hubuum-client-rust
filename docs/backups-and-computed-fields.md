@@ -9,8 +9,10 @@ blocking equivalents.
 
 Backups are administrator-only task operations. `run()` submits the task, waits
 for a successful terminal state, and decodes the resulting versioned backup
-document. Hubuum v0.0.19 produces backup format 9 and accepts formats 6–8.
-`CURRENT_BACKUP_VERSION` is 9, and `has_supported_version()` accepts 6–9.
+document. Hubuum v0.0.20 produces backup format 10 and accepts formats 6–10.
+`CURRENT_BACKUP_VERSION` is 10, and `has_supported_version()` accepts 6–10.
+Format 10 adds shared computed-definition history. Older
+servers cannot restore it; upgrade the restore executor with the server.
 Format 9 retains logical query-usage declarations and their provenance; native
 indexes and ownership records are excluded. Older servers cannot restore
 format 9. Format 5 and earlier artifacts must be restored with their matching

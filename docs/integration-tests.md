@@ -63,6 +63,10 @@ An external stack must expose the same `planet-express` provider and fixture use
   PostgreSQL 18 reference from
   `tests/container_integration/fixtures/postgres/Dockerfile`.
 - `HUBUUM_INTEGRATION_LDAP_IMAGE` overrides the LDAP fixture image.
+- `HUBUUM_INTEGRATION_LDAP_CONTAINER` identifies the disposable LDAP container
+  when using an external stack. The wrapper supplies it automatically. Provider
+  login tests rotate fixture passwords before use instead of relying on the
+  image's public example credentials.
 - `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1` makes credential approval
   scenarios assert that the selected server enforces fresh authentication.
   Required CI and local release verification must set it. Focused legacy-server
@@ -76,12 +80,12 @@ An external stack must expose the same `planet-express` provider and fixture use
 - `HUBUUM_INTEGRATION_SEED_SQL` overrides the default seed SQL file.
 
 The canonical suite includes delegated collection webhook setup in both async
-and blocking modes. These cases are mandatory for the v0.0.19 target and need
+and blocking modes. These cases are mandatory for the v0.0.20 target and need
 no separate opt-in variable.
 
 Required CI runs integration tests against an immutable server image digest.
-For client 0.15.0, that image is Hubuum server v0.0.19 at
-`sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225`.
+For client 0.16.0, that image is Hubuum server v0.0.20 at
+`sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a`.
 Required CI sets `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`; set the
 same variable for local release verification so missing enforcement fails.
 A scheduled compatibility workflow separately runs against
@@ -111,13 +115,13 @@ docker login ghcr.io
 
 With `--with-e2e-client` or `--e2e-only`, the wrapper runs both blocking and async
 full restore scenarios with and without history after all ordinary suites finish.
-Each scenario activates an enforced schema, creates and downloads a format 8 backup, deletes an object, stages
+Each scenario activates an enforced schema, creates and downloads a format 10 backup, deletes an object, stages
 and confirms the restore, polls with its capability until completion, verifies bearer-token
 invalidation, and checks that the deleted object and its revision were restored
 after a new login. Recovery also creates and stages default backups before and
 after another mutation. Recovery also checks the restored schema revision and
 object validation evidence, with and without history.
-Because formats 6, 7, and 8 exclude password hashes, the wrapper resets the disposable
+Because supported backup formats exclude password hashes, the wrapper resets the disposable
 administrator password after each restore before running the recovery assertion.
 
 The separate `e2e_client` restore test target requires `restore-tests` and the
@@ -126,18 +130,22 @@ of ordinary tests against an externally managed stack; full restore replaces
 all data and invalidates tokens. The complete non-container workspace suite
 compiles these tests but leaves them ignored.
 
-## Candidate rotating-session contract
+## Rotating-session contract
 
-Keep the canonical pinned compatibility run above. Additionally, run the
-independent consumer against a disposable server implementing `/api/v1/auth`,
-configured with `HUBUUM_SESSION_ACCESS_SECONDS=2`. Supply its address and
-administrator password through the existing integration environment variables:
+The canonical combined suite provisions a disposable server with
+`HUBUUM_SESSION_ACCESS_SECONDS=30` and requires both async and blocking session
+checks. Both runtimes cross a real access deadline, rotate, retain the original
+absolute deadline, and verify logout invalidates clones. The short deadline is
+required by these tests; it does not change production defaults.
+
+For focused iteration against a caller-managed disposable server with the same
+short access lifetime, supply its address and administrator password through the
+existing integration environment variables and run:
 
 ```bash
 cargo test --locked -p e2e_client --features session-tests --test sessions \
   -- --ignored --test-threads=1
 ```
 
-Both runtimes cross a real access deadline, rotate, retain the original absolute
-deadline, and verify logout invalidates clones. The short deadline is required
-by this focused test; it does not change production defaults.
+This focused command does not replace the canonical combined suite, which also
+covers ordinary authenticated workflows and full restore recovery.

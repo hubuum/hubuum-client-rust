@@ -468,25 +468,52 @@ mod test {
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();
 
-        // Optional session APIs are forward extensions, not part of the pinned
-        // v0.0.19 compatibility claim or its authoritative operation snapshot.
-        let session_paths = [
-            "/api/v1/auth/login",
-            "/api/v1/auth/refresh",
-            "/api/v1/auth/providers",
-            "/api/v1/auth/validate",
-            "/api/v1/auth/logout",
-            "/api/v1/auth/logout_all",
-            "/api/v1/auth/logout/token",
-            "/api/v1/auth/logout/uid/{user_id}",
+        // Legacy login remains available for older servers. New server surfaces
+        // without typed helpers are explicit raw() gaps, documented in known-gaps.md.
+        let legacy_paths = [
+            "/api/v0/auth/login",
+            "/api/v0/auth/logout",
+            "/api/v0/auth/logout/token",
+            "/api/v0/auth/logout/uid/{user_id}",
+            "/api/v0/auth/logout_all",
+            "/api/v0/auth/providers",
+            "/api/v0/auth/validate",
+        ]
+        .into_iter()
+        .collect();
+        let raw_paths = [
+            "/api/v1/admin/query-observations",
+            "/api/v1/classes/{class_id}/history/entries/{history_id}",
+            "/api/v1/classes/{class_id}/history/timeline",
+            "/api/v1/classes/{class_id}/objects/history",
+            "/api/v1/classes/{class_id}/objects/history/as-of",
+            "/api/v1/classes/{class_id}/relations/history",
+            "/api/v1/classes/{class_id}/relations/history/as-of",
+            "/api/v1/classes/{class_id}/{object_id}/history/computed/as-of",
+            "/api/v1/classes/{class_id}/{object_id}/history/entries/{history_id}",
+            "/api/v1/classes/{class_id}/{object_id}/history/timeline",
+            "/api/v1/classes/{class_id}/{object_id}/relations/history",
+            "/api/v1/classes/{class_id}/{object_id}/relations/history/as-of",
+            "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/activity",
+            "/api/v1/search/hydrate",
         ]
         .into_iter()
         .collect();
         assert_eq!(
-            client_paths,
-            spec_paths.union(&session_paths).copied().collect()
+            client_paths
+                .difference(&spec_paths)
+                .copied()
+                .collect::<std::collections::BTreeSet<_>>(),
+            legacy_paths
         );
-        assert_eq!(contract["operation_count"], 240);
+        assert_eq!(
+            spec_paths
+                .difference(&client_paths)
+                .copied()
+                .collect::<std::collections::BTreeSet<_>>(),
+            raw_paths
+        );
+        assert_eq!(contract["operation_count"], 257);
     }
     use std::str::FromStr;
     use yare::parameterized;

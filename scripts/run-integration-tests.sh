@@ -427,6 +427,7 @@ container run -d \
     -e "HUBUUM_BIND_PORT=8080" \
     -e "HUBUUM_CLIENT_ALLOWLIST=${CLIENT_ALLOWLIST}" \
     -e "HUBUUM_LOG_LEVEL=debug" \
+    -e "HUBUUM_SESSION_ACCESS_SECONDS=30" \
     -e "HUBUUM_QUERY_OBSERVATIONS_ENABLED=true" \
     -e "HUBUUM_QUERY_OBSERVATIONS_SAMPLE_EVERY=1" \
     -e "HUBUUM_AUTH_CONFIG_PATH=/etc/hubuum/auth-providers.toml" \
@@ -459,6 +460,7 @@ container run -d \
 
 export HUBUUM_INTEGRATION_BASE_URL="${BASE_URL}"
 export HUBUUM_INTEGRATION_ADMIN_PASSWORD="${ADMIN_PASSWORD}"
+export HUBUUM_INTEGRATION_LDAP_CONTAINER="${LDAP_CONTAINER}"
 
 echo "Running integration tests against external stack: ${BASE_URL}"
 
@@ -485,7 +487,7 @@ if [[ "${RUN_E2E_CLIENT}" == "1" ]]; then
         cargo test
         --locked
         -p e2e_client
-        --features integration-tests
+        --features integration-tests,session-tests
         --
         --ignored
         --nocapture

@@ -106,7 +106,10 @@ fn delegated_collection_webhooks(asynchronous: bool) {
             .block_on(
                 Client::try_new(harness.base_url.clone())
                     .unwrap()
-                    .login(Credentials::new(user.username, user.password)),
+                    .login_session(
+                        Credentials::new(user.username, user.password),
+                        Default::default(),
+                    ),
             )
             .unwrap();
         macro_rules! send {

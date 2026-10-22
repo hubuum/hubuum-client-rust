@@ -88,7 +88,7 @@ macro_rules! workflow {
         let completed = $send!($client.tasks().wait(submitted.id).send()).unwrap();
         assert!(completed.status.is_success());
         let backup = $send!($client.backups().output(submitted.id)).unwrap();
-        assert_eq!(backup.backup_version, 9);
+        assert_eq!(backup.backup_version, 10);
         assert!(backup.has_supported_version());
         assert!(backup.state.sections["query_usage_declarations"].iter().any(|row| row["id"]==changed.id.get() && row["class_id"]==class.id.get()));
         $send!(usage.delete(changed.id, changed.revision)).unwrap();

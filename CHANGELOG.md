@@ -6,6 +6,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-22
+
+This release explicitly targets Hubuum server v0.0.20.
+
 ### Security
 
 - Update `rustls-webpki` to 0.103.16 and `webpki-root-certs` to 1.0.10 for
@@ -19,20 +23,27 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   refresh credentials remain in memory and are never automatically retried.
 - `session_info()` exposes non-secret deadlines; `session_providers()` discovers
   providers on the versioned API. Legacy login and explicit PAT injection remain
-  available against the declared v0.0.19 server target.
+  available for older servers and service credentials, respectively.
 
 ### Changed
 
-- Prepare the next breaking client version, 0.16.0, without publishing a release.
+- **Breaking server target:** upgrade to Hubuum v0.0.20 and use
+  `login_session` for interactive authentication. Older server login routes are
+  unavailable on this server. Upgrade API, worker, and restore binaries together
+  during the documented offline migration; keep a pre-upgrade backup for rollback.
+- Recognize backup format 10 and the 257-operation OpenAPI contract. New history,
+  hydration, credential activity, and observation-management operations are
+  available through `raw()`; see the documented typed API gaps.
+- Refresh all dependencies compatible with Rust 1.88 and all GitHub Actions pins,
+  including the HTTPmock 0.9 test API.
 - **Breaking:** Client `token()` and deprecated `get_token()` now return
   `Result<Token, ApiError>` snapshots instead of borrowed strings, and
   `token_expires_at()` returns an owned timestamp. Callers must handle unavailable
   session credentials and use `client.token()?.as_str()` when raw bearer access
   is necessary. A refresh failure, cancellation, or ambiguous response requires
   login again; logout clears session credentials across clones.
-- Enable Tokio's `sync` feature for async refresh coordination. The MSRV, pinned
-  server image, and baseline OpenAPI snapshot are unchanged. Rotating sessions
-  require a newer server implementing `/api/v1/auth`.
+- Enable Tokio's `sync` feature for async refresh coordination. The Rust 1.88
+  MSRV and supported public feature combinations remain unchanged.
 
 ## [0.15.1] - 2026-10-19
 

@@ -90,10 +90,10 @@ fn e2e_probe_meta_and_auth_admin_endpoints() {
         .expect("managed user should log in");
     let second_session = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
         .expect("second client should build")
-        .login(hubuum_client::Credentials::new(
-            "admin".to_string(),
-            harness.admin_password.clone(),
-        ))
+        .login_session(
+            hubuum_client::Credentials::new("admin".to_string(), harness.admin_password.clone()),
+            Default::default(),
+        )
         .expect("second admin login should succeed");
     let second_token = second_session.token().unwrap().as_str().to_string();
 
@@ -115,10 +115,10 @@ fn e2e_probe_meta_and_auth_admin_endpoints() {
 
     let fourth_session = hubuum_client::blocking::Client::try_new(harness.base_url.clone())
         .expect("fourth client should build")
-        .login(hubuum_client::Credentials::new(
-            "admin".to_string(),
-            harness.admin_password.clone(),
-        ))
+        .login_session(
+            hubuum_client::Credentials::new("admin".to_string(), harness.admin_password.clone()),
+            Default::default(),
+        )
         .expect("fourth admin login should succeed");
     harness
         .client

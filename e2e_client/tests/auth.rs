@@ -24,10 +24,10 @@ fn e2e_auth_identity_token_and_logout() {
 
     let second_session = blocking::Client::try_new(harness.base_url.clone())
         .expect("second client should build")
-        .login(Credentials::new(
-            "admin".to_string(),
-            harness.admin_password.clone(),
-        ))
+        .login_session(
+            Credentials::new("admin".to_string(), harness.admin_password.clone()),
+            Default::default(),
+        )
         .expect("second admin login should succeed");
     let revoked_token = Token::new(second_session.token().unwrap().as_str());
     let logged_out = second_session.logout().expect("logout should succeed");

@@ -1,340 +1,8 @@
 {
-  "api_version": "0.0.19",
+  "api_version": "0.0.20",
   "openapi": "3.1.0",
-  "operation_count": 240,
+  "operation_count": 257,
   "operations": [
-    {
-      "method": "POST",
-      "operation_id": "postApiV0AuthLogin",
-      "parameters": [],
-      "path": "/api/v0/auth/login",
-      "request_content": [
-        "application/json"
-      ],
-      "request_schema_refs": [
-        "LoginUser"
-      ],
-      "request_schemas": {
-        "application/json": {
-          "$ref": "#/components/schemas/LoginUser"
-        }
-      },
-      "response_schema_refs": [
-        "ApiErrorResponse",
-        "LoginResponse"
-      ],
-      "response_schemas": {
-        "200": {
-          "application/json": {
-            "$ref": "#/components/schemas/LoginResponse"
-          }
-        },
-        "400": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        },
-        "401": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        },
-        "429": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        },
-        "500": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        }
-      },
-      "responses": {
-        "200": [
-          "application/json"
-        ],
-        "400": [
-          "application/json"
-        ],
-        "401": [
-          "application/json"
-        ],
-        "429": [
-          "application/json"
-        ],
-        "500": [
-          "application/json"
-        ]
-      },
-      "security": []
-    },
-    {
-      "method": "POST",
-      "operation_id": "postApiV0AuthLogout",
-      "parameters": [],
-      "path": "/api/v0/auth/logout",
-      "request_content": [],
-      "request_schema_refs": [],
-      "request_schemas": {},
-      "response_schema_refs": [
-        "ApiErrorResponse",
-        "MessageResponse"
-      ],
-      "response_schemas": {
-        "200": {
-          "application/json": {
-            "$ref": "#/components/schemas/MessageResponse"
-          }
-        },
-        "401": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        },
-        "500": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        }
-      },
-      "responses": {
-        "200": [
-          "application/json"
-        ],
-        "401": [
-          "application/json"
-        ],
-        "500": [
-          "application/json"
-        ]
-      },
-      "security": [
-        {
-          "bearer_auth": []
-        }
-      ]
-    },
-    {
-      "method": "POST",
-      "operation_id": "postApiV0AuthLogoutToken",
-      "parameters": [],
-      "path": "/api/v0/auth/logout/token",
-      "request_content": [
-        "application/json"
-      ],
-      "request_schema_refs": [
-        "LogoutTokenRequest"
-      ],
-      "request_schemas": {
-        "application/json": {
-          "$ref": "#/components/schemas/LogoutTokenRequest"
-        }
-      },
-      "response_schema_refs": [
-        "ApiErrorResponse",
-        "MessageResponse"
-      ],
-      "response_schemas": {
-        "200": {
-          "application/json": {
-            "$ref": "#/components/schemas/MessageResponse"
-          }
-        },
-        "401": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        },
-        "500": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        }
-      },
-      "responses": {
-        "200": [
-          "application/json"
-        ],
-        "401": [
-          "application/json"
-        ],
-        "500": [
-          "application/json"
-        ]
-      },
-      "security": [
-        {
-          "bearer_auth": []
-        }
-      ]
-    },
-    {
-      "method": "POST",
-      "operation_id": "postApiV0AuthLogoutUidByUserId",
-      "parameters": [
-        "path:user_id"
-      ],
-      "path": "/api/v0/auth/logout/uid/{user_id}",
-      "request_content": [],
-      "request_schema_refs": [],
-      "request_schemas": {},
-      "response_schema_refs": [
-        "ApiErrorResponse",
-        "MessageResponse"
-      ],
-      "response_schemas": {
-        "200": {
-          "application/json": {
-            "$ref": "#/components/schemas/MessageResponse"
-          }
-        },
-        "401": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        },
-        "500": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        }
-      },
-      "responses": {
-        "200": [
-          "application/json"
-        ],
-        "401": [
-          "application/json"
-        ],
-        "500": [
-          "application/json"
-        ]
-      },
-      "security": [
-        {
-          "bearer_auth": []
-        }
-      ]
-    },
-    {
-      "method": "POST",
-      "operation_id": "postApiV0AuthLogoutAll",
-      "parameters": [],
-      "path": "/api/v0/auth/logout_all",
-      "request_content": [],
-      "request_schema_refs": [],
-      "request_schemas": {},
-      "response_schema_refs": [
-        "ApiErrorResponse",
-        "MessageResponse"
-      ],
-      "response_schemas": {
-        "200": {
-          "application/json": {
-            "$ref": "#/components/schemas/MessageResponse"
-          }
-        },
-        "401": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        },
-        "500": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        }
-      },
-      "responses": {
-        "200": [
-          "application/json"
-        ],
-        "401": [
-          "application/json"
-        ],
-        "500": [
-          "application/json"
-        ]
-      },
-      "security": [
-        {
-          "bearer_auth": []
-        }
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "getApiV0AuthProviders",
-      "parameters": [],
-      "path": "/api/v0/auth/providers",
-      "request_content": [],
-      "request_schema_refs": [],
-      "request_schemas": {},
-      "response_schema_refs": [
-        "ApiErrorResponse",
-        "AuthProvidersResponse"
-      ],
-      "response_schemas": {
-        "200": {
-          "application/json": {
-            "$ref": "#/components/schemas/AuthProvidersResponse"
-          }
-        },
-        "500": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        }
-      },
-      "responses": {
-        "200": [
-          "application/json"
-        ],
-        "500": [
-          "application/json"
-        ]
-      },
-      "security": []
-    },
-    {
-      "method": "GET",
-      "operation_id": "getApiV0AuthValidate",
-      "parameters": [],
-      "path": "/api/v0/auth/validate",
-      "request_content": [],
-      "request_schema_refs": [],
-      "request_schemas": {},
-      "response_schema_refs": [
-        "ApiErrorResponse",
-        "MessageResponse"
-      ],
-      "response_schemas": {
-        "200": {
-          "application/json": {
-            "$ref": "#/components/schemas/MessageResponse"
-          }
-        },
-        "401": {
-          "application/json": {
-            "$ref": "#/components/schemas/ApiErrorResponse"
-          }
-        }
-      },
-      "responses": {
-        "200": [
-          "application/json"
-        ],
-        "401": [
-          "application/json"
-        ]
-      },
-      "security": [
-        {
-          "bearer_auth": []
-        }
-      ]
-    },
     {
       "method": "GET",
       "operation_id": "getApiV0MetaCounts",
@@ -725,6 +393,491 @@
           "application/json"
         ],
         "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AdminQueryObservations",
+      "parameters": [],
+      "path": "/api/v1/admin/query-observations",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "QueryObservationConfig"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/QueryObservationConfig"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1AdminQueryObservations",
+      "parameters": [],
+      "path": "/api/v1/admin/query-observations",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "QueryObservationUpdateRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/QueryObservationUpdateRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "QueryObservationConfig"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/QueryObservationConfig"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogin",
+      "parameters": [],
+      "path": "/api/v1/auth/login",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "SessionLoginRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SessionLoginRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "RefreshToken",
+        "SessionResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SessionResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogout",
+      "parameters": [],
+      "path": "/api/v1/auth/logout",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogoutToken",
+      "parameters": [],
+      "path": "/api/v1/auth/logout/token",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "LogoutTokenRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/LogoutTokenRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogoutUidByUserId",
+      "parameters": [
+        "path:user_id"
+      ],
+      "path": "/api/v1/auth/logout/uid/{user_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogoutAll",
+      "parameters": [],
+      "path": "/api/v1/auth/logout_all",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AuthProviders",
+      "parameters": [],
+      "path": "/api/v1/auth/providers",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthProvidersResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/AuthProvidersResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthRefresh",
+      "parameters": [],
+      "path": "/api/v1/auth/refresh",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "RefreshToken",
+        "SessionRefreshRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SessionRefreshRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "RefreshToken",
+        "SessionResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SessionResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AuthValidate",
+      "parameters": [],
+      "path": "/api/v1/auth/validate",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
           "application/json"
         ]
       },
@@ -1858,9 +2011,12 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "HubuumClassRelation",
         "HubuumObjectRelation",
         "HubuumObjectWithPath",
+        "ObjectRelationLimit",
         "RelatedObjectGraph",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -2175,6 +2331,7 @@
         "HubuumClassWithPath",
         "ObjectRelationLimit",
         "RelatedClassGraph",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -2237,6 +2394,7 @@
         "ApiErrorResponse",
         "HubuumClassRelation",
         "ObjectRelationLimit",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -3173,6 +3331,158 @@
     },
     {
       "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdHistoryEntriesByHistoryId",
+      "parameters": [
+        "path:class_id",
+        "path:history_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/history/entries/{history_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoryResponse_HubuumClassHistory",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/HistoryResponse_HubuumClassHistory"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdHistoryTimeline",
+      "parameters": [
+        "path:class_id",
+        "query:anchor",
+        "query:at",
+        "query:cursor",
+        "query:direction",
+        "query:from",
+        "query:include_total",
+        "query:limit",
+        "query:until"
+      ],
+      "path": "/api/v1/classes/{class_id}/history/timeline",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoryResponse_HistoryMarker",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryResponse_HistoryMarker"
+            },
+            "type": "array"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
       "operation_id": "getApiV1ClassesByClassIdObjectAggregates",
       "parameters": [
         "path:class_id",
@@ -3248,6 +3558,156 @@
     },
     {
       "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdObjectsHistory",
+      "parameters": [
+        "path:class_id",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:name",
+        "query:revision",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/objects/history",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoryResponse_HubuumObjectHistory",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryResponse_HubuumObjectHistory"
+            },
+            "type": "array"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdObjectsHistoryAsOf",
+      "parameters": [
+        "path:class_id",
+        "query:at",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:revision",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/objects/history/as-of",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoricalClassObjects",
+        "HistoricalPopulationCoverage",
+        "HistoryResponse_HubuumClassHistory",
+        "HistoryResponse_HubuumObjectHistory",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/HistoricalClassObjects"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
       "operation_id": "getApiV1ClassesByClassIdObjectsByObjectIdRelatedGraph",
       "parameters": [
         "path:class_id",
@@ -3259,9 +3719,12 @@
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
+        "HubuumClassRelation",
         "HubuumObjectRelation",
         "HubuumObjectWithPath",
+        "ObjectRelationLimit",
         "RelatedObjectGraph",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -3959,6 +4422,7 @@
         "HubuumClassWithPath",
         "ObjectRelationLimit",
         "RelatedClassGraph",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -4021,6 +4485,7 @@
         "ApiErrorResponse",
         "HubuumClassRelation",
         "ObjectRelationLimit",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -4080,7 +4545,8 @@
       ],
       "request_schema_refs": [
         "NewHubuumClassRelationFromClass",
-        "ObjectRelationLimit"
+        "ObjectRelationLimit",
+        "RelationLabel"
       ],
       "request_schemas": {
         "application/json": {
@@ -4091,6 +4557,7 @@
         "ApiErrorResponse",
         "HubuumClassRelation",
         "ObjectRelationLimit",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -4126,6 +4593,175 @@
           "application/json"
         ],
         "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdRelationsHistory",
+      "parameters": [
+        "path:class_id",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/relations/history",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoricalEndpointContext",
+        "HistoricalEndpointUnavailableReason",
+        "HistoricalPopulationCoverage",
+        "HistoricalRelationEndpoint",
+        "HistoricalRelationValue",
+        "HistoricalRelationships",
+        "HistoryResponse_HistoricalRelation",
+        "HubuumClassRelation",
+        "HubuumObjectRelation",
+        "ObjectRelationLimit",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "RelationLabel",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/HistoricalRelationships"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdRelationsHistoryAsOf",
+      "parameters": [
+        "path:class_id",
+        "query:at",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/relations/history/as-of",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoricalEndpointContext",
+        "HistoricalEndpointUnavailableReason",
+        "HistoricalPopulationCoverage",
+        "HistoricalRelationEndpoint",
+        "HistoricalRelationValue",
+        "HistoricalRelationships",
+        "HistoryResponse_HistoricalRelation",
+        "HubuumClassRelation",
+        "HubuumObjectRelation",
+        "ObjectRelationLimit",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "RelationLabel",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/HistoricalRelationships"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
           "application/json"
         ]
       },
@@ -4203,6 +4839,7 @@
         "ApiErrorResponse",
         "HubuumClassRelation",
         "ObjectRelationLimit",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -5846,6 +6483,406 @@
         "200": {
           "application/json": {
             "$ref": "#/components/schemas/HistoryResponse_HubuumObjectHistory"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByObjectIdHistoryComputedAsOf",
+      "parameters": [
+        "path:class_id",
+        "path:object_id",
+        "query:at"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}/history/computed/as-of",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "ComputedFieldErrorResponse",
+        "HistoricalComputationMode",
+        "HistoricalComputedField",
+        "HistoricalComputedFieldResult",
+        "HistoricalComputedObjectSource",
+        "HistoricalComputedUnavailableReason",
+        "HistoricalComputedValues",
+        "HistoricalPersonalFields",
+        "HistoricalSharedComputedFields",
+        "ResourceRevision"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/HistoricalComputedValues"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByObjectIdHistoryEntriesByHistoryId",
+      "parameters": [
+        "path:class_id",
+        "path:history_id",
+        "path:object_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}/history/entries/{history_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoryResponse_HubuumObjectHistory",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/HistoryResponse_HubuumObjectHistory"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByObjectIdHistoryTimeline",
+      "parameters": [
+        "path:class_id",
+        "path:object_id",
+        "query:anchor",
+        "query:at",
+        "query:cursor",
+        "query:direction",
+        "query:from",
+        "query:include_total",
+        "query:limit",
+        "query:until"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}/history/timeline",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoryResponse_HistoryMarker",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryResponse_HistoryMarker"
+            },
+            "type": "array"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByObjectIdRelationsHistory",
+      "parameters": [
+        "path:class_id",
+        "path:object_id",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}/relations/history",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoricalEndpointContext",
+        "HistoricalEndpointUnavailableReason",
+        "HistoricalPopulationCoverage",
+        "HistoricalRelationEndpoint",
+        "HistoricalRelationValue",
+        "HistoricalRelationships",
+        "HistoryResponse_HistoricalRelation",
+        "HubuumClassRelation",
+        "HubuumObjectRelation",
+        "ObjectRelationLimit",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "RelationLabel",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/HistoricalRelationships"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdByObjectIdRelationsHistoryAsOf",
+      "parameters": [
+        "path:class_id",
+        "path:object_id",
+        "query:at",
+        "query:cursor",
+        "query:include_total",
+        "query:limit",
+        "query:sort"
+      ],
+      "path": "/api/v1/classes/{class_id}/{object_id}/relations/history/as-of",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HistoricalEndpointContext",
+        "HistoricalEndpointUnavailableReason",
+        "HistoricalPopulationCoverage",
+        "HistoricalRelationEndpoint",
+        "HistoricalRelationValue",
+        "HistoricalRelationships",
+        "HistoryResponse_HistoricalRelation",
+        "HubuumClassRelation",
+        "HubuumObjectRelation",
+        "ObjectRelationLimit",
+        "PrincipalID",
+        "Provenance",
+        "ProvenanceActor",
+        "ProvenancePrincipal",
+        "RelationLabel",
+        "ResourceRevision",
+        "TaskID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/HistoricalRelationships"
           }
         },
         "400": {
@@ -9827,6 +10864,11 @@
             "$ref": "#/components/schemas/ApiErrorResponse"
           }
         },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
         "404": {
           "application/json": {
             "$ref": "#/components/schemas/ApiErrorResponse"
@@ -9846,6 +10888,9 @@
           "text/plain"
         ],
         "401": [
+          "application/json"
+        ],
+        "403": [
           "application/json"
         ],
         "404": [
@@ -9926,6 +10971,7 @@
         "Permissions",
         "PrincipalID",
         "PrincipalKey",
+        "RelationLabel",
         "RemoteAuthConfig",
         "RemoteHttpMethod",
         "RemoteTargetSubjectType",
@@ -11983,6 +13029,59 @@
       ]
     },
     {
+      "method": "GET",
+      "operation_id": "getApiV1IamPrincipalsByPrincipalIdTokensByTokenIdActivity",
+      "parameters": [
+        "path:principal_id",
+        "path:token_id",
+        "query:limit",
+        "query:offset"
+      ],
+      "path": "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/activity",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CredentialActivityResponse",
+        "CredentialCreationResponse",
+        "CredentialSourceResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/CredentialActivityResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
       "method": "POST",
       "operation_id": "postApiV1IamPrincipalsByPrincipalIdTokensByTokenIdRenew",
       "parameters": [
@@ -12973,6 +14072,7 @@
         "ObjectRelationLimit",
         "Permissions",
         "PrincipalKey",
+        "RelationLabel",
         "RemoteAuthConfig",
         "RemoteHttpMethod",
         "RemoteTargetSubjectType",
@@ -13250,6 +14350,7 @@
         "ApiErrorResponse",
         "HubuumClassRelation",
         "ObjectRelationLimit",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -13299,7 +14400,8 @@
       ],
       "request_schema_refs": [
         "NewHubuumClassRelation",
-        "ObjectRelationLimit"
+        "ObjectRelationLimit",
+        "RelationLabel"
       ],
       "request_schemas": {
         "application/json": {
@@ -13310,6 +14412,7 @@
         "ApiErrorResponse",
         "HubuumClassRelation",
         "ObjectRelationLimit",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -13412,6 +14515,7 @@
         "ApiErrorResponse",
         "HubuumClassRelation",
         "ObjectRelationLimit",
+        "RelationLabel",
         "ResourceRevision"
       ],
       "response_schemas": {
@@ -13439,6 +14543,99 @@
           "application/json"
         ],
         "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1RelationsClassesByRelationId",
+      "parameters": [
+        "header:If-Match",
+        "path:relation_id"
+      ],
+      "path": "/api/v1/relations/classes/{relation_id}",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "RelationLabel",
+        "UpdateClassRelationLabels"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/UpdateClassRelationLabels"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumClassRelation",
+        "ObjectRelationLimit",
+        "RelationLabel",
+        "ResourceRevision"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/HubuumClassRelation"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "412": [
           "application/json"
         ]
       },
@@ -14708,6 +15905,91 @@
       ]
     },
     {
+      "method": "POST",
+      "operation_id": "postApiV1SearchHydrate",
+      "parameters": [],
+      "path": "/api/v1/search/hydrate",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "HubuumClassID",
+        "HubuumObjectID",
+        "SearchHydrationRequest",
+        "StructuredClassSelector"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SearchHydrationRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "HubuumObject",
+        "HubuumObjectRelation",
+        "ResourceRevision",
+        "SearchHydrationPath",
+        "SearchHydrationResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SearchHydrationResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
       "method": "GET",
       "operation_id": "getApiV1SearchStream",
       "parameters": [
@@ -15656,8 +16938,8 @@
       "security": []
     }
   ],
-  "path_count": 162,
-  "schema_count": 359,
+  "path_count": 177,
+  "schema_count": 391,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -15699,11 +16981,14 @@
     "ComputedScopeResponse",
     "CopyOperation",
     "CountsResponse",
+    "CredentialActivityResponse",
     "CredentialApprovalRecord",
     "CredentialApprovalRequest",
     "CredentialApprovalResponse",
     "CredentialApprovalSecret",
+    "CredentialCreationResponse",
     "CredentialOperation",
+    "CredentialSourceResponse",
     "CurrentTokenMetadata",
     "DatabaseConfig",
     "DbStateResponse",
@@ -15762,8 +17047,27 @@
     "GroupPermission",
     "GroupPointResponse",
     "GroupResponse",
+    "HistoricalClassObjects",
+    "HistoricalComputationMode",
+    "HistoricalComputedField",
+    "HistoricalComputedFieldResult",
+    "HistoricalComputedObjectSource",
+    "HistoricalComputedUnavailableReason",
+    "HistoricalComputedValues",
+    "HistoricalEndpointContext",
+    "HistoricalEndpointUnavailableReason",
+    "HistoricalPersonalFields",
+    "HistoricalPopulationCoverage",
+    "HistoricalRelationEndpoint",
+    "HistoricalRelationValue",
+    "HistoricalRelationships",
+    "HistoricalSharedComputedFields",
+    "HistoryDirection",
+    "HistoryMarker",
     "HistoryResponse_CollectionHistory",
     "HistoryResponse_ExportTemplateHistory",
+    "HistoryResponse_HistoricalRelation",
+    "HistoryResponse_HistoryMarker",
     "HistoryResponse_HubuumClassHistory",
     "HistoryResponse_HubuumObjectHistory",
     "HistoryResponse_RemoteTargetHistory",
@@ -15873,6 +17177,7 @@
     "QueryObservationConfig",
     "QueryObservationSettings",
     "QueryObservationSnapshot",
+    "QueryObservationUpdateRequest",
     "QueryPatternObservation",
     "QueryUsageAdapterProgress",
     "QueryUsageAnalysisRequest",
@@ -15890,8 +17195,10 @@
     "QueryUsageSuggestion",
     "QueryUsageValueType",
     "RebuildTaskDetails",
+    "RefreshToken",
     "RelatedClassGraph",
     "RelatedObjectGraph",
+    "RelationLabel",
     "ReleaseRateLimitResponse",
     "RemoteAuthConfig",
     "RemoteCallConfig",
@@ -15951,11 +17258,17 @@
     "SchemaWorkKind",
     "SchemaWorkResponse",
     "SchemaWorkStatus",
+    "SearchHydrationPath",
+    "SearchHydrationRequest",
+    "SearchHydrationResponse",
     "SecretSourceConfig",
     "SecretStatus",
     "ServerConfig",
     "ServiceAccountPointResponse",
     "ServiceAccountResponse",
+    "SessionLoginRequest",
+    "SessionRefreshRequest",
+    "SessionResponse",
     "SharedComputedScopeResponse",
     "StructuredClassSelector",
     "StructuredRelatedPredicate",
@@ -16003,6 +17316,7 @@
     "UnifiedSearchResponse",
     "UnifiedSearchResults",
     "UnifiedSearchStartedEvent",
+    "UpdateClassRelationLabels",
     "UpdateCollection",
     "UpdateCollectionParent",
     "UpdateEventSink",
@@ -16082,6 +17396,17 @@
             "null"
           ]
         },
+        "credential_activity_enabled": {
+          "type": "boolean"
+        },
+        "credential_activity_retention_days": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "credential_activity_source_cap": {
+          "minimum": 0,
+          "type": "integer"
+        },
         "login_rate_limit": {
           "$ref": "#/components/schemas/LoginRateLimitConfig"
         },
@@ -16100,6 +17425,22 @@
         },
         "require_stable_token_hash_key": {
           "type": "boolean"
+        },
+        "session_absolute_seconds": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "session_access_seconds": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "session_idle_seconds": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "session_retention_seconds": {
+          "format": "int64",
+          "type": "integer"
         },
         "stable_token_hash_key_configured": {
           "type": "boolean"
@@ -16134,11 +17475,18 @@
       "required": [
         "active_token_hash_key_id",
         "admin_groupname",
+        "credential_activity_enabled",
+        "credential_activity_retention_days",
+        "credential_activity_source_cap",
         "login_rate_limit",
         "max_token_lifetime_hours",
         "previous_token_hash_key_ids",
         "provider_config_path",
         "require_stable_token_hash_key",
+        "session_absolute_seconds",
+        "session_access_seconds",
+        "session_idle_seconds",
+        "session_retention_seconds",
         "stable_token_hash_key_configured",
         "token_hash_key_mode",
         "token_hash_key_ring_identity",
@@ -16448,11 +17796,31 @@
           "format": "int64",
           "minimum": 1,
           "type": "integer"
+        },
+        "session_absolute_seconds": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "session_access_seconds": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "session_idle_seconds": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "session_retention_seconds": {
+          "format": "int64",
+          "type": "integer"
         }
       },
       "required": [
         "default_token_lifetime_hours",
-        "max_token_lifetime_hours"
+        "max_token_lifetime_hours",
+        "session_absolute_seconds",
+        "session_access_seconds",
+        "session_idle_seconds",
+        "session_retention_seconds"
       ],
       "type": "object"
     },
@@ -17091,6 +18459,84 @@
       ],
       "type": "object"
     },
+    "CredentialActivityResponse": {
+      "properties": {
+        "best_effort": {
+          "type": "boolean"
+        },
+        "collection_enabled": {
+          "type": "boolean"
+        },
+        "creation": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/CredentialCreationResponse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "next_offset": {
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "offset": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "overflow_since": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "retention_days": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "session_id": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_cap": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/components/schemas/CredentialSourceResponse"
+          },
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "best_effort",
+        "collection_enabled",
+        "limit",
+        "offset",
+        "retention_days",
+        "source_cap",
+        "sources",
+        "total"
+      ],
+      "type": "object"
+    },
     "CredentialApprovalRecord": {
       "properties": {
         "actor_id": {
@@ -17200,6 +18646,39 @@
     "CredentialApprovalSecret": {
       "pattern": "^hca1\\.[0-9a-f]{64}$",
       "type": "string"
+    },
+    "CredentialCreationResponse": {
+      "properties": {
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "address_method": {
+          "type": "string"
+        },
+        "issuance_method": {
+          "type": "string"
+        },
+        "issued_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "issuer_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "address_method",
+        "issuance_method",
+        "issued_at"
+      ],
+      "type": "object"
     },
     "CredentialOperation": {
       "oneOf": [
@@ -17332,6 +18811,33 @@
           "type": "object"
         }
       ]
+    },
+    "CredentialSourceResponse": {
+      "properties": {
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "address_method": {
+          "type": "string"
+        },
+        "first_seen": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "last_seen": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address_method",
+        "first_seen",
+        "last_seen"
+      ],
+      "type": "object"
     },
     "CurrentTokenMetadata": {
       "properties": {
@@ -19497,6 +21003,544 @@
       ],
       "type": "object"
     },
+    "HistoricalClassObjects": {
+      "properties": {
+        "at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "class": {
+          "$ref": "#/components/schemas/HistoryResponse_HubuumClassHistory"
+        },
+        "coverage": {
+          "$ref": "#/components/schemas/HistoricalPopulationCoverage"
+        },
+        "objects": {
+          "items": {
+            "$ref": "#/components/schemas/HistoryResponse_HubuumObjectHistory"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "at",
+        "class",
+        "coverage",
+        "objects"
+      ],
+      "type": "object"
+    },
+    "HistoricalComputationMode": {
+      "enum": [
+        "historical_recomputation"
+      ],
+      "type": "string"
+    },
+    "HistoricalComputedField": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/HistoricalComputedFieldResult"
+        },
+        {
+          "properties": {
+            "definition_id": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "key": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "revision": {
+              "$ref": "#/components/schemas/ResourceRevision"
+            },
+            "semantics_version": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "definition_id",
+            "key",
+            "label",
+            "revision",
+            "semantics_version"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "HistoricalComputedFieldResult": {
+      "oneOf": [
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "evaluated"
+              ],
+              "type": "string"
+            },
+            "value": {}
+          },
+          "required": [
+            "status",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "$ref": "#/components/schemas/ComputedFieldErrorResponse"
+            },
+            "status": {
+              "enum": [
+                "error"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "error",
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "disabled"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "reason": {
+              "$ref": "#/components/schemas/HistoricalComputedUnavailableReason"
+            },
+            "status": {
+              "enum": [
+                "unavailable"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "reason",
+            "status"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "HistoricalComputedObjectSource": {
+      "properties": {
+        "class_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "history_id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "object_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "valid_from": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "valid_to": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "class_id",
+        "history_id",
+        "object_id",
+        "revision",
+        "valid_from"
+      ],
+      "type": "object"
+    },
+    "HistoricalComputedUnavailableReason": {
+      "enum": [
+        "definition_history_unavailable",
+        "class_history_unavailable",
+        "unsupported_evaluator_version",
+        "unsupported_definition_semantics"
+      ],
+      "type": "string"
+    },
+    "HistoricalComputedValues": {
+      "properties": {
+        "at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/components/schemas/HistoricalComputationMode"
+        },
+        "object": {
+          "$ref": "#/components/schemas/HistoricalComputedObjectSource"
+        },
+        "personal": {
+          "$ref": "#/components/schemas/HistoricalPersonalFields"
+        },
+        "shared": {
+          "$ref": "#/components/schemas/HistoricalSharedComputedFields"
+        }
+      },
+      "required": [
+        "at",
+        "mode",
+        "object",
+        "personal",
+        "shared"
+      ],
+      "type": "object"
+    },
+    "HistoricalEndpointContext": {
+      "oneOf": [
+        {
+          "properties": {
+            "snapshot": {
+              "$ref": "#/components/schemas/HistoricalRelationEndpoint"
+            },
+            "status": {
+              "enum": [
+                "available"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "snapshot",
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "reason": {
+              "$ref": "#/components/schemas/HistoricalEndpointUnavailableReason"
+            },
+            "status": {
+              "enum": [
+                "unavailable"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "reason",
+            "status"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "HistoricalEndpointUnavailableReason": {
+      "enum": [
+        "history_unavailable"
+      ],
+      "type": "string"
+    },
+    "HistoricalPersonalFields": {
+      "enum": [
+        "unsupported"
+      ],
+      "type": "string"
+    },
+    "HistoricalPopulationCoverage": {
+      "enum": [
+        "retained_history"
+      ],
+      "type": "string"
+    },
+    "HistoricalRelationEndpoint": {
+      "properties": {
+        "collection_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "history_id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "hubuum_class_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "valid_from": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "valid_to": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "collection_id",
+        "history_id",
+        "id",
+        "name",
+        "revision",
+        "valid_from"
+      ],
+      "type": "object"
+    },
+    "HistoricalRelationValue": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "class"
+              ],
+              "type": "string"
+            },
+            "relation": {
+              "$ref": "#/components/schemas/HubuumClassRelation"
+            }
+          },
+          "required": [
+            "kind",
+            "relation"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "object"
+              ],
+              "type": "string"
+            },
+            "relation": {
+              "$ref": "#/components/schemas/HubuumObjectRelation"
+            }
+          },
+          "required": [
+            "kind",
+            "relation"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "HistoricalRelationships": {
+      "properties": {
+        "at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coverage": {
+          "$ref": "#/components/schemas/HistoricalPopulationCoverage"
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/components/schemas/HistoryResponse_HistoricalRelation"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "coverage",
+        "relations"
+      ],
+      "type": "object"
+    },
+    "HistoricalSharedComputedFields": {
+      "oneOf": [
+        {
+          "properties": {
+            "definition_history_id": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "evaluator_version": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "fields": {
+              "items": {
+                "$ref": "#/components/schemas/HistoricalComputedField"
+              },
+              "type": "array"
+            },
+            "status": {
+              "enum": [
+                "available"
+              ],
+              "type": "string"
+            },
+            "valid_from": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "valid_to": {
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "definition_history_id",
+            "evaluator_version",
+            "fields",
+            "status",
+            "valid_from"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "reason": {
+              "$ref": "#/components/schemas/HistoricalComputedUnavailableReason"
+            },
+            "status": {
+              "enum": [
+                "unavailable"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "reason",
+            "status"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "HistoryDirection": {
+      "enum": [
+        "older",
+        "newer"
+      ],
+      "type": "string"
+    },
+    "HistoryMarker": {
+      "properties": {
+        "actor_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "actor_kind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "collection_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "history_id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "hubuum_class_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "initiator_user_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "op": {
+          "type": "string"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "task_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "valid_from": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "valid_to": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "collection_id",
+        "history_id",
+        "id",
+        "name",
+        "op",
+        "revision",
+        "valid_from"
+      ],
+      "type": "object"
+    },
     "HistoryResponse_CollectionHistory": {
       "allOf": [
         {
@@ -19732,6 +21776,207 @@
             "revision",
             "template",
             "updated_at",
+            "valid_from"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "actor_username": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "provenance": {
+              "$ref": "#/components/schemas/Provenance"
+            }
+          },
+          "required": [
+            "provenance"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "HistoryResponse_HistoricalRelation": {
+      "allOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/HistoricalRelationValue"
+            },
+            {
+              "properties": {
+                "actor_id": {
+                  "format": "int32",
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "actor_kind": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "context_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "from": {
+                  "$ref": "#/components/schemas/HistoricalEndpointContext"
+                },
+                "history_id": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "initiator_user_id": {
+                  "format": "int32",
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "op": {
+                  "type": "string"
+                },
+                "revision": {
+                  "$ref": "#/components/schemas/ResourceRevision"
+                },
+                "task_id": {
+                  "format": "int32",
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "to": {
+                  "$ref": "#/components/schemas/HistoricalEndpointContext"
+                },
+                "valid_from": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "valid_to": {
+                  "format": "date-time",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "context_at",
+                "from",
+                "history_id",
+                "op",
+                "revision",
+                "to",
+                "valid_from"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        {
+          "properties": {
+            "actor_username": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "provenance": {
+              "$ref": "#/components/schemas/Provenance"
+            }
+          },
+          "required": [
+            "provenance"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "HistoryResponse_HistoryMarker": {
+      "allOf": [
+        {
+          "properties": {
+            "actor_id": {
+              "format": "int32",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "actor_kind": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "collection_id": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "history_id": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "hubuum_class_id": {
+              "format": "int32",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "id": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "initiator_user_id": {
+              "format": "int32",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "revision": {
+              "$ref": "#/components/schemas/ResourceRevision"
+            },
+            "task_id": {
+              "format": "int32",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "valid_from": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "valid_to": {
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "collection_id",
+            "history_id",
+            "id",
+            "name",
+            "op",
+            "revision",
             "valid_from"
           ],
           "type": "object"
@@ -20317,6 +22562,16 @@
           "format": "date-time",
           "type": "string"
         },
+        "forward_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "forward_template_alias": {
           "type": [
             "string",
@@ -20340,6 +22595,16 @@
         "id": {
           "format": "int32",
           "type": "integer"
+        },
+        "reverse_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "reverse_template_alias": {
           "type": [
@@ -20813,6 +23078,16 @@
             }
           ]
         },
+        "forward_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "forward_template_alias": {
           "type": [
             "string",
@@ -20849,6 +23124,16 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "reverse_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "reverse_template_alias": {
@@ -22418,6 +24703,10 @@
           "minimum": 0,
           "type": "integer"
         },
+        "max_attempts_per_account": {
+          "minimum": 0,
+          "type": "integer"
+        },
         "max_attempts_per_ip": {
           "minimum": 0,
           "type": "integer"
@@ -22459,6 +24748,7 @@
         "backoff_max_seconds",
         "enabled",
         "max_attempts",
+        "max_attempts_per_account",
         "max_attempts_per_ip",
         "max_attempts_per_subnet",
         "subnet_prefix_v4",
@@ -22492,6 +24782,10 @@
           "minimum": 0,
           "type": "integer"
         },
+        "max_attempts_per_account": {
+          "minimum": 0,
+          "type": "integer"
+        },
         "max_attempts_per_ip": {
           "minimum": 0,
           "type": "integer"
@@ -22522,6 +24816,7 @@
         "backoff_max_seconds",
         "enabled",
         "max_attempts",
+        "max_attempts_per_account",
         "max_attempts_per_ip",
         "max_attempts_per_subnet",
         "subnet_prefix_v4",
@@ -22636,6 +24931,7 @@
         },
         "password": {
           "maxLength": 4096,
+          "minLength": 1,
           "type": "string"
         }
       },
@@ -23012,6 +25308,16 @@
     },
     "NewHubuumClassRelation": {
       "properties": {
+        "forward_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "forward_template_alias": {
           "type": [
             "string",
@@ -23026,6 +25332,16 @@
           "oneOf": [
             {
               "$ref": "#/components/schemas/ObjectRelationLimit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reverse_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
             },
             {
               "type": "null"
@@ -23061,6 +25377,16 @@
     },
     "NewHubuumClassRelationFromClass": {
       "properties": {
+        "forward_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "forward_template_alias": {
           "type": [
             "string",
@@ -23071,6 +25397,16 @@
           "oneOf": [
             {
               "$ref": "#/components/schemas/ObjectRelationLimit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reverse_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
             },
             {
               "type": "null"
@@ -23326,6 +25662,8 @@
           "type": "string"
         },
         "password": {
+          "maxLength": 4096,
+          "minLength": 1,
           "type": "string"
         },
         "proper_name": {
@@ -24563,6 +26901,12 @@
           "minimum": 0,
           "type": "integer"
         },
+        "runtime_override": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "sample_every": {
           "format": "int32",
           "minimum": 0,
@@ -24652,6 +26996,18 @@
         "process_started_at",
         "settings",
         "source"
+      ],
+      "type": "object"
+    },
+    "QueryObservationUpdateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
       ],
       "type": "object"
     },
@@ -25059,6 +27415,9 @@
       },
       "type": "object"
     },
+    "RefreshToken": {
+      "type": "string"
+    },
     "RelatedClassGraph": {
       "properties": {
         "classes": {
@@ -25082,6 +27441,12 @@
     },
     "RelatedObjectGraph": {
       "properties": {
+        "class_relations": {
+          "items": {
+            "$ref": "#/components/schemas/HubuumClassRelation"
+          },
+          "type": "array"
+        },
         "objects": {
           "items": {
             "$ref": "#/components/schemas/HubuumObjectWithPath"
@@ -25096,10 +27461,16 @@
         }
       },
       "required": [
+        "class_relations",
         "objects",
         "relations"
       ],
       "type": "object"
+    },
+    "RelationLabel": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
     },
     "ReleaseRateLimitResponse": {
       "properties": {
@@ -26958,6 +29329,130 @@
       ],
       "type": "string"
     },
+    "SearchHydrationPath": {
+      "properties": {
+        "object_ids": {
+          "items": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "relation_ids": {
+          "items": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "object_ids",
+        "relation_ids"
+      ],
+      "type": "object"
+    },
+    "SearchHydrationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "class": {
+          "$ref": "#/components/schemas/StructuredClassSelector"
+        },
+        "depth": {
+          "format": "int32",
+          "maximum": 10,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "limit": {
+          "format": "int32",
+          "maximum": 50,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "root_class_id": {
+          "$ref": "#/components/schemas/HubuumClassID"
+        },
+        "root_object_id": {
+          "$ref": "#/components/schemas/HubuumObjectID"
+        },
+        "version": {
+          "format": "int32",
+          "maximum": 1,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "class",
+        "depth",
+        "limit",
+        "root_class_id",
+        "root_object_id",
+        "version"
+      ],
+      "type": "object"
+    },
+    "SearchHydrationResponse": {
+      "properties": {
+        "depth": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "limit": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "objects": {
+          "items": {
+            "$ref": "#/components/schemas/HubuumObject"
+          },
+          "type": "array"
+        },
+        "paths": {
+          "items": {
+            "$ref": "#/components/schemas/SearchHydrationPath"
+          },
+          "type": "array"
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/components/schemas/HubuumObjectRelation"
+          },
+          "type": "array"
+        },
+        "root_object_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "target_class_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "version": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "depth",
+        "limit",
+        "objects",
+        "paths",
+        "relations",
+        "root_object_id",
+        "target_class_id",
+        "truncated",
+        "version"
+      ],
+      "type": "object"
+    },
     "SecretSourceConfig": {
       "properties": {
         "cache_capacity_per_consumer": {
@@ -27162,6 +29657,87 @@
         "owner_group_id",
         "revision",
         "updated_at"
+      ],
+      "type": "object"
+    },
+    "SessionLoginRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "client_id": {
+          "type": "string"
+        },
+        "identity_scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "client_id",
+        "name",
+        "password"
+      ],
+      "type": "object"
+    },
+    "SessionRefreshRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "client_id": {
+          "type": "string"
+        },
+        "refresh_token": {
+          "$ref": "#/components/schemas/RefreshToken"
+        }
+      },
+      "required": [
+        "client_id",
+        "refresh_token"
+      ],
+      "type": "object"
+    },
+    "SessionResponse": {
+      "properties": {
+        "absolute_expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "access_expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "access_token": {
+          "type": "string"
+        },
+        "refresh_expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "refresh_token": {
+          "$ref": "#/components/schemas/RefreshToken"
+        },
+        "session_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "token_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "absolute_expires_at",
+        "access_expires_at",
+        "access_token",
+        "refresh_expires_at",
+        "refresh_token",
+        "session_id",
+        "token_type"
       ],
       "type": "object"
     },
@@ -28997,6 +31573,32 @@
       ],
       "type": "object"
     },
+    "UpdateClassRelationLabels": {
+      "additionalProperties": false,
+      "properties": {
+        "forward_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reverse_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
     "UpdateCollection": {
       "properties": {
         "description": {
@@ -29456,6 +32058,8 @@
           ]
         },
         "password": {
+          "maxLength": 4096,
+          "minLength": 1,
           "type": [
             "string",
             "null"
@@ -29595,5 +32199,5 @@
       "type": "object"
     }
   },
-  "spec_sha256": "6ab21f9548fc4519dfef0ee0cfa30267b06c1bb6a688e9ec61993af1353d6fa0"
+  "spec_sha256": "c42315ba68dee89494da420331a80468897f89642f34ff2aa102de0fb58181d6"
 }

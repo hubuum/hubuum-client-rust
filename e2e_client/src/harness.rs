@@ -31,10 +31,10 @@ pub struct E2EUser {
 
 impl E2EUser {
     pub fn login(&self, base_url: BaseUrl) -> Result<blocking::Client<Authenticated>, ApiError> {
-        blocking::Client::try_new(base_url)?.login(Credentials::new(
-            self.username.clone(),
-            self.password.clone(),
-        ))
+        blocking::Client::try_new(base_url)?.login_session(
+            Credentials::new(self.username.clone(), self.password.clone()),
+            Default::default(),
+        )
     }
 }
 
@@ -44,10 +44,10 @@ impl E2EHarness {
 
         let client = blocking::Client::try_new(parsed_base_url.clone())
             .map_err(|err| format!("client initialization failed: {err}"))?
-            .login(Credentials::new(
-                ADMIN_USERNAME.to_string(),
-                admin_password.to_string(),
-            ))
+            .login_session(
+                Credentials::new(ADMIN_USERNAME.to_string(), admin_password.to_string()),
+                Default::default(),
+            )
             .map_err(|err| format!("admin login failed: {err}"))?;
 
         Ok(Self {
@@ -93,7 +93,10 @@ impl E2EHarness {
     pub fn create_user(&self, case: &str) -> Result<E2EUser, ApiError> {
         let prefix = unique_case_prefix(case);
         let username = format!("{prefix}-user");
-        let password = format!("{prefix}-Passw0rd!");
+        let mut password_bytes = [0u8; 16];
+        getrandom::fill(&mut password_bytes)
+            .expect("OS randomness must be available for fixture passwords");
+        let password = format!("{:032x}", u128::from_ne_bytes(password_bytes));
         let request = UserPost {
             identity_scope: None,
             name: username.clone(),
@@ -138,7 +141,10 @@ impl AsyncE2EHarness {
         let (base_url, admin_password) = integration_connection()?;
         let client = Client::try_new(base_url.clone())
             .map_err(|err| format!("client initialization failed: {err}"))?
-            .login(Credentials::new(ADMIN_USERNAME.to_string(), admin_password))
+            .login_session(
+                Credentials::new(ADMIN_USERNAME.to_string(), admin_password),
+                Default::default(),
+            )
             .await
             .map_err(|err| format!("admin login failed: {err}"))?;
 

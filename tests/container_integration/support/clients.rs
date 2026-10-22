@@ -22,10 +22,10 @@ impl TestUserCredentials {
         &self,
         base_url: BaseUrl,
     ) -> Result<blocking::Client<Authenticated>, ApiError> {
-        blocking::Client::try_new(base_url)?.login(Credentials::new(
-            self.username.clone(),
-            self.password.clone(),
-        ))
+        blocking::Client::try_new(base_url)?.login_session(
+            Credentials::new(self.username.clone(), self.password.clone()),
+            Default::default(),
+        )
     }
 
     pub(crate) async fn login_async(
@@ -33,10 +33,10 @@ impl TestUserCredentials {
         base_url: BaseUrl,
     ) -> Result<Client<Authenticated>, ApiError> {
         Client::try_new(base_url)?
-            .login(Credentials::new(
-                self.username.clone(),
-                self.password.clone(),
-            ))
+            .login_session(
+                Credentials::new(self.username.clone(), self.password.clone()),
+                Default::default(),
+            )
             .await
     }
 }
@@ -45,10 +45,10 @@ pub(crate) fn login_sync(
     base_url: BaseUrl,
     admin_password: &str,
 ) -> Result<blocking::Client<Authenticated>, ApiError> {
-    blocking::Client::try_new(base_url)?.login(Credentials::new(
-        ADMIN_USERNAME.to_string(),
-        admin_password.to_string(),
-    ))
+    blocking::Client::try_new(base_url)?.login_session(
+        Credentials::new(ADMIN_USERNAME.to_string(), admin_password.to_string()),
+        Default::default(),
+    )
 }
 
 pub(crate) fn is_unsupported_query_operator(err: &ApiError, operator: &str) -> bool {
@@ -66,10 +66,10 @@ pub(crate) async fn login_async(
     admin_password: &str,
 ) -> Result<Client<Authenticated>, ApiError> {
     Client::try_new(base_url)?
-        .login(Credentials::new(
-            ADMIN_USERNAME.to_string(),
-            admin_password.to_string(),
-        ))
+        .login_session(
+            Credentials::new(ADMIN_USERNAME.to_string(), admin_password.to_string()),
+            Default::default(),
+        )
         .await
 }
 

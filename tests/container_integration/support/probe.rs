@@ -6,10 +6,11 @@ pub(crate) const ADMIN_USERNAME: &str = "admin";
 
 pub(crate) fn login_token(base_url: &str, admin_password: &str) -> Result<String, String> {
     let response = reqwest::blocking::Client::new()
-        .post(format!("{base_url}/api/v0/auth/login"))
+        .post(format!("{base_url}/api/v1/auth/login"))
         .json(&json!({
             "name": ADMIN_USERNAME,
-            "password": admin_password
+            "password": admin_password,
+            "client_id": "rust-id-probe"
         }))
         .send()
         .map_err(|err| format!("login request failed: {err}"))?;
@@ -22,10 +23,10 @@ pub(crate) fn login_token(base_url: &str, admin_password: &str) -> Result<String
         .json()
         .map_err(|err| format!("failed to decode login response: {err}"))?;
     payload
-        .get("token")
+        .get("access_token")
         .and_then(Value::as_str)
         .map(str::to_string)
-        .ok_or_else(|| "login response missing token field".to_string())
+        .ok_or_else(|| "login response missing access_token field".to_string())
 }
 
 pub(crate) fn fetch_admin_ids(base_url: &str, token: &str) -> Result<(UserId, GroupId), String> {

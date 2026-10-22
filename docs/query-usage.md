@@ -1,6 +1,6 @@
 # JSON query usage and analysis
 
-Hubuum server v0.0.19 records advisory workload declarations separately from class
+Hubuum server v0.0.19 and newer record advisory workload declarations separately from class
 schemas. A declaration describes one JSON path, scalar type, and set of
 operations. It never changes filtering, validation, or authorization and does not
 promise an index or a speedup.
@@ -99,7 +99,7 @@ valid without preparation. Analysis exposes native ownership and progress;
 `can_prepare` does not establish that the executor is running or that its limits
 permit allocation. Independently managed indexes are preserved.
 
-Backup format 9 retains declarations and attribution. Native resources and their
+Backup formats 9 and 10 retain declarations and attribution. Native resources and their
 ownership records are not portable backup content. Reconcile against restored
 intent on the target deployment. See [backups and restores](backups-and-computed-fields.md).
 

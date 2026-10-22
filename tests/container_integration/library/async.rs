@@ -34,6 +34,7 @@ enum AsyncMutationCase {
 
 fn assert_auth_token_revoked(err: ApiError) {
     match err {
+        ApiError::SessionExpired => {}
         ApiError::HttpWithBody { status, .. }
             if status == reqwest::StatusCode::UNAUTHORIZED
                 || status == reqwest::StatusCode::FORBIDDEN => {}
@@ -427,13 +428,19 @@ fn async_external_provider_login_and_user_settings_roundtrip() {
     let client = Client::try_new(base_url).expect("failed to construct async client");
 
     let providers = runtime
-        .block_on(client.auth_providers())
+        .block_on(client.session_providers())
         .expect("async auth provider discovery failed");
     assert!(providers.contains(LOCAL_IDENTITY_SCOPE));
     assert!(providers.contains("planet-express"));
 
+    let password = stack
+        .reset_ldap_password("cn=Amy Wong+sn=Kroker,ou=people,dc=planetexpress,dc=com")
+        .expect("LDAP fixture password rotation failed");
     let external = runtime
-        .block_on(client.login(Credentials::scoped("planet-express", "amy", "amy")))
+        .block_on(client.login_session(
+            Credentials::scoped("planet-express", "amy", password),
+            Default::default(),
+        ))
         .expect("async LDAP login for amy failed");
     let me = runtime
         .block_on(external.me())

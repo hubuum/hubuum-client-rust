@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use crate::support::naming::unique_suffix;
 
@@ -328,14 +328,10 @@ fn collect_stack_diagnostics(
     .unwrap_or_else(|err| format!("logs-error: {err}"));
 
     let probe = match reqwest::blocking::Client::new()
-        .post(format!("{base_url}/api/v0/auth/login"))
-        .json(&json!({ "name": "__readiness__", "password": "__readiness__" }))
+        .get(format!("{base_url}/readyz"))
         .send()
     {
-        Ok(response) => format!(
-            "probe-status={} (POST /api/v0/auth/login)",
-            response.status()
-        ),
+        Ok(response) => format!("probe-status={} (GET /readyz)", response.status()),
         Err(err) => format!("probe-error={err}"),
     };
 
@@ -655,13 +651,10 @@ impl StackInner {
 
         if let Err(err) = wait_until(timeout, || {
             match reqwest::blocking::Client::new()
-                .post(format!("{base_url}/api/v0/auth/login"))
-                .json(&json!({ "name": "__readiness__", "password": "__readiness__" }))
+                .get(format!("{base_url}/readyz"))
                 .send()
             {
-                Ok(response) => {
-                    Ok(response.status().is_success() || response.status().is_client_error())
-                }
+                Ok(response) => Ok(response.status().is_success()),
                 Err(_) => Ok(false),
             }
         })
@@ -746,6 +739,34 @@ pub(crate) struct IntegrationStack {
 }
 
 impl IntegrationStack {
+    /// Rotate a disposable LDAP fixture user's password before exercising login.
+    pub(crate) fn reset_ldap_password(&self, distinguished_name: &str) -> Result<String, String> {
+        let ldap_container = match &self._inner {
+            Some(inner) => inner.ldap_container_name.clone(),
+            None => std::env::var("HUBUUM_INTEGRATION_LDAP_CONTAINER")
+                .map_err(|_| "set HUBUUM_INTEGRATION_LDAP_CONTAINER for LDAP fixture tests")?,
+        };
+        let output = container(&[
+            "exec".into(),
+            ldap_container,
+            "ldappasswd".into(),
+            "-x".into(),
+            "-H".into(),
+            "ldap://127.0.0.1:10389".into(),
+            "-D".into(),
+            "cn=admin,dc=planetexpress,dc=com".into(),
+            "-w".into(),
+            "GoodNewsEveryone".into(),
+            distinguished_name.into(),
+        ])?;
+        output
+            .lines()
+            .find_map(|line| line.strip_prefix("New password: "))
+            .filter(|password| !password.is_empty())
+            .map(str::to_owned)
+            .ok_or_else(|| "LDAP fixture did not return a generated password".into())
+    }
+
     fn from_external_env() -> Result<Option<Self>, String> {
         let base_url = std::env::var(EXTERNAL_BASE_URL_ENV)
             .ok()

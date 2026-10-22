@@ -17,14 +17,14 @@ provider choices before asking for credentials:
 use hubuum_client::{Client, Credentials};
 
 let client = Client::from_url("https://hubuum.example")?;
-let providers = client.auth_providers().await?;
+let providers = client.session_providers().await?;
 
 for provider in providers.iter() {
     println!("Available login provider: {provider}");
 }
 
 let client = client
-    .login(Credentials::scoped(selected_provider, username, password))
+    .login_session(Credentials::scoped(selected_provider, username, password), Default::default())
     .await?;
 ```
 
@@ -32,14 +32,14 @@ let client = client
 `iter()`, `len()`, `is_empty()`, and `into_providers()` helpers. Provider names
 come from deployment configuration; clients should display the returned values
 rather than hard-code a directory list. The blocking client exposes the same
-`auth_providers()` method without `.await`.
+`session_providers()` method without `.await`.
 
 Local login remains unchanged. Omitting `identity_scope` lets the server use its
 `local` default:
 
 ```rust
 let client = hubuum_client::Client::from_url("https://hubuum.example")?
-    .login(hubuum_client::Credentials::new("alice", password))
+    .login_session(hubuum_client::Credentials::new("alice", password), Default::default())
     .await?;
 ```
 
@@ -49,7 +49,7 @@ Select an advertised provider by passing its configured scope:
 use hubuum_client::{Client, Credentials};
 
 let client = Client::from_url("https://hubuum.example")?
-    .login(Credentials::scoped("corp-directory", "alice", password))
+    .login_session(Credentials::scoped("corp-directory", "alice", password), Default::default())
     .await?;
 ```
 
