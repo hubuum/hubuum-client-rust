@@ -2187,7 +2187,6 @@ impl Client<Authenticated> {
         Resource::new(self.clone(), UrlParams::default())
     }
 
-    /// Execute version 1 structured POST search with typed results or SSE events.
     /// Expand a root object's visible neighborhood without changing search results.
     /// The server can reject traversal work or report concurrent changes; no cursor is returned.
     pub fn hydrate_search(
@@ -2208,6 +2207,7 @@ impl Client<Authenticated> {
         })
     }
 
+    /// Execute version 1 structured POST search with typed results or SSE events.
     pub fn structured_search(&self, request: StructuredSearchRequest) -> StructuredSearchOp {
         StructuredSearchOp {
             client: self.clone(),
