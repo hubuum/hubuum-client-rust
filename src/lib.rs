@@ -147,7 +147,11 @@ pub use types::{
     StructuredSearchStartedEvent, StructuredSearchTarget,
 };
 
-pub use types::{CredentialApprovalId, CredentialApprovalRecord, CredentialOperation};
+pub use types::{
+    CredentialActivityPageOptions, CredentialActivityResponse, CredentialApprovalId,
+    CredentialApprovalRecord, CredentialCreationResponse, CredentialOperation,
+    CredentialSourceResponse,
+};
 
 #[cfg(feature = "blocking")]
 pub mod blocking {

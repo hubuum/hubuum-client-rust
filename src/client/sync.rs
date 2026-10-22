@@ -11,6 +11,7 @@ use crate::types::{
 use crate::types::{StructuredSearchEvent, StructuredSearchRequest, StructuredSearchResponse};
 use crate::{ClassRelationId, ObjectRelationId};
 use crate::{CollectionEventSink, EventSinkId};
+use crate::{CredentialActivityPageOptions, CredentialActivityResponse, TokenId};
 use log::{debug, trace};
 use reqwest::blocking::Response;
 use secrecy::SecretString;
@@ -1743,6 +1744,27 @@ impl Client<Authenticated> {
 
     pub fn event_deliveries(&self) -> EventDeliveries {
         EventDeliveries::new(self.clone())
+    }
+
+    /// Creation provenance and a page of recent credential sources.
+    /// Requires the server's token-management authority for the owning principal.
+    /// Activity is best-effort and does not change token revisions or ETags.
+    pub fn token_activity(
+        &self,
+        principal_id: impl Into<PrincipalId>,
+        token_id: impl Into<TokenId>,
+        options: CredentialActivityPageOptions,
+    ) -> Result<CredentialActivityResponse, ApiError> {
+        let (url_params, query) =
+            shared::credential_activity_request(principal_id.into(), token_id.into(), options);
+        self.request_with_endpoint::<EmptyPostParams, CredentialActivityResponse>(
+            reqwest::Method::GET,
+            &Endpoint::PrincipalTokenActivity,
+            url_params,
+            query,
+            EmptyPostParams,
+        )?
+        .ok_or_else(|| ApiError::EmptyResult("Credential activity returned no response".into()))
     }
 
     /// The authenticated caller's own identity and current-token metadata.

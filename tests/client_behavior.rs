@@ -8157,6 +8157,7 @@ async fn async_structured_search_posts_json_and_decodes_results_and_events() {
 }
 
 mod client_behavior {
+    mod credential_activity;
     mod notifications;
     mod query_usage;
     mod sessions;

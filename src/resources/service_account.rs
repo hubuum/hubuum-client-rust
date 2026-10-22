@@ -23,8 +23,9 @@ use crate::resources::user::{
     principal_tokens_request_sync, principal_tokens_sync,
 };
 use crate::{
-    ApiError, GroupId, NewTokenRequest, PrincipalCollectionPermissions, PrincipalTokenMetadata,
-    PrincipalTokenPointResponse, RenewTokenRequest, Token,
+    ApiError, CredentialActivityPageOptions, CredentialActivityResponse, GroupId, NewTokenRequest,
+    PrincipalCollectionPermissions, PrincipalTokenMetadata, PrincipalTokenPointResponse,
+    RenewTokenRequest, Token,
     endpoints::Endpoint,
     types::{
         EntityTag, HubuumDateTime, PrincipalId, ResourceRevision, Revisioned, TokenId,
@@ -49,6 +50,15 @@ impl ServiceAccount {
 
 #[cfg(feature = "blocking")]
 impl SyncHandle<ServiceAccount> {
+    /// Creation provenance and recent source history for a retained token.
+    pub fn token_activity(
+        &self,
+        token_id: impl Into<TokenId>,
+        options: CredentialActivityPageOptions,
+    ) -> Result<CredentialActivityResponse, ApiError> {
+        self.client().token_activity(self.id(), token_id, options)
+    }
+
     pub fn settings(&self) -> SyncPrincipalSettingsScope {
         self.client().principal_settings(self.id())
     }
@@ -133,6 +143,17 @@ impl SyncHandle<ServiceAccount> {
 
 #[cfg(feature = "async")]
 impl AsyncHandle<ServiceAccount> {
+    /// Creation provenance and recent source history for a retained token.
+    pub async fn token_activity(
+        &self,
+        token_id: impl Into<TokenId>,
+        options: CredentialActivityPageOptions,
+    ) -> Result<CredentialActivityResponse, ApiError> {
+        self.client()
+            .token_activity(self.id(), token_id, options)
+            .await
+    }
+
     pub fn settings(&self) -> AsyncPrincipalSettingsScope {
         self.client().principal_settings(self.id())
     }

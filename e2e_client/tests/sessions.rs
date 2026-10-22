@@ -29,12 +29,33 @@ fn blocking_session_rotates_and_logout_invalidates_clones() {
         .unwrap();
     let before = client.session_info().unwrap();
     let old = client.token().unwrap();
+    let identity = client.me().unwrap();
+    let activity = client
+        .token_activity(
+            identity.principal.principal_id,
+            identity.token.id,
+            Default::default(),
+        )
+        .unwrap();
+    assert_eq!(activity.session_id.as_deref(), Some(before.id()));
+    assert_eq!(activity.creation.as_ref().unwrap().issuance_method, "login");
     std::thread::sleep(expiry_wait(&before));
     assert_eq!(client.me().unwrap().principal.name, "admin");
     assert_ne!(client.token().unwrap(), old);
     let after = client.session_info().unwrap();
     assert_eq!(before.id(), after.id());
     assert_eq!(before.absolute_expires_at(), after.absolute_expires_at());
+    let identity = client.me().unwrap();
+    let rotated = client
+        .token_activity(
+            identity.principal.principal_id,
+            identity.token.id,
+            Default::default(),
+        )
+        .unwrap();
+    assert_eq!(rotated.session_id, activity.session_id);
+    assert_eq!(rotated.creation, activity.creation);
+    assert!(!rotated.sources.is_empty());
     let clone = client.clone();
     client.logout().unwrap();
     assert!(clone.me().is_err());
@@ -54,12 +75,35 @@ async fn async_session_rotates_and_logout_invalidates_clones() {
         .unwrap();
     let before = client.session_info().unwrap();
     let old = client.token().unwrap();
+    let identity = client.me().await.unwrap();
+    let activity = client
+        .token_activity(
+            identity.principal.principal_id,
+            identity.token.id,
+            Default::default(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(activity.session_id.as_deref(), Some(before.id()));
+    assert_eq!(activity.creation.as_ref().unwrap().issuance_method, "login");
     tokio::time::sleep(expiry_wait(&before)).await;
     assert_eq!(client.me().await.unwrap().principal.name, "admin");
     assert_ne!(client.token().unwrap(), old);
     let after = client.session_info().unwrap();
     assert_eq!(before.id(), after.id());
     assert_eq!(before.absolute_expires_at(), after.absolute_expires_at());
+    let identity = client.me().await.unwrap();
+    let rotated = client
+        .token_activity(
+            identity.principal.principal_id,
+            identity.token.id,
+            Default::default(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(rotated.session_id, activity.session_id);
+    assert_eq!(rotated.creation, activity.creation);
+    assert!(!rotated.sources.is_empty());
     let clone = client.clone();
     client.logout().await.unwrap();
     assert!(clone.me().await.is_err());

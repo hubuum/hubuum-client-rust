@@ -15,7 +15,6 @@ use std::ops::Deref;
 use std::path::Path;
 
 use super::{GetID, UrlParams};
-use crate::QueryFilter;
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{ApiResource, ClassId};
@@ -25,6 +24,27 @@ use crate::types::{
     Revisioned, SchemaPageOptions, SchemaRevision, TaskId, TaskResponse,
 };
 use crate::types::{FilterOperator, JsonPath, QueryUsageDeclarationId};
+use crate::{CredentialActivityPageOptions, PrincipalId, QueryFilter, TokenId};
+
+pub(crate) fn credential_activity_request(
+    principal_id: PrincipalId,
+    token_id: TokenId,
+    options: CredentialActivityPageOptions,
+) -> (UrlParams, Vec<QueryFilter>) {
+    (
+        vec![
+            (
+                Cow::Borrowed("principal_id"),
+                principal_id.to_string().into(),
+            ),
+            (Cow::Borrowed("token_id"), token_id.to_string().into()),
+        ],
+        vec![
+            QueryFilter::raw("offset", options.offset_value().to_string()),
+            QueryFilter::raw("limit", options.limit_value().to_string()),
+        ],
+    )
+}
 
 pub(crate) const NEXT_CURSOR_HEADER: &str = "X-Next-Cursor";
 pub(crate) const TOTAL_COUNT_HEADER: &str = "X-Total-Count";

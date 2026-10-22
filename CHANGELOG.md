@@ -6,6 +6,17 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Typed credential creation provenance and recent source history through
+  `token_activity` on authenticated clients and user/service-account handles,
+  in both async and blocking modes. Validated offset pagination preserves
+  session-family correlation, retention, collection status, and overflow evidence;
+  debug output omits source addresses.
+- Session lifetime and retention settings in public and administrator configuration,
+  plus administrator credential-activity settings. These fields are optional so
+  older server responses preserve unavailable values as `None`.
+
 ## [0.16.0] - 2026-10-22
 
 This release explicitly targets Hubuum server v0.0.20.

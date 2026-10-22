@@ -1659,3 +1659,55 @@ fn async_structured_search_paginates_and_streams_typed_resources() {
     };
     harness.block_on(run);
 }
+
+#[test]
+#[ignore = "requires Docker and Hubuum server v0.0.20 image"]
+fn async_credential_activity_and_authentication_config() {
+    let harness = AsyncHarness::start().expect("failed to bootstrap harness");
+    let client = &harness.client;
+    let me = harness.block_on(client.me()).unwrap();
+    let user = harness
+        .block_on(client.users().get(me.principal.principal_id.get()))
+        .unwrap();
+    let activity = harness
+        .block_on(user.token_activity(me.token.id, Default::default()))
+        .unwrap();
+    assert_eq!(
+        activity.session_id.as_deref(),
+        Some(client.session_info().unwrap().id())
+    );
+    assert_eq!(
+        activity.creation.as_ref().unwrap().issuer_id,
+        Some(me.principal.principal_id)
+    );
+    assert!(!activity.sources.is_empty());
+    assert!(activity.best_effort && activity.collection_enabled);
+    let public = harness.block_on(client.config()).unwrap().authentication;
+    let admin = harness
+        .block_on(client.admin_config())
+        .unwrap()
+        .authentication;
+    assert!(public.session_access_seconds.is_some_and(|value| value > 0));
+    assert_eq!(public.session_access_seconds, admin.session_access_seconds);
+    assert_eq!(public.session_idle_seconds, admin.session_idle_seconds);
+    assert_eq!(
+        public.session_absolute_seconds,
+        admin.session_absolute_seconds
+    );
+    assert_eq!(
+        public.session_retention_seconds,
+        admin.session_retention_seconds
+    );
+    assert_eq!(
+        admin.credential_activity_enabled,
+        Some(activity.collection_enabled)
+    );
+    assert_eq!(
+        admin.credential_activity_retention_days,
+        Some(activity.retention_days)
+    );
+    assert_eq!(
+        admin.credential_activity_source_cap,
+        Some(activity.source_cap)
+    );
+}

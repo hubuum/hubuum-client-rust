@@ -26,10 +26,22 @@ pub struct ClientPaginationConfig {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClientAuthenticationConfig {
-    /// Lifetime applied when login or token minting omits an explicit expiry.
+    /// Lifetime applied when token minting omits an explicit expiry.
     pub default_token_lifetime_hours: i64,
     /// Largest lifetime accepted for an explicitly requested token expiry.
     pub max_token_lifetime_hours: i64,
+    /// Access-token lifetime in seconds; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_access_seconds: Option<i64>,
+    /// Refresh inactivity deadline in seconds; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_idle_seconds: Option<i64>,
+    /// Fixed maximum session lifetime in seconds; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_absolute_seconds: Option<i64>,
+    /// Session replay-evidence retention in seconds; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_retention_seconds: Option<i64>,
 }
 
 /// Redacted effective process configuration returned by the administrative
@@ -198,7 +210,28 @@ pub struct RemoteCallConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuthenticationConfig {
     pub token_lifetime_hours: i64,
+    /// Whether credential source collection is enabled; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credential_activity_enabled: Option<bool>,
+    /// Rolling credential source-history retention in days; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credential_activity_retention_days: Option<i64>,
+    /// Maximum distinct sources retained per credential or session family; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credential_activity_source_cap: Option<usize>,
     pub max_token_lifetime_hours: i64,
+    /// Access-token lifetime in seconds; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_access_seconds: Option<i64>,
+    /// Refresh inactivity deadline in seconds; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_idle_seconds: Option<i64>,
+    /// Fixed maximum session lifetime in seconds; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_absolute_seconds: Option<i64>,
+    /// Session replay-evidence retention in seconds; absent on servers before 0.0.20.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_retention_seconds: Option<i64>,
     pub token_retention_purge_enabled: bool,
     pub token_retention_days: i64,
     pub token_retention_purge_interval_seconds: u64,

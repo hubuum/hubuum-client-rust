@@ -268,6 +268,13 @@ mod parity_contract {
 
     macro_rules! assert_authenticated_client_auth_surface {
         ($module:ident) => {
+            let _ = |client: &$module::Client<Authenticated>| {
+                std::mem::drop(client.token_activity(
+                    1,
+                    2,
+                    crate::CredentialActivityPageOptions::default(),
+                ));
+            };
             let _ = $module::Client::<Authenticated>::credential_approvals;
             let _ = |scope: &$module::CredentialApprovals,
                      operation: crate::CredentialOperation<crate::Token>| {
@@ -600,6 +607,9 @@ mod parity_contract {
             let _ = |handle: &$module::Handle<User>, etag: &crate::types::EntityTag| {
                 std::mem::drop(handle.token(1));
                 std::mem::drop(
+                    handle.token_activity(1, crate::CredentialActivityPageOptions::default()),
+                );
+                std::mem::drop(
                     handle.token_renew(1, crate::resources::RenewTokenRequest::default()),
                 );
                 std::mem::drop(handle.token_revoke_if_match(1, etag));
@@ -615,6 +625,9 @@ mod parity_contract {
             let _ = $module::Handle::<ServiceAccount>::tokens_create_token;
             let _ = |handle: &$module::Handle<ServiceAccount>, etag: &crate::types::EntityTag| {
                 std::mem::drop(handle.token(1));
+                std::mem::drop(
+                    handle.token_activity(1, crate::CredentialActivityPageOptions::default()),
+                );
                 std::mem::drop(
                     handle.token_renew(1, crate::resources::RenewTokenRequest::default()),
                 );

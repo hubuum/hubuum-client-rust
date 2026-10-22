@@ -110,16 +110,24 @@ and session-aware logout. Legacy single-token login is only for older servers.
 The following newer surfaces intentionally use authenticated `raw()` requests:
 history timeline and entry lookup, relationship and computed-field historical
 views, exact-name history across object identities, bounded search hydration,
-credential-activity administration, and observation-management mutations.
+and observation-management mutations.
 Existing typed resource and administrative models retain their earlier projections:
 
 - Class-relation read/create models do not expose `forward_label` or
   `reverse_label`; use raw JSON to preserve or set directional labels.
-- `AuthenticationConfig` does not expose the session lifetime/retention or
-  credential-activity configuration fields. Read the raw administrator config
-  when those settings are needed.
 - Query-observation configuration models omit `runtime_override`; use raw
   administrator configuration to inspect the effective override.
 
 `openapi/model-contract.json` records these field-level exceptions explicitly.
 Backup format 10 is recognized without discarding the extensible backup payload.
+
+Credential activity has typed `token_activity(principal_id, token_id, options)`
+client methods and `token_activity(token_id, options)` user/service-account handle
+methods in both modes. `CredentialActivityPageOptions` validates offset and limit;
+`CredentialActivityResponse::next_page_options()` follows body-based pagination
+without discarding creation or coverage metadata. Activity has no revision or ETag.
+
+Public and administrator authentication configuration expose session settings;
+administrator configuration also exposes credential-activity settings. These
+additions use `Option` to distinguish unavailable fields on older servers from
+actual configured values. See [credential activity usage](../docs/scoped-auth.md#credential-activity).

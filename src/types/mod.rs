@@ -3,6 +3,7 @@ mod backup;
 mod baseurl;
 mod computed;
 mod config;
+mod credential_activity;
 mod credential_approval;
 mod datetime;
 mod event;
@@ -54,6 +55,10 @@ pub use config::{
     RestoreConfig, RunningConfig, RunningLoginRateLimitConfig, SamplingRatio,
     SchemaValidationConfig, SecretSourceConfig, SecretStatus, ServerConfig, TaskConfig, TlsConfig,
     TracingConfig,
+};
+pub use credential_activity::{
+    CredentialActivityPageOptions, CredentialActivityResponse, CredentialCreationResponse,
+    CredentialSourceResponse,
 };
 pub use credential_approval::{CredentialApprovalRecord, CredentialOperation};
 pub(crate) use credential_approval::{
