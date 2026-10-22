@@ -67,6 +67,52 @@ Provider configuration, TLS, synchronization intervals, and directory mapping
 belong to the Hubuum server. The client does not configure or enumerate identity
 providers.
 
+## Credential activity
+
+Server v0.0.20 exposes creation provenance and recent credential sources separately
+from token metadata. Use the owning principal and retained token ID:
+
+```rust,no_run
+use hubuum_client::{Client, CredentialActivityPageOptions, PrincipalId, TokenId};
+
+# async fn example(client: &Client<hubuum_client::Authenticated>, principal_id: PrincipalId, token_id: TokenId) -> Result<(), hubuum_client::ApiError> {
+let mut options = CredentialActivityPageOptions::default().limit(25)?;
+loop {
+    let page = client.token_activity(principal_id, token_id, options).await?;
+    // Inspect page.creation, page.sources, and the coverage fields together.
+    // Source addresses are available explicitly but omitted from Debug output.
+    let Some(next) = page.next_page_options()? else { break };
+    options = next;
+}
+# Ok(())
+# }
+```
+
+User and service-account handles also expose `token_activity(token_id, options)`.
+Blocking clients use the same API without `.await`. The default page starts at
+offset 0 with a limit of 50; limits accept 1–100 and offsets accept 0–256. The
+next-page helper rejects non-advancing or out-of-range continuations.
+
+The caller needs token-management authority: an unscoped human managing their own
+credentials, an administrator, or an authorized service-account owner-group member.
+An issuer can differ from the credential's owner. Historical credentials can have
+`creation: None`, and an unavailable source has `address: None`. Method strings
+preserve future server values. Rotating access tokens share the original session's
+creation evidence and source history, identified by `session_id`.
+
+Activity is best-effort evidence of successful credential validation, including
+requests whose subsequent authorization or handler fails. It is not a complete
+request ledger. Read `collection_enabled`, `best_effort`, `retention_days`,
+`source_cap`, and `overflow_since` alongside the sources. A missing overflow marker
+does not guarantee complete collection. Activity does not change the token's
+revision or ETag; revocation preserves evidence until retention removes it.
+
+`config().authentication` exposes session access, idle, absolute, and retention
+durations in seconds. `admin_config().authentication` additionally exposes
+`credential_activity_enabled`, `credential_activity_retention_days`, and
+`credential_activity_source_cap`. These settings are `Option` values: `None`
+means the server did not report the field, rather than zero or disabled.
+
 ## Querying Identities
 
 Names are unique within an identity scope, not globally. Include

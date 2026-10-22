@@ -23,6 +23,9 @@ pub enum ApiError {
     #[error("Client ID must contain 1-128 ASCII letters, digits, or -._:")]
     InvalidSessionClientId,
 
+    #[error("Invalid credential activity pagination: {reason}")]
+    InvalidCredentialActivityPagination { reason: &'static str },
+
     #[error("HTTP error: {0}")]
     Http(#[source] reqwest::Error),
 
@@ -219,6 +222,10 @@ impl std::fmt::Debug for ApiError {
             Self::SessionExpired => f.write_str("SessionExpired"),
             Self::InvalidSessionResponse => f.write_str("InvalidSessionResponse"),
             Self::InvalidSessionClientId => f.write_str("InvalidSessionClientId"),
+            Self::InvalidCredentialActivityPagination { reason } => f
+                .debug_struct("InvalidCredentialActivityPagination")
+                .field("reason", reason)
+                .finish(),
             Self::Http(error) => f.debug_tuple("Http").field(error).finish(),
             Self::Json(error) => f
                 .debug_struct("Json")

@@ -39,6 +39,7 @@ pub enum Endpoint {
     PrincipalPermissions,
     PrincipalTokens,
     PrincipalToken,
+    PrincipalTokenActivity,
     PrincipalTokenRenew,
     PrincipalTokenRevoke,
     PrincipalSettings,
@@ -217,6 +218,9 @@ impl Endpoint {
             Endpoint::PrincipalPermissions => "/api/v1/iam/principals/{principal_id}/permissions",
             Endpoint::PrincipalTokens => "/api/v1/iam/principals/{principal_id}/tokens",
             Endpoint::PrincipalToken => "/api/v1/iam/principals/{principal_id}/tokens/{token_id}",
+            Endpoint::PrincipalTokenActivity => {
+                "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/activity"
+            }
             Endpoint::PrincipalTokenRenew => {
                 "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/renew"
             }
@@ -494,7 +498,6 @@ mod test {
             "/api/v1/classes/{class_id}/{object_id}/history/timeline",
             "/api/v1/classes/{class_id}/{object_id}/relations/history",
             "/api/v1/classes/{class_id}/{object_id}/relations/history/as-of",
-            "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/activity",
             "/api/v1/search/hydrate",
         ]
         .into_iter()
@@ -542,6 +545,7 @@ mod test {
         principal_permissions = { Endpoint::PrincipalPermissions, "/api/v1/iam/principals/{principal_id}/permissions" },
         principal_tokens = { Endpoint::PrincipalTokens, "/api/v1/iam/principals/{principal_id}/tokens" },
         principal_token = { Endpoint::PrincipalToken, "/api/v1/iam/principals/{principal_id}/tokens/{token_id}" },
+        principal_token_activity = { Endpoint::PrincipalTokenActivity, "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/activity" },
         principal_token_renew = { Endpoint::PrincipalTokenRenew, "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/renew" },
         principal_token_revoke = { Endpoint::PrincipalTokenRevoke, "/api/v1/iam/principals/{principal_id}/tokens/{token_id}/revoke" },
         principal_settings = { Endpoint::PrincipalSettings, "/api/v1/iam/principals/{principal_id}/settings" },

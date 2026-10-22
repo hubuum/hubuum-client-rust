@@ -122,6 +122,31 @@ together during the server's offline migration, retain a pre-upgrade PostgreSQL
 snapshot, and sign in again. Backup format 10 preserves shared computed-definition
 history; the client recognizes formats 6–10 and preserves section contents.
 
+### Unreleased credential activity coverage
+
+On 2026-10-22, typed credential activity and authentication configuration additions
+passed the canonical combined suite against the same pinned v0.0.20 image:
+101 library tests, 42 ordinary consumer cases (including four historical version
+gates), three native-resource phases, and all four restore/recovery pairs.
+The new cases verify human and service-account issuance provenance, retained
+activity after revocation, unchanged token ETags, source pagination, public/admin
+configuration agreement, and shared session-family activity across real rotations
+in both client modes.
+
+The first live run passed the new cases but received HTTP 503 in the existing
+asynchronous schema-cancellation test. A complete fresh run passed that case and
+every subsequent phase. Local rootless Podman required a temporary runtime wrapper
+adding `--security-opt label=disable` for disposable containers so SELinux allowed
+fixture bind mounts; server images and fixture contents were unchanged.
+
+The complete non-container workspace suite passed 832 tests, with container cases
+left ignored there. Formatting, strict Clippy, rustdoc, all five public feature
+combinations, Rust 1.88 across all workspace targets/features, generated-code
+checks, and pinned OpenAPI comparison passed. The unchanged 257-operation snapshot
+now reconciles 115 Rust model mappings. Semver checking against `74349ba` passed
+all 202 applicable checks; no dependency, MSRV, or declared server-target change
+was needed.
+
 ## v0.0.19 target
 
 Client 0.15.1 retains this target and adds the versioned tracing contract. On
