@@ -608,6 +608,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0020-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.20 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0019-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -693,22 +704,16 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Collection integration APIs">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#optional-rotating-session-extension" class="md-nav__link">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0020-authentication-migration" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional rotating-session extension
+        v0.0.20 authentication migration
       </span>
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1558,6 +1563,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0020-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.20 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0019-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1643,22 +1659,16 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Collection integration APIs">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#optional-rotating-session-extension" class="md-nav__link">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v0020-authentication-migration" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional rotating-session extension
+        v0.0.20 authentication migration
       </span>
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1710,6 +1720,12 @@ coverage evolves.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.16.0</td>
+<td>0.0.20</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code></td>
+<td><a href="../compatibility-evidence/#v0020-target">Pinned session, library/consumer, native-resource, and restore/recovery verification</a> on 2026-10-22.</td>
+</tr>
 <tr>
 <td>0.15.1</td>
 <td>0.0.19</td>
@@ -1889,9 +1905,9 @@ coverage evolves.</p>
 <p>The client version 0.0.2 row predates and is unrelated to the independently
 versioned Hubuum server v0.0.2 release.</p>
 <h2 id="before-upgrading">Before upgrading<a class="headerlink" href="#before-upgrading" title="Permanent link">&para;</a></h2>
-<p>Client 0.15.1 targets server v0.0.19. Use fresh credential approvals for protected
+<p>Client 0.16.0 targets server v0.0.20. Use fresh credential approvals for protected
 mutations, and review <a href="../known-gaps/">known typed API gaps</a>. The client
-accepts backup formats 6, 7, 8, and 9; the server decides whether it can restore one.
+accepts backup formats 6, 7, 8, 9, and 10; the server decides whether it can restore one.
 For older Rust releases, check the linked migration notes before upgrading:
 added fields can break exhaustive struct literals and patterns.</p>
 <p>Server v0.0.18 requires an offline upgrade from v0.0.17 and emits backup format 8;
@@ -1905,6 +1921,9 @@ migration commands from an older client release.</p>
 image identities, dates, suite results, and earlier compatibility limits.</p>
 <h2 id="forward-compatibility">Forward compatibility<a class="headerlink" href="#forward-compatibility" title="Permanent link">&para;</a></h2>
 <p>See <a href="../compatibility-evidence/#forward-compatibility">forward compatibility</a> in the historical evidence.</p>
+<h2 id="v0020-target">v0.0.20 target<a class="headerlink" href="#v0020-target" title="Permanent link">&para;</a></h2>
+<p>See <a href="../compatibility-evidence/#v0020-target">v0.0.20 evidence</a> for source
+provenance, session migration, typed API limits, and pinned integration results.</p>
 <h2 id="v0019-target">v0.0.19 target<a class="headerlink" href="#v0019-target" title="Permanent link">&para;</a></h2>
 <p>See <a href="../compatibility-evidence/#v0019-target">v0.0.19 target</a> for typed coverage,
 backup compatibility, migration guidance, and pinned integration evidence.</p>
@@ -1922,12 +1941,17 @@ backup compatibility, migration guidance, and pinned integration evidence.</p>
 <p>See <a href="../compatibility-evidence/#v0015-target">v0.0.15 target</a> in the historical evidence.</p>
 <h2 id="collection-integration-apis">Collection integration APIs<a class="headerlink" href="#collection-integration-apis" title="Permanent link">&para;</a></h2>
 <p>See <a href="../compatibility-evidence/#collection-integration-apis">collection integration apis</a> in the historical evidence.</p>
-<h3 id="optional-rotating-session-extension">Optional rotating-session extension<a class="headerlink" href="#optional-rotating-session-extension" title="Permanent link">&para;</a></h3>
-<p>The unreleased <code>login_session</code> and <code>session_providers</code> APIs require the versioned
-<code>/api/v1/auth</code> contract introduced by hubuum/hubuum#178. They do not change the
-pinned v0.0.19 target or its normalized OpenAPI snapshot. Legacy login remains
-available. Migrating Rust consumers must adapt token snapshot accessors as
-recorded in the Unreleased changelog.</p>
+<h2 id="v0020-authentication-migration">v0.0.20 authentication migration<a class="headerlink" href="#v0020-authentication-migration" title="Permanent link">&para;</a></h2>
+<p>Use <code>login_session(credentials, client_id)</code> and <code>session_providers()</code> on the
+supported server. Legacy <code>login()</code> is retained only for older servers; there is
+no automatic authentication downgrade. Handle <code>client.token()?</code> as a short-lived,
+owned snapshot. After refresh failure, sign in again instead of retrying an old
+refresh credential. PAT injection remains supported and independent of sessions.</p>
+<p>Upgrade the server and restore executor together using the
+<a href="https://hubuum.github.io/hubuum/v0.0.20/deployment/">offline upgrade guide</a>.
+Retain a pre-upgrade backup and matching binaries for rollback. See the
+<a href="../known-gaps/#v0020-coverage">typed API gaps</a> before relying on newly
+introduced server fields or operations.</p>
 
 
 

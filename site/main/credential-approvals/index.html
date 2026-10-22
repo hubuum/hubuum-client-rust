@@ -1496,7 +1496,7 @@
 <h1 id="fresh-credential-approvals">Fresh credential approvals<a class="headerlink" href="#fresh-credential-approvals" title="Permanent link">&para;</a></h1>
 <p>Hubuum v0.0.16 and newer require fresh password authentication for token creation and renewal, local user
 creation, password changes, credential-bearing imports (including dry runs), and
-restore confirmation. Client 0.15.0 targets v0.0.19; the approval helpers
+restore confirmation. Client 0.16.0 targets v0.0.20; the approval helpers
 have been available since client 0.11.1.</p>
 <h2 id="authenticate-the-acting-human">Authenticate the acting human<a class="headerlink" href="#authenticate-the-acting-human" title="Permanent link">&para;</a></h2>
 <p>Use an authenticated client holding an <strong>unscoped human bearer token</strong>. Here,
@@ -1511,7 +1511,7 @@ use hubuum_client::{ApiError, Authenticated, Client, Credentials};</p>
     password: String,
 ) -&gt; Result<Client\<Authenticated>, ApiError> {
     Client::from_url(base_url)?
-        .login(Credentials::new(username, password))
+        .login_session(Credentials::new(username, password), Default::default())
         .await
 }
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>For LDAP or another configured provider, use

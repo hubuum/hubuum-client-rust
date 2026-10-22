@@ -1482,7 +1482,7 @@
 
 
 <h1 id="json-query-usage-and-analysis">JSON query usage and analysis<a class="headerlink" href="#json-query-usage-and-analysis" title="Permanent link">&para;</a></h1>
-<p>Hubuum server v0.0.19 records advisory workload declarations separately from class
+<p>Hubuum server v0.0.19 and newer record advisory workload declarations separately from class
 schemas. A declaration describes one JSON path, scalar type, and set of
 operations. It never changes filtering, validation, or authorization and does not
 promise an index or a speedup.</p>
@@ -1562,7 +1562,7 @@ equality patterns and retries preparation and cleanup. Other declarations remain
 valid without preparation. Analysis exposes native ownership and progress;
 <code>can_prepare</code> does not establish that the executor is running or that its limits
 permit allocation. Independently managed indexes are preserved.</p>
-<p>Backup format 9 retains declarations and attribution. Native resources and their
+<p>Backup formats 9 and 10 retain declarations and attribution. Native resources and their
 ownership records are not portable backup content. Reconcile against restored
 intent on the target deployment. See <a href="../backups-and-computed-fields/">backups and restores</a>.</p>
 <h2 id="authentication-notifications-and-related-audit-activity">Authentication notifications and related audit activity<a class="headerlink" href="#authentication-notifications-and-related-audit-activity" title="Permanent link">&para;</a></h2>

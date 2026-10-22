@@ -1195,6 +1195,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0020-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.20 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0019-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1497,6 +1508,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0020-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.20 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0019-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1632,6 +1654,12 @@ coverage evolves.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.16.0</td>
+<td>0.0.20</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code></td>
+<td>99 library tests, 40 consumer cases including two real rotation tests and four historical version gates, three native-resource phases, and four full restore/recovery pairs passed with approval enforcement on 2026-10-22; 257 operations and 111 model mappings.</td>
+</tr>
 <tr>
 <td>0.15.1</td>
 <td>0.0.19</td>
@@ -1843,6 +1871,36 @@ released artifact and reviewed contract as described below.</p>
 jobs separately compare the contract and run the integration suites against the
 server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.</p>
+<h2 id="v0020-target">v0.0.20 target<a class="headerlink" href="#v0020-target" title="Permanent link">&para;</a></h2>
+<p>Client 0.16.0 targets the immutable v0.0.20 image recorded above. Both Linux
+architectures identify server commit <code>3bede6e5b815585f3ac5372cc829734b2ae14a68</code>.
+The upstream OpenAPI document has SHA-256
+<code>7ad82a5d64f7c01966eb34b9b82009955c2d5d246206190d2210c6bdf03e8dbb</code>; its 257
+operations across 177 paths match the normalized snapshot. All 111 wire-model
+mappings reconcile, with explicit projections recorded in
+<a href="../known-gaps/#v0020-coverage">known typed API gaps</a>.</p>
+<p>On 2026-10-22, the canonical combined suite passed against the released Linux
+AMD64 image with <code>HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1</code>: 99 library
+tests and 40 consumer cases, including two real rotation/clone-invalidation
+tests. Four historical v0.0.8/v0.0.9 cases intentionally return early for the
+newer target. Three native-resource phases and all four blocking/async full
+restore-and-recovery pairs also passed. The disposable server used 30-second
+access tokens, so normal consumer workflows exercised automatic rotation too.
+Local Podman fixture mounts used SELinux relabeling; CI retains its Docker setup.</p>
+<p>The complete non-container workspace suite, all five supported feature
+combinations, Rust 1.88 across every workspace target and feature, strict Clippy,
+formatting, rustdoc, generated-code checks, upstream OpenAPI comparison, and
+advisory/license/source checks passed on the combined dependency set.</p>
+<p><strong>Breaking Rust API:</strong> token accessors return owned, fallible snapshots. Use
+<code>client.token()?.as_str()</code> only for immediate access and sign in again after
+<code>SessionExpired</code>. Clones share rotating session state; refresh uncertainty
+invalidates that state rather than replaying the single-use credential.</p>
+<p><strong>Breaking server target:</strong> use <code>login_session(credentials, client_id)</code> and
+<code>session_providers()</code>. Legacy login remains only for older servers, while PAT
+injection remains supported. Upgrade all API, worker, and restore binaries
+together during the server's offline migration, retain a pre-upgrade PostgreSQL
+snapshot, and sign in again. Backup format 10 preserves shared computed-definition
+history; the client recognizes formats 6–10 and preserves section contents.</p>
 <h2 id="v0019-target">v0.0.19 target<a class="headerlink" href="#v0019-target" title="Permanent link">&para;</a></h2>
 <p>Client 0.15.1 retains this target and adds the versioned tracing contract. On
 2026-10-19, the canonical combined integration command passed against the same

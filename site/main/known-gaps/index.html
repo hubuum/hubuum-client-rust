@@ -79,7 +79,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#known-hubuum-server-v0019-openapi-gaps" class="md-skip">
+        <a href="#known-hubuum-server-v0020-openapi-gaps" class="md-skip">
           Skip to content
         </a>
       
@@ -1115,10 +1115,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-session-extension" class="md-nav__link">
+  <a href="#v0020-coverage" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional session extension
+        v0.0.20 coverage
       </span>
     </span>
   </a>
@@ -1486,10 +1486,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-session-extension" class="md-nav__link">
+  <a href="#v0020-coverage" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional session extension
+        v0.0.20 coverage
       </span>
     </span>
   </a>
@@ -1525,8 +1525,8 @@
   
 
 
-<h1 id="known-hubuum-server-v0019-openapi-gaps">Known Hubuum server v0.0.19 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0019-openapi-gaps" title="Permanent link">&para;</a></h1>
-<p>The pinned client contract records these limitations in the server v0.0.19
+<h1 id="known-hubuum-server-v0020-openapi-gaps">Known Hubuum server v0.0.20 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0020-openapi-gaps" title="Permanent link">&para;</a></h1>
+<p>The pinned client contract records these limitations in the server v0.0.20
 specification explicitly:</p>
 <ul>
 <li><code>GET /api/v1/search/stream</code> declares <code>text/event-stream</code> but does not
@@ -1579,7 +1579,7 @@ Rust wire models:</p>
   callers must narrow queries or reduce traversal depth and template workloads.</li>
 </ul>
 <h2 id="credential-approval-coverage">Credential approval coverage<a class="headerlink" href="#credential-approval-coverage" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.19 contract includes both approval endpoints and the approval
+<p>The pinned v0.0.20 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return <code>reauthentication_required</code>; applications
@@ -1609,18 +1609,33 @@ uses <code>collection_id: None</code>.</p>
 public clients, including typed pacing, filter serialization, nullable health,
 and test-delivery decoding.</p>
 <h2 id="collection-integrations">Collection integrations<a class="headerlink" href="#collection-integrations" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.19 snapshot includes all eight collection destination and
+<p>The pinned v0.0.20 snapshot includes all eight collection destination and
 administrator grant operations. Both client modes provide typed helpers, and
 <code>CollectionEventSink</code> preserves safe metadata while omitting configuration,
 URLs, and credentials. The canonical live suite requires delegated collection
 setup in both modes and exercises global sink use through an explicit collection
 grant. These APIs require <code>ManageEventSubscription</code> and <code>ReadAudit</code>; grants do
 not inherit to child collections.</p>
-<h2 id="optional-session-extension">Optional session extension<a class="headerlink" href="#optional-session-extension" title="Permanent link">&para;</a></h2>
-<p><code>SessionLogin</code>, <code>SessionRefresh</code>, <code>SessionProviders</code>, and the <code>SessionLogout*</code>
-endpoints describe the versioned rotating-session API from hubuum/hubuum#178.
-These opt-in operations are outside the pinned v0.0.19 snapshot and are tested
-separately against the candidate server. The baseline snapshot is unchanged.</p>
+<h2 id="v0020-coverage">v0.0.20 coverage<a class="headerlink" href="#v0020-coverage" title="Permanent link">&para;</a></h2>
+<p>The pinned 257-operation contract includes the versioned session API. Both
+client modes provide <code>login_session</code>, <code>session_providers</code>, automatic refresh,
+and session-aware logout. Legacy single-token login is only for older servers.</p>
+<p>The following newer surfaces intentionally use authenticated <code>raw()</code> requests:
+history timeline and entry lookup, relationship and computed-field historical
+views, exact-name history across object identities, bounded search hydration,
+credential-activity administration, and observation-management mutations.
+Existing typed resource and administrative models retain their earlier projections:</p>
+<ul>
+<li>Class-relation read/create models do not expose <code>forward_label</code> or
+  <code>reverse_label</code>; use raw JSON to preserve or set directional labels.</li>
+<li><code>AuthenticationConfig</code> does not expose the session lifetime/retention or
+  credential-activity configuration fields. Read the raw administrator config
+  when those settings are needed.</li>
+<li>Query-observation configuration models omit <code>runtime_override</code>; use raw
+  administrator configuration to inspect the effective override.</li>
+</ul>
+<p><code>openapi/model-contract.json</code> records these field-level exceptions explicitly.
+Backup format 10 is recognized without discarding the extensible backup payload.</p>
 
 
 

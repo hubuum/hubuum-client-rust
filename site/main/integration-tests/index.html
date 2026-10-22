@@ -1255,10 +1255,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#candidate-rotating-session-contract" class="md-nav__link">
+  <a href="#rotating-session-contract" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Candidate rotating-session contract
+        Rotating-session contract
       </span>
     </span>
   </a>
@@ -1486,10 +1486,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#candidate-rotating-session-contract" class="md-nav__link">
+  <a href="#rotating-session-contract" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Candidate rotating-session contract
+        Rotating-session contract
       </span>
     </span>
   </a>
@@ -1573,6 +1573,10 @@ An external stack must expose the same <code>planet-express</code> provider and 
   PostgreSQL 18 reference from
   <code>tests/container_integration/fixtures/postgres/Dockerfile</code>.</li>
 <li><code>HUBUUM_INTEGRATION_LDAP_IMAGE</code> overrides the LDAP fixture image.</li>
+<li><code>HUBUUM_INTEGRATION_LDAP_CONTAINER</code> identifies the disposable LDAP container
+  when using an external stack. The wrapper supplies it automatically. Provider
+  login tests rotate fixture passwords before use instead of relying on the
+  image's public example credentials.</li>
 <li><code>HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1</code> makes credential approval
   scenarios assert that the selected server enforces fresh authentication.
   Required CI and local release verification must set it. Focused legacy-server
@@ -1586,11 +1590,11 @@ An external stack must expose the same <code>planet-express</code> provider and 
 <li><code>HUBUUM_INTEGRATION_SEED_SQL</code> overrides the default seed SQL file.</li>
 </ul>
 <p>The canonical suite includes delegated collection webhook setup in both async
-and blocking modes. These cases are mandatory for the v0.0.19 target and need
+and blocking modes. These cases are mandatory for the v0.0.20 target and need
 no separate opt-in variable.</p>
 <p>Required CI runs integration tests against an immutable server image digest.
-For client 0.15.0, that image is Hubuum server v0.0.19 at
-<code>sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225</code>.
+For client 0.16.0, that image is Hubuum server v0.0.20 at
+<code>sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code>.
 Required CI sets <code>HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1</code>; set the
 same variable for local release verification so missing enforcement fails.
 A scheduled compatibility workflow separately runs against
@@ -1613,30 +1617,33 @@ the precise meaning of a declared server target.</p>
 <h2 id="full-restore-coverage">Full restore coverage<a class="headerlink" href="#full-restore-coverage" title="Permanent link">&para;</a></h2>
 <p>With <code>--with-e2e-client</code> or <code>--e2e-only</code>, the wrapper runs both blocking and async
 full restore scenarios with and without history after all ordinary suites finish.
-Each scenario activates an enforced schema, creates and downloads a format 8 backup, deletes an object, stages
+Each scenario activates an enforced schema, creates and downloads a format 10 backup, deletes an object, stages
 and confirms the restore, polls with its capability until completion, verifies bearer-token
 invalidation, and checks that the deleted object and its revision were restored
 after a new login. Recovery also creates and stages default backups before and
 after another mutation. Recovery also checks the restored schema revision and
 object validation evidence, with and without history.
-Because formats 6, 7, and 8 exclude password hashes, the wrapper resets the disposable
+Because supported backup formats exclude password hashes, the wrapper resets the disposable
 administrator password after each restore before running the recovery assertion.</p>
 <p>The separate <code>e2e_client</code> restore test target requires <code>restore-tests</code> and the
 wrapper-owned <code>HUBUUM_INTEGRATION_DISPOSABLE_BASE_URL</code> marker. It is never part
 of ordinary tests against an externally managed stack; full restore replaces
 all data and invalidates tokens. The complete non-container workspace suite
 compiles these tests but leaves them ignored.</p>
-<h2 id="candidate-rotating-session-contract">Candidate rotating-session contract<a class="headerlink" href="#candidate-rotating-session-contract" title="Permanent link">&para;</a></h2>
-<p>Keep the canonical pinned compatibility run above. Additionally, run the
-independent consumer against a disposable server implementing <code>/api/v1/auth</code>,
-configured with <code>HUBUUM_SESSION_ACCESS_SECONDS=2</code>. Supply its address and
-administrator password through the existing integration environment variables:</p>
+<h2 id="rotating-session-contract">Rotating-session contract<a class="headerlink" href="#rotating-session-contract" title="Permanent link">&para;</a></h2>
+<p>The canonical combined suite provisions a disposable server with
+<code>HUBUUM_SESSION_ACCESS_SECONDS=30</code> and requires both async and blocking session
+checks. Both runtimes cross a real access deadline, rotate, retain the original
+absolute deadline, and verify logout invalidates clones. The short deadline is
+required by these tests; it does not change production defaults.</p>
+<p>For focused iteration against a caller-managed disposable server with the same
+short access lifetime, supply its address and administrator password through the
+existing integration environment variables and run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--locked<span class="w"> </span>-p<span class="w"> </span>e2e_client<span class="w"> </span>--features<span class="w"> </span>session-tests<span class="w"> </span>--test<span class="w"> </span>sessions<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--<span class="w"> </span>--ignored<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
 </code></pre></div>
-<p>Both runtimes cross a real access deadline, rotate, retain the original absolute
-deadline, and verify logout invalidates clones. The short deadline is required
-by this focused test; it does not change production defaults.</p>
+<p>This focused command does not replace the canonical combined suite, which also
+covers ordinary authenticated workflows and full restore recovery.</p>
 
 
 
