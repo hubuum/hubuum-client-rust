@@ -1622,14 +1622,11 @@ client modes provide <code>login_session</code>, <code>session_providers</code>,
 and session-aware logout. Legacy single-token login is only for older servers.</p>
 <p>The following newer surfaces intentionally use authenticated <code>raw()</code> requests:
 history timeline and entry lookup, relationship and computed-field historical
-views, exact-name history across object identities, bounded search hydration,
-and observation-management mutations.
+views, exact-name history across object identities, and bounded search hydration.
 Existing typed resource and administrative models retain their earlier projections:</p>
 <ul>
 <li>Class-relation read/create models do not expose <code>forward_label</code> or
   <code>reverse_label</code>; use raw JSON to preserve or set directional labels.</li>
-<li>Query-observation configuration models omit <code>runtime_override</code>; use raw
-  administrator configuration to inspect the effective override.</li>
 </ul>
 <p><code>openapi/model-contract.json</code> records these field-level exceptions explicitly.
 Backup format 10 is recognized without discarding the extensible backup payload.</p>
@@ -1642,6 +1639,12 @@ without discarding creation or coverage metadata. Activity has no revision or ET
 administrator configuration also exposes credential-activity settings. These
 additions use <code>Option</code> to distinguish unavailable fields on older servers from
 actual configured values. See <a href="../scoped-auth/#credential-activity">credential activity usage</a>.</p>
+<p>Observation management has typed <code>query_observations()</code> and
+<code>set_query_observations(QueryObservationUpdateRequest { enabled })</code> methods in
+both modes. These operations require an unscoped human administrator. The update
+commits a shared override; other replicas reconcile asynchronously. Configuration
+responses expose <code>runtime_override</code>; analysis snapshots omit it. Disabling
+collection retains existing observations and does not alter sampling or retention.</p>
 
 
 

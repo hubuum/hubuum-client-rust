@@ -1217,6 +1217,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#unreleased-query-observation-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased query-observation management
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1541,6 +1552,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Unreleased credential activity coverage
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unreleased-query-observation-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased query-observation management
       </span>
     </span>
   </a>
@@ -1956,6 +1978,20 @@ checks, and pinned OpenAPI comparison passed. The unchanged 257-operation snapsh
 now reconciles 115 Rust model mappings. Semver checking against <code>74349ba</code> passed
 all 202 applicable checks; no dependency, MSRV, or declared server-target change
 was needed.</p>
+<h3 id="unreleased-query-observation-management">Unreleased query-observation management<a class="headerlink" href="#unreleased-query-observation-management" title="Permanent link">&para;</a></h3>
+<p>On 2026-10-22, typed observation reads and enable/disable updates passed the
+canonical combined suite against the same pinned v0.0.20 image, with credential
+approval enforcement: 101 library tests, 43 ordinary consumer cases, all three
+native-resource phases, and all four restore/recovery pairs. Both client modes
+verify denied non-administrator access, effective overrides, and agreement with
+administrator configuration. Collection is restored after the toggle scenario.</p>
+<p>Formatting, model reconciliation (116 mappings), strict Clippy, rustdoc, the full
+workspace suite, all five feature combinations, Rust 1.88, and the authoritative
+OpenAPI comparison passed. All 202 applicable public API checks passed against
+<code>fd12c8a</code>. The non-container suite passed with <code>RUST_TEST_THREADS=1</code> after the
+existing async tracing test missed an attempt in a parallel run. Local HTTP tests
+required sockets outside the sandbox; Podman used the existing disposable-fixture
+SELinux wrapper described above. Dependencies, MSRV, and server target are unchanged.</p>
 <h2 id="v0019-target">v0.0.19 target<a class="headerlink" href="#v0019-target" title="Permanent link">&para;</a></h2>
 <p>Client 0.15.1 retains this target and adds the versioned tracing contract. On
 2026-10-19, the canonical combined integration command passed against the same
