@@ -769,43 +769,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#querying-identities" class="md-nav__link">
+  <a href="#credential-activity" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Querying Identities
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#provider-metadata" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Provider Metadata
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#imports" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Imports
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#constants" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Constants
+        Credential activity
       </span>
     </span>
   </a>
@@ -1431,43 +1398,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#querying-identities" class="md-nav__link">
+  <a href="#credential-activity" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Querying Identities
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#provider-metadata" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Provider Metadata
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#imports" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Imports
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#constants" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Constants
+        Credential activity
       </span>
     </span>
   </a>
@@ -1555,26 +1489,70 @@ examples.</p>
 <p>Provider configuration, TLS, synchronization intervals, and directory mapping
 belong to the Hubuum server. The client does not configure or enumerate identity
 providers.</p>
-<h2 id="querying-identities">Querying Identities<a class="headerlink" href="#querying-identities" title="Permanent link">&para;</a></h2>
-<p>Names are unique within an identity scope, not globally. Include
-<code>identity_scope</code> whenever a name may be ambiguous:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">alice</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="p">.</span><span class="n">users</span><span class="p">()</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="p">.</span><span class="n">identity_scope</span><span class="p">()</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="p">.</span><span class="n">eq</span><span class="p">(</span><span class="s">"corp-directory"</span><span class="p">)</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="p">.</span><span class="n">name</span><span class="p">()</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="p">.</span><span class="n">eq</span><span class="p">(</span><span class="s">"alice"</span><span class="p">)</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="p">.</span><span class="n">one</span><span class="p">()</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="kd">let</span><span class="w"> </span><span class="n">operators</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="p">.</span><span class="n">groups</span><span class="p">()</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="p">.</span><span class="n">identity_scope</span><span class="p">()</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="p">.</span><span class="n">eq</span><span class="p">(</span><span class="s">"corp-directory"</span><span class="p">)</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="p">.</span><span class="n">groupname</span><span class="p">()</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="p">.</span><span class="n">eq</span><span class="p">(</span><span class="s">"operators"</span><span class="p">)</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">    </span><span class="p">.</span><span class="n">one</span><span class="p">()</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<h2 id="credential-activity">Credential activity<a class="headerlink" href="#credential-activity" title="Permanent link">&para;</a></h2>
+<p>Server v0.0.20 exposes creation provenance and recent credential sources separately
+from token metadata. Use the owning principal and retained token ID:</p>
+<p>```rust,no_run
+use hubuum_client::{Client, CredentialActivityPageOptions, PrincipalId, TokenId};</p>
+<h1 id="async-fn-exampleclient-client-principal_id-principalid-token_id-tokenid-result-hubuum_clientapierror">async fn example(client: &amp;Client<hubuum_client::Authenticated>, principal_id: PrincipalId, token_id: TokenId) -&gt; Result&lt;(), hubuum_client::ApiError&gt; {<a class="headerlink" href="#async-fn-exampleclient-client-principal_id-principalid-token_id-tokenid-result-hubuum_clientapierror" title="Permanent link">&para;</a></h1>
+<p>let mut options = CredentialActivityPageOptions::default().limit(25)?;
+loop {
+    let page = client.token_activity(principal_id, token_id, options).await?;
+    // Inspect page.creation, page.sources, and the coverage fields together.
+    // Source addresses are available explicitly but omitted from Debug output.
+    let Some(next) = page.next_page_options()? else { break };
+    options = next;
+}</p>
+<h1 id="ok">Ok(())<a class="headerlink" href="#ok" title="Permanent link">&para;</a></h1>
+<h1 id="_1">}<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>User and service-account handles also expose `token_activity(token_id, options)`.
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>Blocking clients use the same API without `.await`. The default page starts at
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>offset 0 with a limit of 50; limits accept 1–100 and offsets accept 0–256. The
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>next-page helper rejects non-advancing or out-of-range continuations.
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>The caller needs token-management authority: an unscoped human managing their own
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>credentials, an administrator, or an authorized service-account owner-group member.
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>An issuer can differ from the credential's owner. Historical credentials can have
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>`creation: None`, and an unavailable source has `address: None`. Method strings
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>preserve future server values. Rotating access tokens share the original session's
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>creation evidence and source history, identified by `session_id`.
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>Activity is best-effort evidence of successful credential validation, including
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>requests whose subsequent authorization or handler fails. It is not a complete
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>request ledger. Read `collection_enabled`, `best_effort`, `retention_days`,
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>`source_cap`, and `overflow_since` alongside the sources. A missing overflow marker
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>does not guarantee complete collection. Activity does not change the token's
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>revision or ETag; revocation preserves evidence until retention removes it.
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>`config().authentication` exposes session access, idle, absolute, and retention
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>durations in seconds. `admin_config().authentication` additionally exposes
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>`credential_activity_enabled`, `credential_activity_retention_days`, and
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>`credential_activity_source_cap`. These settings are `Option` values: `None`
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>means the server did not report the field, rather than zero or disabled.
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>## Querying Identities
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>Names are unique within an identity scope, not globally. Include
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>`identity_scope` whenever a name may be ambiguous:
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>```rust
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>let alice = client
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>    .users()
+<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a>    .identity_scope()
+<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a>    .eq("corp-directory")
+<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a>    .name()
+<a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a>    .eq("alice")
+<a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a>    .one()
+<a id="__codelineno-3-39" name="__codelineno-3-39" href="#__codelineno-3-39"></a>    .await?;
+<a id="__codelineno-3-40" name="__codelineno-3-40" href="#__codelineno-3-40"></a>
+<a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a>let operators = client
+<a id="__codelineno-3-42" name="__codelineno-3-42" href="#__codelineno-3-42"></a>    .groups()
+<a id="__codelineno-3-43" name="__codelineno-3-43" href="#__codelineno-3-43"></a>    .identity_scope()
+<a id="__codelineno-3-44" name="__codelineno-3-44" href="#__codelineno-3-44"></a>    .eq("corp-directory")
+<a id="__codelineno-3-45" name="__codelineno-3-45" href="#__codelineno-3-45"></a>    .groupname()
+<a id="__codelineno-3-46" name="__codelineno-3-46" href="#__codelineno-3-46"></a>    .eq("operators")
+<a id="__codelineno-3-47" name="__codelineno-3-47" href="#__codelineno-3-47"></a>    .one()
+<a id="__codelineno-3-48" name="__codelineno-3-48" href="#__codelineno-3-48"></a>    .await?;
 </code></pre></div>
 <p>The same typed <code>identity_scope()</code> filter is available on service accounts. It
 composes with pagination, sorting, and the other fluent field filters.</p>

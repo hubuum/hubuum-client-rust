@@ -1203,6 +1203,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="v0.0.20 target">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unreleased-credential-activity-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased credential activity coverage
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1515,6 +1532,23 @@
       </span>
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="v0.0.20 target">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unreleased-credential-activity-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased credential activity coverage
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1901,6 +1935,27 @@ injection remains supported. Upgrade all API, worker, and restore binaries
 together during the server's offline migration, retain a pre-upgrade PostgreSQL
 snapshot, and sign in again. Backup format 10 preserves shared computed-definition
 history; the client recognizes formats 6–10 and preserves section contents.</p>
+<h3 id="unreleased-credential-activity-coverage">Unreleased credential activity coverage<a class="headerlink" href="#unreleased-credential-activity-coverage" title="Permanent link">&para;</a></h3>
+<p>On 2026-10-22, typed credential activity and authentication configuration additions
+passed the canonical combined suite against the same pinned v0.0.20 image:
+101 library tests, 42 ordinary consumer cases (including four historical version
+gates), three native-resource phases, and all four restore/recovery pairs.
+The new cases verify human and service-account issuance provenance, retained
+activity after revocation, unchanged token ETags, source pagination, public/admin
+configuration agreement, and shared session-family activity across real rotations
+in both client modes.</p>
+<p>The first live run passed the new cases but received HTTP 503 in the existing
+asynchronous schema-cancellation test. A complete fresh run passed that case and
+every subsequent phase. Local rootless Podman required a temporary runtime wrapper
+adding <code>--security-opt label=disable</code> for disposable containers so SELinux allowed
+fixture bind mounts; server images and fixture contents were unchanged.</p>
+<p>The complete non-container workspace suite passed 832 tests, with container cases
+left ignored there. Formatting, strict Clippy, rustdoc, all five public feature
+combinations, Rust 1.88 across all workspace targets/features, generated-code
+checks, and pinned OpenAPI comparison passed. The unchanged 257-operation snapshot
+now reconciles 115 Rust model mappings. Semver checking against <code>74349ba</code> passed
+all 202 applicable checks; no dependency, MSRV, or declared server-target change
+was needed.</p>
 <h2 id="v0019-target">v0.0.19 target<a class="headerlink" href="#v0019-target" title="Permanent link">&para;</a></h2>
 <p>Client 0.15.1 retains this target and adds the versioned tracing contract. On
 2026-10-19, the canonical combined integration command passed against the same

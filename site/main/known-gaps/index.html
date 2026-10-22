@@ -1623,19 +1623,25 @@ and session-aware logout. Legacy single-token login is only for older servers.</
 <p>The following newer surfaces intentionally use authenticated <code>raw()</code> requests:
 history timeline and entry lookup, relationship and computed-field historical
 views, exact-name history across object identities, bounded search hydration,
-credential-activity administration, and observation-management mutations.
+and observation-management mutations.
 Existing typed resource and administrative models retain their earlier projections:</p>
 <ul>
 <li>Class-relation read/create models do not expose <code>forward_label</code> or
   <code>reverse_label</code>; use raw JSON to preserve or set directional labels.</li>
-<li><code>AuthenticationConfig</code> does not expose the session lifetime/retention or
-  credential-activity configuration fields. Read the raw administrator config
-  when those settings are needed.</li>
 <li>Query-observation configuration models omit <code>runtime_override</code>; use raw
   administrator configuration to inspect the effective override.</li>
 </ul>
 <p><code>openapi/model-contract.json</code> records these field-level exceptions explicitly.
 Backup format 10 is recognized without discarding the extensible backup payload.</p>
+<p>Credential activity has typed <code>token_activity(principal_id, token_id, options)</code>
+client methods and <code>token_activity(token_id, options)</code> user/service-account handle
+methods in both modes. <code>CredentialActivityPageOptions</code> validates offset and limit;
+<code>CredentialActivityResponse::next_page_options()</code> follows body-based pagination
+without discarding creation or coverage metadata. Activity has no revision or ETag.</p>
+<p>Public and administrator authentication configuration expose session settings;
+administrator configuration also exposes credential-activity settings. These
+additions use <code>Option</code> to distinguish unavailable fields on older servers from
+actual configured values. See <a href="../scoped-auth/#credential-activity">credential activity usage</a>.</p>
 
 
 
