@@ -1218,6 +1218,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#unreleased-directional-relation-labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased directional relation labels
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#unreleased-query-observation-management" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1552,6 +1563,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Unreleased credential activity coverage
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unreleased-directional-relation-labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased directional relation labels
       </span>
     </span>
   </a>
@@ -1978,6 +2000,25 @@ checks, and pinned OpenAPI comparison passed. The unchanged 257-operation snapsh
 now reconciles 115 Rust model mappings. Semver checking against <code>74349ba</code> passed
 all 202 applicable checks; no dependency, MSRV, or declared server-target change
 was needed.</p>
+<h3 id="unreleased-directional-relation-labels">Unreleased directional relation labels<a class="headerlink" href="#unreleased-directional-relation-labels" title="Permanent link">&para;</a></h3>
+<p>On 2026-10-23, typed relation labels passed the canonical combined suite against
+the pinned v0.0.20 image above with credential approval enforcement: 101 library
+tests, 43 ordinary consumer cases, three native-resource phases, and all four
+restore/recovery pairs. Both modes verify label creation and reads, including
+server normalization that swaps labels when it sorts the supplied class IDs.</p>
+<p>The full workspace suite passed 844 tests with <code>RUST_TEST_THREADS=1</code>. Formatting,
+strict Clippy, rustdoc, all five public feature combinations, Rust 1.88 across
+all targets/features, pinned OpenAPI comparison, and model reconciliation
+(116 mappings) passed. All 202 applicable API compatibility checks passed against
+<code>fd12c8a</code>. <code>ClassRelationPost</code> literals retain their existing fields; labeled
+creation uses the class handle's typed options. Dependencies, MSRV, and the server
+target are unchanged.</p>
+<p>Local verification used an isolated Cargo target directory after shared worktree
+artifacts caused an initial MSRV check to resolve another branch's library.
+The fresh complete integration run used the disposable Podman SELinux wrapper
+and a container-readable copy of the public provider fixture; an earlier stack
+could not read that temporary checkout's fixture. Repository fixture contents
+and server/container configuration were unchanged.</p>
 <h3 id="unreleased-query-observation-management">Unreleased query-observation management<a class="headerlink" href="#unreleased-query-observation-management" title="Permanent link">&para;</a></h3>
 <p>On 2026-10-22, typed observation reads and enable/disable updates passed the
 canonical combined suite against the same pinned v0.0.20 image, with credential
