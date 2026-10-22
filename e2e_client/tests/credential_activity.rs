@@ -80,11 +80,10 @@ fn durable_credential_activity(service_account: bool) {
     assert_eq!(empty.total, activity.total);
 
     if service_account {
-        assert!(
-            consumer
-                .token_activity(owner, me.token.id, options)
-                .is_err()
-        );
+        let denied = consumer
+            .token_activity(owner, me.token.id, options)
+            .unwrap_err();
+        assert_eq!(denied.status().unwrap().as_u16(), 403);
         let handle = harness.client.service_accounts().get(owner.get()).unwrap();
         let before = handle.token(me.token.id).unwrap();
         consumer.me().unwrap();
@@ -110,6 +109,13 @@ fn durable_credential_activity(service_account: bool) {
             activity.creation
         );
     } else {
+        assert_eq!(
+            consumer
+                .token_activity(owner, me.token.id, options)
+                .unwrap()
+                .creation,
+            activity.creation
+        );
         let handle = harness.client.users().get(owner.get()).unwrap();
         let before = handle.token(me.token.id).unwrap();
         consumer.me().unwrap();
@@ -135,11 +141,13 @@ fn durable_credential_activity(service_account: bool) {
             activity.creation
         );
     }
-    assert!(
-        harness
-            .client
-            .token_activity(issuer, me.token.id, options)
-            .is_err(),
+    let mismatched_owner = harness
+        .client
+        .token_activity(issuer, me.token.id, options)
+        .unwrap_err();
+    assert_eq!(
+        mismatched_owner.status().unwrap().as_u16(),
+        404,
         "both path IDs constrain activity"
     );
 }
