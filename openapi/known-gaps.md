@@ -115,7 +115,6 @@ Existing typed resource and administrative models retain their earlier projectio
 - Class-relation read/create models do not expose `forward_label` or
   `reverse_label`; use raw JSON to preserve or set directional labels.
 
-
 `openapi/model-contract.json` records these field-level exceptions explicitly.
 Backup format 10 is recognized without discarding the extensible backup payload.
 
