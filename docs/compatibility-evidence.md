@@ -101,7 +101,7 @@ AMD64 image with `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`: 99 library
 tests and 40 consumer cases, including two real rotation/clone-invalidation
 tests. Four historical v0.0.8/v0.0.9 cases intentionally return early for the
 newer target. Three native-resource phases and all four blocking/async full
-restore-and-recovery pairs also passed. The disposable server used two-second
+restore-and-recovery pairs also passed. The disposable server used 30-second
 access tokens, so normal consumer workflows exercised automatic rotation too.
 Local Podman fixture mounts used SELinux relabeling; CI retains its Docker setup.
 

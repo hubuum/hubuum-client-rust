@@ -739,6 +739,34 @@ pub(crate) struct IntegrationStack {
 }
 
 impl IntegrationStack {
+    /// Rotate a disposable LDAP fixture user's password before exercising login.
+    pub(crate) fn reset_ldap_password(&self, distinguished_name: &str) -> Result<String, String> {
+        let ldap_container = match &self._inner {
+            Some(inner) => inner.ldap_container_name.clone(),
+            None => std::env::var("HUBUUM_INTEGRATION_LDAP_CONTAINER")
+                .map_err(|_| "set HUBUUM_INTEGRATION_LDAP_CONTAINER for LDAP fixture tests")?,
+        };
+        let output = container(&[
+            "exec".into(),
+            ldap_container,
+            "ldappasswd".into(),
+            "-x".into(),
+            "-H".into(),
+            "ldap://127.0.0.1:10389".into(),
+            "-D".into(),
+            "cn=admin,dc=planetexpress,dc=com".into(),
+            "-w".into(),
+            "GoodNewsEveryone".into(),
+            distinguished_name.into(),
+        ])?;
+        output
+            .lines()
+            .find_map(|line| line.strip_prefix("New password: "))
+            .filter(|password| !password.is_empty())
+            .map(str::to_owned)
+            .ok_or_else(|| "LDAP fixture did not return a generated password".into())
+    }
+
     fn from_external_env() -> Result<Option<Self>, String> {
         let base_url = std::env::var(EXTERNAL_BASE_URL_ENV)
             .ok()

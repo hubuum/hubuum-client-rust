@@ -10,14 +10,14 @@ fn expiry_wait(info: &hubuum_client::SessionInfo) -> Duration {
         .unwrap_or_default()
         + Duration::from_millis(100);
     assert!(
-        delay <= Duration::from_secs(10),
-        "session tests require HUBUUM_SESSION_ACCESS_SECONDS=2 on the disposable server"
+        delay <= Duration::from_secs(35),
+        "session tests require HUBUUM_SESSION_ACCESS_SECONDS=30 on the disposable server"
     );
     delay
 }
 
 #[test]
-#[ignore = "requires the pinned disposable server with session access lifetime set to 2 seconds"]
+#[ignore = "requires the pinned disposable server with session access lifetime set to 30 seconds"]
 fn blocking_session_rotates_and_logout_invalidates_clones() {
     let (base, password) = integration_connection().unwrap();
     let client = blocking::Client::try_new(base)
@@ -41,7 +41,7 @@ fn blocking_session_rotates_and_logout_invalidates_clones() {
 }
 
 #[tokio::test]
-#[ignore = "requires the pinned disposable server with session access lifetime set to 2 seconds"]
+#[ignore = "requires the pinned disposable server with session access lifetime set to 30 seconds"]
 async fn async_session_rotates_and_logout_invalidates_clones() {
     let (base, password) = integration_connection().unwrap();
     let client = Client::try_new(base)

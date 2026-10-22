@@ -433,9 +433,12 @@ fn async_external_provider_login_and_user_settings_roundtrip() {
     assert!(providers.contains(LOCAL_IDENTITY_SCOPE));
     assert!(providers.contains("planet-express"));
 
+    let password = stack
+        .reset_ldap_password("cn=Amy Wong+sn=Kroker,ou=people,dc=planetexpress,dc=com")
+        .expect("LDAP fixture password rotation failed");
     let external = runtime
         .block_on(client.login_session(
-            Credentials::scoped("planet-express", "amy", "amy"),
+            Credentials::scoped("planet-express", "amy", password),
             Default::default(),
         ))
         .expect("async LDAP login for amy failed");

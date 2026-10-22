@@ -93,7 +93,10 @@ impl E2EHarness {
     pub fn create_user(&self, case: &str) -> Result<E2EUser, ApiError> {
         let prefix = unique_case_prefix(case);
         let username = format!("{prefix}-user");
-        let password = format!("{prefix}-Passw0rd!");
+        let mut password_bytes = [0u8; 16];
+        getrandom::fill(&mut password_bytes)
+            .expect("OS randomness must be available for fixture passwords");
+        let password = format!("{:032x}", u128::from_ne_bytes(password_bytes));
         let request = UserPost {
             identity_scope: None,
             name: username.clone(),

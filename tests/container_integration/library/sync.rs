@@ -157,15 +157,22 @@ fn sync_external_provider_login_materializes_groups_and_supports_settings() {
 
     let err = client
         .login_session(
-            Credentials::scoped("planet-express", "fry", "wrong"),
+            Credentials::scoped(
+                "planet-express",
+                "fry",
+                format!("{:032x}", fastrand::u128(..)),
+            ),
             Default::default(),
         )
         .expect_err("LDAP login should reject an invalid password");
     assert_auth_token_revoked(err);
 
+    let password = stack
+        .reset_ldap_password("cn=Philip J. Fry,ou=people,dc=planetexpress,dc=com")
+        .expect("LDAP fixture password rotation failed");
     let external = client
         .login_session(
-            Credentials::scoped("planet-express", "fry", "fry"),
+            Credentials::scoped("planet-express", "fry", password),
             Default::default(),
         )
         .expect("LDAP login for fry failed");
