@@ -109,14 +109,8 @@ and session-aware logout. Legacy single-token login is only for older servers.
 
 The following newer surfaces intentionally use authenticated `raw()` requests:
 history timeline and entry lookup, relationship and computed-field historical
-views, exact-name history across object identities, bounded search hydration,
-and observation-management mutations.
-Existing typed resource and administrative models retain their earlier projections:
-
-- Query-observation configuration models omit `runtime_override`; use raw
-  administrator configuration to inspect the effective override.
-
-`openapi/model-contract.json` records these field-level exceptions explicitly.
+views, exact-name history across object identities, and bounded search hydration.
+`openapi/model-contract.json` records intentional field-level exceptions explicitly.
 Backup format 10 is recognized without discarding the extensible backup payload.
 
 Credential activity has typed `token_activity(principal_id, token_id, options)`
@@ -137,3 +131,10 @@ or `with_reverse_label`. Labels describe the supplied source/target direction;
 the server sorts class IDs and swaps labels when necessary. Existing
 `ClassRelationPost` literals remain compatible; use the handle options for labels.
 Labels require 1–128 Unicode characters, no controls, and no surrounding whitespace.
+
+Observation management has typed `query_observations()` and
+`set_query_observations(QueryObservationUpdateRequest { enabled })` methods in
+both modes. These operations require an unscoped human administrator. The update
+commits a shared override; other replicas reconcile asynchronously. Configuration
+responses expose `runtime_override`; analysis snapshots omit it. Disabling
+collection retains existing observations and does not alter sampling or retention.

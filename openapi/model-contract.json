@@ -708,7 +708,10 @@
       "openapi_schema": "QueryObservationSettings",
       "rust_file": "src/types/query_usage.rs",
       "rust_type": "QueryObservationSettings",
-      "direction": "response"
+      "direction": "response",
+      "rust_only_fields": {
+        "runtime_override": "The public settings/config alias is retained for compatibility; only configuration responses carry the optional runtime override."
+      }
     },
     {
       "openapi_schema": "QueryObservationSnapshot",
@@ -750,10 +753,7 @@
       "openapi_schema": "QueryObservationConfig",
       "rust_file": "src/types/query_usage.rs",
       "rust_type": "QueryObservationSettings",
-      "direction": "response",
-      "openapi_only_fields": {
-        "runtime_override": "The typed projection retains its existing fields; access the v0.0.20 runtime_override field through raw() as documented in openapi/known-gaps.md."
-      }
+      "direction": "response"
     },
     {
       "openapi_schema": "SystemEventSubscription",
@@ -811,6 +811,12 @@
       "openapi_only_fields": {
         "to_hubuum_class_id": "The class-handle method accepts the typed target ID separately and the private request wrapper flattens these options."
       }
+    },
+    {
+      "openapi_schema": "QueryObservationUpdateRequest",
+      "rust_file": "src/types/query_usage.rs",
+      "rust_type": "QueryObservationUpdateRequest",
+      "direction": "request"
     }
   ]
 }

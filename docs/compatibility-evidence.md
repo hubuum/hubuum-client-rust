@@ -170,6 +170,23 @@ and a container-readable copy of the public provider fixture; an earlier stack
 could not read that temporary checkout's fixture. Repository fixture contents
 and server/container configuration were unchanged.
 
+### Unreleased query-observation management
+
+On 2026-10-22, typed observation reads and enable/disable updates passed the
+canonical combined suite against the same pinned v0.0.20 image, with credential
+approval enforcement: 101 library tests, 43 ordinary consumer cases, all three
+native-resource phases, and all four restore/recovery pairs. Both client modes
+verify denied non-administrator access, effective overrides, and agreement with
+administrator configuration. Collection is restored after the toggle scenario.
+
+Formatting, model reconciliation (116 mappings), strict Clippy, rustdoc, the full
+workspace suite, all five feature combinations, Rust 1.88, and the authoritative
+OpenAPI comparison passed. All 202 applicable public API checks passed against
+`fd12c8a`. The non-container suite passed with `RUST_TEST_THREADS=1` after the
+existing async tracing test missed an attempt in a parallel run. Local HTTP tests
+required sockets outside the sandbox; Podman used the existing disposable-fixture
+SELinux wrapper described above. Dependencies, MSRV, and server target are unchanged.
+
 ## v0.0.19 target
 
 Client 0.15.1 retains this target and adds the versioned tracing contract. On

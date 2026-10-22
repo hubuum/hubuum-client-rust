@@ -25,6 +25,7 @@ pub enum Endpoint {
     MetaTasks,
     ClientConfig,
     AdminConfig,
+    AdminQueryObservations,
     Backups,
     BackupByTaskId,
     BackupOutput,
@@ -201,6 +202,7 @@ impl Endpoint {
             Endpoint::MetaDb => "/api/v0/meta/db",
             Endpoint::MetaTasks => "/api/v0/meta/tasks",
             Endpoint::ClientConfig => "/api/v1/config",
+            Endpoint::AdminQueryObservations => "/api/v1/admin/query-observations",
             Endpoint::AdminConfig => "/api/v1/admin/config",
             Endpoint::Backups => "/api/v1/backups",
             Endpoint::BackupByTaskId => "/api/v1/backups/{task_id}",
@@ -486,7 +488,6 @@ mod test {
         .into_iter()
         .collect();
         let raw_paths = [
-            "/api/v1/admin/query-observations",
             "/api/v1/classes/{class_id}/history/entries/{history_id}",
             "/api/v1/classes/{class_id}/history/timeline",
             "/api/v1/classes/{class_id}/objects/history",

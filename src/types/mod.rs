@@ -117,11 +117,12 @@ pub use params::{ClassParams, CollectionPermissionsGrantParams, UserParams};
 pub use provenance::{Provenance, ProvenanceActor, ProvenancePrincipal};
 pub use query_usage::{
     QueryObservationConfig, QueryObservationSettings, QueryObservationSnapshot,
-    QueryPatternObservation, QueryUsageAdapterProgress, QueryUsageAnalysisRequest,
-    QueryUsageAnalysisResponse, QueryUsageAnalysisStatus, QueryUsageAssessment,
-    QueryUsageCompatibility, QueryUsageCreateRequest, QueryUsageDeclarationId, QueryUsageOperation,
-    QueryUsagePattern, QueryUsageReplaceRequest, QueryUsageResource, QueryUsageResourceOwnership,
-    QueryUsageResponse, QueryUsageSuggestion, QueryUsageValueType,
+    QueryObservationUpdateRequest, QueryPatternObservation, QueryUsageAdapterProgress,
+    QueryUsageAnalysisRequest, QueryUsageAnalysisResponse, QueryUsageAnalysisStatus,
+    QueryUsageAssessment, QueryUsageCompatibility, QueryUsageCreateRequest,
+    QueryUsageDeclarationId, QueryUsageOperation, QueryUsagePattern, QueryUsageReplaceRequest,
+    QueryUsageResource, QueryUsageResourceOwnership, QueryUsageResponse, QueryUsageSuggestion,
+    QueryUsageValueType,
 };
 pub use relation::{ObjectRelationLimit, RelationLabel};
 pub use remote::{
