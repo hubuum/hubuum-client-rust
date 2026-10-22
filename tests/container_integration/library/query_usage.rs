@@ -12,6 +12,17 @@ use crate::support::{
 
 macro_rules! management {
     ($client:ident, $class_id:ident, $send:ident) => {{
+        for error in
+            [
+                $send!($client.query_observations()).unwrap_err(),
+                $send!($client.set_query_observations(
+                    hubuum_client::QueryObservationUpdateRequest { enabled: true }
+                ))
+                .unwrap_err(),
+            ]
+        {
+            assert_eq!(error.status().unwrap().as_u16(), 403);
+        }
         let usage = $client.class_query_usage($class_id);
         let pattern = QueryUsagePattern::new(
             JsonPath::new(["serial"]).unwrap(),

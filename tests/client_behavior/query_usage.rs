@@ -240,3 +240,118 @@ async fn async_object_json_filter_uses_server_query_key() {
         [("json_data__equals".into(), "hardware,serial=abc".into())]
     );
 }
+
+fn observation_transport() -> MockTransport {
+    let transport = MockTransport::default();
+    for override_value in [Value::Null, json!(false), json!(true)] {
+        let mut body = analysis("complete")["observations"]["settings"].clone();
+        body["enabled"] = json!(override_value.as_bool().unwrap_or(true));
+        body["runtime_override"] = override_value;
+        transport.push_response(TransportResponse::json(StatusCode::OK, &body).unwrap());
+    }
+    transport.push_response(
+        TransportResponse::json(
+            StatusCode::FORBIDDEN,
+            &json!({"message":"administrator required"}),
+        )
+        .unwrap(),
+    );
+    transport
+}
+
+macro_rules! observation_workflow {
+    ($client:ident, $send:ident) => {{
+        use hubuum_client::QueryObservationUpdateRequest;
+        let settings = $send!($client.query_observations()).unwrap();
+        assert!(settings.enabled);
+        assert_eq!(settings.runtime_override, None);
+        for enabled in [false, true] {
+            let updated =
+                $send!($client.set_query_observations(QueryObservationUpdateRequest { enabled }))
+                    .unwrap();
+            assert_eq!(updated.enabled, enabled);
+            assert_eq!(updated.runtime_override, Some(enabled));
+            assert_eq!(updated.sample_every, 1);
+        }
+        assert_eq!(
+            $send!($client.query_observations()).unwrap_err().status(),
+            Some(StatusCode::FORBIDDEN)
+        );
+    }};
+}
+
+fn assert_observation_requests(transport: &MockTransport) {
+    let requests = transport.requests();
+    assert_eq!(requests.len(), 4);
+    for (request, method) in
+        requests
+            .iter()
+            .zip([Method::GET, Method::PUT, Method::PUT, Method::GET])
+    {
+        assert_eq!(request.method, method);
+        assert_eq!(request.url.path(), "/api/v1/admin/query-observations");
+        assert_eq!(request.url.query(), None);
+        assert_eq!(request.headers["authorization"], "Bearer private_token");
+    }
+    for (request, enabled) in requests[1..3].iter().zip([false, true]) {
+        assert_eq!(
+            serde_json::from_slice::<Value>(request.body()).unwrap(),
+            json!({"enabled": enabled})
+        );
+    }
+}
+
+#[test]
+fn blocking_observation_management() {
+    let transport = observation_transport();
+    let client = blocking::Client::builder(BaseUrl::new("https://example.test").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("private_token"));
+    macro_rules! send {
+        ($value:expr) => {
+            $value
+        };
+    }
+    observation_workflow!(client, send);
+    assert_observation_requests(&transport);
+}
+
+#[tokio::test]
+async fn async_observation_management() {
+    let transport = observation_transport();
+    let client = Client::builder(BaseUrl::new("https://example.test").unwrap())
+        .with_transport(Arc::new(transport.clone()))
+        .build()
+        .unwrap()
+        .authenticate(Token::new("private_token"));
+    macro_rules! send {
+        ($value:expr) => {
+            $value.await
+        };
+    }
+    observation_workflow!(client, send);
+    assert_observation_requests(&transport);
+}
+
+#[test]
+fn observation_models_preserve_missing_override_and_reject_invalid_updates() {
+    use hubuum_client::{QueryObservationConfig, QueryObservationUpdateRequest};
+    let settings: QueryObservationConfig =
+        serde_json::from_value(analysis("complete")["observations"]["settings"].clone()).unwrap();
+    assert_eq!(settings.runtime_override, None);
+    assert!(
+        serde_json::to_value(settings)
+            .unwrap()
+            .get("runtime_override")
+            .is_none()
+    );
+    for body in [
+        json!({}),
+        json!({"enabled":null}),
+        json!({"enabled":true,"sample_every":2}),
+    ] {
+        assert!(serde_json::from_value::<QueryObservationUpdateRequest>(body).is_err());
+    }
+}
