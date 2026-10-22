@@ -58,6 +58,8 @@ fn e2e_class_and_object_relations_roundtrip() {
         .create_relation_with_options(
             class_b.id,
             ClassRelationCreateOptions::default()
+                .with_forward_label(hubuum_client::RelationLabel::new("contains ø").unwrap())
+                .with_reverse_label(hubuum_client::RelationLabel::new("belongs to").unwrap())
                 .with_forward_template_alias("targets")
                 .with_reverse_template_alias("sources")
                 .with_from_max_relations(ObjectRelationLimit::new(1).unwrap()),
@@ -76,6 +78,22 @@ fn e2e_class_and_object_relations_roundtrip() {
         .relation(class_relation.id)
         .expect("class relation should be fetchable through source class");
     assert_eq!(fetched_class_relation.id(), class_relation.id);
+    assert_eq!(
+        fetched_class_relation
+            .forward_label
+            .as_ref()
+            .unwrap()
+            .as_str(),
+        "contains ø"
+    );
+    assert_eq!(
+        fetched_class_relation
+            .reverse_label
+            .as_ref()
+            .unwrap()
+            .as_str(),
+        "belongs to"
+    );
 
     let related_classes = class_a
         .related_classes()
@@ -182,4 +200,65 @@ fn e2e_class_and_object_relations_roundtrip() {
         class_a.relation(class_relation.id).is_err(),
         "deleted class relation should not be fetchable"
     );
+}
+
+#[tokio::test]
+#[ignore = "requires Docker and Hubuum server v0.0.20"]
+async fn async_directional_labels_follow_stored_class_order() {
+    use e2e_client::harness::{AsyncE2EHarness, async_admin_context};
+    use hubuum_client::{CollectionPost, RelationLabel};
+    let harness = AsyncE2EHarness::from_env().await.unwrap();
+    let client = &harness.client;
+    let (_, group) = async_admin_context(client).await.unwrap();
+    let prefix = unique_case_prefix("labels");
+    let collection = client
+        .collections()
+        .create_raw(CollectionPost {
+            name: prefix.clone(),
+            group_id: group,
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    let mut classes = Vec::new();
+    for suffix in ["first", "second"] {
+        classes.push(
+            client
+                .classes()
+                .create_raw(ClassPost {
+                    name: format!("{prefix}-{suffix}"),
+                    collection_id: collection.id,
+                    ..Default::default()
+                })
+                .await
+                .unwrap(),
+        );
+    }
+    let source = client.classes().get(classes[1].id).await.unwrap();
+    let relation = source
+        .create_relation_with_options(
+            classes[0].id,
+            ClassRelationCreateOptions::default()
+                .with_forward_label(RelationLabel::new("belongs to").unwrap())
+                .with_reverse_label(RelationLabel::new("contains").unwrap()),
+        )
+        .await
+        .unwrap();
+    assert_eq!(relation.from_hubuum_class_id, classes[0].id);
+    assert_eq!(
+        relation.forward_label.as_ref().unwrap().as_str(),
+        "contains"
+    );
+    assert_eq!(
+        relation.reverse_label.as_ref().unwrap().as_str(),
+        "belongs to"
+    );
+    let selected = client.class_relation().get(relation.id).await.unwrap();
+    assert_eq!(selected.forward_label, relation.forward_label);
+    assert_eq!(selected.reverse_label, relation.reverse_label);
+    client.class_relation().delete(relation.id).await.unwrap();
+    for class in classes {
+        client.classes().delete(class.id).await.unwrap();
+    }
+    client.collections().delete(collection.id).await.unwrap();
 }

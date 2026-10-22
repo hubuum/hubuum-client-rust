@@ -20,6 +20,10 @@ pub struct ClassResource {
 }
 
 pub struct ClassRelationResource {
+    #[api(read_only, response_optional, skip_query)]
+    pub forward_label: RelationLabel,
+    #[api(read_only, response_optional, skip_query)]
+    pub reverse_label: RelationLabel,
     #[api(read_only)]
     pub id: i32,
     #[api(query_key = "from_classes")]

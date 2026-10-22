@@ -110,12 +110,7 @@ and session-aware logout. Legacy single-token login is only for older servers.
 The following newer surfaces intentionally use authenticated `raw()` requests:
 history timeline and entry lookup, relationship and computed-field historical
 views, and exact-name history across object identities.
-Existing typed resource and administrative models retain their earlier projections:
-
-- Class-relation read/create models do not expose `forward_label` or
-  `reverse_label`; use raw JSON to preserve or set directional labels.
-
-`openapi/model-contract.json` records these field-level exceptions explicitly.
+`openapi/model-contract.json` records intentional field-level exceptions explicitly.
 Backup format 10 is recognized without discarding the extensible backup payload.
 
 Credential activity has typed `token_activity(principal_id, token_id, options)`
@@ -135,6 +130,14 @@ depth 1–10, and a limit of 1–50 visible paths. Results preserve unique objec
 relations, paths, and `truncated`; hydration does not paginate or change root
 search results. Intermediate objects can belong to other classes. Server
 authorization, traversal-bound errors, and concurrent-change errors are preserved.
+
+Class-relation responses preserve `forward_label` and `reverse_label` as validated
+`RelationLabel` values. Create labeled relations with a class handle's
+`create_relation_with_options` and `ClassRelationCreateOptions::with_forward_label`
+or `with_reverse_label`. Labels describe the supplied source/target direction;
+the server sorts class IDs and swaps labels when necessary. Existing
+`ClassRelationPost` literals remain compatible; use the handle options for labels.
+Labels require 1–128 Unicode characters, no controls, and no surrounding whitespace.
 
 Observation management has typed `query_observations()` and
 `set_query_observations(QueryObservationUpdateRequest { enabled })` methods in

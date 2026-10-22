@@ -107,7 +107,28 @@ macro_rules! relations {
             ..Default::default()
         }))
         .unwrap();
-        let relation = $send!(class.create_relation(other.id)).unwrap();
+        let other_handle = $send!($client.classes().get(other.id)).unwrap();
+        let relation = $send!(
+            other_handle.create_relation_with_options(
+                $class_id,
+                hubuum_client::ClassRelationCreateOptions::default()
+                    .with_forward_label(hubuum_client::RelationLabel::new("belongs to").unwrap())
+                    .with_reverse_label(hubuum_client::RelationLabel::new("contains").unwrap())
+            )
+        )
+        .unwrap();
+        assert_eq!(relation.from_hubuum_class_id, $class_id);
+        assert_eq!(
+            relation.forward_label.as_ref().unwrap().as_str(),
+            "contains"
+        );
+        assert_eq!(
+            relation.reverse_label.as_ref().unwrap().as_str(),
+            "belongs to"
+        );
+        let fetched = $send!(class.relation(relation.id)).unwrap();
+        assert_eq!(fetched.forward_label, relation.forward_label);
+        assert_eq!(fetched.reverse_label, relation.reverse_label);
         for id in [$class_id, other.id] {
             let plain = $send!($client.class_events(id).all()).unwrap();
             assert!(

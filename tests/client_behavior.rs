@@ -8160,6 +8160,7 @@ mod client_behavior {
     mod credential_activity;
     mod notifications;
     mod query_usage;
+    mod relation_labels;
     mod search_hydration;
     mod sessions;
 }

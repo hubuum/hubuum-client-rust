@@ -61,11 +61,7 @@
       "openapi_schema": "HubuumClassRelation",
       "rust_file": "src/resources/generated/class.rs",
       "rust_type": "ClassRelation",
-      "direction": "response",
-      "openapi_only_fields": {
-        "forward_label": "The typed projection retains its existing fields; access the v0.0.20 forward_label field through raw() as documented in openapi/known-gaps.md.",
-        "reverse_label": "The typed projection retains its existing fields; access the v0.0.20 reverse_label field through raw() as documented in openapi/known-gaps.md."
-      }
+      "direction": "response"
     },
     {
       "openapi_schema": "NewHubuumClassRelation",
@@ -73,8 +69,8 @@
       "rust_type": "ClassRelationPost",
       "direction": "request",
       "openapi_only_fields": {
-        "forward_label": "The typed projection retains its existing fields; access the v0.0.20 forward_label field through raw() as documented in openapi/known-gaps.md.",
-        "reverse_label": "The typed projection retains its existing fields; access the v0.0.20 reverse_label field through raw() as documented in openapi/known-gaps.md."
+        "forward_label": "ClassRelationPost retains source compatibility with existing literals. Use typed ClassRelationCreateOptions on class handles to set directional labels.",
+        "reverse_label": "ClassRelationPost retains source compatibility with existing literals. Use typed ClassRelationCreateOptions on class handles to set directional labels."
       }
     },
     {
@@ -824,6 +820,15 @@
       "rust_file": "src/types/search_hydration.rs",
       "rust_type": "SearchHydrationResponse",
       "direction": "response"
+    },
+    {
+      "openapi_schema": "NewHubuumClassRelationFromClass",
+      "rust_file": "src/resources/class.rs",
+      "rust_type": "ClassRelationCreateOptions",
+      "direction": "request",
+      "openapi_only_fields": {
+        "to_hubuum_class_id": "The class-handle method accepts the typed target ID separately and the private request wrapper flattens these options."
+      }
     },
     {
       "openapi_schema": "QueryObservationUpdateRequest",
