@@ -1218,6 +1218,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#unreleased-bounded-search-hydration" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased bounded search hydration
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#unreleased-directional-relation-labels" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1563,6 +1574,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Unreleased credential activity coverage
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unreleased-bounded-search-hydration" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased bounded search hydration
       </span>
     </span>
   </a>
@@ -2000,6 +2022,24 @@ checks, and pinned OpenAPI comparison passed. The unchanged 257-operation snapsh
 now reconciles 115 Rust model mappings. Semver checking against <code>74349ba</code> passed
 all 202 applicable checks; no dependency, MSRV, or declared server-target change
 was needed.</p>
+<h3 id="unreleased-bounded-search-hydration">Unreleased bounded search hydration<a class="headerlink" href="#unreleased-bounded-search-hydration" title="Permanent link">&para;</a></h3>
+<p>On 2026-10-23, typed search hydration passed the canonical combined suite against
+the pinned v0.0.20 image above with credential approval enforcement: 103 library
+tests, 44 ordinary consumer cases, three native-resource phases, and all four
+restore/recovery pairs. Both modes verify root authorization, empty neighborhoods,
+bounded paths and truncation, intermediate objects, relation/path correspondence,
+and equivalent target selection by exact class name or typed ID.</p>
+<p>The full workspace suite passed 856 tests with <code>RUST_TEST_THREADS=1</code>, including
+compile-fail checks for incorrect resource IDs and unauthenticated calls.
+Formatting, strict Clippy, rustdoc, all five public feature combinations,
+Rust 1.88 across all targets/features, pinned OpenAPI comparison, and model
+reconciliation (118 mappings) passed. All 202 applicable API compatibility checks
+passed against <code>fd12c8a</code>. Dependencies, MSRV, and the declared server target are
+unchanged. Hydration is bounded independently of root-search pagination; callers
+must inspect <code>truncated</code> and preserve server authorization/concurrency errors.</p>
+<p>Local verification used a separate Cargo target directory and the existing
+Podman SELinux wrapper with a container-readable public provider fixture.
+The container setup and immutable server image were unchanged.</p>
 <h3 id="unreleased-directional-relation-labels">Unreleased directional relation labels<a class="headerlink" href="#unreleased-directional-relation-labels" title="Permanent link">&para;</a></h3>
 <p>On 2026-10-23, typed relation labels passed the canonical combined suite against
 the pinned v0.0.20 image above with credential approval enforcement: 101 library
