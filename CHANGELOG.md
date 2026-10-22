@@ -11,6 +11,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Typed bounded search hydration in both client modes, with validated roots,
   target class selectors, depth/path limits, typed paths, and truncation metadata.
 
+- Typed administrator query-observation reads and enable/disable updates in both
+  client modes, including the effective shared `runtime_override`.
+
 - Typed credential creation provenance and recent source history through
   `token_activity` on authenticated clients and user/service-account handles,
   in both async and blocking modes. Validated offset pagination preserves

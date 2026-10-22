@@ -12,6 +12,7 @@ use crate::types::{StructuredSearchEvent, StructuredSearchRequest, StructuredSea
 use crate::{ClassRelationId, ObjectRelationId};
 use crate::{CollectionEventSink, EventSinkId};
 use crate::{CredentialActivityPageOptions, CredentialActivityResponse, TokenId};
+use crate::{QueryObservationConfig, QueryObservationUpdateRequest};
 use crate::{SearchHydrationRequest, SearchHydrationResponse};
 use log::{debug, trace};
 use reqwest::Response;
@@ -1335,6 +1336,44 @@ impl Client<Authenticated> {
             opt.ok_or(ApiError::EmptyResult(
                 "Admin config returned empty result".into(),
             ))
+        })
+    }
+
+    /// Read effective observation settings. Requires an unscoped human administrator.
+    pub async fn query_observations(&self) -> Result<QueryObservationConfig, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, QueryObservationConfig>(
+            reqwest::Method::GET,
+            &Endpoint::AdminQueryObservations,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .await
+        .and_then(|value| {
+            value.ok_or_else(|| {
+                ApiError::EmptyResult("Query observation settings returned empty result".into())
+            })
+        })
+    }
+
+    /// Commit a shared collection override. Requires an unscoped human administrator.
+    /// Other replicas apply the override asynchronously; existing observations remain.
+    pub async fn set_query_observations(
+        &self,
+        request: QueryObservationUpdateRequest,
+    ) -> Result<QueryObservationConfig, ApiError> {
+        self.request_with_endpoint::<QueryObservationUpdateRequest, QueryObservationConfig>(
+            reqwest::Method::PUT,
+            &Endpoint::AdminQueryObservations,
+            UrlParams::default(),
+            vec![],
+            request,
+        )
+        .await
+        .and_then(|value| {
+            value.ok_or_else(|| {
+                ApiError::EmptyResult("Query observation settings returned empty result".into())
+            })
         })
     }
 

@@ -3,6 +3,8 @@ use hubuum_client::{Authenticated, Client, JsonPath, QueryUsagePattern, QueryUsa
     QueryUsageDeclarationId, ResourceRevision, blocking};
 
 fn async_api(client: Client<Authenticated>) {
+    let _ = client.query_observations();
+    let _ = client.set_query_observations(hubuum_client::QueryObservationUpdateRequest { enabled: true });
     let usage = client.class_query_usage(42);
     let pattern = QueryUsagePattern::new(JsonPath::new(["serial"]).unwrap(), QueryUsageValueType::String,
         [QueryUsageOperation::Equals]).unwrap();
@@ -13,6 +15,8 @@ fn async_api(client: Client<Authenticated>) {
     std::mem::drop(usage.analyze(QueryUsageAnalysisRequest::default()));
 }
 fn blocking_api(client: blocking::Client<Authenticated>) {
+    let _ = client.query_observations();
+    let _ = client.set_query_observations(hubuum_client::QueryObservationUpdateRequest { enabled: true });
     let usage = client.class_query_usage(42);
     let _ = usage.delete(QueryUsageDeclarationId::new(1).unwrap(), ResourceRevision::INITIAL);
 }
