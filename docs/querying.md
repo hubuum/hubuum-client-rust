@@ -178,6 +178,62 @@ let classes = client
 
 Use `filter(...)` or `raw_param(...)` for backend query features that are not modeled yet.
 
+## Filtering by Related Objects
+
+Use `RelatedObjectFilter` to select class objects with a visible related target.
+The group requires an exact target class ID or name and a caller-chosen alias:
+
+```rust
+use hubuum_client::{RelatedObjectFilter, StructuredClassSelector};
+
+let room = RelatedObjectFilter::new(
+    "room",
+    StructuredClassSelector::Name { name: "Rooms".into() },
+)?
+.max_depth(2)?
+.name().ieq("Room A")
+.data().try_path(["location", "floor"])?
+.eq(3);
+
+let hosts = client
+    .objects(host_class_id)
+    .name().starts_with("web-")
+    .related(room)?
+    .include_total(false)
+    .page()?;
+```
+
+Class-name requests use the same group with
+`client.class_by_name("Hosts").objects().query().related(room)?`.
+Async clients await the terminal operation. Class handles expose this through
+`objects_query().related(room)?`.
+
+All predicates within one group must match the **same target object**. Separate
+groups are combined with AND and can match different targets, including targets
+in the same class. Negated field operators still require a matching related
+object: `.name().ne("Room A")` means a related room exists with another name,
+not that no related room is named Room A.
+
+Target fields are `id`, `name`, `description`, `collection_id`, `created_at`,
+`updated_at`, `revision`, and `data` (wire field `json_data`). They reuse the
+ordinary typed field operators; IDs use `ObjectId` and `CollectionId`, and
+`revision` uses `ResourceRevision`. JSON predicates require a validated path.
+
+Aliases contain 1–64 ASCII letters, digits, or underscores, cannot start with a
+digit, and must be unique within a query. Queries accept at most four groups.
+The maximum depth defaults to 1; `.max_depth(...)` accepts 1–10 and replaces it.
+Constructors validate aliases and class selectors; `.related(...)` checks duplicate aliases,
+the group limit, and deferred JSON-path errors before transport. Existing raw
+related parameters count toward the alias limit; raw parameters added later
+are checked by the server.
+
+Traversal is bidirectional, may cross intermediate classes, and excludes the
+source object itself. Every object and relation along the path must be visible.
+Missing or inaccessible targets produce no matches. The server enforces graph
+work limits, so prefer the smallest useful depth and disable exact totals when
+unneeded. Related filters do not support sorting or group-level OR/NOT; use
+structured search for boolean combinations.
+
 ## Relations and Traversal
 
 Find a relation between classes:

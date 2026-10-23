@@ -60,8 +60,8 @@ pub use client::{
 };
 pub use client::{
     Authenticated, IntoQueryFilters, MockTransport, Page, QueryBoolField, QueryJsonField,
-    QueryJsonPathField, QueryNumericField, QueryTextField, QueryValueField, RequestPlan,
-    RetryPolicy, TransportResponse, Unauthenticated,
+    QueryJsonPathField, QueryNumericField, QueryTextField, QueryValueField, RelatedObjectFilter,
+    RequestPlan, RetryPolicy, TransportResponse, Unauthenticated,
 };
 #[cfg(any(feature = "async", feature = "blocking"))]
 pub use client::{SessionStore, SessionStoreGuard, StoredSession};

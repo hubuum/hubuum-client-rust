@@ -6,6 +6,14 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Typed related-object filter groups for class object lists by ID or name in
+  async and blocking clients. `RelatedObjectFilter` provides typed target-field
+  predicates, exact class selectors, and bounded relationship depth. Query
+  builders reject invalid aliases, duplicate groups, more than four groups, and
+  invalid JSON paths before transport.
+
 ## [0.17.0] - 2026-10-23
 
 This release explicitly targets Hubuum server v0.0.20.

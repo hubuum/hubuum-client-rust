@@ -31,7 +31,6 @@ use super::diagnostics::{self, TraceSpan};
 use super::{
     Authenticated, ClientCore, GetID, IntoQueryFilters, Unauthenticated, UrlParams, shared,
 };
-use crate::QueryFilter;
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{
@@ -73,6 +72,7 @@ use crate::types::{
     CredentialApprovalId, CredentialApprovalRecord, CredentialApprovalRequest, CredentialOperation,
     EntityTag,
 };
+use crate::{QueryFilter, RelatedObjectFilter};
 
 #[derive(Deserialize, Debug)]
 struct DeleteResponse;
@@ -6751,6 +6751,16 @@ impl<T: ApiResource> shared::QueryFilterTarget for QueryOp<T> {
 }
 
 impl QueryOp<Object> {
+    /// Add a named related-object predicate to this class object list.
+    ///
+    /// Rejects duplicate aliases, more than four groups, and invalid JSON paths
+    /// before transport. Raw related parameters already present count toward
+    /// the alias limit; subsequent raw parameters remain server-validated.
+    pub fn related(mut self, filter: RelatedObjectFilter) -> Result<Self, ApiError> {
+        filter.append_to(&mut self.query_params)?;
+        Ok(self)
+    }
+
     /// Filter an object list using an enabled shared or owned personal computed field.
     pub fn computed_filter<V: ToString>(
         self,
@@ -6961,6 +6971,16 @@ impl<T> CursorRequest<T> {
 }
 
 impl CursorRequest<Object> {
+    /// Add a named related-object predicate to this class object list.
+    ///
+    /// Rejects duplicate aliases, more than four groups, and invalid JSON paths
+    /// before transport. Raw related parameters already present count toward
+    /// the alias limit; subsequent raw parameters remain server-validated.
+    pub fn related(mut self, filter: RelatedObjectFilter) -> Result<Self, ApiError> {
+        filter.append_to(&mut self.query_params)?;
+        Ok(self)
+    }
+
     /// Filter an object list using an enabled shared or owned personal computed field.
     pub fn computed_filter<V: ToString>(
         self,
@@ -7466,6 +7486,16 @@ impl<T: ApiResource> shared::QueryFilterTarget for Resource<T> {
 }
 
 impl Resource<Object> {
+    /// Add a named related-object predicate to this class object list.
+    ///
+    /// Rejects duplicate aliases, more than four groups, and invalid JSON paths
+    /// before transport. Raw related parameters already present count toward
+    /// the alias limit; subsequent raw parameters remain server-validated.
+    pub fn related(mut self, filter: RelatedObjectFilter) -> Result<Self, ApiError> {
+        filter.append_to(&mut self.query_params)?;
+        Ok(self)
+    }
+
     /// Filter an object list using an enabled shared or owned personal computed field.
     pub fn computed_filter<V: ToString>(
         self,
