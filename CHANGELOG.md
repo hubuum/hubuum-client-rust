@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-23
+
+This release explicitly targets Hubuum server v0.0.20.
+The server image, Rust 1.88 MSRV, and public feature combinations are unchanged.
+Existing 0.16.0 callers need no migration.
+
 ### Added
 
 - Typed coverage for all eleven remaining Hubuum v0.0.20 history routes in async
@@ -45,6 +51,16 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 - Redact pagination cursors and class/object history snapshot contents from
   `Debug` output.
+
+### Changed
+
+- Refresh compatible dependencies, including ICU 2.4, `cc` 1.10.0,
+  `webpki-root-certs` 1.0.11, and their supporting crates. Allowing newer Rust
+  requirements did not enable additional dependency updates.
+- Update the pinned RustSec audit Action to its Node 24 implementation; all
+  other GitHub Actions already match their latest releases or selected branches.
+- Document the server v0.0.20 class-deletion/rebuild deadlock and the workaround
+  of waiting for all class reindex tasks before deletion.
 
 ## [0.16.0] - 2026-10-22
 

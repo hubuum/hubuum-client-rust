@@ -130,6 +130,14 @@ of ordinary tests against an externally managed stack; full restore replaces
 all data and invalidates tokens. The complete non-container workspace suite
 compiles these tests but leaves them ignored.
 
+## Computed-history cleanup
+
+Computed-field definition mutations enqueue asynchronous rebuilds, including
+definition deletion. The history scenarios wait for all reindex tasks belonging
+to their unique class before removing the object and class. Superseded rebuilds
+may finish cancelled; other failures still fail the test. This avoids the
+v0.0.20 class-deletion/rebuild deadlock without retrying or ignoring HTTP 500s.
+
 ## Rotating-session contract
 
 The canonical combined suite provisions a disposable server with

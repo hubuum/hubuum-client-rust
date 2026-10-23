@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use e2e_client::{
     harness::{E2EHarness, admin_context},
     naming::unique_case_prefix,
@@ -7,7 +9,7 @@ use hubuum_client::{
     ComputedFieldOperation, ComputedResultType, HistoricalComputedFieldResult,
     HistoricalEndpointContext, HistoricalPopulationCoverage, HistoricalRelationValue,
     HistoricalSharedComputedFields, HistoryDirection, HistoryPageOptions, HistoryTimelineOptions,
-    ObjectHistoryOptions, ObjectPatch, ObjectPost, RelationHistoryOptions,
+    ObjectHistoryOptions, ObjectPatch, ObjectPost, RelationHistoryOptions, TaskKind, TaskStatus,
 };
 use serde_json::json;
 
@@ -461,11 +463,41 @@ fn e2e_computed_history_uses_old_data_and_definitions(asynchronous: bool) {
         }};
     }
     with_client!(harness, asynchronous, scenario);
-    harness
+    let deleted = harness
         .client
         .computed_fields(class)
         .delete(field.definition.id)
         .unwrap();
+    // Definition mutations enqueue rebuilds, including deletion. Drain every
+    // revision before removing the class so cleanup cannot race a worker that
+    // still holds its computation state or class locks.
+    let tasks = harness
+        .client
+        .tasks()
+        .query()
+        .class_id(class)
+        .kind(TaskKind::Reindex)
+        .all()
+        .unwrap();
+    let deletion_task = deleted
+        .state
+        .active_task_id
+        .expect("deletion enqueues a rebuild");
+    assert!(tasks.iter().any(|task| task.id == deletion_task));
+    for task in tasks {
+        let completed = harness
+            .client
+            .tasks()
+            .wait(task.id)
+            .poll_interval(Duration::from_millis(100))
+            .timeout(Some(Duration::from_secs(60)))
+            .send()
+            .unwrap();
+        assert!(matches!(
+            completed.status,
+            TaskStatus::Succeeded | TaskStatus::Cancelled
+        ));
+    }
     harness.client.objects(class).delete(object).unwrap();
     harness.client.classes().delete(class).unwrap();
     harness.client.collections().delete(collection).unwrap();
