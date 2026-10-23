@@ -1595,7 +1595,12 @@ runs <code>hubuum-admin --migrate</code> before starting the server, starts a se
 data, exercises native query-usage preparation and cleanup between consumer phases,
 enables query observations with one sample per request, and tears everything down in a shell <code>trap</code> unless keep mode is enabled.</p>
 <p>Provider coverage discovers the unauthenticated provider list, rejects invalid LDAP credentials, logs in real directory users through both async and blocking clients, verifies synchronized user and group metadata, and exercises settings replace, merge-patch, get, and reset operations as an external user. The fixture configuration lives at <code>tests/container_integration/fixtures/auth-providers.toml</code>.</p>
-<p>Mutating integration tests use unique <code>itest-&lt;case&gt;-&lt;ts&gt;</code> resource name prefixes, so they are safe to run with default parallel test threads.</p>
+<p>Both suites share public-API fixture helpers in the unpublished
+<code>integration_support</code> workspace crate. Scenario assertions remain in each suite.
+Mutating tests use <code>itest-&lt;case&gt;-&lt;run-id&gt;-&lt;sequence&gt;</code> resource names, with a random
+process identifier and an atomic sequence, to isolate parallel runs.
+The Rust stack launcher owns cleanup resources from the start of provisioning,
+including failures before the server's address has been parsed.</p>
 <h2 id="seed-behavior">Seed Behavior<a class="headerlink" href="#seed-behavior" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Default seed file: <code>tests/container_integration/seed/init.sql</code></li>
