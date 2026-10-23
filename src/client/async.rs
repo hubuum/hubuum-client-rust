@@ -885,6 +885,95 @@ impl Client<Unauthenticated> {
         })
     }
 
+    /// Resume a persisted session without a password. Returns `None` when the
+    /// store is empty or the refresh lifetime has expired. Refresh is coordinated
+    /// with other clients/processes and the access token is validated before
+    /// returning; rejected or uncertain
+    /// refreshes return `SessionExpired` and leave the store empty.
+    pub async fn resume_session(
+        &self,
+        client_id: crate::SessionClientId,
+        store: Arc<dyn super::SessionStore>,
+    ) -> Result<Option<Client<Authenticated>>, ApiError> {
+        let lock_store = store.clone();
+        let mut guard = tokio::task::spawn_blocking(move || lock_store.lock())
+            .await
+            .map_err(|_| ApiError::SessionExpired)??;
+        let Some(stored) = guard.load()? else {
+            return Ok(None);
+        };
+        let pair = stored.restore(self.base_url(), &client_id)?;
+        if stored.expired() {
+            guard.save(None)?;
+            return Ok(None);
+        }
+        let client = Client {
+            runtime: self.runtime.clone(),
+            state: Authenticated::with_session_store(pair, client_id, store),
+        };
+        drop(guard);
+        client.ready_token().await?;
+        let session = client.state.session().ok_or(ApiError::SessionExpired)?;
+        let store = session.store.clone().ok_or(ApiError::SessionExpired)?;
+        let mut guard = tokio::task::spawn_blocking(move || store.lock())
+            .await
+            .map_err(|_| ApiError::SessionExpired)??;
+        session.reload(guard.as_ref(), self.base_url())?;
+        // Keep the store locked while validating this exact credential, so a
+        // concurrent rotation cannot make us discard its valid successor.
+        let validation = self
+            .authenticate(session.token()?)
+            .request_with_endpoint::<EmptyPostParams, serde_json::Value>(
+                reqwest::Method::GET,
+                &Endpoint::SessionValidate,
+                UrlParams::default(),
+                vec![],
+                EmptyPostParams,
+            )
+            .await;
+        if let Err(error) = validation {
+            if error.is_status(reqwest::StatusCode::UNAUTHORIZED) {
+                session.forget(guard.as_mut())?;
+            }
+            return Err(error);
+        }
+        drop(guard);
+        Ok(Some(client))
+    }
+
+    /// Log in and persist rotating credentials in an application-owned store.
+    /// Ordinary requests reload the latest state under the store's lock and
+    /// durably save refresh successors. Passwords are never stored.
+    pub async fn login_session_with_store(
+        &self,
+        credentials: Credentials,
+        client_id: crate::SessionClientId,
+        store: Arc<dyn super::SessionStore>,
+    ) -> Result<Client<Authenticated>, ApiError> {
+        let lock_store = store.clone();
+        let mut guard = tokio::task::spawn_blocking(move || lock_store.lock())
+            .await
+            .map_err(|_| ApiError::SessionExpired)??;
+        let request = super::sessions::SessionLogin {
+            credentials: &credentials,
+            client_id: &client_id,
+        };
+        let pair = self
+            .exchange_session(&Endpoint::SessionLogin, &request)
+            .await
+            .map_err(super::sessions::login_error)?;
+        let client = Client {
+            runtime: self.runtime.clone(),
+            state: Authenticated::with_session_store(pair, client_id, store),
+        };
+        client
+            .state
+            .session()
+            .ok_or(ApiError::SessionExpired)?
+            .save(guard.as_mut(), self.base_url())?;
+        Ok(client)
+    }
+
     /// Discover login providers on the versioned session API.
     pub async fn session_providers(&self) -> Result<AuthProvidersResponse, ApiError> {
         self.public_get(
@@ -1017,7 +1106,29 @@ impl Client<Authenticated> {
             return self.state.token();
         };
         let _guard = session.async_lock.lock().await;
-        if let Some(previous) = session.take_if_due()? {
+        let mut storage = if let Some(store) = session.store.clone() {
+            let guard = tokio::task::spawn_blocking(move || store.lock())
+                .await
+                .map_err(|_| ApiError::SessionExpired)??;
+            session.reload(guard.as_ref(), self.base_url())?;
+            Some(guard)
+        } else {
+            None
+        };
+        let previous = match session.take_if_due() {
+            Ok(previous) => previous,
+            Err(error) => {
+                if let Some(guard) = storage.as_mut() {
+                    guard.save(None)?;
+                }
+                return Err(error);
+            }
+        };
+        if let Some(previous) = previous {
+            if let Some(guard) = storage.as_mut() {
+                guard.save(None)?;
+            }
+
             let pair = self
                 .exchange_session(
                     &Endpoint::SessionRefresh,
@@ -1027,6 +1138,9 @@ impl Client<Authenticated> {
                 .map_err(|_| ApiError::SessionExpired)?;
             pair.validate_successor(&previous)
                 .map_err(|_| ApiError::SessionExpired)?;
+            if let Some(guard) = storage.as_mut() {
+                guard.save(Some(&pair.snapshot(self.base_url(), &session.client_id)))?;
+            }
             session.install(pair)?;
         }
         session.token()
@@ -1212,7 +1326,14 @@ impl Client<Authenticated> {
             )
             .await;
         if let Some(session) = self.state.session() {
-            session.clear();
+            if let Some(store) = session.store.clone() {
+                let mut guard = tokio::task::spawn_blocking(move || store.lock())
+                    .await
+                    .map_err(|_| ApiError::SessionExpired)??;
+                session.forget(guard.as_mut())?;
+            } else {
+                session.clear();
+            }
         }
         result?;
         Ok(Client {
@@ -1252,7 +1373,14 @@ impl Client<Authenticated> {
             )
             .await;
         if let Some(session) = self.state.session() {
-            session.clear();
+            if let Some(store) = session.store.clone() {
+                let mut guard = tokio::task::spawn_blocking(move || store.lock())
+                    .await
+                    .map_err(|_| ApiError::SessionExpired)??;
+                session.forget(guard.as_mut())?;
+            } else {
+                session.clear();
+            }
         }
         result
     }

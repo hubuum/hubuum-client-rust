@@ -63,6 +63,8 @@ pub use client::{
     QueryJsonPathField, QueryNumericField, QueryTextField, QueryValueField, RequestPlan,
     RetryPolicy, TransportResponse, Unauthenticated,
 };
+#[cfg(any(feature = "async", feature = "blocking"))]
+pub use client::{SessionStore, SessionStoreGuard, StoredSession};
 pub use errors::{ApiError, ApiErrorResponse};
 pub use resources::*;
 pub use types::{
