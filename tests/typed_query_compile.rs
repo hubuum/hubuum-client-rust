@@ -3,6 +3,9 @@
 #[test]
 fn typed_query_operator_contract() {
     let tests = trybuild::TestCases::new();
+    tests.pass("tests/trybuild/related_filter_pass.rs");
+    tests.compile_fail("tests/trybuild/related_filter_fail_wrong_id.rs");
+    tests.compile_fail("tests/trybuild/related_filter_fail_wrong_resource.rs");
     tests.compile_fail("tests/trybuild/history_fail_wrong_id.rs");
     tests.compile_fail("tests/trybuild/history_fail_unauthenticated.rs");
     tests.pass("tests/trybuild/query_usage_types_pass.rs");

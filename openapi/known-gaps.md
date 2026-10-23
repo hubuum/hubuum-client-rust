@@ -45,8 +45,6 @@ Rust wire models:
 
 ## Intentional client limitations
 
-- Class object lists' `related.<alias>` filter groups have no dedicated typed
-  builders. Use `raw_param` with the server's documented query keys.
 - Database diagnostics can return 404 for storage backends that do not provide
   them, such as the experimental memory backend. `meta_db()` and `meta_db_full()`
   preserve that structured HTTP error. Required integration uses PostgreSQL.
@@ -59,6 +57,14 @@ Rust wire models:
   reindex tasks and use `tasks().wait(task.id)` to wait for every task to reach
   a terminal state, including superseded revisions. Waiting only for the most
   recent task can leave an older worker running.
+
+## Related-object filter coverage
+
+Class object lists support typed `related.<alias>` groups through
+`RelatedObjectFilter` and `.related(...)` in both client modes, including
+class-name queries. See [related-object filters](../docs/querying.md#filtering-by-related-objects)
+for group semantics and bounds. Additional raw query parameters remain
+server-validated.
 
 ## Credential approval coverage
 

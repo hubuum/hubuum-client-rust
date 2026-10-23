@@ -25,7 +25,7 @@ pub use self::r#async::{
 };
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryJsonPathField, QueryNumericField, QueryTextField,
-    QueryValueField, RetryPolicy,
+    QueryValueField, RelatedObjectFilter, RetryPolicy,
 };
 pub(crate) use self::shared::{
     decode_json_body, decode_revisioned, if_match_headers, redact_reqwest_error,
@@ -352,6 +352,9 @@ mod parity_contract {
     macro_rules! assert_filter_builder_surface {
         ($module:ident) => {
             let _ = $module::QueryOp::<Class>::filter::<&str, i32>;
+            let _ = $module::QueryOp::<Object>::related;
+            let _ = $module::Resource::<Object>::related;
+            let _ = $module::CursorRequest::<Object>::related;
             let _ = $module::QueryOp::<Class>::raw_param::<&str, &str>;
             let _ = $module::QueryOp::<Class>::set_raw_param::<&str, &str>;
             let _ = $module::QueryOp::<Class>::sort_by::<&str>;

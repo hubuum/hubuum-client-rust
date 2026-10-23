@@ -102,6 +102,9 @@ pub enum ApiError {
     #[error("Invalid structured search: {reason}")]
     InvalidStructuredSearch { reason: &'static str },
 
+    #[error("Invalid related object filter: {reason}")]
+    InvalidRelatedFilter { reason: &'static str },
+
     #[error("Invalid query usage: {reason}")]
     InvalidQueryUsage { reason: &'static str },
 
@@ -275,6 +278,10 @@ impl std::fmt::Debug for ApiError {
                 .finish(),
             Self::InvalidStructuredSearch { reason } => f
                 .debug_struct("InvalidStructuredSearch")
+                .field("reason", reason)
+                .finish(),
+            Self::InvalidRelatedFilter { reason } => f
+                .debug_struct("InvalidRelatedFilter")
                 .field("reason", reason)
                 .finish(),
             Self::InvalidQueryUsage { reason } => f
