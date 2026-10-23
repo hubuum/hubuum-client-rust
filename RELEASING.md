@@ -1,8 +1,8 @@
 # Releasing
 
 This repository publishes one crate: `hubuum_client`. The workspace also contains
-the unpublished `hubuum_reconcile` code generator and the unpublished
-`e2e_client` integration consumer.
+the unpublished `hubuum_reconcile` code generator, `e2e_client` integration
+consumer, and `integration_support` fixture library.
 
 ## First release bootstrap
 

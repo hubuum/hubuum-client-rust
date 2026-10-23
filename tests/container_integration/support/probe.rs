@@ -2,7 +2,7 @@ use serde_json::{Value, json};
 
 use hubuum_client::{GroupId, UserId};
 
-pub(crate) const ADMIN_USERNAME: &str = "admin";
+pub(crate) use integration_support::connection::ADMIN_USERNAME;
 
 pub(crate) fn login_token(base_url: &str, admin_password: &str) -> Result<String, String> {
     let response = reqwest::blocking::Client::new()

@@ -1,5 +1,5 @@
 [workspace]
-members = ["hubuum_reconcile", "e2e_client"]
+members = ["hubuum_reconcile", "e2e_client", "integration_support"]
 resolver = "3"
 
 [package]
@@ -17,6 +17,7 @@ categories = ["api-bindings"]
 exclude = [
     ".github/",
     "hubuum_reconcile/",
+    "integration_support/",
     "openapi/",
     "scripts/",
     "tests/",
@@ -67,6 +68,7 @@ schemars = { version = "1", features = ["chrono04"], optional = true }
 tempfile = "3"
 
 [dev-dependencies]
+integration_support = { path = "integration_support" }
 tokio = { version = "1", features = ["full"] }
 yare = "3"
 httpmock = "0.9"

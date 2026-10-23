@@ -8,7 +8,8 @@ also make sense for this client library.
 
 - This workspace contains the public `hubuum_client` crate, the unpublished
   `hubuum_reconcile` resource-code generator, and the unpublished `e2e_client`
-  consumer used for integration coverage.
+  consumer used for integration coverage, plus the unpublished
+  `integration_support` fixture library shared by the test suites.
 - Treat the root `Cargo.toml` as the source of truth for the client version,
   minimum supported Rust version (MSRV), feature definitions, target Hubuum
   server version, and immutable target server image.
@@ -231,7 +232,7 @@ Treat the test setup as a layered contract:
 ## Releases
 
 - This repository publishes only `hubuum_client`. `hubuum_reconcile` and
-  `e2e_client` remain unpublished workspace tools.
+  `e2e_client` and `integration_support` remain unpublished workspace tools.
 - Do not release while any pull request in this repository remains open. Merge
   or close every open pull request before starting the release step.
 - Before the release step, update every direct and transitive dependency to its
