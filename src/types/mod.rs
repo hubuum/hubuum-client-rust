@@ -9,6 +9,7 @@ mod datetime;
 mod event;
 mod export;
 mod filter;
+mod historical;
 mod history;
 mod id;
 mod identity;
@@ -217,3 +218,15 @@ pub enum Permissions {
 }
 
 pub use search_hydration::{SearchHydrationPath, SearchHydrationRequest, SearchHydrationResponse};
+
+pub(crate) use historical::HistoryPosition;
+pub use historical::{
+    HistoricalClassObjects, HistoricalComputationMode, HistoricalComputedField,
+    HistoricalComputedFieldResult, HistoricalComputedObjectSource,
+    HistoricalComputedUnavailableReason, HistoricalComputedValues, HistoricalEndpointContext,
+    HistoricalEndpointUnavailableReason, HistoricalPersonalFields, HistoricalPopulationCoverage,
+    HistoricalRelation, HistoricalRelationEndpoint, HistoricalRelationValue,
+    HistoricalRelationships, HistoricalSharedComputedFields, HistoryDirection, HistoryMarker,
+    HistoryPage, HistoryPageOptions, HistorySortField, HistoryTimelineOptions,
+    ObjectHistoryOptions, RelationHistoryOptions,
+};

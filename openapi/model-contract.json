@@ -835,6 +835,36 @@
       "rust_file": "src/types/query_usage.rs",
       "rust_type": "QueryObservationUpdateRequest",
       "direction": "request"
+    },
+    {
+      "openapi_schema": "HistoricalClassObjects",
+      "rust_file": "src/types/historical.rs",
+      "rust_type": "HistoricalClassObjects",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "HistoricalRelationships",
+      "rust_file": "src/types/historical.rs",
+      "rust_type": "HistoricalRelationships",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "HistoricalRelationEndpoint",
+      "rust_file": "src/types/historical.rs",
+      "rust_type": "HistoricalRelationEndpoint",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "HistoricalComputedObjectSource",
+      "rust_file": "src/types/historical.rs",
+      "rust_type": "HistoricalComputedObjectSource",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "HistoricalComputedValues",
+      "rust_file": "src/types/historical.rs",
+      "rust_type": "HistoricalComputedValues",
+      "direction": "response"
     }
   ]
 }

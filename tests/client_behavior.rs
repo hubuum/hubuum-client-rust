@@ -8165,3 +8165,366 @@ mod client_behavior {
     mod session_storage;
     mod sessions;
 }
+
+mod typed_history {
+    use hubuum_client::types::SortDirection;
+    use hubuum_client::{
+        ApiError, BaseUrl, Client, HistoryDirection, HistoryPage, HistoryPageOptions,
+        HistoryTimelineOptions, MockTransport, ObjectHistoryOptions, Page, RelationHistoryOptions,
+        Token, TransportResponse, blocking,
+    };
+    use reqwest::{Method, StatusCode};
+    use serde::Serialize;
+    use serde_json::{Value, json};
+    use std::{collections::BTreeMap, fmt::Debug, sync::Arc};
+
+    const AT: &str = "2026-10-23T09:12:13.123456789+00:00";
+    const NAME: &str = "007 /?&secret=name";
+    const CURSOR: &str = "private+/cursor=?&";
+
+    fn page() -> HistoryPageOptions {
+        HistoryPageOptions::default()
+            .limit(2)
+            .unwrap()
+            .include_total(true)
+            .cursor(CURSOR)
+    }
+    fn timeline() -> HistoryTimelineOptions {
+        HistoryTimelineOptions::default()
+            .page(page())
+            .anchor(9001.into())
+            .unwrap()
+            .direction(HistoryDirection::Newer)
+    }
+    fn objects() -> ObjectHistoryOptions {
+        ObjectHistoryOptions::default()
+            .page(page())
+            .revision(hubuum_client::ResourceRevision::new(2).unwrap())
+            .sort(
+                hubuum_client::HistorySortField::Revision,
+                SortDirection::Desc,
+            )
+    }
+    fn relations() -> RelationHistoryOptions {
+        RelationHistoryOptions::default()
+            .page(page())
+            .order(SortDirection::Asc)
+    }
+    fn class() -> Value {
+        super::class_history_json()
+    }
+    fn object() -> Value {
+        let mut v = class();
+        v["id"] = json!(99);
+        v["hubuum_class_id"] = json!(42);
+        v["data"] = json!({"private":"payload"});
+        v
+    }
+    fn fixture(case: &str) -> Value {
+        match case {
+            "class_timeline" | "object_timeline" => json!([{
+                "id":if case == "class_timeline" {42} else {99}, "collection_id":7,
+                "hubuum_class_id":if case == "class_timeline" {Value::Null} else {json!(42)},
+                "name":"private-name","revision":2,"history_id":9001,"op":"D",
+                "valid_from":AT,"valid_to":null
+            }]),
+            "class_entry" => class(),
+            "object_entry" => object(),
+            "name" => json!([object()]),
+            "population" => {
+                json!({"at":AT,"class":class(),"objects":[object()],"coverage":"retained_history"})
+            }
+            "computed" => json!({
+                "mode":"historical_recomputation","at":AT,
+                "object":{"object_id":99,"class_id":42,"history_id":9001,"revision":2,"valid_from":AT,"valid_to":null},
+                "shared":{"status":"unavailable","reason":"definition_history_unavailable"},"personal":"unsupported"
+            }),
+            _ => {
+                json!({"at":if case.ends_with("as_of") {json!(AT)} else {Value::Null},"coverage":"retained_history","relations":[]})
+            }
+        }
+    }
+    fn expected_path(case: &str) -> &'static str {
+        match case {
+            "class_timeline" => "/api/v1/classes/42/history/timeline",
+            "object_timeline" => "/api/v1/classes/42/99/history/timeline",
+            "class_entry" => "/api/v1/classes/42/history/entries/9001",
+            "object_entry" => "/api/v1/classes/42/99/history/entries/9001",
+            "name" => "/api/v1/classes/42/objects/history",
+            "population" => "/api/v1/classes/42/objects/history/as-of",
+            "computed" => "/api/v1/classes/42/99/history/computed/as-of",
+            "class_relations" => "/api/v1/classes/42/relations/history",
+            "class_relations_as_of" => "/api/v1/classes/42/relations/history/as-of",
+            "object_relations" => "/api/v1/classes/42/99/relations/history",
+            "object_relations_as_of" => "/api/v1/classes/42/99/relations/history/as-of",
+            _ => unreachable!(),
+        }
+    }
+    fn metadata(cursor: Option<&str>, total: Option<u64>, limit: Option<usize>) {
+        assert_eq!(cursor, Some(CURSOR));
+        assert_eq!(total, Some(9));
+        assert_eq!(limit, Some(2));
+    }
+    fn array<T: Serialize + Debug>(page: Page<T>) -> Value {
+        metadata(
+            page.next_cursor.as_deref(),
+            page.total_count,
+            page.page_limit,
+        );
+        assert!(!format!("{page:?}").contains(CURSOR));
+        assert!(!format!("{page:?}").contains("payload"));
+        serde_json::to_value(page.items).unwrap()
+    }
+    fn envelope<T: Serialize + Debug>(page: HistoryPage<T>) -> Value {
+        metadata(
+            page.next_cursor.as_deref(),
+            page.total_count,
+            page.page_limit,
+        );
+        assert!(!format!("{page:?}").contains(CURSOR));
+        assert!(!format!("{page:?}").contains("payload"));
+        serde_json::to_value(page.data).unwrap()
+    }
+    macro_rules! call {
+        ($client:ident, $send:ident, $case:expr) => {{
+            let at = serde_json::from_value(json!(AT)).unwrap();
+            match $case {
+                "class_timeline" => {
+                    array($send!($client.class_history_timeline(42.into(), timeline())).unwrap())
+                }
+                "object_timeline" => array(
+                    $send!($client.object_history_timeline(42.into(), 99.into(), timeline()))
+                        .unwrap(),
+                ),
+                "class_entry" => serde_json::to_value(
+                    $send!($client.class_history_entry(42.into(), 9001.into())).unwrap(),
+                )
+                .unwrap(),
+                "object_entry" => serde_json::to_value(
+                    $send!($client.object_history_entry(42.into(), 99.into(), 9001.into()))
+                        .unwrap(),
+                )
+                .unwrap(),
+                "name" => array(
+                    $send!($client.object_history_by_name(42.into(), NAME, objects())).unwrap(),
+                ),
+                "population" => {
+                    envelope($send!($client.class_objects_as_of(42.into(), at, objects())).unwrap())
+                }
+                "computed" => serde_json::to_value(
+                    $send!($client.object_computed_as_of(42.into(), 99.into(), at)).unwrap(),
+                )
+                .unwrap(),
+                "class_relations" => envelope(
+                    $send!($client.class_relation_history(42.into(), relations())).unwrap(),
+                ),
+                "class_relations_as_of" => envelope(
+                    $send!($client.class_relations_as_of(42.into(), at, relations())).unwrap(),
+                ),
+                "object_relations" => envelope(
+                    $send!($client.object_relation_history(42.into(), 99.into(), relations()))
+                        .unwrap(),
+                ),
+                "object_relations_as_of" => envelope(
+                    $send!($client.object_relations_as_of(42.into(), 99.into(), at, relations()))
+                        .unwrap(),
+                ),
+                _ => unreachable!(),
+            }
+        }};
+    }
+    #[rstest::rstest]
+    #[case("class_timeline")]
+    #[case("object_timeline")]
+    #[case("class_entry")]
+    #[case("object_entry")]
+    #[case("name")]
+    #[case("population")]
+    #[case("computed")]
+    #[case("class_relations")]
+    #[case("class_relations_as_of")]
+    #[case("object_relations")]
+    #[case("object_relations_as_of")]
+    fn history_routes_preserve_queries_and_metadata(
+        #[case] case: &str,
+        #[values(false, true)] asynchronous: bool,
+    ) {
+        let transport = MockTransport::default();
+        let mut response = TransportResponse::json(StatusCode::OK, &fixture(case)).unwrap();
+        for (key, value) in [
+            ("x-next-cursor", CURSOR),
+            ("x-total-count", "9"),
+            ("x-page-limit", "2"),
+        ] {
+            response.headers.insert(
+                reqwest::header::HeaderName::from_bytes(key.as_bytes()).unwrap(),
+                value.parse().unwrap(),
+            );
+        }
+        transport.push_response(response);
+        let base = BaseUrl::new("https://example.test").unwrap();
+        let value = if asynchronous {
+            let client = Client::builder(base)
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("token"));
+            tokio::runtime::Runtime::new().unwrap().block_on(async {
+                macro_rules! send {
+                    ($v:expr) => {
+                        $v.await
+                    };
+                }
+                call!(client, send, case)
+            })
+        } else {
+            let client = blocking::Client::builder(base)
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("token"));
+            macro_rules! send {
+                ($v:expr) => {
+                    $v
+                };
+            }
+            call!(client, send, case)
+        };
+        match case {
+            "class_timeline" | "object_timeline" => {
+                assert_eq!(value[0]["op"], "D");
+                assert_eq!(value[0]["history_id"], 9001);
+            }
+            "class_entry" | "object_entry" => assert_eq!(value["history_id"], 9001),
+            "name" => assert_eq!(value[0]["id"], 99),
+            "population" => {
+                assert_eq!(value["objects"][0]["id"], 99);
+                assert_eq!(value["class"]["id"], 42);
+            }
+            "computed" => {
+                assert_eq!(value["shared"]["reason"], "definition_history_unavailable");
+                assert_eq!(value["personal"], "unsupported");
+            }
+            _ => {
+                assert_eq!(value["coverage"], "retained_history");
+                assert!(value["relations"].as_array().unwrap().is_empty());
+            }
+        }
+        let requests = transport.requests();
+        assert_eq!(requests.len(), 1);
+        let request = &requests[0];
+        assert_eq!(request.method, Method::GET);
+        assert_eq!(request.url.path(), expected_path(case));
+        assert_eq!(request.headers["authorization"], "Bearer token");
+        let mut expected = BTreeMap::new();
+        if !case.ends_with("entry") && case != "computed" {
+            expected.extend([
+                ("limit".into(), "2".into()),
+                ("include_total".into(), "true".into()),
+                ("cursor".into(), CURSOR.into()),
+            ]);
+        }
+        if case.ends_with("timeline") {
+            expected.extend([
+                ("anchor".into(), "9001".into()),
+                ("direction".into(), "newer".into()),
+            ]);
+        }
+        if case.contains("relations") {
+            expected.insert("sort".into(), "history_id".into());
+        }
+        if case == "name" || case == "population" {
+            expected.extend([
+                ("revision".into(), "2".into()),
+                ("sort".into(), "-revision".into()),
+            ]);
+        }
+        if case == "name" {
+            expected.insert("name".into(), NAME.into());
+        }
+        if case.ends_with("as_of") || case == "computed" || case == "population" {
+            expected.insert("at".into(), AT.into());
+        }
+        assert_eq!(
+            request
+                .url
+                .query_pairs()
+                .into_owned()
+                .collect::<BTreeMap<String, String>>(),
+            expected
+        );
+    }
+
+    #[rstest::rstest]
+    fn history_rejects_invalid_ids_before_transport(#[values(false, true)] asynchronous: bool) {
+        let transport = MockTransport::default();
+        let base = BaseUrl::new("https://example.test").unwrap();
+        let error = if asynchronous {
+            let client = Client::builder(base)
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("token"));
+            tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(client.object_history_entry(42.into(), 99.into(), 0.into()))
+                .unwrap_err()
+        } else {
+            let client = blocking::Client::builder(base)
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("token"));
+            client
+                .object_history_entry(42.into(), 99.into(), 0.into())
+                .unwrap_err()
+        };
+        assert!(matches!(error, ApiError::InvalidHistoryQuery { .. }));
+        assert!(transport.requests().is_empty());
+    }
+
+    #[rstest::rstest]
+    fn history_preserves_server_errors(
+        #[values(400, 403, 404)] code: u16,
+        #[values(false, true)] asynchronous: bool,
+    ) {
+        let transport = MockTransport::default();
+        transport.push_response(
+            TransportResponse::json(
+                StatusCode::from_u16(code).unwrap(),
+                &json!({"error":"history_unavailable","message":"Retained history unavailable"}),
+            )
+            .unwrap(),
+        );
+        let base = BaseUrl::new("https://example.test").unwrap();
+        let error = if asynchronous {
+            let client = Client::builder(base)
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("token"));
+            tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(client.class_relations_as_of(
+                    42.into(),
+                    serde_json::from_value(json!(AT)).unwrap(),
+                    RelationHistoryOptions::default(),
+                ))
+                .unwrap_err()
+        } else {
+            let client = blocking::Client::builder(base)
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("token"));
+            client
+                .class_relations_as_of(
+                    42.into(),
+                    serde_json::from_value(json!(AT)).unwrap(),
+                    RelationHistoryOptions::default(),
+                )
+                .unwrap_err()
+        };
+        assert_eq!(error.status().unwrap().as_u16(), code);
+    }
+}

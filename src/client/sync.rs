@@ -12,6 +12,11 @@ use crate::types::{StructuredSearchEvent, StructuredSearchRequest, StructuredSea
 use crate::{ClassRelationId, ObjectRelationId};
 use crate::{CollectionEventSink, EventSinkId};
 use crate::{CredentialActivityPageOptions, CredentialActivityResponse, TokenId};
+use crate::{
+    HistoricalClassObjects, HistoricalComputedValues, HistoricalRelationships, HistoryId,
+    HistoryMarker, HistoryPage, HistoryTimelineOptions, ObjectHistoryOptions,
+    RelationHistoryOptions,
+};
 use crate::{QueryObservationConfig, QueryObservationUpdateRequest};
 use crate::{SearchHydrationRequest, SearchHydrationResponse};
 use log::{debug, trace};
@@ -2250,6 +2255,220 @@ impl Client<Authenticated> {
             Endpoint::ClassEvents,
             vec![(Cow::Borrowed("class_id"), class_id.to_string().into())],
         )
+    }
+
+    /// Read lightweight retained timeline markers. Continue with the same selection and cursor.
+    pub fn class_history_timeline(
+        &self,
+        class_id: ClassId,
+        options: HistoryTimelineOptions,
+    ) -> Result<shared::Page<HistoryMarker<ClassId>>, ApiError> {
+        let params = shared::history_url_params(class_id, None, None)?;
+        let query = shared::history_timeline_query(options);
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassHistoryTimeline,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_page_response(&reqwest::Method::GET, raw)
+    }
+
+    /// Read one resource-scoped retained entry, including an authorized deletion marker.
+    pub fn class_history_entry(
+        &self,
+        class_id: ClassId,
+        history_id: HistoryId,
+    ) -> Result<ClassHistory, ApiError> {
+        let params = shared::history_url_params(class_id, None, Some(history_id))?;
+        let query = Vec::new();
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassHistoryEntry,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?
+            .ok_or_else(|| ApiError::EmptyResult("History returned an empty response".into()))
+    }
+
+    /// Read retained direct relationship changes with endpoint context at each change's timestamp.
+    pub fn class_relation_history(
+        &self,
+        class_id: ClassId,
+        options: RelationHistoryOptions,
+    ) -> Result<HistoryPage<HistoricalRelationships>, ApiError> {
+        let params = shared::history_url_params(class_id, None, None)?;
+        let query = shared::relation_history_query(options);
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassRelationHistory,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_history_page(raw)
+    }
+
+    /// Read retained direct relationships and endpoint context at one instant.
+    pub fn class_relations_as_of(
+        &self,
+        class_id: ClassId,
+        at: HubuumDateTime,
+        options: RelationHistoryOptions,
+    ) -> Result<HistoryPage<HistoricalRelationships>, ApiError> {
+        let params = shared::history_url_params(class_id, None, None)?;
+        let mut query = shared::relation_history_query(options);
+        query.push(QueryFilter::raw("at", at.0.to_rfc3339()));
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassRelationHistoryAsOf,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_history_page(raw)
+    }
+
+    /// Read lightweight retained timeline markers. Continue with the same selection and cursor.
+    pub fn object_history_timeline(
+        &self,
+        class_id: ClassId,
+        object_id: ObjectId,
+        options: HistoryTimelineOptions,
+    ) -> Result<shared::Page<HistoryMarker<ObjectId>>, ApiError> {
+        let params = shared::history_url_params(class_id, Some(object_id), None)?;
+        let query = shared::history_timeline_query(options);
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ObjectHistoryTimeline,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_page_response(&reqwest::Method::GET, raw)
+    }
+
+    /// Read one resource-scoped retained entry, including an authorized deletion marker.
+    pub fn object_history_entry(
+        &self,
+        class_id: ClassId,
+        object_id: ObjectId,
+        history_id: HistoryId,
+    ) -> Result<ObjectHistory, ApiError> {
+        let params = shared::history_url_params(class_id, Some(object_id), Some(history_id))?;
+        let query = Vec::new();
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ObjectHistoryEntry,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?
+            .ok_or_else(|| ApiError::EmptyResult("History returned an empty response".into()))
+    }
+
+    /// Read retained direct relationship changes with endpoint context at each change's timestamp.
+    pub fn object_relation_history(
+        &self,
+        class_id: ClassId,
+        object_id: ObjectId,
+        options: RelationHistoryOptions,
+    ) -> Result<HistoryPage<HistoricalRelationships>, ApiError> {
+        let params = shared::history_url_params(class_id, Some(object_id), None)?;
+        let query = shared::relation_history_query(options);
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ObjectRelationHistory,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_history_page(raw)
+    }
+
+    /// Read retained direct relationships and endpoint context at one instant.
+    pub fn object_relations_as_of(
+        &self,
+        class_id: ClassId,
+        object_id: ObjectId,
+        at: HubuumDateTime,
+        options: RelationHistoryOptions,
+    ) -> Result<HistoryPage<HistoricalRelationships>, ApiError> {
+        let params = shared::history_url_params(class_id, Some(object_id), None)?;
+        let mut query = shared::relation_history_query(options);
+        query.push(QueryFilter::raw("at", at.0.to_rfc3339()));
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ObjectRelationHistoryAsOf,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_history_page(raw)
+    }
+
+    /// Read exact-name snapshots across object identities. Numeric names remain names; empty matches return an empty page.
+    pub fn object_history_by_name(
+        &self,
+        class_id: ClassId,
+        name: impl Into<String>,
+        options: ObjectHistoryOptions,
+    ) -> Result<shared::Page<ObjectHistory>, ApiError> {
+        let params = shared::history_url_params(class_id, None, None)?;
+        let mut query = shared::object_history_query(options);
+        query.push(QueryFilter::raw("name", name.into()));
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ObjectHistoryByName,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_page_response(&reqwest::Method::GET, raw)
+    }
+
+    /// Read the retained class/schema and effective object population at the same instant. Coverage is limited to retained history.
+    pub fn class_objects_as_of(
+        &self,
+        class_id: ClassId,
+        at: HubuumDateTime,
+        options: ObjectHistoryOptions,
+    ) -> Result<HistoryPage<HistoricalClassObjects>, ApiError> {
+        let params = shared::history_url_params(class_id, None, None)?;
+        let mut query = shared::object_history_query(options);
+        query.push(QueryFilter::raw("at", at.0.to_rfc3339()));
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ClassObjectsHistoryAsOf,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_history_page(raw)
+    }
+
+    /// Recompute shared fields from retained object and definition snapshots. Personal fields are unsupported; unavailability is explicit.
+    pub fn object_computed_as_of(
+        &self,
+        class_id: ClassId,
+        object_id: ObjectId,
+        at: HubuumDateTime,
+    ) -> Result<HistoricalComputedValues, ApiError> {
+        let params = shared::history_url_params(class_id, Some(object_id), None)?;
+        let query = vec![QueryFilter::raw("at", at.0.to_rfc3339())];
+        let raw = self.request_with_endpoint_raw(
+            reqwest::Method::GET,
+            &Endpoint::ObjectComputedHistoryAsOf,
+            params,
+            query,
+            EmptyPostParams,
+        )?;
+        shared::parse_response(&reqwest::Method::GET, raw.status, raw.body)?
+            .ok_or_else(|| ApiError::EmptyResult("History returned an empty response".into()))
     }
 
     pub fn class_history(&self, class_id: impl Into<ClassId>) -> HistoryRequest<ClassHistory> {

@@ -108,6 +108,9 @@ pub enum ApiError {
     #[error("Invalid task query: {reason}")]
     InvalidTaskQuery { reason: &'static str },
 
+    #[error("Invalid history query: {reason}")]
+    InvalidHistoryQuery { reason: &'static str },
+
     #[error("Entity tag must be an opaque, quoted strong validator")]
     InvalidEntityTag,
 
@@ -276,6 +279,10 @@ impl std::fmt::Debug for ApiError {
                 .finish(),
             Self::InvalidQueryUsage { reason } => f
                 .debug_struct("InvalidQueryUsage")
+                .field("reason", reason)
+                .finish(),
+            Self::InvalidHistoryQuery { reason } => f
+                .debug_struct("InvalidHistoryQuery")
                 .field("reason", reason)
                 .finish(),
             Self::InvalidTaskQuery { reason } => f

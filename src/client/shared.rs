@@ -1,3 +1,4 @@
+use crate::types::SortDirection;
 use percent_encoding::{AsciiSet, CONTROLS, percent_decode_str, utf8_percent_encode};
 use reqwest::{
     Method, StatusCode,
@@ -10,6 +11,7 @@ use serde_json::Value;
 use std::any::type_name;
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::fmt;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::path::Path;
@@ -18,6 +20,7 @@ use super::{GetID, UrlParams};
 use crate::endpoints::Endpoint;
 use crate::errors::ApiError;
 use crate::resources::{ApiResource, ClassId};
+use crate::types::HistoryPosition;
 use crate::types::{
     BaseUrl, ComplianceStatus, CredentialApprovalResponse, CredentialOperation,
     CredentialOperationPayload, EntityTag, ExportContentType, HubuumDateTime, IntoQueryTuples,
@@ -25,6 +28,112 @@ use crate::types::{
 };
 use crate::types::{FilterOperator, JsonPath, QueryUsageDeclarationId};
 use crate::{CredentialActivityPageOptions, PrincipalId, QueryFilter, TokenId};
+use crate::{
+    HistoryDirection, HistoryId, HistoryPage, HistoryPageOptions, HistorySortField,
+    HistoryTimelineOptions, ObjectHistoryOptions, ObjectId, RelationHistoryOptions,
+};
+
+pub(crate) fn history_url_params(
+    class_id: ClassId,
+    object_id: Option<ObjectId>,
+    history_id: Option<HistoryId>,
+) -> Result<UrlParams, ApiError> {
+    if class_id.get() <= 0
+        || object_id.is_some_and(|id| id.get() <= 0)
+        || history_id.is_some_and(|id| id.get() <= 0)
+    {
+        return Err(ApiError::InvalidHistoryQuery {
+            reason: "resource and history IDs must be positive",
+        });
+    }
+    let mut params = vec![(Cow::Borrowed("class_id"), class_id.to_string().into())];
+    if let Some(id) = object_id {
+        params.push((Cow::Borrowed("object_id"), id.to_string().into()));
+    }
+    if let Some(id) = history_id {
+        params.push((Cow::Borrowed("history_id"), id.to_string().into()));
+    }
+    Ok(params)
+}
+
+fn history_page_query(options: HistoryPageOptions) -> Vec<QueryFilter> {
+    let mut query = Vec::new();
+    if let Some(limit) = options.limit {
+        query.push(QueryFilter::raw("limit", limit.to_string()));
+    }
+    if let Some(cursor) = options.cursor {
+        query.push(QueryFilter::raw("cursor", cursor));
+    }
+    if let Some(include_total) = options.include_total {
+        query.push(QueryFilter::raw("include_total", include_total.to_string()));
+    }
+    query
+}
+
+pub(crate) fn history_timeline_query(options: HistoryTimelineOptions) -> Vec<QueryFilter> {
+    let mut query = history_page_query(options.page);
+    for (key, value) in [("from", options.from), ("until", options.until)] {
+        if let Some(at) = value {
+            query.push(QueryFilter::raw(key, at.0.to_rfc3339()));
+        }
+    }
+    match options.position {
+        Some(HistoryPosition::At(at)) => query.push(QueryFilter::raw("at", at.0.to_rfc3339())),
+        Some(HistoryPosition::Anchor(id)) => query.push(QueryFilter::raw("anchor", id.to_string())),
+        None => {}
+    }
+    query.push(QueryFilter::raw(
+        "direction",
+        match options.direction {
+            HistoryDirection::Older => "older",
+            HistoryDirection::Newer => "newer",
+        },
+    ));
+    query
+}
+
+fn history_sort(field: HistorySortField, direction: SortDirection) -> QueryFilter {
+    let field = match field {
+        HistorySortField::HistoryId => "history_id",
+        HistorySortField::Revision => "revision",
+    };
+    let prefix = match direction {
+        SortDirection::Asc => "",
+        SortDirection::Desc => "-",
+    };
+    QueryFilter::raw("sort", format!("{prefix}{field}"))
+}
+
+pub(crate) fn object_history_query(options: ObjectHistoryOptions) -> Vec<QueryFilter> {
+    let mut query = history_page_query(options.page);
+    if let Some((field, direction)) = options.sort {
+        query.push(history_sort(field, direction));
+    }
+    if let Some(revision) = options.revision {
+        query.push(QueryFilter::raw("revision", revision.to_string()));
+    }
+    query
+}
+
+pub(crate) fn relation_history_query(options: RelationHistoryOptions) -> Vec<QueryFilter> {
+    let mut query = history_page_query(options.page);
+    if let Some(direction) = options.order {
+        query.push(history_sort(HistorySortField::HistoryId, direction));
+    }
+    query
+}
+
+pub(crate) fn parse_history_page<T: DeserializeOwned>(
+    raw: RawResponse,
+) -> Result<HistoryPage<T>, ApiError> {
+    Ok(HistoryPage {
+        next_cursor: raw.next_cursor,
+        total_count: raw.total_count,
+        page_limit: raw.page_limit,
+        data: parse_response(&Method::GET, raw.status, raw.body)?
+            .ok_or_else(|| ApiError::EmptyResult("History returned an empty response".into()))?,
+    })
+}
 
 pub(crate) fn credential_activity_request(
     principal_id: PrincipalId,
@@ -198,7 +307,7 @@ pub(crate) struct ApprovedCredentialRequest {
 }
 
 impl std::fmt::Debug for ApprovedCredentialRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ApprovedCredentialRequest")
             .field("record", &self.response.record)
             .field("request", &"[REDACTED]")
@@ -930,7 +1039,7 @@ pub(crate) fn requires_name_route_fallback(name: &str) -> bool {
     matches!(name, "." | "..")
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Page<T> {
     pub items: Vec<T>,
@@ -939,6 +1048,20 @@ pub struct Page<T> {
     pub total_count: Option<u64>,
     /// Effective page size after applying the server's default and maximum.
     pub page_limit: Option<usize>,
+}
+
+impl<T: fmt::Debug> fmt::Debug for Page<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Page")
+            .field("items", &self.items)
+            .field(
+                "next_cursor",
+                &self.next_cursor.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("total_count", &self.total_count)
+            .field("page_limit", &self.page_limit)
+            .finish()
+    }
 }
 
 impl<T> Page<T> {
@@ -1028,7 +1151,7 @@ pub(crate) fn if_match_headers(etag: &EntityTag) -> [(&'static str, String); 1] 
 }
 
 impl std::fmt::Debug for RawResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RawResponse")
             .field("status", &self.status)
             .field("body", &"[REDACTED]")

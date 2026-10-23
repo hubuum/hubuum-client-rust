@@ -416,6 +416,16 @@ mod parity_contract {
             let _ = $module::EventListRequest::all;
             let _ = $module::EventListRequest::include_total;
             let _ = $module::EventListRequest::include_relations;
+            let _ = $module::Client::<Authenticated>::class_history_timeline;
+            let _ = $module::Client::<Authenticated>::class_history_entry;
+            let _ = $module::Client::<Authenticated>::class_relation_history;
+            let _ = $module::Client::<Authenticated>::class_relations_as_of;
+            let _ = $module::Client::<Authenticated>::object_history_timeline;
+            let _ = $module::Client::<Authenticated>::object_history_entry;
+            let _ = $module::Client::<Authenticated>::object_relation_history;
+            let _ = $module::Client::<Authenticated>::object_relations_as_of;
+            let _ = $module::Client::<Authenticated>::class_objects_as_of;
+            let _ = $module::Client::<Authenticated>::object_computed_as_of;
             let _ = $module::HistoryRequest::<crate::types::ClassHistory>::all;
             let _ = $module::HistoryRequest::<crate::types::ClassHistory>::include_total;
             let _ = $module::TaskListRequest::all;
@@ -532,6 +542,7 @@ mod parity_contract {
                 std::mem::drop(client.revoke_event_sink(1, 2));
                 let _ = client.class_by_name(String::new());
                 let _ = client.object_aggregates(1);
+                std::mem::drop(client.object_history_by_name(1.into(), "name", crate::ObjectHistoryOptions::default()));
                 let _ = client.collection_history_full(1);
                 std::mem::drop(client.collection_history_as_of_full(
                     1,

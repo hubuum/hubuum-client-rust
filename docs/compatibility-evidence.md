@@ -5,9 +5,9 @@ a server release when its pinned OpenAPI contract comes from that server tag and
 the complete Docker-backed library and consumer integration suites pass against
 an immutable image for the same release.
 
-Dedicated typed helpers do not necessarily exist for every server operation.
-Authenticated relative routes remain available through `raw()` while typed
-coverage evolves.
+The unreleased client provides typed helpers for every route in the pinned
+v0.0.20 contract. Authenticated relative routes remain available through `raw()`
+as an extension point for additional operations.
 
 ## Compatibility history
 
@@ -85,6 +85,37 @@ Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
+
+## Unreleased typed history coverage
+
+On 2026-10-23, the canonical combined command passed against the declared server
+v0.0.20 image
+`ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a`:
+
+```sh
+./scripts/run-integration-tests.sh --with-e2e-client -- --test-threads=1
+```
+
+The run passed 105 library tests and 52 downstream consumer cases (including two
+real session-rotation tests and four legacy server-version gates), followed by
+all three native-resource phases and all four restore/recovery pairs. Local
+containers used the existing Podman wrapper that disables SELinux labels for the
+fixture mounts. The target image and fixture contents were unchanged.
+
+Both client modes exercised all eleven new typed history routes. Coverage
+includes denied root access, timeline anchors and cursor continuation, exact
+entry lookup including deletion markers, cross-resource history-ID rejection,
+name reuse across deleted and recreated identities, historical class/object
+population pagination, deleted relationship history and historical endpoint names,
+and recomputation using old object data and shared definitions. The server's
+`I`, `U`, and `D` operation codes are preserved unchanged.
+
+The workspace suite passed 913 non-container tests. Formatting, strict Clippy and
+rustdoc, five feature combinations, Rust 1.88, generated-code reconciliation,
+125 model mappings, pinned contract validation/comparison, and all 202 applicable
+public API compatibility checks passed. The 257-operation snapshot, declared
+server target, dependencies, and public feature availability are unchanged. See
+[historical views](history.md) for the typed API and retained-history limits.
 
 ## v0.0.20 target
 

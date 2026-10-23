@@ -107,9 +107,11 @@ The pinned 257-operation contract includes the versioned session API. Both
 client modes provide `login_session`, `session_providers`, automatic refresh,
 and session-aware logout. Legacy single-token login is only for older servers.
 
-The following newer surfaces intentionally use authenticated `raw()` requests:
-history timeline and entry lookup, relationship and computed-field historical
-views, and exact-name history across object identities.
+All eleven newer history routes have typed helpers in both modes: class/object
+timelines and entry lookup, exact-name object history, historical class object
+populations, direct relationship changes and as-of views, and historical computed
+values. No pinned route requires `raw()` for lack of a dedicated helper. See
+[historical views](../docs/history.md) for pagination and retention semantics.
 `openapi/model-contract.json` records intentional field-level exceptions explicitly.
 Backup format 10 is recognized without discarding the extensible backup payload.
 

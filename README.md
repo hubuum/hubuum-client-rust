@@ -322,6 +322,7 @@ and retained metadata for all six task kinds.
 - [Client setup](docs/client-setup.md): async and blocking initialization, token login, and builder options.
 - [Querying resources](docs/querying.md): resource CRUD, typed filters, pagination, related-object traversal, and error details.
 - [Exports, imports, and tasks](docs/exports-and-tasks.md): export templates, rendered output, task polling, and import results.
+- [Historical views](docs/history.md): timelines, exact entries, name reuse, historical populations and relationships, and recomputed values.
 - [Backups, restores, and computed fields](docs/backups-and-computed-fields.md): administrative recovery, capability handling, definition lifecycles, previews, rebuilds, and enriched reads.
 - [Advanced usage](docs/advanced.md): lazy streams, retries, body limits, typed payloads, scoped navigation, mock transports, and raw requests.
 - [Principal settings](docs/principal-settings.md): current-principal and administrative preference management with JSON Merge Patch.

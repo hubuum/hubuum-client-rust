@@ -17,6 +17,7 @@ nav = [
     { "Client setup" = "client-setup.md" },
     { "Tracing diagnostics" = "tracing.md" },
     { "Queries and pagination" = "querying.md" },
+    { "Historical views" = "history.md" },
     { "JSON query usage and analysis" = "query-usage.md" },
     { "Scoped authentication" = "scoped-auth.md" },
     { "Credential approvals" = "credential-approvals.md" },

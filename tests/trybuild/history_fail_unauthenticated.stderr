@@ -1,0 +1,11 @@
+error[E0599]: no method named `class_history_timeline` found for reference `&hubuum_client::Client<Unauthenticated>` in the current scope
+ --> tests/trybuild/history_fail_unauthenticated.rs:3:26
+  |
+3 |     let _ = async_client.class_history_timeline(1.into(), HistoryTimelineOptions::default());
+  |                          ^^^^^^^^^^^^^^^^^^^^^^ method not found in `&hubuum_client::Client<Unauthenticated>`
+
+error[E0599]: no method named `object_computed_as_of` found for reference `&hubuum_client::blocking::Client<Unauthenticated>` in the current scope
+ --> tests/trybuild/history_fail_unauthenticated.rs:4:29
+  |
+4 |     let _ = blocking_client.object_computed_as_of(1.into(), 2.into(), Default::default());
+  |                             ^^^^^^^^^^^^^^^^^^^^^ method not found in `&hubuum_client::blocking::Client<Unauthenticated>`
