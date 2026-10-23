@@ -1571,8 +1571,29 @@ refreshes before the access deadline; the fixed absolute deadline never slides.
 A failed or cancelled single-use exchange clears the usable pair, including
 across clones, and returns <code>ApiError::SessionExpired</code> on later requests. Sign in
 again rather than retrying an old refresh token. No password is retained, and
-no credentials are persisted automatically. External persistence requires an
-explicit secure-storage design; this API exposes no refresh-secret exporter.</p>
+<code>login_session</code> keeps credentials only in memory. For persistence, explicitly
+supply an application-owned <code>SessionStore</code> to <code>login_session_with_store</code>, then use
+<code>resume_session</code> on subsequent starts. Both methods are available in async and
+blocking modes. <code>resume_session</code> validates the access token and refreshes it when
+needed; an empty or expired store returns <code>None</code>.</p>
+<p>The store must isolate identities, protect serialized <code>StoredSession</code> values as
+secrets, and provide an exclusive cross-process <code>SessionStoreGuard</code>. Its <code>save</code>
+operation must atomically and durably replace the current value. The SDK binds
+snapshots to the API base URL and client ID; the application must additionally
+separate usernames and identity providers. Async clients acquire the store lock
+on a blocking worker so a contended filesystem lock cannot block the runtime.
+Guard reads and writes are synchronous and should be brief.</p>
+<p>Every authenticated request reloads the latest stored state under that lock.
+Clients remain bound to the session family they logged into or resumed. If a new
+login replaces that family in the store, older clients return
+<code>ApiError::SessionExpired</code>; their logout cleanup preserves the newer login.
+Before refresh, the SDK durably removes the old credential; after successful
+exchange it durably saves the successor before using it. Crash, cancellation,
+refresh rejection, or an uncertain exchange leaves no reusable refresh secret
+and requires sign-in again. Logout clears the matching saved session. Transient
+validation errors preserve the cache; rejected credentials clear it. Store
+failures are returned to the caller and must not expose credential contents.
+Passwords are never included in snapshots, and <code>Debug</code> redacts all session data.</p>
 <p><code>session_info()</code> returns non-secret metadata. <code>token()</code> now returns a redacted,
 owned <code>Result&lt;Token, ApiError&gt;</code> snapshot because rotation cannot safely expose a
 stable borrowed token. Use <code>client.token()?.as_str()</code> only where raw access is

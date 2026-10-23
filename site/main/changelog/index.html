@@ -4302,6 +4302,15 @@
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>Opt-in persistent rotating sessions through <code>SessionStore</code>, <code>SessionStoreGuard</code>,
+  and redacted, serializable <code>StoredSession</code> snapshots. Both client modes expose
+  <code>login_session_with_store</code> and <code>resume_session</code>, coordinate refresh with an
+  application-owned exclusive store lock, and persist single-use credential
+  consumption before exchange. Clients remain bound to their original session
+  family so concurrent logout cannot remove a newer login from storage.
+  Existing in-memory sessions retain their behavior.</p>
+</li>
+<li>
 <p>Typed bounded search hydration in both client modes, with validated roots,
   target class selectors, depth/path limits, typed paths, and truncation metadata.</p>
 </li>
