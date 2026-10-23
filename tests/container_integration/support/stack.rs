@@ -19,8 +19,6 @@ const LDAP_CERTIFICATE_SCRIPT: &str =
 const LDAP_HOST_ALIAS: &str = "planetexpress.com";
 const CLIENT_ALLOWLIST_DEFAULT: &str = "*";
 const STACK_TIMEOUT_DEFAULT_SECS: u64 = 300;
-const EXTERNAL_BASE_URL_ENV: &str = "HUBUUM_INTEGRATION_BASE_URL";
-const EXTERNAL_ADMIN_PASSWORD_ENV: &str = "HUBUUM_INTEGRATION_ADMIN_PASSWORD";
 const CONTAINER_RUNTIME_ENV: &str = "HUBUUM_INTEGRATION_CONTAINER_RUNTIME";
 
 fn shared_stack_slot() -> &'static Mutex<Weak<StackInner>> {
@@ -368,27 +366,58 @@ fn collect_db_startup_diagnostics(db_container_name: &str) -> String {
     format!("db_status={db_status}\ndb_health={db_health}\ndb_logs_tail:\n{db_logs}")
 }
 
-struct StackInner {
+struct StackResources {
     network_name: String,
     db_container_name: String,
     server_container_name: String,
     ldap_container_name: String,
     ldap_cert_volume_name: String,
+}
+
+struct StackInner {
+    resources: StackResources,
     base_url: String,
     admin_password: String,
 }
 
 impl StackInner {
     fn start_new() -> Result<Self, String> {
-        let suffix = unique_suffix();
         let timeout = stack_timeout();
         let auth_config_path = auth_config_path()?;
-        let network_name = format!("hubuum-it-net-{suffix}");
-        let db_container_name = format!("hubuum-it-db-{suffix}");
-        let server_container_name = format!("hubuum-it-server-{suffix}");
-        let ldap_container_name = format!("hubuum-it-ldap-{suffix}");
-        let ldap_cert_volume_name = format!("hubuum-it-ldap-certs-{suffix}");
+        let resources = StackResources::new();
+        resources.create_network()?;
+        resources.start_ldap(timeout)?;
+        resources.start_database(timeout)?;
+        resources.start_server(&auth_config_path)?;
+        let base_url = resources.base_url()?;
+        resources.wait_ready(timeout, &base_url)?;
+        let admin_password = resources.admin_password(timeout, &base_url)?;
+        Ok(Self {
+            resources,
+            base_url,
+            admin_password,
+        })
+    }
+}
 
+impl StackResources {
+    fn new() -> Self {
+        let suffix = unique_suffix();
+        Self {
+            network_name: format!("hubuum-it-net-{suffix}"),
+            db_container_name: format!("hubuum-it-db-{suffix}"),
+            server_container_name: format!("hubuum-it-server-{suffix}"),
+            ldap_container_name: format!("hubuum-it-ldap-{suffix}"),
+            ldap_cert_volume_name: format!("hubuum-it-ldap-certs-{suffix}"),
+        }
+    }
+
+    fn create_network(&self) -> Result<(), String> {
+        let Self {
+            network_name,
+            ldap_cert_volume_name,
+            ..
+        } = self;
         container(&[
             "network".to_string(),
             "create".to_string(),
@@ -401,26 +430,22 @@ impl StackInner {
             "create".to_string(),
             ldap_cert_volume_name.clone(),
         ]) {
-            cleanup_stack_resources(
-                &network_name,
-                &db_container_name,
-                &server_container_name,
-                &ldap_container_name,
-                &ldap_cert_volume_name,
-            );
             return Err(format!(
                 "failed to create LDAP certificate volume `{ldap_cert_volume_name}`: {err}"
             ));
         }
 
-        if let Err(err) = initialize_ldap_certificates(&ldap_cert_volume_name) {
-            cleanup_stack_resources(
-                &network_name,
-                &db_container_name,
-                &server_container_name,
-                &ldap_container_name,
-                &ldap_cert_volume_name,
-            );
+        Ok(())
+    }
+
+    fn start_ldap(&self, timeout: Duration) -> Result<(), String> {
+        let Self {
+            network_name,
+            ldap_container_name,
+            ldap_cert_volume_name,
+            ..
+        } = self;
+        if let Err(err) = initialize_ldap_certificates(ldap_cert_volume_name) {
             return Err(format!(
                 "failed to initialize LDAP certificates in `{ldap_cert_volume_name}`: {err}"
             ));
@@ -439,13 +464,6 @@ impl StackInner {
             format!("type=volume,source={ldap_cert_volume_name},target=/etc/ldap/ssl"),
             ldap_image(),
         ]) {
-            cleanup_stack_resources(
-                &network_name,
-                &db_container_name,
-                &server_container_name,
-                &ldap_container_name,
-                &ldap_cert_volume_name,
-            );
             return Err(format!(
                 "failed to start LDAP container `{ldap_container_name}`: {err}"
             ));
@@ -481,16 +499,18 @@ impl StackInner {
                 ldap_container_name.clone(),
             ])
             .unwrap_or_else(|logs_err| format!("logs-error: {logs_err}"));
-            cleanup_stack_resources(
-                &network_name,
-                &db_container_name,
-                &server_container_name,
-                &ldap_container_name,
-                &ldap_cert_volume_name,
-            );
             return Err(format!("{err}\nldap_logs_tail:\n{ldap_logs}"));
         }
 
+        Ok(())
+    }
+
+    fn start_database(&self, timeout: Duration) -> Result<(), String> {
+        let Self {
+            network_name,
+            db_container_name,
+            ..
+        } = self;
         let database_url =
             format!("postgres://{DB_USER}:{DB_PASSWORD}@{db_container_name}/{DB_NAME}");
 
@@ -517,13 +537,6 @@ impl StackInner {
             format!("POSTGRES_DB={DB_NAME}"),
             db_image(),
         ]) {
-            cleanup_stack_resources(
-                &network_name,
-                &db_container_name,
-                &server_container_name,
-                &ldap_container_name,
-                &ldap_cert_volume_name,
-            );
             return Err(format!(
                 "failed to start postgres container `{db_container_name}`: {err}"
             ));
@@ -540,14 +553,7 @@ impl StackInner {
         })
         .map_err(|err| format!("database container did not become healthy: {err}"))
         {
-            let diagnostics = collect_db_startup_diagnostics(&db_container_name);
-            cleanup_stack_resources(
-                &network_name,
-                &db_container_name,
-                &server_container_name,
-                &ldap_container_name,
-                &ldap_cert_volume_name,
-            );
+            let diagnostics = collect_db_startup_diagnostics(db_container_name);
             return Err(format!("{err}\n{diagnostics}"));
         }
 
@@ -563,16 +569,22 @@ impl StackInner {
             server_image(),
             "--migrate".to_string(),
         ]) {
-            cleanup_stack_resources(
-                &network_name,
-                &db_container_name,
-                &server_container_name,
-                &ldap_container_name,
-                &ldap_cert_volume_name,
-            );
             return Err(format!("failed to migrate integration database: {err}"));
         }
 
+        Ok(())
+    }
+
+    fn start_server(&self, auth_config_path: &str) -> Result<(), String> {
+        let Self {
+            network_name,
+            db_container_name,
+            server_container_name,
+            ldap_cert_volume_name,
+            ..
+        } = self;
+        let database_url =
+            format!("postgres://{DB_USER}:{DB_PASSWORD}@{db_container_name}/{DB_NAME}");
         if let Err(err) = container(&[
             "run".to_string(),
             "-d".to_string(),
@@ -612,18 +624,19 @@ impl StackInner {
             ),
             server_image(),
         ]) {
-            cleanup_stack_resources(
-                &network_name,
-                &db_container_name,
-                &server_container_name,
-                &ldap_container_name,
-                &ldap_cert_volume_name,
-            );
             return Err(format!(
                 "failed to start hubuum server container `{server_container_name}`: {err}"
             ));
         }
 
+        Ok(())
+    }
+
+    fn base_url(&self) -> Result<String, String> {
+        let Self {
+            server_container_name,
+            ..
+        } = self;
         let mapped = match container(&[
             "port".to_string(),
             server_container_name.clone(),
@@ -631,13 +644,6 @@ impl StackInner {
         ]) {
             Ok(value) => value,
             Err(err) => {
-                cleanup_stack_resources(
-                    &network_name,
-                    &db_container_name,
-                    &server_container_name,
-                    &ldap_container_name,
-                    &ldap_cert_volume_name,
-                );
                 return Err(format!("failed to resolve mapped server port: {err}"));
             }
         };
@@ -649,6 +655,16 @@ impl StackInner {
             .map_err(|err| format!("failed to parse mapped server port as integer: {err}"))?;
         let base_url = format!("http://127.0.0.1:{mapped_port}");
 
+        Ok(base_url)
+    }
+
+    fn wait_ready(&self, timeout: Duration, base_url: &str) -> Result<(), String> {
+        let Self {
+            db_container_name,
+            server_container_name,
+            ldap_container_name,
+            ..
+        } = self;
         if let Err(err) = wait_until(timeout, || {
             match reqwest::blocking::Client::new()
                 .get(format!("{base_url}/readyz"))
@@ -661,54 +677,42 @@ impl StackInner {
         .map_err(|err| format!("hubuum-server did not become ready: {err}"))
         {
             let diagnostics = collect_stack_diagnostics(
-                &server_container_name,
-                &db_container_name,
-                &ldap_container_name,
-                &base_url,
-            );
-            cleanup_stack_resources(
-                &network_name,
-                &db_container_name,
-                &server_container_name,
-                &ldap_container_name,
-                &ldap_cert_volume_name,
+                server_container_name,
+                db_container_name,
+                ldap_container_name,
+                base_url,
             );
             return Err(format!("{err}\n{diagnostics}"));
         }
 
-        let admin_password = match resolve_admin_password(&server_container_name, timeout) {
+        Ok(())
+    }
+
+    fn admin_password(&self, timeout: Duration, base_url: &str) -> Result<String, String> {
+        let Self {
+            db_container_name,
+            server_container_name,
+            ldap_container_name,
+            ..
+        } = self;
+        let admin_password = match resolve_admin_password(server_container_name, timeout) {
             Ok(password) => password,
             Err(err) => {
                 let diagnostics = collect_stack_diagnostics(
-                    &server_container_name,
-                    &db_container_name,
-                    &ldap_container_name,
-                    &base_url,
-                );
-                cleanup_stack_resources(
-                    &network_name,
-                    &db_container_name,
-                    &server_container_name,
-                    &ldap_container_name,
-                    &ldap_cert_volume_name,
+                    server_container_name,
+                    db_container_name,
+                    ldap_container_name,
+                    base_url,
                 );
                 return Err(format!("{err}\n{diagnostics}"));
             }
         };
 
-        Ok(Self {
-            network_name,
-            db_container_name,
-            server_container_name,
-            ldap_container_name,
-            ldap_cert_volume_name,
-            base_url,
-            admin_password,
-        })
+        Ok(admin_password)
     }
 }
 
-impl Drop for StackInner {
+impl Drop for StackResources {
     fn drop(&mut self) {
         if keep_containers() {
             eprintln!(
@@ -742,7 +746,7 @@ impl IntegrationStack {
     /// Rotate a disposable LDAP fixture user's password before exercising login.
     pub(crate) fn reset_ldap_password(&self, distinguished_name: &str) -> Result<String, String> {
         let ldap_container = match &self._inner {
-            Some(inner) => inner.ldap_container_name.clone(),
+            Some(inner) => inner.resources.ldap_container_name.clone(),
             None => std::env::var("HUBUUM_INTEGRATION_LDAP_CONTAINER")
                 .map_err(|_| "set HUBUUM_INTEGRATION_LDAP_CONTAINER for LDAP fixture tests")?,
         };
@@ -768,26 +772,13 @@ impl IntegrationStack {
     }
 
     fn from_external_env() -> Result<Option<Self>, String> {
-        let base_url = std::env::var(EXTERNAL_BASE_URL_ENV)
-            .ok()
-            .map(|value| value.trim().to_string())
-            .filter(|value| !value.is_empty());
-        let admin_password = std::env::var(EXTERNAL_ADMIN_PASSWORD_ENV)
-            .ok()
-            .map(|value| value.trim().to_string())
-            .filter(|value| !value.is_empty());
-
-        match (base_url, admin_password) {
-            (Some(base_url), Some(admin_password)) => Ok(Some(Self {
+        integration_support::connection::optional_integration_connection().map(|connection| {
+            connection.map(|(base_url, admin_password)| Self {
                 _inner: None,
-                base_url,
+                base_url: base_url.as_str().trim_end_matches('/').to_owned(),
                 admin_password,
-            })),
-            (None, None) => Ok(None),
-            _ => Err(format!(
-                "set both {EXTERNAL_BASE_URL_ENV} and {EXTERNAL_ADMIN_PASSWORD_ENV} to use an external integration stack"
-            )),
-        }
+            })
+        })
     }
 
     pub(crate) fn start() -> Result<Self, String> {
@@ -822,6 +813,67 @@ impl IntegrationStack {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn startup_failure_cleans_up_partial_resources() {
+        use std::os::unix::fs::PermissionsExt;
+
+        const PROBE: &str = "HUBUUM_TEST_STARTUP_FAILURE";
+        if std::env::var_os(PROBE).is_some() {
+            let error = StackInner::start_new().err().expect("startup must fail");
+            assert!(error.contains("mapped server port"), "{error}");
+            return;
+        }
+
+        let temporary = tempfile::tempdir().unwrap();
+        let runtime = temporary.path().join("container-runtime");
+        let log = temporary.path().join("commands");
+        std::fs::write(
+            &runtime,
+            r#"#!/bin/sh
+printf '%s\n' "$*" >> "$HUBUUM_TEST_COMMAND_LOG"
+case "$1" in
+    inspect) printf 'healthy\n' ;;
+    port) printf 'invalid-port\n' ;;
+esac
+exit 0
+"#,
+        )
+        .unwrap();
+        std::fs::set_permissions(&runtime, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let module = module_path!().split_once("::").unwrap().1;
+        let output = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                &format!("{module}::startup_failure_cleans_up_partial_resources"),
+                "--nocapture",
+            ])
+            .env(PROBE, "1")
+            .env("HUBUUM_TEST_COMMAND_LOG", &log)
+            .env(CONTAINER_RUNTIME_ENV, &runtime)
+            .env("HUBUUM_INTEGRATION_KEEP_CONTAINERS", "0")
+            .env_remove(integration_support::connection::BASE_URL_ENV)
+            .env_remove(integration_support::connection::ADMIN_PASSWORD_ENV)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let commands = std::fs::read_to_string(log).unwrap();
+        let commands: Vec<_> = commands.lines().collect();
+        let cleanup = &commands[commands.len() - 3..];
+        assert!(cleanup[0].starts_with("rm -f hubuum-it-server-"));
+        assert!(cleanup[1].starts_with("volume rm hubuum-it-ldap-certs-"));
+        assert!(cleanup[2].starts_with("network rm hubuum-it-net-"));
+        let network = commands
+            .iter()
+            .find_map(|line| line.strip_prefix("network create "))
+            .unwrap();
+        assert_eq!(cleanup[2], format!("network rm {network}"));
+    }
 
     #[test]
     fn postgres_fixture_uses_an_immutable_versioned_image() {

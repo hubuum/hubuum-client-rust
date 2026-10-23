@@ -290,6 +290,7 @@ version = "0.0.0"
 dependencies = [
  "getrandom 0.4.3",
  "hubuum_client",
+ "integration_support",
  "serde_json",
  "tokio",
  "yare",
@@ -567,6 +568,7 @@ dependencies = [
  "futures-util",
  "httpdate",
  "httpmock",
+ "integration_support",
  "log",
  "percent-encoding",
  "reqwest",
@@ -794,6 +796,15 @@ checksum = "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
 dependencies = [
  "equivalent",
  "hashbrown",
+]
+
+[[package]]
+name = "integration_support"
+version = "0.0.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "hubuum_client",
+ "serde_json",
 ]
 
 [[package]]
