@@ -737,6 +737,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#filtering-by-related-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Filtering by Related Objects
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#relations-and-traversal" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1491,6 +1502,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#filtering-by-related-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Filtering by Related Objects
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#relations-and-traversal" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1687,62 +1709,109 @@ the historical <code>parent_collection_id</code> is needed.</p>
 <a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
 </code></pre></div>
 <p>Use <code>filter(...)</code> or <code>raw_param(...)</code> for backend query features that are not modeled yet.</p>
+<h2 id="filtering-by-related-objects">Filtering by Related Objects<a class="headerlink" href="#filtering-by-related-objects" title="Permanent link">&para;</a></h2>
+<p>Use <code>RelatedObjectFilter</code> to select class objects with a visible related target.
+The group requires an exact target class ID or name and a caller-chosen alias:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">use</span><span class="w"> </span><span class="n">hubuum_client</span><span class="p">::{</span><span class="n">RelatedObjectFilter</span><span class="p">,</span><span class="w"> </span><span class="n">StructuredClassSelector</span><span class="p">};</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">room</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RelatedObjectFilter</span><span class="p">::</span><span class="n">new</span><span class="p">(</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="s">"room"</span><span class="p">,</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="n">StructuredClassSelector</span><span class="p">::</span><span class="n">Name</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Rooms"</span><span class="p">.</span><span class="n">into</span><span class="p">()</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">)</span><span class="o">?</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="p">.</span><span class="n">max_depth</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">?</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="p">.</span><span class="n">name</span><span class="p">().</span><span class="n">ieq</span><span class="p">(</span><span class="s">"Room A"</span><span class="p">)</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="p">.</span><span class="n">data</span><span class="p">().</span><span class="n">try_path</span><span class="p">([</span><span class="s">"location"</span><span class="p">,</span><span class="w"> </span><span class="s">"floor"</span><span class="p">])</span><span class="o">?</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p">.</span><span class="n">eq</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="kd">let</span><span class="w"> </span><span class="n">hosts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="p">.</span><span class="n">objects</span><span class="p">(</span><span class="n">host_class_id</span><span class="p">)</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">    </span><span class="p">.</span><span class="n">name</span><span class="p">().</span><span class="n">starts_with</span><span class="p">(</span><span class="s">"web-"</span><span class="p">)</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">    </span><span class="p">.</span><span class="n">related</span><span class="p">(</span><span class="n">room</span><span class="p">)</span><span class="o">?</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">    </span><span class="p">.</span><span class="n">include_total</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">    </span><span class="p">.</span><span class="n">page</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+</code></pre></div>
+<p>Class-name requests use the same group with
+<code>client.class_by_name("Hosts").objects().query().related(room)?</code>.
+Async clients await the terminal operation. Class handles expose this through
+<code>objects_query().related(room)?</code>.</p>
+<p>All predicates within one group must match the <strong>same target object</strong>. Separate
+groups are combined with AND and can match different targets, including targets
+in the same class. Negated field operators still require a matching related
+object: <code>.name().ne("Room A")</code> means a related room exists with another name,
+not that no related room is named Room A.</p>
+<p>Target fields are <code>id</code>, <code>name</code>, <code>description</code>, <code>collection_id</code>, <code>created_at</code>,
+<code>updated_at</code>, <code>revision</code>, and <code>data</code> (wire field <code>json_data</code>). They reuse the
+ordinary typed field operators; IDs use <code>ObjectId</code> and <code>CollectionId</code>, and
+<code>revision</code> uses <code>ResourceRevision</code>. JSON predicates require a validated path.</p>
+<p>Aliases contain 1–64 ASCII letters, digits, or underscores, cannot start with a
+digit, and must be unique within a query. Queries accept at most four groups.
+The maximum depth defaults to 1; <code>.max_depth(...)</code> accepts 1–10 and replaces it.
+Constructors validate aliases and class selectors; <code>.related(...)</code> checks duplicate aliases,
+the group limit, and deferred JSON-path errors before transport. Existing raw
+related parameters count toward the alias limit; raw parameters added later
+are checked by the server.</p>
+<p>Traversal is bidirectional, may cross intermediate classes, and excludes the
+source object itself. Every object and relation along the path must be visible.
+Missing or inaccessible targets produce no matches. The server enforces graph
+work limits, so prefer the smallest useful depth and disable exact totals when
+unneeded. Related filters do not support sorting or group-level OR/NOT; use
+structured search for boolean combinations.</p>
 <h2 id="relations-and-traversal">Relations and Traversal<a class="headerlink" href="#relations-and-traversal" title="Permanent link">&para;</a></h2>
 <p>Find a relation between classes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">relation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="p">.</span><span class="n">class_relation</span><span class="p">()</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="p">.</span><span class="n">from_hubuum_class_id</span><span class="p">()</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="p">.</span><span class="n">eq</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="p">.</span><span class="n">to_hubuum_class_id</span><span class="p">()</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="p">.</span><span class="n">eq</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="p">.</span><span class="n">one</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">relation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="p">.</span><span class="n">class_relation</span><span class="p">()</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="p">.</span><span class="n">from_hubuum_class_id</span><span class="p">()</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="p">.</span><span class="n">eq</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="p">.</span><span class="n">to_hubuum_class_id</span><span class="p">()</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="p">.</span><span class="n">eq</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="p">.</span><span class="n">one</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
 </code></pre></div>
 <p>Related-object traversal follows the dedicated <code>related/*</code> endpoints, including graph fetches and endpoint-specific result filters:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">related</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">object</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="p">.</span><span class="n">related_objects</span><span class="p">()</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="p">.</span><span class="n">ignore_classes</span><span class="p">([</span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="mi">99</span><span class="p">])</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="p">.</span><span class="n">ignore_self_class</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="p">.</span><span class="n">filter</span><span class="p">(</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">        </span><span class="s">"from_classes"</span><span class="p">,</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">        </span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">FilterOperator</span><span class="p">::</span><span class="n">Equals</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">is_negated</span><span class="p">:</span><span class="w"> </span><span class="nc">false</span><span class="w"> </span><span class="p">},</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">        </span><span class="mi">42</span><span class="p">,</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">    </span><span class="p">)</span>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">    </span><span class="p">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span>
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">    </span><span class="p">.</span><span class="n">page</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
-<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="kd">let</span><span class="w"> </span><span class="n">graph</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">object</span>
-<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="p">.</span><span class="n">related_graph</span><span class="p">()</span>
-<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">    </span><span class="p">.</span><span class="n">filter</span><span class="p">(</span>
-<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">        </span><span class="s">"depth"</span><span class="p">,</span>
-<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="w">        </span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">FilterOperator</span><span class="p">::</span><span class="n">Equals</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">is_negated</span><span class="p">:</span><span class="w"> </span><span class="nc">false</span><span class="w"> </span><span class="p">},</span>
-<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="w">        </span><span class="mi">2</span><span class="p">,</span>
-<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="w">    </span><span class="p">)</span>
-<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="w">    </span><span class="p">.</span><span class="n">send</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">related</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">object</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="p">.</span><span class="n">related_objects</span><span class="p">()</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="p">.</span><span class="n">ignore_classes</span><span class="p">([</span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="mi">99</span><span class="p">])</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="p">.</span><span class="n">ignore_self_class</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="p">.</span><span class="n">filter</span><span class="p">(</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">        </span><span class="s">"from_classes"</span><span class="p">,</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">        </span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">FilterOperator</span><span class="p">::</span><span class="n">Equals</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">is_negated</span><span class="p">:</span><span class="w"> </span><span class="nc">false</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">        </span><span class="mi">42</span><span class="p">,</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="p">)</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="p">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">    </span><span class="p">.</span><span class="n">page</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="kd">let</span><span class="w"> </span><span class="n">graph</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">object</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">    </span><span class="p">.</span><span class="n">related_graph</span><span class="p">()</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">    </span><span class="p">.</span><span class="n">filter</span><span class="p">(</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">        </span><span class="s">"depth"</span><span class="p">,</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">        </span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">FilterOperator</span><span class="p">::</span><span class="n">Equals</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">is_negated</span><span class="p">:</span><span class="w"> </span><span class="nc">false</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="w">        </span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">    </span><span class="p">)</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">    </span><span class="p">.</span><span class="n">send</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
 </code></pre></div>
 <h2 id="unified-search">Unified Search<a class="headerlink" href="#unified-search" title="Permanent link">&para;</a></h2>
 <p>Grouped discovery searches are exposed through <code>client.search(...)</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">search</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="p">.</span><span class="n">search</span><span class="p">(</span><span class="s">"server"</span><span class="p">)</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="p">.</span><span class="n">kinds</span><span class="p">([</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">        </span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">UnifiedSearchKind</span><span class="p">::</span><span class="n">Collection</span><span class="p">,</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">        </span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">UnifiedSearchKind</span><span class="p">::</span><span class="n">Object</span><span class="p">,</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="p">])</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="p">.</span><span class="n">limit_per_kind</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="p">.</span><span class="n">search_object_data</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="p">.</span><span class="n">send</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="k">for</span><span class="w"> </span><span class="n">object</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">search</span><span class="p">.</span><span class="n">results</span><span class="p">.</span><span class="n">objects</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"{}"</span><span class="p">,</span><span class="w"> </span><span class="n">object</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="p">}</span>
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>
-<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="kd">let</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
-<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">    </span><span class="p">.</span><span class="n">search</span><span class="p">(</span><span class="s">"server"</span><span class="p">)</span>
-<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">    </span><span class="p">.</span><span class="n">kinds</span><span class="p">([</span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">UnifiedSearchKind</span><span class="p">::</span><span class="n">Object</span><span class="p">])</span>
-<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="w">    </span><span class="p">.</span><span class="n">stream</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>
-<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="k">for</span><span class="w"> </span><span class="n">event</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"{:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="o">?</span><span class="p">);</span>
-<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">search</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="p">.</span><span class="n">search</span><span class="p">(</span><span class="s">"server"</span><span class="p">)</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="p">.</span><span class="n">kinds</span><span class="p">([</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">        </span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">UnifiedSearchKind</span><span class="p">::</span><span class="n">Collection</span><span class="p">,</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">        </span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">UnifiedSearchKind</span><span class="p">::</span><span class="n">Object</span><span class="p">,</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">    </span><span class="p">])</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">    </span><span class="p">.</span><span class="n">limit_per_kind</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="p">.</span><span class="n">search_object_data</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">    </span><span class="p">.</span><span class="n">send</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="k">for</span><span class="w"> </span><span class="n">object</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">search</span><span class="p">.</span><span class="n">results</span><span class="p">.</span><span class="n">objects</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"{}"</span><span class="p">,</span><span class="w"> </span><span class="n">object</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="p">}</span>
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="kd">let</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span>
+<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="w">    </span><span class="p">.</span><span class="n">search</span><span class="p">(</span><span class="s">"server"</span><span class="p">)</span>
+<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="w">    </span><span class="p">.</span><span class="n">kinds</span><span class="p">([</span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">UnifiedSearchKind</span><span class="p">::</span><span class="n">Object</span><span class="p">])</span>
+<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a><span class="w">    </span><span class="p">.</span><span class="n">stream</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>
+<a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a><span class="k">for</span><span class="w"> </span><span class="n">event</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"{:?}"</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="o">?</span><span class="p">);</span>
+<a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="error-details">Error Details<a class="headerlink" href="#error-details" title="Permanent link">&para;</a></h2>
 <p>HTTP errors include the request method, URL, status, parsed API message, and raw
