@@ -1222,6 +1222,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-0180-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.18.0 release
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#client-0170-release" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1600,6 +1611,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Forward compatibility
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-0180-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.18.0 release
       </span>
     </span>
   </a>
@@ -2048,6 +2070,42 @@ released artifact and reviewed contract as described below.</p>
 jobs separately compare the contract and run the integration suites against the
 server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.</p>
+<h2 id="client-0180-release">Client 0.18.0 release<a class="headerlink" href="#client-0180-release" title="Permanent link">&para;</a></h2>
+<p>Client 0.18.0 adds typed related-object filter groups for class object lists by ID
+or name in both client modes. Existing 0.17.0 callers need no migration. The
+release retains server v0.0.20, its immutable image
+<code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code>,
+the 257-operation snapshot, 125 wire-model mappings, Rust 1.88, and all public
+feature combinations.</p>
+<p>On 2026-10-23, the canonical combined command passed with credential approval
+enforcement against that image:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+<p>The run passed 107 library tests, 56 ordinary consumer cases (including four
+historical server-version gates), three native-resource phases, and all four
+restore/recovery pairs. Related-filter authorization and grouping, live session
+rotation and persistence, LDAP/LDAPS, and restore recovery passed in both client
+modes. Local containers used a rootless Podman wrapper with
+<code>--userns=keep-id:uid=0,gid=0</code> and disabled SELinux labels for fixture mounts;
+the pinned images and fixture contents were unchanged.</p>
+<p>The complete workspace suite passed 958 non-container tests, including all 30
+trybuild cases. Formatting, generated-code reconciliation, strict Clippy/rustdoc,
+all five public feature combinations, Rust 1.88 across every workspace target
+and feature, and pinned OpenAPI validation/comparison passed. All 202 applicable
+public API checks passed against v0.17.0 with additive compatibility required.</p>
+<p>The tracing capture regression failed on the original harness when pagination
+callsites were first used on a thread without a scoped subscriber. Keeping a
+registry dispatcher alive avoids the upstream single-dispatch interest-cache
+bug without installing a global subscriber or changing client instrumentation.
+The regression passed with the fix, followed by 100 consecutive foundations runs
+with 16 test threads: 6,700 passing cases. This is an internal test-harness fix.</p>
+<p>The dependency refresh updated <code>smallvec</code> from 1.16.3 to 1.16.4. All direct and
+compatible transitive dependencies are current; removing the Rust-version
+restriction found no additional updates. <code>generic-array</code> remains at 0.14.7
+because upstream <code>crypto-common</code> 0.1.7 requires that exact version. Advisory,
+license, ban, and source checks passed. The audit used temporary Cargo and
+advisory caches to avoid home-filesystem lock failures.</p>
 <h2 id="client-0170-release">Client 0.17.0 release<a class="headerlink" href="#client-0170-release" title="Permanent link">&para;</a></h2>
 <p>Client 0.17.0 retains server v0.0.20, its immutable image
 <code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code>,
@@ -2055,7 +2113,7 @@ the 257-operation snapshot, and 125 wire-model mappings. The new typed APIs and
 persistent sessions are additive; existing 0.16.0 callers need no migration.</p>
 <p>On 2026-10-23, the canonical combined suite passed against that image with
 credential approval enforcement:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 <p>The run passed 105 library tests, 54 ordinary consumer cases (including four
 historical server-version gates), three native-resource phases, and all four
@@ -2091,7 +2149,7 @@ live testing and retained the fixture's 30-second access-token lifetime.</p>
 <p>On 2026-10-23, the canonical combined command passed against the declared server
 v0.0.20 image
 <code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 <p>The run passed 105 library tests and 52 downstream consumer cases (including two
 real session-rotation tests and four legacy server-version gates), followed by
