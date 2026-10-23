@@ -12,7 +12,9 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   and redacted, serializable `StoredSession` snapshots. Both client modes expose
   `login_session_with_store` and `resume_session`, coordinate refresh with an
   application-owned exclusive store lock, and persist single-use credential
-  consumption before exchange. Existing in-memory sessions retain their behavior.
+  consumption before exchange. Clients remain bound to their original session
+  family so concurrent logout cannot remove a newer login from storage.
+  Existing in-memory sessions retain their behavior.
 
 - Typed bounded search hydration in both client modes, with validated roots,
   target class selectors, depth/path limits, typed paths, and truncation metadata.

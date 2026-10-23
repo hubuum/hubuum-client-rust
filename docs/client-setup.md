@@ -128,6 +128,9 @@ on a blocking worker so a contended filesystem lock cannot block the runtime.
 Guard reads and writes are synchronous and should be brief.
 
 Every authenticated request reloads the latest stored state under that lock.
+Clients remain bound to the session family they logged into or resumed. If a new
+login replaces that family in the store, older clients return
+`ApiError::SessionExpired`; their logout cleanup preserves the newer login.
 Before refresh, the SDK durably removes the old credential; after successful
 exchange it durably saves the successor before using it. Crash, cancellation,
 refresh rejection, or an uncertain exchange leaves no reusable refresh secret

@@ -1,17 +1,18 @@
 use std::sync::{
-    Arc,
+    Arc, Barrier,
     atomic::{AtomicBool, Ordering},
 };
+use std::{future::Future, pin::Pin};
 
 use chrono::Utc;
 use hubuum_client::{
-    ApiError, Client, Credentials, MockTransport, SessionClientId, SessionStore, SessionStoreGuard,
-    StoredSession, TransportResponse, blocking,
+    ApiError, AsyncTransport, BlockingTransport, Client, Credentials, MockTransport, RequestPlan,
+    SessionClientId, SessionStore, SessionStoreGuard, StoredSession, TransportResponse, blocking,
 };
 use reqwest::{Method, StatusCode};
 use rstest::rstest;
 use serde_json::{Value, json};
-use tokio::sync::{Mutex, OwnedMutexGuard};
+use tokio::sync::{Mutex, Notify, OwnedMutexGuard};
 
 #[derive(Default, Debug)]
 struct Store {
@@ -264,4 +265,179 @@ async fn independently_resumed_clients_coordinate_refresh_on_one_runtime_thread(
         1
     );
     assert_eq!(store.writes(), [true, false, true]);
+}
+
+fn new_login() -> Value {
+    let mut next = successor(&pair());
+    next["session_id"] = json!("second-family");
+    next
+}
+
+#[derive(Debug, Default)]
+struct SuspendedLogout {
+    transport: MockTransport,
+    started: Notify,
+    finish: Notify,
+}
+
+impl AsyncTransport for SuspendedLogout {
+    fn execute<'a>(
+        &'a self,
+        request: RequestPlan,
+    ) -> Pin<Box<dyn Future<Output = Result<TransportResponse, ApiError>> + Send + 'a>> {
+        Box::pin(async move {
+            if request.url.path() == "/api/v1/auth/logout" {
+                assert_eq!(request.headers["authorization"], "Bearer first-access");
+                self.started.notify_one();
+                self.finish.notified().await;
+                Ok(TransportResponse::empty(StatusCode::NO_CONTENT))
+            } else {
+                AsyncTransport::execute(&self.transport, request).await
+            }
+        })
+    }
+}
+
+#[tokio::test]
+async fn logout_preserves_new_login_during_concurrent_clone_request() {
+    let store = Arc::new(Store::default());
+    let transport = Arc::new(SuspendedLogout::default());
+    let unauthenticated = Client::builder_from_url("https://example.invalid")
+        .unwrap()
+        .with_transport(transport.clone())
+        .build()
+        .unwrap();
+    transport
+        .transport
+        .push_response(TransportResponse::json(StatusCode::OK, &pair()).unwrap());
+    let first = unauthenticated
+        .login_session_with_store(
+            Credentials::new("alice", format!("fixture-{:032x}", fastrand::u128(..))),
+            SessionClientId::default(),
+            store.clone(),
+        )
+        .await
+        .unwrap();
+    let concurrent_clone = first.clone();
+    let logout = tokio::spawn(async move { first.logout().await });
+    transport.started.notified().await;
+
+    // Another process logs in to the same identity while the first logout is in flight.
+    transport
+        .transport
+        .push_response(TransportResponse::json(StatusCode::OK, &new_login()).unwrap());
+    let second = unauthenticated
+        .login_session_with_store(
+            Credentials::new("alice", format!("fixture-{:032x}", fastrand::u128(..))),
+            SessionClientId::default(),
+            store.clone(),
+        )
+        .await
+        .unwrap();
+
+    // A clone must reject the replacement family while the original logout is in flight.
+    transport
+        .transport
+        .push_response(TransportResponse::json(StatusCode::OK, &json!({})).unwrap());
+    let stale = concurrent_clone
+        .raw(Method::GET, "/api/v1/iam/me")
+        .send::<Value>()
+        .await;
+    assert_eq!(second.session_info().unwrap().id(), "second-family");
+
+    transport.finish.notify_one();
+    logout.await.unwrap().unwrap();
+
+    // Only the first family was logged out; the new login must still work.
+    assert_eq!(
+        store.value().unwrap()["pair"]["session_id"],
+        "second-family"
+    );
+    assert!(matches!(stale, Err(ApiError::SessionExpired)));
+    assert!(concurrent_clone.token().is_err());
+    second
+        .raw(Method::GET, "/api/v1/iam/me")
+        .send::<Value>()
+        .await
+        .unwrap();
+}
+
+#[derive(Debug)]
+struct SuspendedBlockingLogout {
+    transport: MockTransport,
+    started: Barrier,
+    finish: Barrier,
+}
+
+impl BlockingTransport for SuspendedBlockingLogout {
+    fn execute(&self, request: RequestPlan) -> Result<TransportResponse, ApiError> {
+        if request.url.path() == "/api/v1/auth/logout" {
+            assert_eq!(request.headers["authorization"], "Bearer first-access");
+            self.started.wait();
+            self.finish.wait();
+            Ok(TransportResponse::empty(StatusCode::NO_CONTENT))
+        } else {
+            BlockingTransport::execute(&self.transport, request)
+        }
+    }
+}
+
+#[test]
+fn blocking_logout_preserves_new_login_during_concurrent_clone_request() {
+    let store = Arc::new(Store::default());
+    let transport = Arc::new(SuspendedBlockingLogout {
+        transport: MockTransport::default(),
+        started: Barrier::new(2),
+        finish: Barrier::new(2),
+    });
+    let unauthenticated = blocking::Client::builder_from_url("https://example.invalid")
+        .unwrap()
+        .with_transport(transport.clone())
+        .build()
+        .unwrap();
+    transport
+        .transport
+        .push_response(TransportResponse::json(StatusCode::OK, &pair()).unwrap());
+    let first = unauthenticated
+        .login_session_with_store(
+            Credentials::new("alice", format!("fixture-{:032x}", fastrand::u128(..))),
+            SessionClientId::default(),
+            store.clone(),
+        )
+        .unwrap();
+    let concurrent_clone = first.clone();
+    let logout = std::thread::spawn(move || first.logout());
+    transport.started.wait();
+
+    transport
+        .transport
+        .push_response(TransportResponse::json(StatusCode::OK, &new_login()).unwrap());
+    let second = unauthenticated
+        .login_session_with_store(
+            Credentials::new("alice", format!("fixture-{:032x}", fastrand::u128(..))),
+            SessionClientId::default(),
+            store.clone(),
+        )
+        .unwrap();
+
+    transport
+        .transport
+        .push_response(TransportResponse::json(StatusCode::OK, &json!({})).unwrap());
+    let stale = concurrent_clone
+        .raw(Method::GET, "/api/v1/iam/me")
+        .send::<Value>();
+    assert_eq!(second.session_info().unwrap().id(), "second-family");
+
+    transport.finish.wait();
+    logout.join().unwrap().unwrap();
+    assert_eq!(
+        store.value().unwrap()["pair"]["session_id"],
+        "second-family"
+    );
+    assert!(matches!(stale, Err(ApiError::SessionExpired)));
+    assert!(concurrent_clone.token().is_err());
+    second
+        .raw(Method::GET, "/api/v1/iam/me")
+        .send::<Value>()
+        .unwrap();
 }

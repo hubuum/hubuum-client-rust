@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use e2e_client::harness::integration_connection;
-use hubuum_client::{Client, Credentials, SessionClientId, blocking};
+use hubuum_client::{ApiError, Client, Credentials, SessionClientId, blocking};
 
 fn expiry_wait(info: &hubuum_client::SessionInfo) -> Duration {
     let expiry: std::time::SystemTime = info.access_expires_at().0.into();
@@ -183,4 +183,45 @@ async fn persisted_session_survives_client_recreation_and_access_expiry() {
             .unwrap()
             .is_none()
     );
+}
+
+#[tokio::test]
+#[ignore = "requires the pinned disposable server"]
+async fn new_login_survives_logout_from_a_superseded_client() {
+    use std::sync::Arc;
+    let (base, password) = integration_connection().unwrap();
+    let store = Arc::new(persistence::Store::default());
+    let client_id = SessionClientId::new("persistent-replacement-e2e").unwrap();
+    let client = Client::try_new(base).unwrap();
+    let first = client
+        .login_session_with_store(
+            Credentials::new("admin", password.clone()),
+            client_id.clone(),
+            store.clone(),
+        )
+        .await
+        .unwrap();
+    let second = client
+        .login_session_with_store(
+            Credentials::new("admin", password),
+            client_id.clone(),
+            store.clone(),
+        )
+        .await
+        .unwrap();
+    let second_id = second.session_info().unwrap().id().to_owned();
+    assert_ne!(first.session_info().unwrap().id(), second_id);
+    assert!(matches!(
+        first.logout().await,
+        Err(ApiError::SessionExpired)
+    ));
+    drop(second);
+    let resumed = client
+        .resume_session(client_id, store)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(resumed.session_info().unwrap().id(), second_id);
+    assert_eq!(resumed.me().await.unwrap().principal.name, "admin");
+    resumed.logout().await.unwrap();
 }

@@ -132,6 +132,8 @@ impl SessionPair {
 pub(super) struct SessionState {
     pub client_id: SessionClientId,
     pub store: Option<Arc<dyn SessionStore>>,
+    // A new login must not change the family owned by existing clients/clones.
+    session_id: String,
     pair: Mutex<Option<SessionPair>>,
     closed: AtomicBool,
     #[cfg(feature = "async")]
@@ -145,6 +147,7 @@ impl SessionState {
         Self {
             client_id,
             store: None,
+            session_id: pair.info.id.clone(),
             pair: Mutex::new(Some(pair)),
             closed: AtomicBool::new(false),
             #[cfg(feature = "async")]
@@ -168,7 +171,12 @@ impl SessionState {
             return Err(ApiError::SessionExpired);
         }
         let stored = guard.load()?.ok_or(ApiError::SessionExpired)?;
-        self.install(stored.restore(base_url, &self.client_id)?)
+        let pair = stored.restore(base_url, &self.client_id)?;
+        if pair.info.id != self.session_id {
+            self.clear();
+            return Err(ApiError::SessionExpired);
+        }
+        self.install(pair)
     }
 
     pub fn save(
@@ -182,10 +190,9 @@ impl SessionState {
     }
 
     pub fn forget(&self, guard: &mut dyn SessionStoreGuard) -> Result<(), ApiError> {
-        let current = self.info();
         self.clear();
         if let Some(stored) = guard.load()?
-            && current.is_some_and(|info| info.id == stored.pair.session_id)
+            && self.session_id == stored.pair.session_id
         {
             guard.save(None)?;
         }
