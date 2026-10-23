@@ -667,6 +667,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Historical views
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../query-usage/" class="md-nav__link">
         
   
@@ -1195,6 +1222,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#unreleased-typed-history-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased typed history coverage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0020-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1558,6 +1596,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#unreleased-typed-history-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Unreleased typed history coverage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0020-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1740,9 +1789,9 @@
 a server release when its pinned OpenAPI contract comes from that server tag and
 the complete Docker-backed library and consumer integration suites pass against
 an immutable image for the same release.</p>
-<p>Dedicated typed helpers do not necessarily exist for every server operation.
-Authenticated relative routes remain available through <code>raw()</code> while typed
-coverage evolves.</p>
+<p>The unreleased client provides typed helpers for every route in the pinned
+v0.0.20 contract. Authenticated relative routes remain available through <code>raw()</code>
+as an extension point for additional operations.</p>
 <h2 id="compatibility-history">Compatibility history<a class="headerlink" href="#compatibility-history" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1971,6 +2020,30 @@ released artifact and reviewed contract as described below.</p>
 jobs separately compare the contract and run the integration suites against the
 server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.</p>
+<h2 id="unreleased-typed-history-coverage">Unreleased typed history coverage<a class="headerlink" href="#unreleased-typed-history-coverage" title="Permanent link">&para;</a></h2>
+<p>On 2026-10-23, the canonical combined command passed against the declared server
+v0.0.20 image
+<code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+<p>The run passed 105 library tests and 52 downstream consumer cases (including two
+real session-rotation tests and four legacy server-version gates), followed by
+all three native-resource phases and all four restore/recovery pairs. Local
+containers used the existing Podman wrapper that disables SELinux labels for the
+fixture mounts. The target image and fixture contents were unchanged.</p>
+<p>Both client modes exercised all eleven new typed history routes. Coverage
+includes denied root access, timeline anchors and cursor continuation, exact
+entry lookup including deletion markers, cross-resource history-ID rejection,
+name reuse across deleted and recreated identities, historical class/object
+population pagination, deleted relationship history and historical endpoint names,
+and recomputation using old object data and shared definitions. The server's
+<code>I</code>, <code>U</code>, and <code>D</code> operation codes are preserved unchanged.</p>
+<p>The workspace suite passed 913 non-container tests. Formatting, strict Clippy and
+rustdoc, five feature combinations, Rust 1.88, generated-code reconciliation,
+125 model mappings, pinned contract validation/comparison, and all 202 applicable
+public API compatibility checks passed. The 257-operation snapshot, declared
+server target, dependencies, and public feature availability are unchanged. See
+<a href="../history/">historical views</a> for the typed API and retained-history limits.</p>
 <h2 id="v0020-target">v0.0.20 target<a class="headerlink" href="#v0020-target" title="Permanent link">&para;</a></h2>
 <p>Client 0.16.0 targets the immutable v0.0.20 image recorded above. Both Linux
 architectures identify server commit <code>3bede6e5b815585f3ac5372cc829734b2ae14a68</code>.

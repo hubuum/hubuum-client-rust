@@ -667,6 +667,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Historical views
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../query-usage/" class="md-nav__link">
         
   
@@ -1620,9 +1647,11 @@ not inherit to child collections.</p>
 <p>The pinned 257-operation contract includes the versioned session API. Both
 client modes provide <code>login_session</code>, <code>session_providers</code>, automatic refresh,
 and session-aware logout. Legacy single-token login is only for older servers.</p>
-<p>The following newer surfaces intentionally use authenticated <code>raw()</code> requests:
-history timeline and entry lookup, relationship and computed-field historical
-views, and exact-name history across object identities.
+<p>All eleven newer history routes have typed helpers in both modes: class/object
+timelines and entry lookup, exact-name object history, historical class object
+populations, direct relationship changes and as-of views, and historical computed
+values. No pinned route requires <code>raw()</code> for lack of a dedicated helper. See
+<a href="../history/">historical views</a> for pagination and retention semantics.
 <code>openapi/model-contract.json</code> records intentional field-level exceptions explicitly.
 Backup format 10 is recognized without discarding the extensible backup payload.</p>
 <p>Credential activity has typed <code>token_activity(principal_id, token_id, options)</code>
