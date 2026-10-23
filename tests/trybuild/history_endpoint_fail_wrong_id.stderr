@@ -1,20 +1,8 @@
 error[E0308]: mismatched types
- --> tests/trybuild/history_endpoint_fail_wrong_id.rs:7:19
-  |
-7 |         } => Some(snapshot.id),
-  |              ---- ^^^^^^^^^^^ expected `ClassId`, found `ObjectId`
-  |              |
-  |              arguments to this enum variant are incorrect
-  |
-help: the type constructed contains `ObjectId` due to the type of the argument passed
  --> tests/trybuild/history_endpoint_fail_wrong_id.rs:7:14
   |
-7 |         } => Some(snapshot.id),
-  |              ^^^^^-----------^
-  |                   |
-  |                   this argument influences the type of `Some`
-note: tuple variant defined here
- --> $RUST/core/src/option.rs
-  |
-  |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
-  |     ^^^^
+3 | fn class_id(value: HistoricalRelationValue) -> ClassId {
+  |                                                ------- expected `ClassId` because of return type
+...
+7 |         } => snapshot.id,
+  |              ^^^^^^^^^^^ expected `ClassId`, found `ObjectId`

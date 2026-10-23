@@ -13,22 +13,10 @@ note: method defined here
   |            ^^
 
 error[E0308]: mismatched types
- --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:6:33
+ --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:7:28
   |
-6 |     let _ = ClassGet { id: Some(object), ..Default::default() };
-  |                            ---- ^^^^^^ expected `ClassId`, found `ObjectId`
-  |                            |
-  |                            arguments to this enum variant are incorrect
+7 |     let _ = ClassGet { id: wrong_id, ..Default::default() };
+  |                            ^^^^^^^^ expected `Option<ClassId>`, found `Option<ObjectId>`
   |
-help: the type constructed contains `ObjectId` due to the type of the argument passed
- --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:6:28
-  |
-6 |     let _ = ClassGet { id: Some(object), ..Default::default() };
-  |                            ^^^^^------^
-  |                                 |
-  |                                 this argument influences the type of `Some`
-note: tuple variant defined here
- --> $RUST/core/src/option.rs
-  |
-  |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
-  |     ^^^^
+  = note: expected enum `Option<ClassId>`
+             found enum `Option<ObjectId>`
