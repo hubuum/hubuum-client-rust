@@ -1,3 +1,4 @@
+use hubuum_client::{CredentialApprovalId, PrincipalId, RestoreId, TokenId, UserId};
 use std::sync::Arc;
 
 use hubuum_client::{
@@ -121,7 +122,7 @@ macro_rules! approval_scenarios {
             final_body["expires_at"] = json!(EXPIRY);
             push(&$transport, StatusCode::CREATED, approval_response("create_token"));
             push(&$transport, StatusCode::CREATED, json!({"token":"minted-secret", "expires_at":EXPIRY}));
-            let operation = CredentialOperation::create_token(42, request);
+            let operation = CredentialOperation::create_token(PrincipalId::new(42).unwrap(), request);
             let approved = $finish!($client.credential_approvals().approve(&passwords.actor, operation)).unwrap();
             assert_eq!(approved.record().id, 11);
             assert_eq!(approved.token_expires_at().unwrap().0.timestamp_subsec_nanos(), 123456000);
@@ -138,7 +139,7 @@ macro_rules! approval_scenarios {
             push(&$transport, StatusCode::CREATED, approval_response("renew_token"));
             push(&$transport, StatusCode::CREATED, json!({"token":"renewed-secret", "expires_at":EXPIRY}));
             let approved = $finish!($client.credential_approvals().approve(&passwords.actor,
-                CredentialOperation::renew_token(42, 99, request))).unwrap();
+                CredentialOperation::renew_token(PrincipalId::new(42).unwrap(), TokenId::new(99).unwrap(), request))).unwrap();
             assert_eq!($finish!(approved.send()).unwrap().as_str(), "renewed-secret");
             assert_wire(&$transport, "/api/v1/iam/principals/42/tokens/99/renew", operation_wire, json!({"expires_at":EXPIRY}), &passwords);
         }
@@ -162,7 +163,7 @@ macro_rules! approval_scenarios {
         push(&$transport, StatusCode::CREATED, approval_response("update_user"));
         push(&$transport, StatusCode::PRECONDITION_FAILED, error_body(None));
         let approved = $finish!($client.credential_approvals().approve(&passwords.actor,
-            CredentialOperation::update_user(42, profile, &passwords.user))).unwrap()
+            CredentialOperation::update_user(UserId::new(42).unwrap(), profile, &passwords.user))).unwrap()
             .if_match(EntityTag::new("\"rev-2\"").unwrap());
         assert!($finish!(approved.send()).unwrap_err().is_status(StatusCode::PRECONDITION_FAILED));
         assert_wire(&$transport, "/api/v1/iam/users/42", json!({"kind":"update_user","user_id":42,"user":user_body}), user_body, &passwords);
@@ -200,7 +201,7 @@ macro_rules! approval_scenarios {
         push(&$transport, StatusCode::CREATED, approval_response("confirm_restore"));
         push(&$transport, StatusCode::CONFLICT, error_body(None));
         let approved = $finish!($client.credential_approvals().approve(&passwords.actor,
-            CredentialOperation::confirm_restore(73, confirmation))).unwrap();
+            CredentialOperation::confirm_restore(RestoreId::new(73).unwrap(), confirmation))).unwrap();
         assert!($finish!(approved.send()).unwrap_err().is_status(StatusCode::CONFLICT));
         assert_wire(&$transport, "/api/v1/restores/73/confirm", json!({"kind":"confirm_restore","restore_id":73,"confirmation":body}), body, &passwords);
 
@@ -209,7 +210,7 @@ macro_rules! approval_scenarios {
         let mut record = approval_response("create_token")["record"].clone();
         record["consumed_at"] = json!("2026-09-19T12:00:01Z");
         push(&$transport, StatusCode::OK, record);
-        let record = $finish!($client.credential_approvals().get(11)).unwrap();
+        let record = $finish!($client.credential_approvals().get(CredentialApprovalId::new(11).unwrap())).unwrap();
         assert!(record.consumed_at.is_some());
         let last = $transport.requests().pop().unwrap();
         assert_eq!(last.method, Method::GET);
@@ -220,7 +221,7 @@ macro_rules! approval_scenarios {
             "legacy_server" => {
         // Old servers receive exactly the legacy mutation, with no discovery probe.
         push(&$transport, StatusCode::OK, json!({"id":42,"name":"existing-user","created_at":"2026-01-01T00:00:00","updated_at":"2026-01-01T00:00:00","revision":1}));
-        let user = $finish!($client.users().get(42)).unwrap();
+        let user = $finish!($client.users().get(UserId::new(42).unwrap())).unwrap();
         let before = $transport.requests().len();
         push(&$transport, StatusCode::CREATED, json!({"token":"legacy-secret"}));
         let token = $finish!(user.tokens_create_token(NewTokenRequest::new())).unwrap();
@@ -235,7 +236,7 @@ macro_rules! approval_scenarios {
             let before = $transport.requests().len();
             push(&$transport, status, error_body(None));
             let error = $finish!($client.credential_approvals().approve(&passwords.actor,
-                CredentialOperation::create_token(42, NewTokenRequest::new()))).unwrap_err();
+                CredentialOperation::create_token(PrincipalId::new(42).unwrap(), NewTokenRequest::new()))).unwrap_err();
             assert!(error.is_status(status));
             assert_eq!($transport.requests().len(), before + 1);
         }
@@ -245,7 +246,7 @@ macro_rules! approval_scenarios {
         push(&$transport, StatusCode::CREATED, approval_response("create_token"));
         push(&$transport, StatusCode::FORBIDDEN, error_body(Some("reauthentication_required")));
         let approved = $finish!($client.credential_approvals().approve(&passwords.actor,
-            CredentialOperation::create_token(42, NewTokenRequest::new()))).unwrap();
+            CredentialOperation::create_token(PrincipalId::new(42).unwrap(), NewTokenRequest::new()))).unwrap();
         let before = $transport.requests().len();
         let error = $finish!(approved.send()).unwrap_err();
         assert!(error.is_reauthentication_required());
@@ -260,13 +261,13 @@ macro_rules! approval_scenarios {
             response["token_expires_at"] = expiry;
             push(&$transport, StatusCode::CREATED, response);
             let error = $finish!($client.credential_approvals().approve(&passwords.actor,
-                CredentialOperation::create_token(42, NewTokenRequest::new()))).unwrap_err();
+                CredentialOperation::create_token(PrincipalId::new(42).unwrap(), NewTokenRequest::new()))).unwrap_err();
             assert!(!format!("{error:?}").contains(&secret));
             assert_eq!($transport.requests().len(), before + 1);
         }
             },
             "invalid_operation" => {
-                let operation = CredentialOperation::create_token(42, NewTokenRequest::new().scopes(vec![]));
+                let operation = CredentialOperation::create_token(PrincipalId::new(42).unwrap(), NewTokenRequest::new().scopes(vec![]));
                 let error = $finish!($client.credential_approvals().approve(&passwords.actor, operation)).unwrap_err();
                 assert!(matches!(error, ApiError::InvalidTokenScopes));
                 assert!($transport.requests().is_empty());

@@ -10,7 +10,8 @@ macro_rules! workflow {
         let collection = $send!($client.collections().create_raw(CollectionPost {
             name: prefix.clone(),
             group_id: $group,
-            ..Default::default()
+            description: Default::default(),
+            parent_collection_id: None
         }))
         .unwrap();
         let mut classes = Vec::new();
@@ -19,7 +20,9 @@ macro_rules! workflow {
                 $send!($client.classes().create_raw(ClassPost {
                     name: format!("{prefix}-{suffix}"),
                     collection_id: collection.id,
-                    ..Default::default()
+                    description: Default::default(),
+                    json_schema: None,
+                    validate_schema: None
                 }))
                 .unwrap(),
             );
@@ -31,7 +34,8 @@ macro_rules! workflow {
                     name: format!("{prefix}-{index}"),
                     collection_id: Some(collection.id),
                     hubuum_class_id: Some(classes[class].id),
-                    ..Default::default()
+                    description: Default::default(),
+                    data: None
                 }))
                 .unwrap(),
             );

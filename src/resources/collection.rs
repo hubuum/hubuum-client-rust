@@ -1,3 +1,4 @@
+use crate::client::EndpointRequest;
 use std::borrow::Cow;
 
 #[cfg(feature = "async")]
@@ -230,14 +231,14 @@ impl SyncHandle<Collection> {
         permissions: Vec<String>,
         etag: &EntityTag,
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
-        let raw = self.client().request_with_endpoint_raw_with_headers(
-            reqwest::Method::PUT,
-            &Endpoint::CollectionPermissionsGrant,
-            collection_group_permission_params(self.id(), group_id.into()),
-            vec![],
-            CollectionPermissionsGrantParams::from_strings(permissions)?,
-            &crate::client::if_match_headers(etag),
-        )?;
+        let raw = self.client().request_endpoint(EndpointRequest {
+            method: reqwest::Method::PUT,
+            endpoint: &Endpoint::CollectionPermissionsGrant,
+            url_params: collection_group_permission_params(self.id(), group_id.into()),
+            query_params: vec![],
+            body: CollectionPermissionsGrantParams::from_strings(permissions)?,
+            headers: &crate::client::if_match_headers(etag),
+        })?;
         crate::client::decode_revisioned(raw)
     }
 
@@ -266,14 +267,14 @@ impl SyncHandle<Collection> {
         permissions: Vec<String>,
         etag: &EntityTag,
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
-        let raw = self.client().request_with_endpoint_raw_with_headers(
-            reqwest::Method::POST,
-            &Endpoint::CollectionPermissionsGrant,
-            collection_group_permission_params(self.id(), group_id.into()),
-            vec![],
-            CollectionPermissionsGrantParams::from_strings(permissions)?,
-            &crate::client::if_match_headers(etag),
-        )?;
+        let raw = self.client().request_endpoint(EndpointRequest {
+            method: reqwest::Method::POST,
+            endpoint: &Endpoint::CollectionPermissionsGrant,
+            url_params: collection_group_permission_params(self.id(), group_id.into()),
+            query_params: vec![],
+            body: CollectionPermissionsGrantParams::from_strings(permissions)?,
+            headers: &crate::client::if_match_headers(etag),
+        })?;
         crate::client::decode_revisioned(raw)
     }
 
@@ -326,14 +327,14 @@ impl SyncHandle<Collection> {
         group_id: impl Into<GroupId>,
         etag: &EntityTag,
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
-        let raw = self.client().request_with_endpoint_raw_with_headers(
-            reqwest::Method::DELETE,
-            &Endpoint::CollectionPermissionsGrant,
-            collection_group_permission_params(self.id(), group_id.into()),
-            vec![],
-            SyncEmptyPostParams {},
-            &crate::client::if_match_headers(etag),
-        )?;
+        let raw = self.client().request_endpoint(EndpointRequest {
+            method: reqwest::Method::DELETE,
+            endpoint: &Endpoint::CollectionPermissionsGrant,
+            url_params: collection_group_permission_params(self.id(), group_id.into()),
+            query_params: vec![],
+            body: SyncEmptyPostParams {},
+            headers: &crate::client::if_match_headers(etag),
+        })?;
         crate::client::decode_revisioned(raw)
     }
 
@@ -389,14 +390,14 @@ impl SyncHandle<Collection> {
         permission: Permissions,
         etag: &EntityTag,
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
-        let raw = self.client().request_with_endpoint_raw_with_headers(
-            reqwest::Method::POST,
-            &Endpoint::CollectionPermissionGrant,
-            collection_single_permission_params(self.id(), group_id.into(), permission),
-            vec![],
-            SyncEmptyPostParams {},
-            &crate::client::if_match_headers(etag),
-        )?;
+        let raw = self.client().request_endpoint(EndpointRequest {
+            method: reqwest::Method::POST,
+            endpoint: &Endpoint::CollectionPermissionGrant,
+            url_params: collection_single_permission_params(self.id(), group_id.into(), permission),
+            query_params: vec![],
+            body: SyncEmptyPostParams {},
+            headers: &crate::client::if_match_headers(etag),
+        })?;
         crate::client::decode_revisioned(raw)
     }
 
@@ -424,14 +425,14 @@ impl SyncHandle<Collection> {
         permission: Permissions,
         etag: &EntityTag,
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
-        let raw = self.client().request_with_endpoint_raw_with_headers(
-            reqwest::Method::DELETE,
-            &Endpoint::CollectionPermissionGrant,
-            collection_single_permission_params(self.id(), group_id.into(), permission),
-            vec![],
-            SyncEmptyPostParams {},
-            &crate::client::if_match_headers(etag),
-        )?;
+        let raw = self.client().request_endpoint(EndpointRequest {
+            method: reqwest::Method::DELETE,
+            endpoint: &Endpoint::CollectionPermissionGrant,
+            url_params: collection_single_permission_params(self.id(), group_id.into(), permission),
+            query_params: vec![],
+            body: SyncEmptyPostParams {},
+            headers: &crate::client::if_match_headers(etag),
+        })?;
         crate::client::decode_revisioned(raw)
     }
 
@@ -656,14 +657,14 @@ impl AsyncHandle<Collection> {
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
         let raw = self
             .client()
-            .request_with_endpoint_raw_with_headers(
-                reqwest::Method::PUT,
-                &Endpoint::CollectionPermissionsGrant,
-                collection_group_permission_params(self.id(), group_id.into()),
-                vec![],
-                CollectionPermissionsGrantParams::from_strings(permissions)?,
-                &crate::client::if_match_headers(etag),
-            )
+            .request_endpoint(EndpointRequest {
+                method: reqwest::Method::PUT,
+                endpoint: &Endpoint::CollectionPermissionsGrant,
+                url_params: collection_group_permission_params(self.id(), group_id.into()),
+                query_params: vec![],
+                body: CollectionPermissionsGrantParams::from_strings(permissions)?,
+                headers: &crate::client::if_match_headers(etag),
+            })
             .await?;
         crate::client::decode_revisioned(raw)
     }
@@ -696,14 +697,14 @@ impl AsyncHandle<Collection> {
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
         let raw = self
             .client()
-            .request_with_endpoint_raw_with_headers(
-                reqwest::Method::POST,
-                &Endpoint::CollectionPermissionsGrant,
-                collection_group_permission_params(self.id(), group_id.into()),
-                vec![],
-                CollectionPermissionsGrantParams::from_strings(permissions)?,
-                &crate::client::if_match_headers(etag),
-            )
+            .request_endpoint(EndpointRequest {
+                method: reqwest::Method::POST,
+                endpoint: &Endpoint::CollectionPermissionsGrant,
+                url_params: collection_group_permission_params(self.id(), group_id.into()),
+                query_params: vec![],
+                body: CollectionPermissionsGrantParams::from_strings(permissions)?,
+                headers: &crate::client::if_match_headers(etag),
+            })
             .await?;
         crate::client::decode_revisioned(raw)
     }
@@ -768,14 +769,14 @@ impl AsyncHandle<Collection> {
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
         let raw = self
             .client()
-            .request_with_endpoint_raw_with_headers(
-                reqwest::Method::DELETE,
-                &Endpoint::CollectionPermissionsGrant,
-                collection_group_permission_params(self.id(), group_id.into()),
-                vec![],
-                AsyncEmptyPostParams {},
-                &crate::client::if_match_headers(etag),
-            )
+            .request_endpoint(EndpointRequest {
+                method: reqwest::Method::DELETE,
+                endpoint: &Endpoint::CollectionPermissionsGrant,
+                url_params: collection_group_permission_params(self.id(), group_id.into()),
+                query_params: vec![],
+                body: AsyncEmptyPostParams {},
+                headers: &crate::client::if_match_headers(etag),
+            })
             .await?;
         crate::client::decode_revisioned(raw)
     }
@@ -837,14 +838,18 @@ impl AsyncHandle<Collection> {
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
         let raw = self
             .client()
-            .request_with_endpoint_raw_with_headers(
-                reqwest::Method::POST,
-                &Endpoint::CollectionPermissionGrant,
-                collection_single_permission_params(self.id(), group_id.into(), permission),
-                vec![],
-                AsyncEmptyPostParams {},
-                &crate::client::if_match_headers(etag),
-            )
+            .request_endpoint(EndpointRequest {
+                method: reqwest::Method::POST,
+                endpoint: &Endpoint::CollectionPermissionGrant,
+                url_params: collection_single_permission_params(
+                    self.id(),
+                    group_id.into(),
+                    permission,
+                ),
+                query_params: vec![],
+                body: AsyncEmptyPostParams {},
+                headers: &crate::client::if_match_headers(etag),
+            })
             .await?;
         crate::client::decode_revisioned(raw)
     }
@@ -878,14 +883,18 @@ impl AsyncHandle<Collection> {
     ) -> Result<Revisioned<CollectionPermissionSet>, ApiError> {
         let raw = self
             .client()
-            .request_with_endpoint_raw_with_headers(
-                reqwest::Method::DELETE,
-                &Endpoint::CollectionPermissionGrant,
-                collection_single_permission_params(self.id(), group_id.into(), permission),
-                vec![],
-                AsyncEmptyPostParams {},
-                &crate::client::if_match_headers(etag),
-            )
+            .request_endpoint(EndpointRequest {
+                method: reqwest::Method::DELETE,
+                endpoint: &Endpoint::CollectionPermissionGrant,
+                url_params: collection_single_permission_params(
+                    self.id(),
+                    group_id.into(),
+                    permission,
+                ),
+                query_params: vec![],
+                body: AsyncEmptyPostParams {},
+                headers: &crate::client::if_match_headers(etag),
+            })
             .await?;
         crate::client::decode_revisioned(raw)
     }

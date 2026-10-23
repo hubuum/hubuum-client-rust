@@ -61,7 +61,8 @@ fn e2e_history_navigation_names_and_population(asynchronous: bool) {
             name: unique_case_prefix("history-sibling"),
             collection_id: Some(collection),
             hubuum_class_id: Some(class),
-            ..Default::default()
+            description: Default::default(),
+            data: None,
         })
         .unwrap();
     harness
@@ -106,7 +107,7 @@ fn e2e_history_navigation_names_and_population(asynchronous: bool) {
             collection_id: Some(collection),
             hubuum_class_id: Some(class),
             data: Some(json!({"source":"replacement"})),
-            ..Default::default()
+            description: Default::default(),
         })
         .unwrap();
     harness
@@ -304,7 +305,9 @@ fn e2e_relationship_history_retains_deleted_edges_and_endpoint_names(asynchronou
         .create_raw(ClassPost {
             name: unique_case_prefix("history-peer"),
             collection_id: collection,
-            ..Default::default()
+            description: Default::default(),
+            json_schema: None,
+            validate_schema: None,
         })
         .unwrap();
     let peer_object = harness
@@ -314,7 +317,8 @@ fn e2e_relationship_history_retains_deleted_edges_and_endpoint_names(asynchronou
             name: unique_case_prefix("history-peer-object"),
             collection_id: Some(collection),
             hubuum_class_id: Some(peer.id),
-            ..Default::default()
+            description: Default::default(),
+            data: None,
         })
         .unwrap();
     let class_edge = harness
@@ -376,8 +380,7 @@ fn e2e_relationship_history_retains_deleted_edges_and_endpoint_names(asynchronou
             let edges=$send!($client.class_relations_as_of(class,at.clone(),RelationHistoryOptions::default())).unwrap();
             assert_eq!(edges.data.relations.len(),1);
             let edge=&edges.data.relations[0];
-            assert!(matches!(&edge.value,HistoricalRelationValue::Class(r) if r.id==class_edge.id));
-            assert!(matches!(&edge.to,HistoricalEndpointContext::Available {snapshot} if snapshot.name==peer.name));
+            assert!(matches!(&edge.value,HistoricalRelationValue::Class { relation, to: HistoricalEndpointContext::Available { snapshot }, .. } if relation.id==class_edge.id && snapshot.name==peer.name));
             let changes=$send!($client.object_relation_history(class,object,RelationHistoryOptions::default().page(HistoryPageOptions::default().limit(1).unwrap().include_total(true)))).unwrap();
             assert_eq!(changes.total_count,Some(2));
             assert_eq!(changes.data.relations[0].history.op,"D");
@@ -387,8 +390,7 @@ fn e2e_relationship_history_retains_deleted_edges_and_endpoint_names(asynchronou
             let edges=$send!($client.object_relations_as_of(class,object,at.clone(),RelationHistoryOptions::default())).unwrap();
             assert_eq!(edges.data.relations.len(),1);
             let edge=&edges.data.relations[0];
-            assert!(matches!(&edge.value,HistoricalRelationValue::Object(r) if r.id==object_edge.id));
-            assert!(matches!(&edge.to,HistoricalEndpointContext::Available {snapshot} if snapshot.name==peer_object.name));
+            assert!(matches!(&edge.value,HistoricalRelationValue::Object { relation, to: HistoricalEndpointContext::Available { snapshot }, .. } if relation.id==object_edge.id && snapshot.name==peer_object.name));
             let now=hubuum_client::HubuumDateTime(std::time::SystemTime::now().into());
             assert!($send!($client.object_relations_as_of(class,object,now,RelationHistoryOptions::default())).unwrap().data.relations.is_empty());
         }};

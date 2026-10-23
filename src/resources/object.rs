@@ -18,7 +18,7 @@ use crate::{
 
 include!("generated/object.rs");
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct ObjectWithPath {
     pub id: ObjectId,
     pub name: String,
@@ -498,7 +498,7 @@ impl SyncHandle<Object> {
 impl SyncCursorRequest<ObjectWithPath> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
-        I: IntoIterator<Item = i32>,
+        I: IntoIterator<Item = ClassId>,
     {
         self.query_param(
             "ignore_classes",
@@ -519,7 +519,7 @@ impl SyncCursorRequest<ObjectWithPath> {
 impl SyncGraphRequest<RelatedObjectGraph> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
-        I: IntoIterator<Item = i32>,
+        I: IntoIterator<Item = ClassId>,
     {
         self.query_param(
             "ignore_classes",
@@ -710,7 +710,7 @@ impl AsyncHandle<Object> {
 impl AsyncCursorRequest<ObjectWithPath> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
-        I: IntoIterator<Item = i32>,
+        I: IntoIterator<Item = ClassId>,
     {
         self.query_param(
             "ignore_classes",
@@ -731,7 +731,7 @@ impl AsyncCursorRequest<ObjectWithPath> {
 impl AsyncGraphRequest<RelatedObjectGraph> {
     pub fn ignore_classes<I>(self, class_ids: I) -> Self
     where
-        I: IntoIterator<Item = i32>,
+        I: IntoIterator<Item = ClassId>,
     {
         self.query_param(
             "ignore_classes",

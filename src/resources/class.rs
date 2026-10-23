@@ -113,7 +113,7 @@ impl Class {
     }
 }
 
-#[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
 pub struct ClassWithPath {
     pub id: ClassId,
     pub name: String,
@@ -161,8 +161,7 @@ impl SyncHandle<Class> {
             (Cow::Borrowed("class_id"), self.id().to_string().into()),
             (Cow::Borrowed("name"), name.to_string().into()),
         ];
-        let raw: Vec<Object> = self.client().get(
-            Object::default(),
+        let raw: Vec<Object> = self.client().get::<Object, _>(
             url_params,
             vec![QueryFilter {
                 key: "name".to_string(),
@@ -493,7 +492,7 @@ mod alias_tests {
     #[test]
     fn new_relation_params_without_aliases_serialize_one_key() {
         let params = NewClassRelationFromClassParams {
-            to_hubuum_class_id: 2.into(),
+            to_hubuum_class_id: crate::ClassId::new(2).unwrap(),
             options: ClassRelationCreateOptions::default(),
         };
         let value = serde_json::to_value(&params).unwrap();
@@ -505,7 +504,7 @@ mod alias_tests {
     #[test]
     fn new_relation_params_with_aliases_serialize_three_keys() {
         let params = NewClassRelationFromClassParams {
-            to_hubuum_class_id: 2.into(),
+            to_hubuum_class_id: crate::ClassId::new(2).unwrap(),
             options: ClassRelationCreateOptions::default()
                 .with_forward_template_alias("rooms")
                 .with_reverse_template_alias("hosts")

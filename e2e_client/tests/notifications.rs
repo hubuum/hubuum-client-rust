@@ -37,8 +37,9 @@ macro_rules! notifications {
                     subject_is_admin: Some(true),
                     ..Default::default()
                 }),
-                ..Default::default()
-            })).unwrap();
+ description: None,
+ routing: None
+})).unwrap();
         let subscription_id = subscription.id;
         let filter = subscription.filter.as_ref().unwrap();
         assert_eq!(filter.subject_is_admin, Some(true));

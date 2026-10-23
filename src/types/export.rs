@@ -160,7 +160,7 @@ impl ExportScope {
                 let class_id = self.class_id.ok_or(ApiError::InvalidExportScope {
                     reason: "objects_in_class requires class_id",
                 })?;
-                validate_export_scope_id("class_id", class_id.get())?;
+
                 if self.object_id.is_some() {
                     return Err(ApiError::InvalidExportScope {
                         reason: "objects_in_class does not accept object_id",
@@ -182,8 +182,7 @@ impl ExportScope {
                         reason: "related_objects requires class_id and object_id",
                     });
                 };
-                validate_export_scope_id("class_id", class_id.get())?;
-                validate_export_scope_id("object_id", object_id.get())?;
+
                 Ok(ValidatedExportScope::RelatedObjects {
                     class_id,
                     object_id,
@@ -216,13 +215,6 @@ impl ValidatedExportScope {
             Self::RelatedObjects { .. } => ExportScopeKind::RelatedObjects,
         }
     }
-}
-
-fn validate_export_scope_id(field: &'static str, value: i32) -> Result<(), ApiError> {
-    if value <= 0 {
-        return Err(ApiError::InvalidExportScopeId { field, value });
-    }
-    Ok(())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -339,62 +331,38 @@ mod tests {
         );
     }
 
-    #[test]
-    fn export_scope_ids_must_be_positive() {
-        for (scope, field, value) in [
-            (
-                ExportScope {
-                    class_id: Some(0.into()),
-                    kind: ExportScopeKind::ObjectsInClass,
-                    object_id: None,
-                },
-                "class_id",
-                0,
-            ),
-            (
-                ExportScope {
-                    class_id: Some(1.into()),
-                    kind: ExportScopeKind::RelatedObjects,
-                    object_id: Some((-2).into()),
-                },
-                "object_id",
-                -2,
-            ),
-        ] {
-            assert!(matches!(
-                scope.validate(),
-                Err(ApiError::InvalidExportScopeId {
-                    field: actual_field,
-                    value: actual_value
-                }) if actual_field == field && actual_value == value
-            ));
-        }
+    #[rstest::rstest]
+    #[case(0, 2)]
+    #[case(1, -2)]
+    fn export_scope_ids_must_be_positive(#[case] class_id: i32, #[case] object_id: i32) {
+        let wire = serde_json::json!({"kind":"related_objects", "class_id":class_id, "object_id":object_id});
+        assert!(serde_json::from_value::<ExportScope>(wire).is_err());
     }
 
     #[test]
     fn export_scope_validation_matches_kind_specific_id_rules() {
         assert_eq!(
             ExportScope {
-                class_id: Some(7.into()),
+                class_id: Some(crate::ClassId::new(7).unwrap()),
                 kind: ExportScopeKind::ObjectsInClass,
                 object_id: None,
             }
             .validate()
             .unwrap(),
-            ValidatedExportScope::ObjectsInClass(7.into())
+            ValidatedExportScope::ObjectsInClass(crate::ClassId::new(7).unwrap())
         );
         assert!(matches!(
             ExportScope {
                 class_id: None,
                 kind: ExportScopeKind::RelatedObjects,
-                object_id: Some(2.into()),
+                object_id: Some(crate::ObjectId::new(2).unwrap()),
             }
             .validate(),
             Err(ApiError::InvalidExportScope { .. })
         ));
         assert!(matches!(
             ExportScope {
-                class_id: Some(1.into()),
+                class_id: Some(crate::ClassId::new(1).unwrap()),
                 kind: ExportScopeKind::Collections,
                 object_id: None,
             }
@@ -409,7 +377,7 @@ mod tests {
         related.insert(
             "owners".to_string(),
             ExportIncludeRelatedObject {
-                class_id: 7.into(),
+                class_id: crate::ClassId::new(7).unwrap(),
                 class_relation_id: None,
                 direction: Some(ExportIncludeRelatedDirection::Outgoing),
                 limit: Some(10),
@@ -422,7 +390,7 @@ mod tests {
             missing_data_policy: None,
             query: None,
             scope: ExportScope {
-                class_id: Some(42.into()),
+                class_id: Some(crate::ClassId::new(42).unwrap()),
                 kind: ExportScopeKind::ObjectsInClass,
                 object_id: None,
             },

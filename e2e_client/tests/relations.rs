@@ -216,7 +216,8 @@ async fn async_directional_labels_follow_stored_class_order() {
         .create_raw(CollectionPost {
             name: prefix.clone(),
             group_id: group,
-            ..Default::default()
+            description: Default::default(),
+            parent_collection_id: None,
         })
         .await
         .unwrap();
@@ -228,7 +229,9 @@ async fn async_directional_labels_follow_stored_class_order() {
                 .create_raw(ClassPost {
                     name: format!("{prefix}-{suffix}"),
                     collection_id: collection.id,
-                    ..Default::default()
+                    description: Default::default(),
+                    json_schema: None,
+                    validate_schema: None,
                 })
                 .await
                 .unwrap(),

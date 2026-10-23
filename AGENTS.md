@@ -100,10 +100,11 @@ cargo check -p hubuum_client --locked --no-default-features --features blocking,
 ## Client Architecture
 
 - Keep transport-independent request construction, parsing, pagination,
-  retries, URL safety, and other shared behavior in `src/client/shared.rs` or
+  retries, URL safety, and other shared behavior in `src/client/shared/*` or
   `src/client/transport.rs`.
-- Keep async and blocking implementations in `src/client/async.rs` and
-  `src/client/sync.rs`. Public capabilities should remain equivalent unless a
+- Keep async and blocking implementations in `src/client/async.rs`,
+  `src/client/sync.rs`, and their responsibility-specific submodules.
+  Public capabilities should remain equivalent unless a
   documented runtime constraint makes parity impossible.
 - Extend the compile-time parity contract in `src/client/mod.rs` whenever a new
   public client, scope, builder, or handle method should exist in both modes.

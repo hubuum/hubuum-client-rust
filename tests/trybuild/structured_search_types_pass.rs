@@ -1,3 +1,4 @@
+use hubuum_client::{ObjectId};
 use hubuum_client::{
     Authenticated, Client, ClassId, StructuredClassSelector, StructuredSearchRequest,
     StructuredSearchTarget, StructuredSearchResponse, StructuredSearchEvent, blocking,
@@ -5,7 +6,7 @@ use hubuum_client::{
 
 fn request() -> StructuredSearchRequest {
     StructuredSearchRequest::new(StructuredSearchTarget::Object {
-        class: Some(StructuredClassSelector::Id { id: ClassId::new(7) }),
+        class: Some(StructuredClassSelector::Id { id: ClassId::new(7).unwrap() }),
     })
 }
 
@@ -22,7 +23,7 @@ fn blocking_search(client: blocking::Client<Authenticated>) {
 fn main() { let _ = async_search; let _ = blocking_search; }
 
 fn hydration(client: hubuum_client::Client<hubuum_client::Authenticated>, blocking: hubuum_client::blocking::Client<hubuum_client::Authenticated>) {
-    let request = hubuum_client::SearchHydrationRequest::new(hubuum_client::ClassId::new(1), hubuum_client::ObjectId::new(2), hubuum_client::StructuredClassSelector::Id { id: hubuum_client::ClassId::new(3) }, 2, 10).unwrap();
+    let request = hubuum_client::SearchHydrationRequest::new(ClassId::new(1).unwrap(), ObjectId::new(2).unwrap(), hubuum_client::StructuredClassSelector::Id { id: ClassId::new(3).unwrap() }, 2, 10).unwrap();
     std::mem::drop(client.hydrate_search(request.clone()));
     let _ = blocking.hydrate_search(request);
 }

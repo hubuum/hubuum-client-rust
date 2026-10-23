@@ -141,11 +141,6 @@ impl HistoryTimelineOptions {
     /// Seek strictly past a resource-scoped entry, excluding the entry itself.
     /// Replaces any previous anchor or timestamp selection.
     pub fn anchor(mut self, anchor: HistoryId) -> Result<Self, ApiError> {
-        if anchor.get() <= 0 {
-            return Err(ApiError::InvalidHistoryQuery {
-                reason: "history ID must be positive",
-            });
-        }
         self.position = Some(HistoryPosition::Anchor(anchor));
         Ok(self)
     }
@@ -261,18 +256,26 @@ impl fmt::Debug for HistoricalClassObjects {
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "kind", content = "relation", rename_all = "snake_case")]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum HistoricalRelationValue {
-    Class(ClassRelation),
-    Object(ObjectRelation),
+    Class {
+        relation: ClassRelation,
+        from: HistoricalEndpointContext<ClassId>,
+        to: HistoricalEndpointContext<ClassId>,
+    },
+    Object {
+        relation: ObjectRelation,
+        from: HistoricalEndpointContext<ObjectId>,
+        to: HistoricalEndpointContext<ObjectId>,
+    },
 }
 
-/// Historical endpoint metadata. `id` is a class or object wire ID according
-/// to the enclosing [`HistoricalRelationValue`]; no current context is expanded.
+/// Historical endpoint metadata with an identity matching its relation variant.
+/// No current context is expanded.
 #[non_exhaustive]
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
-pub struct HistoricalRelationEndpoint {
-    pub id: i32,
+pub struct HistoricalRelationEndpoint<I> {
+    pub id: I,
     pub hubuum_class_id: Option<ClassId>,
     pub collection_id: CollectionId,
     pub name: String,
@@ -282,7 +285,7 @@ pub struct HistoricalRelationEndpoint {
     pub valid_to: Option<HubuumDateTime>,
 }
 
-impl fmt::Debug for HistoricalRelationEndpoint {
+impl<I: fmt::Debug> fmt::Debug for HistoricalRelationEndpoint<I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("HistoricalRelationEndpoint")
             .field("id", &self.id)
@@ -301,9 +304,9 @@ pub enum HistoricalEndpointUnavailableReason {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "status", rename_all = "snake_case")]
-pub enum HistoricalEndpointContext {
+pub enum HistoricalEndpointContext<I> {
     Available {
-        snapshot: HistoricalRelationEndpoint,
+        snapshot: HistoricalRelationEndpoint<I>,
     },
     Unavailable {
         reason: HistoricalEndpointUnavailableReason,
@@ -320,8 +323,6 @@ pub struct HistoricalRelation {
     pub history: HistoryMetadata,
     pub revision: ResourceRevision,
     pub context_at: HubuumDateTime,
-    pub from: HistoricalEndpointContext,
-    pub to: HistoricalEndpointContext,
 }
 
 impl fmt::Debug for HistoricalRelation {
@@ -463,14 +464,14 @@ mod tests {
     fn navigation_options_reject_invalid_bounds_and_replace_positions() {
         let at: HubuumDateTime = serde_json::from_value(json!("2026-10-23T00:00:00Z")).unwrap();
         assert!(HistoryPageOptions::default().limit(0).is_err());
-        assert!(HistoryTimelineOptions::default().anchor(0.into()).is_err());
+        assert!(HistoryId::new(0).is_err());
         assert!(
             HistoryTimelineOptions::default()
                 .window(Some(at.clone()), Some(at.clone()))
                 .is_err()
         );
         let options = HistoryTimelineOptions::default()
-            .anchor(1.into())
+            .anchor(crate::HistoryId::new(1).unwrap())
             .unwrap()
             .at(at);
         assert!(matches!(options.position, Some(HistoryPosition::At(_))));
@@ -538,17 +539,31 @@ mod tests {
         let result: HistoricalRelation = serde_json::from_value(wire).unwrap();
         assert_eq!(result.history.history_id, 123);
         assert_eq!(result.history.op, "D");
-        assert!(matches!(
-            result.to,
-            HistoricalEndpointContext::Unavailable {
-                reason: HistoricalEndpointUnavailableReason::HistoryUnavailable
-            }
-        ));
         match &result.value {
-            HistoricalRelationValue::Class(r) => {
-                assert_eq!(r.forward_label.as_ref().unwrap().as_str(), "runs")
+            HistoricalRelationValue::Class { relation, from, to } => {
+                assert_eq!(relation.forward_label.as_ref().unwrap().as_str(), "runs");
+                assert!(
+                    matches!(from, HistoricalEndpointContext::Available { snapshot } if snapshot.id == ClassId::new(1).unwrap())
+                );
+                assert!(matches!(
+                    to,
+                    HistoricalEndpointContext::Unavailable {
+                        reason: HistoricalEndpointUnavailableReason::HistoryUnavailable
+                    }
+                ));
             }
-            HistoricalRelationValue::Object(r) => assert_eq!(r.class_relation_id, 11),
+            HistoricalRelationValue::Object { relation, from, to } => {
+                assert_eq!(relation.class_relation_id, 11);
+                assert!(
+                    matches!(from, HistoricalEndpointContext::Available { snapshot } if snapshot.id == ObjectId::new(1).unwrap())
+                );
+                assert!(matches!(
+                    to,
+                    HistoricalEndpointContext::Unavailable {
+                        reason: HistoricalEndpointUnavailableReason::HistoryUnavailable
+                    }
+                ));
+            }
         }
         let encoded = serde_json::to_value(&result).unwrap();
         assert_eq!(encoded["kind"], kind);

@@ -1,3 +1,4 @@
+use hubuum_client::ClassId;
 use std::sync::Arc;
 
 use hubuum_client::{
@@ -61,7 +62,7 @@ fn transport(status: &str) -> MockTransport {
 
 macro_rules! exercise {
     ($client:ident, $send:ident, $expected:expr) => {{
-        let usage = $client.class_query_usage(42);
+        let usage = $client.class_query_usage(ClassId::new(42).unwrap());
         assert_eq!(usage.class_id().get(), 42);
         let records = $send!(usage.list()).unwrap();
         assert_eq!(records[0].created_by.unwrap().get(), 1);
@@ -201,7 +202,7 @@ fn blocking_object_json_filter_uses_server_query_key() {
         .unwrap()
         .authenticate(Token::new("token"));
     client
-        .objects(42)
+        .objects(ClassId::new(42).unwrap())
         .data()
         .path(["hardware", "serial"])
         .eq("abc")
@@ -225,7 +226,7 @@ async fn async_object_json_filter_uses_server_query_key() {
         .unwrap()
         .authenticate(Token::new("token"));
     client
-        .objects(42)
+        .objects(ClassId::new(42).unwrap())
         .data()
         .path(["hardware", "serial"])
         .eq("abc")

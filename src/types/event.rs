@@ -119,7 +119,7 @@ impl<'de> Deserialize<'de> for EventDeliveryPolicy {
 
 /// Permitted destination metadata. URLs, configuration and secret aliases are omitted.
 /// Requires server collection-integration support in v0.0.18 and newer.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct CollectionEventSink {
     pub id: EventSinkId,
@@ -154,7 +154,7 @@ pub enum EventSinkRouting {
     Unknown,
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct EventSink {
     #[serde(default)]
@@ -302,7 +302,7 @@ impl std::fmt::Debug for EventNotificationPreview {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct NewEventSubscription {
     pub sink_id: EventSinkId,
     pub name: String,
@@ -725,12 +725,14 @@ mod tests {
         }))
         .unwrap();
         let create_subscription = NewEventSubscription {
-            sink_id: EventSinkId::new(1),
+            sink_id: EventSinkId::new(1).unwrap(),
             name: "subscription".into(),
             entity_types: vec!["object".into()],
             actions: vec!["updated".into()],
             routing: Some(json!({"token": "create-routing-secret"})),
-            ..Default::default()
+            description: None,
+            enabled: None,
+            filter: None,
         };
         let update_subscription = UpdateEventSubscription {
             routing: Some(json!({"token": "update-routing-secret"})),

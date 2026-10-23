@@ -6,17 +6,22 @@ error[E0277]: the trait bound `ClassId: From<GroupId>` is not satisfied
   |                    |
   |                    required by a bound introduced by this call
   |
-help: `ClassId` implements trait `From<T>`
- --> src/resources/generated/class.rs
+help: the trait `From<GroupId>` is not implemented for `ClassId`
+      but trait `From<&ClassId>` is implemented for it
+ --> src/types/id.rs
   |
-  | impl From<i32> for ClassId {
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^ `From<i32>`
-...
-  | impl From<&ClassId> for ClassId {
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `From<&ClassId>`
+  |         impl From<&$name> for $name {
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+ ::: src/resources/generated/class.rs
+  |
+  | crate::types::id::define_id!(ClassId, i32);
+  | ------------------------------------------ in this macro invocation
+  = help: for that trait implementation, expected `&ClassId`, found `GroupId`
   = note: required for `GroupId` to implement `Into<ClassId>`
 note: required by a bound in `hubuum_client::blocking::Client::<Authenticated>::objects`
  --> src/client/sync.rs
   |
   |     pub fn objects(&self, class_id: impl Into<ClassId>) -> Resource<Object> {
   |                                          ^^^^^^^^^^^^^ required by this bound in `Client::<Authenticated>::objects`
+  = note: this error originates in the macro `crate::types::id::define_id` (in Nightly builds, run with -Z macro-backtrace for more info)

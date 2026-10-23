@@ -1,13 +1,13 @@
 error[E0308]: mismatched types
  --> tests/trybuild/related_filter_fail_wrong_id.rs:5:27
   |
-5 |     let _ = group.id().eq(ClassId::from(19));
-  |                        -- ^^^^^^^^^^^^^^^^^ expected `ObjectId`, found `ClassId`
+5 |     let _ = group.id().eq(ClassId::new(19).unwrap());
+  |                        -- ^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ObjectId`, found `ClassId`
   |                        |
   |                        arguments to this method are incorrect
   |
 note: method defined here
- --> src/client/shared.rs
+ --> src/client/shared/query.rs
   |
   |     pub fn eq(self, value: V) -> Q {
   |            ^^

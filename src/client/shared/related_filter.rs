@@ -38,19 +38,11 @@ impl RelatedObjectFilter {
                 reason: "alias must contain 1–64 ASCII letters, digits, or underscores and cannot start with a digit",
             });
         }
-        match &class {
-            StructuredClassSelector::Id { id } if id.get() <= 0 => {
-                return Err(ApiError::InvalidRelatedFilter {
-                    reason: "target class ID must be positive",
-                });
-            }
-            StructuredClassSelector::Name { name } if name.trim().is_empty() => {
-                return Err(ApiError::InvalidRelatedFilter {
-                    reason: "target class name must not be blank",
-                });
-            }
-            _ => {}
-        }
+        class
+            .validate()
+            .map_err(|_| ApiError::InvalidRelatedFilter {
+                reason: "target class name must not be blank",
+            })?;
         Ok(Self {
             alias,
             class,
@@ -190,7 +182,12 @@ mod tests {
     use rstest::rstest;
 
     fn group(alias: &str) -> Result<RelatedObjectFilter, ApiError> {
-        RelatedObjectFilter::new(alias, StructuredClassSelector::Id { id: 1.into() })
+        RelatedObjectFilter::new(
+            alias,
+            StructuredClassSelector::Id {
+                id: crate::ClassId::new(1).unwrap(),
+            },
+        )
     }
 
     #[rstest]
@@ -226,8 +223,6 @@ mod tests {
     }
 
     #[rstest]
-    #[case(StructuredClassSelector::Id { id: 0.into() })]
-    #[case(StructuredClassSelector::Id { id: (-1).into() })]
     #[case(StructuredClassSelector::Name { name: " \n".into() })]
     fn invalid_class_selectors(#[case] class: StructuredClassSelector) {
         assert!(matches!(

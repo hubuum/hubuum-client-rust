@@ -11,7 +11,7 @@ pub struct RequestPlan {
     pub method: Method,
     pub url: url::Url,
     pub headers: HeaderMap,
-    body: Option<Arc<[u8]>>,
+    body: Option<Arc<Vec<u8>>>,
 }
 
 impl RequestPlan {
@@ -24,12 +24,33 @@ impl RequestPlan {
         }
     }
 
+    #[cfg(feature = "async")]
+    pub(crate) fn into_async_request(self, client: &reqwest::Client) -> reqwest::RequestBuilder {
+        let request = client.request(self.method, self.url).headers(self.headers);
+        match self.body {
+            Some(body) => request.body(Arc::unwrap_or_clone(body)),
+            None => request,
+        }
+    }
+
+    #[cfg(feature = "blocking")]
+    pub(crate) fn into_blocking_request(
+        self,
+        client: &reqwest::blocking::Client,
+    ) -> reqwest::blocking::RequestBuilder {
+        let request = client.request(self.method, self.url).headers(self.headers);
+        match self.body {
+            Some(body) => request.body(Arc::unwrap_or_clone(body)),
+            None => request,
+        }
+    }
+
     pub fn body(&self) -> &[u8] {
-        self.body.as_deref().unwrap_or_default()
+        self.body.as_deref().map(Vec::as_slice).unwrap_or_default()
     }
 
     pub fn with_body(mut self, body: impl Into<Vec<u8>>) -> Self {
-        self.body = Some(Arc::from(body.into()));
+        self.body = Some(Arc::new(body.into()));
         self
     }
 }

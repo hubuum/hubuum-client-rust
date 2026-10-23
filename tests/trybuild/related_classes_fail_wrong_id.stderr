@@ -1,0 +1,16 @@
+error[E0271]: type mismatch resolving `<[ObjectId; 1] as IntoIterator>::Item == ClassId`
+ --> tests/trybuild/related_classes_fail_wrong_id.rs:4:53
+  |
+4 |     let _ = object.related_objects().ignore_classes([ObjectId::new(1).unwrap()]);
+  |                                      -------------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ClassId`, found `ObjectId`
+  |                                      |
+  |                                      required by a bound introduced by this call
+  |
+note: required by a bound in `resources::object::<impl hubuum_client::blocking::CursorRequest<ObjectWithPath>>::ignore_classes`
+ --> src/resources/object.rs
+  |
+  |     pub fn ignore_classes<I>(self, class_ids: I) -> Self
+  |            -------------- required by a bound in this associated function
+  |     where
+  |         I: IntoIterator<Item = ClassId>,
+  |                         ^^^^^^^^^^^^^^ required by this bound in `resources::object::<impl CursorRequest<ObjectWithPath>>::ignore_classes`

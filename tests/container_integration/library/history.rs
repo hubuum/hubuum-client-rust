@@ -22,7 +22,8 @@ fn history_requires_current_access_to_the_root(asynchronous: bool) {
             name: unique_case_prefix("history-private"),
             collection_id: Some(collection),
             hubuum_class_id: Some(class),
-            ..Default::default()
+            description: Default::default(),
+            data: None,
         })
         .unwrap();
     let entry = admin.object_history(class, object.id).list().unwrap()[0]

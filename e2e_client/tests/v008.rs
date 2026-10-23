@@ -1,3 +1,4 @@
+use hubuum_client::{ClassId, ClassRelationId, CollectionId, ObjectId, ObjectRelationId};
 use std::time::Duration;
 
 use e2e_client::harness::{AsyncE2EHarness, E2EHarness, admin_context, async_admin_context};
@@ -200,7 +201,7 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
             .collections()
             .query()
             .id()
-            .eq(collection_id.get())
+            .eq(CollectionId::new(collection_id.get()).unwrap())
             .one()
             .expect("resource-scoped admin should list its collection")
             .id,
@@ -211,7 +212,7 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
             .classes()
             .query()
             .id()
-            .eq(class_id.get())
+            .eq(ClassId::new(class_id.get()).unwrap())
             .one()
             .expect("resource-scoped admin should list its class")
             .id,
@@ -222,7 +223,7 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
             .objects(class_id)
             .query()
             .id()
-            .eq(object_id.get())
+            .eq(ObjectId::new(object_id.get()).unwrap())
             .one()
             .expect("resource-scoped admin should list its object")
             .id,
@@ -233,7 +234,7 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
             .class_relation()
             .query()
             .id()
-            .eq(class_relation.id.get())
+            .eq(ClassRelationId::new(class_relation.id.get()).unwrap())
             .one()
             .expect("resource-scoped admin should list its class relation")
             .id,
@@ -244,7 +245,7 @@ fn e2e_v008_token_lifecycle_with_and_without_scopes() {
             .object_relation()
             .query()
             .id()
-            .eq(object_relation.id.get())
+            .eq(ObjectRelationId::new(object_relation.id.get()).unwrap())
             .one()
             .expect("resource-scoped admin should list its object relation")
             .id,

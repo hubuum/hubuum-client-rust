@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassParams {
-    pub id: Option<i32>,
+    pub id: Option<crate::ClassId>,
     pub name: Option<String>,
     pub description: Option<String>,
     pub created_at: Option<HubuumDateTime>,
@@ -15,7 +15,7 @@ pub struct ClassParams {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserParams {
-    pub id: Option<i32>,
+    pub id: Option<crate::UserId>,
     pub name: Option<String>,
     pub email: Option<String>,
     pub proper_name: Option<String>,

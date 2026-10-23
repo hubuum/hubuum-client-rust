@@ -1,0 +1,55 @@
+error[E0277]: the trait bound `ClassId: From<{integer}>` is not satisfied
+ --> tests/trybuild/typed_id_fail_unchecked.rs:4:13
+  |
+4 |     let _ = ClassId::from(0);
+  |             ^^^^^^^ the trait `From<{integer}>` is not implemented for `ClassId`
+  |
+help: the trait `From<{integer}>` is not implemented for `ClassId`
+      but trait `From<&ClassId>` is implemented for it
+ --> src/types/id.rs
+  |
+  |         impl From<&$name> for $name {
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+ ::: src/resources/generated/class.rs
+  |
+  | crate::types::id::define_id!(ClassId, i32);
+  | ------------------------------------------ in this macro invocation
+  = help: for that trait implementation, expected `&ClassId`, found `{integer}`
+  = note: this error originates in the macro `crate::types::id::define_id` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0599]: no associated function or constant named `default` found for struct `ClassId` in the current scope
+ --> tests/trybuild/typed_id_fail_unchecked.rs:5:22
+  |
+5 |     let _ = ClassId::default();
+  |                      ^^^^^^^ associated function or constant not found in `ClassId`
+  |
+note: if you're trying to build a new `ClassId`, consider using `ClassId::new` which returns `std::result::Result<ClassId, ApiError>`
+ --> src/types/id.rs
+  |
+  |             pub const fn new(value: $inner) -> Result<Self, crate::ApiError> {
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+ ::: src/resources/generated/class.rs
+  |
+  | crate::types::id::define_id!(ClassId, i32);
+  | ------------------------------------------ in this macro invocation
+  = note: this error originates in the macro `crate::types::id::define_id` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0423]: cannot initialize a tuple struct which contains private fields
+ --> tests/trybuild/typed_id_fail_unchecked.rs:6:13
+  |
+6 |     let _ = ClassId(1);
+  |             ^^^^^^^
+  |
+note: constructor is not visible here due to private fields
+ --> src/types/id.rs
+  |
+  |         pub struct $name($inner);
+  |                          ^^^^^^ private field
+  |
+ ::: src/resources/generated/class.rs
+  |
+  | crate::types::id::define_id!(ClassId, i32);
+  | ------------------------------------------ in this macro invocation
+  = note: this error originates in the macro `crate::types::id::define_id` (in Nightly builds, run with -Z macro-backtrace for more info)

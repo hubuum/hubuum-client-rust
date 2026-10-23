@@ -7,6 +7,7 @@ use hubuum_client::{
     PersonalComputedFieldDefinitionRequest, QueryFilter, Token, UserPatch,
     types::{FilterOperator, Permissions, SortDirection},
 };
+use hubuum_client::{GroupId, PrincipalId, UserId};
 use hubuum_client::{
     StructuredClassSelector, StructuredSearchEvent, StructuredSearchField,
     StructuredSearchFieldPredicate, StructuredSearchOperator, StructuredSearchRequest,
@@ -616,7 +617,7 @@ fn async_collection_has_group_permission_returns_expected(
     let target_group_id = if existing_group {
         admin_group_id
     } else {
-        hubuum_client::GroupId::new(i32::MAX)
+        GroupId::new(i32::MAX).unwrap()
     };
     let has_permission = harness
         .block_on(collection.has_group_permission(target_group_id, Permissions::ReadCollection))
@@ -1042,7 +1043,7 @@ fn async_group_membership_add_remove_roundtrip() {
     assert!(
         members
             .iter()
-            .any(|member| member.principal_id == hubuum_client::PrincipalId::from(user_id))
+            .any(|member| member.principal_id == PrincipalId::from(user_id))
     );
 
     harness
@@ -1054,7 +1055,7 @@ fn async_group_membership_add_remove_roundtrip() {
     assert!(
         !members_after
             .iter()
-            .any(|member| member.principal_id == hubuum_client::PrincipalId::from(user_id))
+            .any(|member| member.principal_id == PrincipalId::from(user_id))
     );
 }
 
@@ -1667,7 +1668,11 @@ fn async_credential_activity_and_authentication_config() {
     let client = &harness.client;
     let me = harness.block_on(client.me()).unwrap();
     let user = harness
-        .block_on(client.users().get(me.principal.principal_id.get()))
+        .block_on(
+            client
+                .users()
+                .get(UserId::new(me.principal.principal_id.get()).unwrap()),
+        )
         .unwrap();
     let activity = harness
         .block_on(user.token_activity(me.token.id, Default::default()))

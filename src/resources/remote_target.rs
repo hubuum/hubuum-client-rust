@@ -18,69 +18,11 @@ use crate::{
 // nested tagged-enum config (`auth_config`), free-form JSON (`headers_template`),
 // and request validation that require bespoke wire models.
 
-#[derive(
-    Default, Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq, Hash,
-)]
-#[serde(transparent)]
-pub struct RemoteTargetId(i32);
-
-impl RemoteTargetId {
-    pub fn new(value: i32) -> Self {
-        Self(value)
-    }
-
-    pub fn get(self) -> i32 {
-        self.0
-    }
-}
-
-impl std::fmt::Display for RemoteTargetId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::str::FromStr for RemoteTargetId {
-    type Err = <i32 as std::str::FromStr>::Err;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        value.parse::<i32>().map(Self)
-    }
-}
-
-impl From<i32> for RemoteTargetId {
-    fn from(value: i32) -> Self {
-        Self(value)
-    }
-}
-
-impl From<&RemoteTargetId> for RemoteTargetId {
-    fn from(value: &RemoteTargetId) -> Self {
-        *value
-    }
-}
-
-impl From<RemoteTargetId> for i32 {
-    fn from(value: RemoteTargetId) -> Self {
-        value.0
-    }
-}
-
-impl PartialEq<i32> for RemoteTargetId {
-    fn eq(&self, other: &i32) -> bool {
-        self.0 == *other
-    }
-}
-
-impl PartialEq<RemoteTargetId> for i32 {
-    fn eq(&self, other: &RemoteTargetId) -> bool {
-        *self == other.0
-    }
-}
+crate::types::id::define_id!(RemoteTargetId, i32);
 
 impl ResourceId for RemoteTargetId {
-    fn new(value: i32) -> Self {
-        Self(value)
+    fn new(value: i32) -> Result<Self, ApiError> {
+        Self::new(value)
     }
 
     fn get(self) -> i32 {
@@ -107,6 +49,10 @@ impl crate::resources::ApiResource for RemoteTarget {
     type GetParams = RemoteTargetGet;
     type GetOutput = RemoteTarget;
     type PostParams = NewRemoteTarget;
+    type PostBuilder = Option<NewRemoteTarget>;
+    fn finish_post(builder: Self::PostBuilder) -> Result<Self::PostParams, ApiError> {
+        builder.ok_or(ApiError::MissingRequiredField { field: "params" })
+    }
     type PostOutput = RemoteTarget;
     type PatchParams = UpdateRemoteTarget;
     type PatchOutput = RemoteTarget;

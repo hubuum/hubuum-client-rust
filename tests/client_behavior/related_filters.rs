@@ -2,12 +2,19 @@ use hubuum_client::{
     ApiError, BaseUrl, Client, MockTransport, RelatedObjectFilter, ResourceRevision,
     StructuredClassSelector, Token, TransportResponse, blocking,
 };
+use hubuum_client::{ClassId, CollectionId, ObjectId};
 use reqwest::{Method, StatusCode};
 use serde_json::json;
 use std::sync::Arc;
 
 fn group(alias: &str) -> RelatedObjectFilter {
-    RelatedObjectFilter::new(alias, StructuredClassSelector::Id { id: 7.into() }).unwrap()
+    RelatedObjectFilter::new(
+        alias,
+        StructuredClassSelector::Id {
+            id: ClassId::new(7).unwrap(),
+        },
+    )
+    .unwrap()
 }
 
 fn predicates() -> RelatedObjectFilter {
@@ -23,7 +30,7 @@ fn predicates() -> RelatedObjectFilter {
     .max_depth(2)
     .unwrap()
     .id()
-    .eq(19.into())
+    .eq(ObjectId::new(19).unwrap())
     .name()
     .ieq("a&b=ø")
     .name()
@@ -31,7 +38,7 @@ fn predicates() -> RelatedObjectFilter {
     .description()
     .contains("rack")
     .collection_id()
-    .eq(3.into())
+    .eq(CollectionId::new(3).unwrap())
     .created_at()
     .gte(serde_json::from_value(json!("2024-01-01T00:00:00Z")).unwrap())
     .updated_at()
@@ -47,7 +54,7 @@ fn predicates() -> RelatedObjectFilter {
 macro_rules! request_scenario {
     ($client:expr, $transport:expr, $send:ident) => {{
         let query = $client
-            .objects(42)
+            .objects(ClassId::new(42).unwrap())
             .name()
             .eq("host")
             .related(predicates())
@@ -55,7 +62,7 @@ macro_rules! request_scenario {
         $send!(query.related(group("owner")).unwrap().limit(1).all()).unwrap();
         $send!(
             $client
-                .objects(42)
+                .objects(ClassId::new(42).unwrap())
                 .related(group("resource"))
                 .unwrap()
                 .list()
@@ -169,7 +176,7 @@ async fn async_related_filters_preserve_queries_and_pagination() {
 
 macro_rules! validation_scenario {
     ($client:expr, $transport:expr) => {{
-        let query = $client.objects(42).query();
+        let query = $client.objects(ClassId::new(42).unwrap()).query();
         let mut query = query.related(group("a")).unwrap();
         for alias in ["b", "c", "d"] {
             query = query.related(group(alias)).unwrap();
@@ -180,7 +187,7 @@ macro_rules! validation_scenario {
         ));
         assert!(matches!(
             $client
-                .objects(42)
+                .objects(ClassId::new(42).unwrap())
                 .related(group("a"))
                 .unwrap()
                 .related(group("a")),
@@ -198,7 +205,7 @@ macro_rules! validation_scenario {
         ));
         assert!(matches!(
             $client
-                .objects(42)
+                .objects(ClassId::new(42).unwrap())
                 .raw_param("related.a.class.id", 7)
                 .related(group("a")),
             Err(ApiError::InvalidRelatedFilter { .. })
@@ -208,7 +215,7 @@ macro_rules! validation_scenario {
             group("a").data().path(["bad,path"]).eq("value"),
         ] {
             assert!(matches!(
-                $client.objects(42).related(invalid),
+                $client.objects(ClassId::new(42).unwrap()).related(invalid),
                 Err(ApiError::InvalidJsonPath { .. })
             ));
         }

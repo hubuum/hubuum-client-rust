@@ -7,7 +7,7 @@ struct IntoOnlyGroupId(i32);
 
 impl From<IntoOnlyGroupId> for GroupId {
     fn from(value: IntoOnlyGroupId) -> Self {
-        Self::new(value.0)
+        Self::new(value.0).unwrap()
     }
 }
 
@@ -15,7 +15,7 @@ struct IntoOnlyPrincipalId(i32);
 
 impl From<IntoOnlyPrincipalId> for PrincipalId {
     fn from(value: IntoOnlyPrincipalId) -> Self {
-        Self::new(value.0)
+        Self::new(value.0).unwrap()
     }
 }
 

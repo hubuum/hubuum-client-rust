@@ -11,6 +11,7 @@ mod sessions;
 #[cfg(any(feature = "async", feature = "blocking"))]
 pub use sessions::{SessionStore, SessionStoreGuard, StoredSession};
 mod shared;
+pub(crate) use shared::EndpointRequest;
 #[cfg(feature = "blocking")]
 pub mod sync;
 #[cfg(all(test, feature = "async", feature = "blocking"))]
@@ -216,8 +217,10 @@ mod parity_contract {
                 $module::Client::<Authenticated>::export_templates;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ExportTemplate> =
                 $module::Client::<Authenticated>::templates;
-            let _: fn(&$module::Client<Authenticated>, i32) -> $module::Resource<Object> =
-                $module::Client::<Authenticated>::objects;
+            let _: fn(
+                &$module::Client<Authenticated>,
+                crate::ClassId,
+            ) -> $module::Resource<Object> = $module::Client::<Authenticated>::objects;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ClassRelation> =
                 $module::Client::<Authenticated>::class_relation;
             let _: fn(&$module::Client<Authenticated>) -> $module::Resource<ObjectRelation> =
@@ -253,14 +256,19 @@ mod parity_contract {
             let _ = $module::SystemEventSubscriptions::create;
             let _ = |scope: &$module::SystemEventSubscriptions,
                      request: crate::UpdateEventSubscription| {
-                std::mem::drop(scope.get(1));
-                std::mem::drop(scope.update(1, request));
-                std::mem::drop(scope.delete(1));
+                std::mem::drop(scope.get(crate::EventSubscriptionId::new(1).unwrap()));
+                std::mem::drop(scope.update(crate::EventSubscriptionId::new(1).unwrap(), request));
+                std::mem::drop(scope.delete(crate::EventSubscriptionId::new(1).unwrap()));
             };
             let _ = |client: &$module::Client<Authenticated>,
                      request: crate::EventNotificationRequest| {
-                std::mem::drop(client.preview_event_notification(1, request.clone()));
-                std::mem::drop(client.test_event_notification(1, request));
+                std::mem::drop(client.preview_event_notification(
+                    crate::EventSinkId::new(1).unwrap(),
+                    request.clone(),
+                ));
+                std::mem::drop(
+                    client.test_event_notification(crate::EventSinkId::new(1).unwrap(), request),
+                );
             };
             let _ = $module::ClassSchema::get;
             let _ = $module::ClassSchema::revisions;
@@ -272,13 +280,13 @@ mod parity_contract {
             let _ = $module::ClassSchema::impact;
             let _ = $module::ClassSchema::revalidate;
             let _ = |schema: &$module::ClassSchema, request: crate::SchemaRepairReportRequest| {
-                std::mem::drop(schema.work(1));
-                std::mem::drop(schema.cancel_work(1));
-                std::mem::drop(schema.generate_report(1, request));
-                std::mem::drop(schema.report(1, true));
+                std::mem::drop(schema.work(crate::TaskId::new(1).unwrap()));
+                std::mem::drop(schema.cancel_work(crate::TaskId::new(1).unwrap()));
+                std::mem::drop(schema.generate_report(crate::TaskId::new(1).unwrap(), request));
+                std::mem::drop(schema.report(crate::TaskId::new(1).unwrap(), true));
             };
             let _ = |tasks: &$module::Tasks, request: crate::TaskCancelRequest| {
-                std::mem::drop(tasks.cancel(1, request));
+                std::mem::drop(tasks.cancel(crate::TaskId::new(1).unwrap(), request));
             };
         };
     }
@@ -287,8 +295,8 @@ mod parity_contract {
         ($module:ident) => {
             let _ = |client: &$module::Client<Authenticated>| {
                 std::mem::drop(client.token_activity(
-                    1,
-                    2,
+                    crate::PrincipalId::new(1).unwrap(),
+                    crate::TokenId::new(2).unwrap(),
                     crate::CredentialActivityPageOptions::default(),
                 ));
             };
@@ -300,7 +308,7 @@ mod parity_contract {
                 std::mem::drop(scope.approve("password", operation));
             };
             let _ = |scope: &$module::CredentialApprovals| {
-                std::mem::drop(scope.get(crate::CredentialApprovalId::new(1)));
+                std::mem::drop(scope.get(crate::CredentialApprovalId::new(1).unwrap()));
             };
             let _ = $module::ApprovedCredentialOperation::<crate::Token>::record;
             let _ = $module::ApprovedCredentialOperation::<crate::Token>::token_expires_at;
@@ -318,7 +326,7 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::token_expires_at;
             let _ = $module::Client::<Authenticated>::logout;
             let _ = $module::Client::<Authenticated>::logout_token;
-            let _ = $module::Client::<Authenticated>::logout_user::<i32>;
+            let _ = $module::Client::<Authenticated>::logout_user::<crate::UserId>;
             let _ = $module::Client::<Authenticated>::logout_all;
             let _ = $module::Client::<Authenticated>::meta_counts;
             let _ = $module::Client::<Authenticated>::meta_db;
@@ -334,8 +342,8 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::me_permissions;
             let _ = $module::Client::<Authenticated>::me_permissions_request;
             let _ = $module::Client::<Authenticated>::settings;
-            let _ = $module::Client::<Authenticated>::principal_settings::<i32>;
-            let _ = $module::Client::<Authenticated>::principal_permissions::<i32>;
+            let _ = $module::Client::<Authenticated>::principal_settings::<crate::PrincipalId>;
+            let _ = $module::Client::<Authenticated>::principal_permissions::<crate::PrincipalId>;
             let _ = $module::PrincipalSettingsScope::get;
             let _ = $module::PrincipalSettingsScope::get_revisioned;
             let _ = $module::PrincipalSettingsScope::replace::<serde_json::Value>;
@@ -502,34 +510,40 @@ mod parity_contract {
             let _ = $module::SharedComputedFields::list;
             let _ = $module::SharedComputedFields::create;
             let _ = |fields: &$module::SharedComputedFields, etag: &crate::types::EntityTag| {
-                std::mem::drop(fields.get(1));
-                std::mem::drop(
-                    fields.update(1, crate::types::ComputedFieldDefinitionPatch::default()),
-                );
+                std::mem::drop(fields.get(crate::ComputedFieldDefinitionId::new(1).unwrap()));
+                std::mem::drop(fields.update(
+                    crate::ComputedFieldDefinitionId::new(1).unwrap(),
+                    crate::types::ComputedFieldDefinitionPatch::default(),
+                ));
                 std::mem::drop(fields.update_if_match(
-                    1,
+                    crate::ComputedFieldDefinitionId::new(1).unwrap(),
                     crate::types::ComputedFieldDefinitionPatch::default(),
                     etag,
                 ));
-                std::mem::drop(fields.delete(1));
-                std::mem::drop(fields.delete_if_match(1, etag));
+                std::mem::drop(fields.delete(crate::ComputedFieldDefinitionId::new(1).unwrap()));
+                std::mem::drop(
+                    fields.delete_if_match(crate::ComputedFieldDefinitionId::new(1).unwrap(), etag),
+                );
             };
             let _ = $module::SharedComputedFields::preview;
             let _ = $module::SharedComputedFields::rebuild;
             let _ = $module::PersonalComputedFields::query;
             let _ = $module::PersonalComputedFields::create;
             let _ = |fields: &$module::PersonalComputedFields, etag: &crate::types::EntityTag| {
-                std::mem::drop(fields.get(1));
-                std::mem::drop(
-                    fields.update(1, crate::types::ComputedFieldDefinitionPatch::default()),
-                );
+                std::mem::drop(fields.get(crate::ComputedFieldDefinitionId::new(1).unwrap()));
+                std::mem::drop(fields.update(
+                    crate::ComputedFieldDefinitionId::new(1).unwrap(),
+                    crate::types::ComputedFieldDefinitionPatch::default(),
+                ));
                 std::mem::drop(fields.update_if_match(
-                    1,
+                    crate::ComputedFieldDefinitionId::new(1).unwrap(),
                     crate::types::ComputedFieldDefinitionPatch::default(),
                     etag,
                 ));
-                std::mem::drop(fields.delete(1));
-                std::mem::drop(fields.delete_if_match(1, etag));
+                std::mem::drop(fields.delete(crate::ComputedFieldDefinitionId::new(1).unwrap()));
+                std::mem::drop(
+                    fields.delete_if_match(crate::ComputedFieldDefinitionId::new(1).unwrap(), etag),
+                );
             };
             let _ = $module::PersonalComputedFields::preview;
         };
@@ -538,21 +552,21 @@ mod parity_contract {
     macro_rules! assert_v003_surface {
         ($module:ident) => {
             let _ = |client: &$module::Client<Authenticated>| {
-                let _ = client.collection_event_sinks(1);
-                let _ = client.collection(1).event_sinks();
-                std::mem::drop(client.event_sink_collections(1));
-                std::mem::drop(client.grant_event_sink(1, 2));
-                std::mem::drop(client.revoke_event_sink(1, 2));
+                let _ = client.collection_event_sinks(crate::CollectionId::new(1).unwrap());
+                let _ = client.collection(crate::CollectionId::new(1).unwrap()).event_sinks();
+                std::mem::drop(client.event_sink_collections(crate::EventSinkId::new(1).unwrap()));
+                std::mem::drop(client.grant_event_sink(crate::EventSinkId::new(1).unwrap(), crate::CollectionId::new(2).unwrap()));
+                std::mem::drop(client.revoke_event_sink(crate::EventSinkId::new(1).unwrap(), crate::CollectionId::new(2).unwrap()));
                 let _ = client.class_by_name(String::new());
-                let _ = client.object_aggregates(1);
-                std::mem::drop(client.object_history_by_name(1.into(), "name", crate::ObjectHistoryOptions::default()));
-                let _ = client.collection_history_full(1);
+                let _ = client.object_aggregates(crate::ClassId::new(1).unwrap());
+                std::mem::drop(client.object_history_by_name(crate::ClassId::new(1).unwrap(), "name", crate::ObjectHistoryOptions::default()));
+                let _ = client.collection_history_full(crate::CollectionId::new(1).unwrap());
                 std::mem::drop(client.collection_history_as_of_full(
-                    1,
+                    crate::CollectionId::new(1).unwrap(),
                     crate::types::HubuumDateTime::default(),
                 ));
                 let patch = crate::resources::ObjectDataPatchDocument::default();
-                std::mem::drop(client.patch_object_data(1, 1, &patch));
+                std::mem::drop(client.patch_object_data(crate::ClassId::new(1).unwrap(), crate::ObjectId::new(1).unwrap(), &patch));
             };
 
             let _ = $module::ClassNameScope::get;
@@ -639,14 +653,16 @@ mod parity_contract {
             let _ = $module::Handle::<User>::tokens_create;
             let _ = $module::Handle::<User>::tokens_create_token;
             let _ = |handle: &$module::Handle<User>, etag: &crate::types::EntityTag| {
-                std::mem::drop(handle.token(1));
-                std::mem::drop(
-                    handle.token_activity(1, crate::CredentialActivityPageOptions::default()),
-                );
-                std::mem::drop(
-                    handle.token_renew(1, crate::resources::RenewTokenRequest::default()),
-                );
-                std::mem::drop(handle.token_revoke_if_match(1, etag));
+                std::mem::drop(handle.token(crate::TokenId::new(1).unwrap()));
+                std::mem::drop(handle.token_activity(
+                    crate::TokenId::new(1).unwrap(),
+                    crate::CredentialActivityPageOptions::default(),
+                ));
+                std::mem::drop(handle.token_renew(
+                    crate::TokenId::new(1).unwrap(),
+                    crate::resources::RenewTokenRequest::default(),
+                ));
+                std::mem::drop(handle.token_revoke_if_match(crate::TokenId::new(1).unwrap(), etag));
             };
             let _ = $module::Handle::<User>::settings;
             let _ = $module::Handle::<User>::permissions;
@@ -658,14 +674,16 @@ mod parity_contract {
             let _ = $module::Handle::<ServiceAccount>::tokens_create;
             let _ = $module::Handle::<ServiceAccount>::tokens_create_token;
             let _ = |handle: &$module::Handle<ServiceAccount>, etag: &crate::types::EntityTag| {
-                std::mem::drop(handle.token(1));
-                std::mem::drop(
-                    handle.token_activity(1, crate::CredentialActivityPageOptions::default()),
-                );
-                std::mem::drop(
-                    handle.token_renew(1, crate::resources::RenewTokenRequest::default()),
-                );
-                std::mem::drop(handle.token_revoke_if_match(1, etag));
+                std::mem::drop(handle.token(crate::TokenId::new(1).unwrap()));
+                std::mem::drop(handle.token_activity(
+                    crate::TokenId::new(1).unwrap(),
+                    crate::CredentialActivityPageOptions::default(),
+                ));
+                std::mem::drop(handle.token_renew(
+                    crate::TokenId::new(1).unwrap(),
+                    crate::resources::RenewTokenRequest::default(),
+                ));
+                std::mem::drop(handle.token_revoke_if_match(crate::TokenId::new(1).unwrap(), etag));
             };
             let _ = $module::Handle::<ServiceAccount>::settings;
             let _ = $module::Handle::<ServiceAccount>::permissions;
@@ -675,24 +693,38 @@ mod parity_contract {
             let _ = $module::Handle::<Group>::members;
             let _ = $module::Handle::<Group>::members_request;
             let _ = |handle: &$module::Handle<Group>, etag: &crate::types::EntityTag| {
-                std::mem::drop(handle.member(1));
-                std::mem::drop(handle.remove_member_if_match(1, etag));
+                std::mem::drop(handle.member(crate::PrincipalId::new(1).unwrap()));
+                std::mem::drop(
+                    handle.remove_member_if_match(crate::PrincipalId::new(1).unwrap(), etag),
+                );
             };
 
             let _ = $module::Handle::<Collection>::permissions;
             let _ = $module::Handle::<Collection>::permissions_revisioned;
             let _ = |handle: &$module::Handle<Collection>, etag: &crate::types::EntityTag| {
-                std::mem::drop(handle.group_permissions_revisioned(1));
-                std::mem::drop(handle.replace_permissions_if_match(1, vec![], etag));
-                std::mem::drop(handle.grant_permissions_if_match(1, vec![], etag));
-                std::mem::drop(handle.revoke_permissions_if_match(1, etag));
+                std::mem::drop(
+                    handle.group_permissions_revisioned(crate::GroupId::new(1).unwrap()),
+                );
+                std::mem::drop(handle.replace_permissions_if_match(
+                    crate::GroupId::new(1).unwrap(),
+                    vec![],
+                    etag,
+                ));
+                std::mem::drop(handle.grant_permissions_if_match(
+                    crate::GroupId::new(1).unwrap(),
+                    vec![],
+                    etag,
+                ));
+                std::mem::drop(
+                    handle.revoke_permissions_if_match(crate::GroupId::new(1).unwrap(), etag),
+                );
                 std::mem::drop(handle.grant_permission_if_match(
-                    1,
+                    crate::GroupId::new(1).unwrap(),
                     crate::types::Permissions::ReadCollection,
                     etag,
                 ));
                 std::mem::drop(handle.revoke_permission_if_match(
-                    1,
+                    crate::GroupId::new(1).unwrap(),
                     crate::types::Permissions::ReadCollection,
                     etag,
                 ));

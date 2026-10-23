@@ -1,0 +1,34 @@
+error[E0308]: mismatched types
+ --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:5:38
+  |
+5 |     let _ = client.classes().id().eq(object);
+  |                                   -- ^^^^^^ expected `ClassId`, found `ObjectId`
+  |                                   |
+  |                                   arguments to this method are incorrect
+  |
+note: method defined here
+ --> src/client/shared/query.rs
+  |
+  |     pub fn eq(self, value: V) -> Q {
+  |            ^^
+
+error[E0308]: mismatched types
+ --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:6:33
+  |
+6 |     let _ = ClassGet { id: Some(object), ..Default::default() };
+  |                            ---- ^^^^^^ expected `ClassId`, found `ObjectId`
+  |                            |
+  |                            arguments to this enum variant are incorrect
+  |
+help: the type constructed contains `ObjectId` due to the type of the argument passed
+ --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:6:28
+  |
+6 |     let _ = ClassGet { id: Some(object), ..Default::default() };
+  |                            ^^^^^------^
+  |                                 |
+  |                                 this argument influences the type of `Some`
+note: tuple variant defined here
+ --> $RUST/core/src/option.rs
+  |
+  |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
+  |     ^^^^
