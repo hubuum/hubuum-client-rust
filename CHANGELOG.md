@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-23
+
+This release explicitly targets Hubuum server v0.0.20.
+The server image, Rust 1.88 MSRV, and public feature combinations are unchanged.
+Existing 0.17.0 callers need no migration.
+
 ### Added
 
 - Typed related-object filter groups for class object lists by ID or name in
@@ -13,6 +19,10 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
   predicates, exact class selectors, and bounded relationship depth. Query
   builders reject invalid aliases, duplicate groups, more than four groups, and
   invalid JSON paths before transport.
+
+### Changed
+
+- Refresh compatible dependencies, updating `smallvec` to 1.16.4.
 
 ## [0.17.0] - 2026-10-23
 
