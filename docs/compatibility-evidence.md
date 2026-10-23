@@ -5,7 +5,7 @@ a server release when its pinned OpenAPI contract comes from that server tag and
 the complete Docker-backed library and consumer integration suites pass against
 an immutable image for the same release.
 
-The unreleased client provides typed helpers for every route in the pinned
+Client 0.17.0 provides typed helpers for every route in the pinned
 v0.0.20 contract. Authenticated relative routes remain available through `raw()`
 as an extension point for additional operations.
 
@@ -13,6 +13,7 @@ as an extension point for additional operations.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.17.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Complete release verification](#client-0170-release) on 2026-10-23: 105 library tests, 54 consumer cases, three native-resource phases, and four restore/recovery pairs with approval enforcement; 257 operations and 125 model mappings. |
 | 0.16.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | 99 library tests, 40 consumer cases including two real rotation tests and four historical version gates, three native-resource phases, and four full restore/recovery pairs passed with approval enforcement on 2026-10-22; 257 operations and 111 model mappings. |
 | 0.15.1 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | Tracing release reverified on 2026-10-19: 99 library tests, 38 ordinary consumer cases, three native-resource phases, and four full restore/recovery pairs; unchanged 240-operation contract and 111 model mappings. |
 | 0.15.0 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | 240-operation contract and 111 wire-model mappings. Canonical run passed with approval enforcement: 99 library tests, 38 ordinary consumer cases (four legacy cases gated by server version), three native-resource phases, and four full restore/recovery pairs (2026-10-19). |
@@ -86,7 +87,56 @@ jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
 
-## Unreleased typed history coverage
+## Client 0.17.0 release
+
+Client 0.17.0 retains server v0.0.20, its immutable image
+`ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a`,
+the 257-operation snapshot, and 125 wire-model mappings. The new typed APIs and
+persistent sessions are additive; existing 0.16.0 callers need no migration.
+
+On 2026-10-23, the canonical combined suite passed against that image with
+credential approval enforcement:
+
+```sh
+./scripts/run-integration-tests.sh --with-e2e-client -- --test-threads=1
+```
+
+The run passed 105 library tests, 54 ordinary consumer cases (including four
+historical server-version gates), three native-resource phases, and all four
+restore/recovery pairs. Both modes exercised typed history and real session
+rotation; persistent-session workflows also passed. Local containers used the
+existing Podman wrapper to disable SELinux labels for disposable fixture mounts;
+the pinned images and fixture contents were unchanged.
+
+On 2026-10-23, the complete workspace suite passed 932 non-container tests with
+Rust 1.99. Formatting, generated-code reconciliation, strict Clippy/rustdoc, all
+five public feature combinations, Rust 1.88 across every workspace target and
+feature, and the pinned OpenAPI validation/comparison passed. All 202 applicable
+public API checks passed against v0.16.0 with additive compatibility required.
+The packaged crate also built successfully.
+
+All 13 available dependency updates were applied and passed advisory, license,
+ban, and source checks. Removing the Rust-version restriction found no additional
+updates, so the MSRV remains 1.88. Cargo's only newer-version notice is
+`generic-array` 0.14.9; its upstream `crypto-common` 0.1.7 dependency requires
+exactly 0.14.7. The audit Action now pins the upstream Node 24 commit; the other
+Actions match their latest releases or selected branch commits.
+
+The original computed-history cleanup failed on repetition 22. PostgreSQL logs
+confirmed a class-row/advisory-lock deadlock between deletion and a computed
+rebuild. The corrected test waits for all of its class's reindex tasks, including
+the deletion-triggered rebuild and superseded revisions. It passed 30 consecutive
+repetitions in both client modes (60 cases). The underlying server v0.0.20
+limitation and application workaround remain explicit in
+[known gaps](../openapi/known-gaps.md#intentional-client-limitations).
+
+An earlier stress run encountered a PostgreSQL connection-pool outage during
+concurrent compilation, and the first combined run received HTTP 401 in the
+async schema-cancellation scenario. The async harness already uses refreshable
+sessions. The successful final verification separated heavy compilation from
+live testing and retained the fixture's 30-second access-token lifetime.
+
+## Pre-release typed history coverage
 
 On 2026-10-23, the canonical combined command passed against the declared server
 v0.0.20 image
@@ -153,7 +203,7 @@ together during the server's offline migration, retain a pre-upgrade PostgreSQL
 snapshot, and sign in again. Backup format 10 preserves shared computed-definition
 history; the client recognizes formats 6–10 and preserves section contents.
 
-### Unreleased credential activity coverage
+### Pre-release credential activity coverage
 
 On 2026-10-22, typed credential activity and authentication configuration additions
 passed the canonical combined suite against the same pinned v0.0.20 image:
@@ -178,7 +228,7 @@ now reconciles 115 Rust model mappings. Semver checking against `74349ba` passed
 all 202 applicable checks; no dependency, MSRV, or declared server-target change
 was needed.
 
-### Unreleased bounded search hydration
+### Pre-release bounded search hydration
 
 On 2026-10-23, typed search hydration passed the canonical combined suite against
 the pinned v0.0.20 image above with credential approval enforcement: 103 library
@@ -200,7 +250,7 @@ Local verification used a separate Cargo target directory and the existing
 Podman SELinux wrapper with a container-readable public provider fixture.
 The container setup and immutable server image were unchanged.
 
-### Unreleased directional relation labels
+### Pre-release directional relation labels
 
 On 2026-10-23, typed relation labels passed the canonical combined suite against
 the pinned v0.0.20 image above with credential approval enforcement: 101 library
@@ -223,7 +273,7 @@ and a container-readable copy of the public provider fixture; an earlier stack
 could not read that temporary checkout's fixture. Repository fixture contents
 and server/container configuration were unchanged.
 
-### Unreleased query-observation management
+### Pre-release query-observation management
 
 On 2026-10-22, typed observation reads and enable/disable updates passed the
 canonical combined suite against the same pinned v0.0.20 image, with credential

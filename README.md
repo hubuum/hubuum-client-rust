@@ -4,19 +4,20 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.16.0 targets Hubuum server v0.0.20. Released **2026-10-22**.
+`hubuum_client` 0.17.0 targets Hubuum server v0.0.20.
 The pinned image and verification evidence are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
-Use rotating interactive sessions for password login. Async and blocking clones
-coordinate refresh, keep credentials in memory, and require sign-in again after
-an expired or uncertain refresh. Explicit personal access tokens remain supported.
-The release also updates all dependencies and GitHub Actions, records the
-257-operation server contract, and recognizes backup format 10. Rust 1.88 remains
-the minimum supported compiler.
+This release completes typed helpers for the pinned 257-operation server contract,
+including history, search hydration, credential activity, and query-observation
+management. Rotating interactive sessions can optionally persist across process
+restarts through application-owned storage. It also adds directional relation
+labels and refreshes dependencies and the audit Action. Rust 1.88 remains the
+minimum supported compiler; the server target, backup formats, and feature flags
+are unchanged. Existing 0.16.0 callers need no migration.
 
-**Breaking:** migrate password login to `login_session`, handle the fallible
-`token()` snapshot, and upgrade the server and restore executor together.
+**Upgrading from before 0.16.0:** migrate password login to `login_session`, handle
+the fallible `token()` snapshot, and upgrade the server and restore executor together.
 See [session migration](docs/client-setup.md#rotating-interactive-sessions),
 [typed API limitations](openapi/known-gaps.md), and [release notes](CHANGELOG.md).
 
@@ -53,7 +54,7 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.16.0"
+hubuum_client = "0.17.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -61,7 +62,7 @@ Async support is enabled by default. Blocking applications can opt into only the
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.16.0", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.17.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
