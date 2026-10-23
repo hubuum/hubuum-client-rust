@@ -87,6 +87,26 @@ jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
 
+## Client 0.19.0 unreleased refactor
+
+The unreleased 0.19.0 source retains server v0.0.20 and immutable image
+`ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a`.
+The [migration guide](migration-0.19.md) covers the breaking Rust API changes;
+server routes and wire formats are unchanged.
+
+On 2026-10-24, the canonical combined library and consumer command passed with
+credential approval enforcement: 107 library tests, 56 ordinary consumer cases,
+three native-resource phases, and four restore/recovery pairs. The run used the
+pinned PostgreSQL and LDAP/LDAPS fixtures. Podman required its local SELinux
+adapter, a fully qualified PostgreSQL image name with the unchanged digest, and
+a readable auth fixture after the worktree's restrictive umask prevented startup.
+
+The non-container workspace suite passed 961 tests, including all 34 compile
+fixtures. Formatting, generated code, strict Clippy, strict rustdoc, all five
+feature combinations, Rust 1.88, and the pinned OpenAPI comparison passed.
+The contract remains at 257 operations and 125 model mappings. Documentation
+navigation and rendered links passed the strict site build.
+
 ## Client 0.18.0 release
 
 Client 0.18.0 adds typed related-object filter groups for class object lists by ID
