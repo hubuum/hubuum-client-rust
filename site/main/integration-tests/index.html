@@ -1282,6 +1282,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#computed-history-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Computed-history cleanup
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rotating-session-contract" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1513,6 +1524,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#computed-history-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Computed-history cleanup
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rotating-session-contract" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1657,6 +1679,12 @@ wrapper-owned <code>HUBUUM_INTEGRATION_DISPOSABLE_BASE_URL</code> marker. It is 
 of ordinary tests against an externally managed stack; full restore replaces
 all data and invalidates tokens. The complete non-container workspace suite
 compiles these tests but leaves them ignored.</p>
+<h2 id="computed-history-cleanup">Computed-history cleanup<a class="headerlink" href="#computed-history-cleanup" title="Permanent link">&para;</a></h2>
+<p>Computed-field definition mutations enqueue asynchronous rebuilds, including
+definition deletion. The history scenarios wait for all reindex tasks belonging
+to their unique class before removing the object and class. Superseded rebuilds
+may finish cancelled; other failures still fail the test. This avoids the
+v0.0.20 class-deletion/rebuild deadlock without retrying or ignoring HTTP 500s.</p>
 <h2 id="rotating-session-contract">Rotating-session contract<a class="headerlink" href="#rotating-session-contract" title="Permanent link">&para;</a></h2>
 <p>The canonical combined suite provisions a disposable server with
 <code>HUBUUM_SESSION_ACCESS_SECONDS=30</code> and requires both async and blocking session

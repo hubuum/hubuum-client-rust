@@ -1604,6 +1604,12 @@ Rust wire models:</p>
 <li>Server traversal, export, and template batch resource limits may reject work
   that previously fit older limits. The client preserves the server error;
   callers must narrow queries or reduce traversal depth and template workloads.</li>
+<li>Server v0.0.20 can deadlock when class deletion overlaps a computed-field
+  rebuild, returning HTTP 500 or failing the rebuild. Definition creation,
+  updates, and deletion enqueue rebuilds. Before deleting the class, list its
+  reindex tasks and use <code>tasks().wait(task.id)</code> to wait for every task to reach
+  a terminal state, including superseded revisions. Waiting only for the most
+  recent task can leave an older worker running.</li>
 </ul>
 <h2 id="credential-approval-coverage">Credential approval coverage<a class="headerlink" href="#credential-approval-coverage" title="Permanent link">&para;</a></h2>
 <p>The pinned v0.0.20 contract includes both approval endpoints and the approval
