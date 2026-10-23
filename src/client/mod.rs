@@ -8,6 +8,8 @@ pub mod r#async;
 mod diagnostics;
 #[cfg(any(feature = "async", feature = "blocking"))]
 mod sessions;
+#[cfg(any(feature = "async", feature = "blocking"))]
+pub use sessions::{SessionStore, SessionStoreGuard, StoredSession};
 mod shared;
 #[cfg(feature = "blocking")]
 pub mod sync;
@@ -109,6 +111,19 @@ impl Authenticated {
             credentials: CredentialSource::Session(Arc::new(sessions::SessionState::new(
                 pair, client_id,
             ))),
+        }
+    }
+
+    #[cfg(any(feature = "async", feature = "blocking"))]
+    fn with_session_store(
+        pair: sessions::SessionPair,
+        client_id: crate::SessionClientId,
+        store: Arc<dyn SessionStore>,
+    ) -> Self {
+        Self {
+            credentials: CredentialSource::Session(Arc::new(
+                sessions::SessionState::new(pair, client_id).with_store(store),
+            )),
         }
     }
 
@@ -277,6 +292,8 @@ mod parity_contract {
                     crate::CredentialActivityPageOptions::default(),
                 ));
             };
+            let _ = $module::Client::<Unauthenticated>::resume_session;
+            let _ = $module::Client::<Unauthenticated>::login_session_with_store;
             let _ = $module::Client::<Authenticated>::credential_approvals;
             let _ = |scope: &$module::CredentialApprovals,
                      operation: crate::CredentialOperation<crate::Token>| {
