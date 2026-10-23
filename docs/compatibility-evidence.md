@@ -87,6 +87,51 @@ jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
 
+## Client 0.18.0 release
+
+Client 0.18.0 adds typed related-object filter groups for class object lists by ID
+or name in both client modes. Existing 0.17.0 callers need no migration. The
+release retains server v0.0.20, its immutable image
+`ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a`,
+the 257-operation snapshot, 125 wire-model mappings, Rust 1.88, and all public
+feature combinations.
+
+On 2026-10-23, the canonical combined command passed with credential approval
+enforcement against that image:
+
+```sh
+HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1 \
+  ./scripts/run-integration-tests.sh --with-e2e-client -- --test-threads=1
+```
+
+The run passed 107 library tests, 56 ordinary consumer cases (including four
+historical server-version gates), three native-resource phases, and all four
+restore/recovery pairs. Related-filter authorization and grouping, live session
+rotation and persistence, LDAP/LDAPS, and restore recovery passed in both client
+modes. Local containers used a rootless Podman wrapper with
+`--userns=keep-id:uid=0,gid=0` and disabled SELinux labels for fixture mounts;
+the pinned images and fixture contents were unchanged.
+
+The complete workspace suite passed 958 non-container tests, including all 30
+trybuild cases. Formatting, generated-code reconciliation, strict Clippy/rustdoc,
+all five public feature combinations, Rust 1.88 across every workspace target
+and feature, and pinned OpenAPI validation/comparison passed. All 202 applicable
+public API checks passed against v0.17.0 with additive compatibility required.
+
+The tracing capture regression failed on the original harness when pagination
+callsites were first used on a thread without a scoped subscriber. Keeping a
+registry dispatcher alive avoids the upstream single-dispatch interest-cache
+bug without installing a global subscriber or changing client instrumentation.
+The regression passed with the fix, followed by 100 consecutive foundations runs
+with 16 test threads: 6,700 passing cases. This is an internal test-harness fix.
+
+The dependency refresh updated `smallvec` from 1.16.3 to 1.16.4. All direct and
+compatible transitive dependencies are current; removing the Rust-version
+restriction found no additional updates. `generic-array` remains at 0.14.7
+because upstream `crypto-common` 0.1.7 requires that exact version. Advisory,
+license, ban, and source checks passed. The audit used temporary Cargo and
+advisory caches to avoid home-filesystem lock failures.
+
 ## Client 0.17.0 release
 
 Client 0.17.0 retains server v0.0.20, its immutable image
