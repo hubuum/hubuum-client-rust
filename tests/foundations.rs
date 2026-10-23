@@ -2348,7 +2348,7 @@ mod tracing_diagnostics {
     use std::collections::BTreeMap;
     use std::fmt;
     use std::io::Read;
-    use std::sync::{Arc, Mutex};
+    use std::sync::{Arc, LazyLock, Mutex};
 
     use tracing::field::{Field, Visit};
     use tracing::instrument::WithSubscriber;
@@ -2382,6 +2382,13 @@ mod tracing_diagnostics {
 
     impl Capture {
         fn dispatch(&self) -> Dispatch {
+            // Keep a second dispatcher alive so tracing-core consults registered
+            // subscribers when another thread first hits a callsite without a
+            // scoped subscriber. Its single-dispatch fast path can cache `never`:
+            // https://github.com/tokio-rs/tracing/pull/3614
+            static REGISTRY: LazyLock<Dispatch> =
+                LazyLock::new(|| Dispatch::new(tracing_subscriber::registry()));
+            LazyLock::force(&REGISTRY);
             Dispatch::new(tracing_subscriber::registry().with(self.clone()))
         }
         fn records(&self, name: &str) -> Vec<TraceRecord> {
@@ -2671,6 +2678,31 @@ mod tracing_diagnostics {
         assert_eq!(pages[0].fields["diagnostics.version"], "1");
         assert_eq!(capture.records("hubuum.http_attempt").len(), 2);
         capture.assert_no_secrets();
+    }
+
+    #[test]
+    fn pagination_capture_survives_callsites_first_used_on_an_untraced_thread() {
+        let capture = Capture::default();
+        let dispatch = capture.dispatch();
+        std::thread::spawn(|| {
+            blocking_mock_client(pagination_transport(), 4096)
+                .classes()
+                .pages()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+        })
+        .join()
+        .unwrap();
+        assert!(capture.0.lock().unwrap().is_empty());
+
+        tracing::dispatcher::with_default(&dispatch, || {
+            blocking_mock_client(pagination_transport(), 4096)
+                .classes()
+                .pages()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+        });
+        assert_page_trace(&capture);
     }
 
     #[test]
