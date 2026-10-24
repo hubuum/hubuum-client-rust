@@ -500,6 +500,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../migration-0.19/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Migrating to 0.19
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../compatibility/" class="md-nav__link">
         
   
@@ -1222,6 +1249,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-0190-unreleased-refactor" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.19.0 unreleased refactor
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#client-0180-release" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1611,6 +1649,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Forward compatibility
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-0190-unreleased-refactor" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.19.0 unreleased refactor
       </span>
     </span>
   </a>
@@ -2070,6 +2119,22 @@ released artifact and reviewed contract as described below.</p>
 jobs separately compare the contract and run the integration suites against the
 server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.</p>
+<h2 id="client-0190-unreleased-refactor">Client 0.19.0 unreleased refactor<a class="headerlink" href="#client-0190-unreleased-refactor" title="Permanent link">&para;</a></h2>
+<p>The unreleased 0.19.0 source retains server v0.0.20 and immutable image
+<code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code>.
+The <a href="../migration-0.19/">migration guide</a> covers the breaking Rust API changes;
+server routes and wire formats are unchanged.</p>
+<p>On 2026-10-24, the canonical combined library and consumer command passed with
+credential approval enforcement: 107 library tests, 56 ordinary consumer cases,
+three native-resource phases, and four restore/recovery pairs. The run used the
+pinned PostgreSQL and LDAP/LDAPS fixtures. Podman required its local SELinux
+adapter, a fully qualified PostgreSQL image name with the unchanged digest, and
+a readable auth fixture after the worktree's restrictive umask prevented startup.</p>
+<p>The non-container workspace suite passed 961 tests, including all 34 compile
+fixtures. Formatting, generated code, strict Clippy, strict rustdoc, all five
+feature combinations, Rust 1.88, and the pinned OpenAPI comparison passed.
+The contract remains at 257 operations and 125 model mappings. Documentation
+navigation and rendered links passed the strict site build.</p>
 <h2 id="client-0180-release">Client 0.18.0 release<a class="headerlink" href="#client-0180-release" title="Permanent link">&para;</a></h2>
 <p>Client 0.18.0 adds typed related-object filter groups for class object lists by ID
 or name in both client modes. Existing 0.17.0 callers need no migration. The

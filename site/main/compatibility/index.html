@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://hubuum.github.io/hubuum-client-rust/main/compatibility/">
       
       
-        <link rel="prev" href="../getting-started/">
+        <link rel="prev" href="../migration-0.19/">
       
       
         <link rel="next" href="../client-setup/">
@@ -486,6 +486,33 @@
     
   
   Installation and quick start
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration-0.19/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Migrating to 0.19
 
     
   </span>
@@ -1736,6 +1763,8 @@ an immutable image for the same release.</p>
 <p>Dedicated typed helpers do not necessarily exist for every server operation.
 Authenticated relative routes remain available through <code>raw()</code> while typed
 coverage evolves.</p>
+<p>The unreleased 0.19.0 source retains the 0.0.20 target and immutable image.
+The typed-ID migration is documented in <a href="../migration-0.19/">the migration guide</a>.</p>
 <h2 id="compatibility-history">Compatibility history<a class="headerlink" href="#compatibility-history" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1747,6 +1776,12 @@ coverage evolves.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.19.0 (unreleased)</td>
+<td>0.0.20</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code></td>
+<td><a href="../compatibility-evidence/#client-0190-unreleased-refactor">Typed-ID refactor verification</a> on 2026-10-24: 107 library tests, 56 consumer cases, three native-resource phases, and four restore/recovery pairs.</td>
+</tr>
 <tr>
 <td>0.18.0</td>
 <td>0.0.20</td>
@@ -1944,7 +1979,7 @@ coverage evolves.</p>
 <p>The client version 0.0.2 row predates and is unrelated to the independently
 versioned Hubuum server v0.0.2 release.</p>
 <h2 id="before-upgrading">Before upgrading<a class="headerlink" href="#before-upgrading" title="Permanent link">&para;</a></h2>
-<p>Client 0.18.0 targets server v0.0.20. Use fresh credential approvals for protected
+<p>The unreleased client 0.19.0 targets server v0.0.20. Use fresh credential approvals for protected
 mutations, and review <a href="../known-gaps/">known typed API gaps</a>. The client
 accepts backup formats 6, 7, 8, 9, and 10; the server decides whether it can restore one.
 For older Rust releases, check the linked migration notes before upgrading:
@@ -2031,7 +2066,7 @@ introduced server fields or operations.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../getting-started/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Installation and quick start">
+          <a href="../migration-0.19/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Migrating to 0.19">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2041,7 +2076,7 @@ introduced server fields or operations.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Installation and quick start
+                Migrating to 0.19
               </div>
             </div>
           </a>
