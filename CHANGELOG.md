@@ -6,6 +6,13 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-24
+
+This release explicitly targets Hubuum server v0.0.20.
+The server image, Rust 1.88 MSRV, and public feature combinations are unchanged.
+Existing callers must follow the [0.19 migration guide](docs/migration-0.19.md)
+for the breaking Rust API changes below; no server data migration is required.
+
 ### Changed
 
 - **Breaking:** resource IDs reject zero and negative values in constructors,

@@ -1,6 +1,6 @@
 # Migrating to 0.19
 
-Version 0.19 is an unreleased API cleanup targeting the same Hubuum server
+Version 0.19 is an API cleanup targeting the same Hubuum server
 v0.0.20 and pinned image as 0.18. It does not require a server data migration.
 
 ## Validated resource IDs
