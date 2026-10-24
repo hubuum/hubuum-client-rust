@@ -13,6 +13,7 @@ as an extension point for additional operations.
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.19.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Complete release verification](#client-0190-release) on 2026-10-24: 107 library tests, 56 consumer cases, three native-resource phases, and four restore/recovery pairs with approval enforcement; 257 operations and 125 model mappings. |
 | 0.17.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Complete release verification](#client-0170-release) on 2026-10-23: 105 library tests, 54 consumer cases, three native-resource phases, and four restore/recovery pairs with approval enforcement; 257 operations and 125 model mappings. |
 | 0.16.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | 99 library tests, 40 consumer cases including two real rotation tests and four historical version gates, three native-resource phases, and four full restore/recovery pairs passed with approval enforcement on 2026-10-22; 257 operations and 111 model mappings. |
 | 0.15.1 | 0.0.19 | `ghcr.io/hubuum/hubuum-server@sha256:6fbe91693356b8885e6b1115cea4417dbf80747ba4af3eb0a15b855ffff47225` | Tracing release reverified on 2026-10-19: 99 library tests, 38 ordinary consumer cases, three native-resource phases, and four full restore/recovery pairs; unchanged 240-operation contract and 111 model mappings. |
@@ -86,6 +87,41 @@ Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
+
+## Client 0.19.0 release
+
+Client 0.19.0 validates positive resource IDs and strengthens resource queries,
+creation builders, computed revisions, and historical relation endpoints.
+Existing callers must follow the [migration guide](migration-0.19.md).
+The release retains server v0.0.20, its immutable image
+`ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a`,
+the 257-operation snapshot, 125 wire-model mappings, Rust 1.88, and all public
+feature combinations. No server data migration is required for this client update.
+
+On 2026-10-24, `cargo update --verbose` and `cargo outdated --workspace` found
+no compatible dependency updates across all four workspace members. The lockfile
+and manifest constraints remain unchanged. The newer `generic-array` 0.14.9
+cannot resolve with the upstream `crypto-common` 0.1.7 requirement `=0.14.7`.
+
+After that dependency review, the canonical combined command passed with
+credential approval enforcement against the declared image:
+
+```sh
+HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1 \
+  ./scripts/run-integration-tests.sh --with-e2e-client -- --test-threads=1
+```
+
+The run passed 107 library tests, 56 ordinary consumer cases, three native-resource
+phases, and all four restore/recovery pairs. Both client modes covered rotating
+and persistent sessions, LDAP/LDAPS authentication, and restore recovery. Local
+containers used the host's rootless Podman SELinux adapter and the fully qualified
+PostgreSQL image name with the same pinned digest; fixture contents were unchanged.
+
+The complete non-container workspace suite passed 961 tests, with all 34 trybuild
+fixtures checked. Formatting, generated resource reconciliation, strict Clippy
+and rustdoc, all five public feature combinations, and Rust 1.88 across every
+workspace target and feature passed. Pinned OpenAPI validation and comparison,
+`cargo audit`, and `cargo deny check bans licenses sources` passed.
 
 ## Client 0.19.0 unreleased refactor
 

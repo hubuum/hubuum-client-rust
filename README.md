@@ -8,12 +8,15 @@ A Rust client library for the Hubuum API. It provides synchronous and asynchrono
 The pinned image and verification evidence are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
-This release adds typed related-object filter groups to class object lists by ID
-or name in both client modes and refreshes dependencies. Filters validate class
-selectors, aliases, relationship depth, and target predicates before transport.
+This release validates resource IDs and strengthens typed resource queries,
+creation builders, and historical relation endpoints in both client modes.
+**Upgrading from 0.18 or earlier requires Rust API changes:** use fallible ID
+constructors, pass typed IDs to queries, and replace default resource instances
+with checked builders or resource type parameters. See the
+[0.19 migration guide](docs/migration-0.19.md).
 Typed helpers cover the pinned 257-operation server contract. Rust 1.88 remains
 the minimum supported compiler; the server target, backup formats, and feature
-flags are unchanged. Existing 0.17.0 callers need no migration.
+flags are unchanged. No server data migration is required for this client update.
 
 **Upgrading from before 0.16.0:** migrate password login to `login_session`, handle
 the fallible `token()` snapshot, and upgrade the server and restore executor together.
