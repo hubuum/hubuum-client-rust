@@ -235,7 +235,10 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(history.parent_collection_id, Some(3.into()));
+        assert_eq!(
+            history.parent_collection_id,
+            Some(crate::CollectionId::new(3).unwrap())
+        );
         let legacy = super::CollectionHistory::from(history);
         assert_eq!(legacy.id, 7);
         assert_eq!(legacy.history.history_id, 11);

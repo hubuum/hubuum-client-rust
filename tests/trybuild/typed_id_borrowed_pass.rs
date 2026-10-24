@@ -3,11 +3,11 @@ use hubuum_client::{
 };
 
 fn borrowed_id_contract(client: &blocking::Client<Authenticated>) {
-    let class_id = ClassId::new(7);
-    let principal_id = PrincipalId::new(8);
-    let task_id = TaskId::new(9);
-    let remote_target_id = RemoteTargetId::new(10);
-    let event_sink_id = EventSinkId::new(11);
+    let class_id = ClassId::new(7).unwrap();
+    let principal_id = PrincipalId::new(8).unwrap();
+    let task_id = TaskId::new(9).unwrap();
+    let remote_target_id = RemoteTargetId::new(10).unwrap();
+    let event_sink_id = EventSinkId::new(11).unwrap();
 
     let _ = client.objects(&class_id);
     let _ = client.classes().get(&class_id);

@@ -181,7 +181,7 @@ pub enum RemoteInvocationSubject {
 }
 
 /// A configured remote target.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct RemoteTarget {
     pub id: RemoteTargetId,
@@ -206,7 +206,7 @@ pub struct RemoteTarget {
 }
 
 /// Request body to create a remote target.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct NewRemoteTarget {
     pub collection_id: CollectionId,
     pub name: String,
@@ -533,7 +533,7 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(result.target_id, Some(RemoteTargetId::new(13)));
+        assert_eq!(result.target_id, Some(RemoteTargetId::new(13).unwrap()));
         assert_eq!(result.subject_id, 14);
     }
 
@@ -550,14 +550,21 @@ mod tests {
     #[test]
     fn remote_request_debug_redacts_templates_and_overrides() {
         let request = NewRemoteTarget {
+            collection_id: CollectionId::new(1).unwrap(),
             url_template: "https://example.invalid?token=url-secret".into(),
             headers_template: Some(serde_json::json!({"authorization": "header-secret"})),
             body_template: Some("body-secret".into()),
             auth_config: Some(RemoteAuthConfig::bearer("auth-secret")),
-            ..Default::default()
+            name: Default::default(),
+            description: Default::default(),
+            method: Default::default(),
+            allowed_subject_types: Default::default(),
+            class_id: None,
+            enabled: None,
+            timeout_ms: None,
         };
         let invocation = RemoteTargetInvokeRequest::new(RemoteInvocationSubject::Collection {
-            collection_id: CollectionId::new(1),
+            collection_id: CollectionId::new(1).unwrap(),
         })
         .parameters(serde_json::json!({"secret": "parameter-secret"}))
         .body_override(serde_json::json!({"secret": "override-secret"}));
@@ -608,7 +615,7 @@ mod tests {
     #[test]
     fn remote_invocation_values_must_be_json_objects() {
         let subject = RemoteInvocationSubject::Collection {
-            collection_id: CollectionId::new(1),
+            collection_id: CollectionId::new(1).unwrap(),
         };
 
         assert!(

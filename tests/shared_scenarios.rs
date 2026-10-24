@@ -1,5 +1,6 @@
 #![cfg(all(feature = "async", feature = "blocking"))]
 
+use hubuum_client::{ClassId, CollectionId, GroupId, PrincipalId};
 use std::str::FromStr;
 
 use httpmock::prelude::*;
@@ -234,44 +235,86 @@ fn setup_scenario_mocks(server: &MockServer) {
 
 fn run_shared_scenario_sync(client: &blocking::Client<Authenticated>) -> Result<(), ApiError> {
     assert_eq!(
-        client.classes().get(CLASS_ID)?.resource().name,
+        client
+            .classes()
+            .get(ClassId::new(CLASS_ID).unwrap())?
+            .resource()
+            .name,
         CLASS_NAME.to_string()
     );
     assert_eq!(client.classes().get_by_name(CLASS_NAME)?.id(), CLASS_ID);
-    assert_eq!(client.classes().get(CLASS_ID)?.objects()?.len(), 1);
     assert_eq!(
         client
             .classes()
-            .get(CLASS_ID)?
+            .get(ClassId::new(CLASS_ID).unwrap())?
+            .objects()?
+            .len(),
+        1
+    );
+    assert_eq!(
+        client
+            .classes()
+            .get(ClassId::new(CLASS_ID).unwrap())?
             .object_by_name(OBJECT_NAME)?
             .id(),
         OBJECT_ID
     );
-    client.classes().get(CLASS_ID)?.delete()?;
-
-    assert_eq!(client.groups().get(GROUP_ID)?.members()?.len(), 1);
-    client.groups().get(GROUP_ID)?.add_member(USER_ID)?;
-    client.groups().get(GROUP_ID)?.remove_member(USER_ID)?;
+    client
+        .classes()
+        .get(ClassId::new(CLASS_ID).unwrap())?
+        .delete()?;
 
     assert_eq!(
-        client.collections().get(NAMESPACE_ID)?.permissions()?.len(),
+        client
+            .groups()
+            .get(GroupId::new(GROUP_ID).unwrap())?
+            .members()?
+            .len(),
+        1
+    );
+    client
+        .groups()
+        .get(GroupId::new(GROUP_ID).unwrap())?
+        .add_member(PrincipalId::new(USER_ID).unwrap())?;
+    client
+        .groups()
+        .get(GroupId::new(GROUP_ID).unwrap())?
+        .remove_member(PrincipalId::new(USER_ID).unwrap())?;
+
+    assert_eq!(
+        client
+            .collections()
+            .get(CollectionId::new(NAMESPACE_ID).unwrap())?
+            .permissions()?
+            .len(),
         1
     );
     client
         .collections()
-        .get(NAMESPACE_ID)?
-        .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])?;
+        .get(CollectionId::new(NAMESPACE_ID).unwrap())?
+        .replace_permissions(
+            GroupId::new(GROUP_ID).unwrap(),
+            vec![Permissions::ReadCollection.to_string()],
+        )?;
     client
         .collections()
-        .get(NAMESPACE_ID)?
-        .grant_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])?;
+        .get(CollectionId::new(NAMESPACE_ID).unwrap())?
+        .grant_permissions(
+            GroupId::new(GROUP_ID).unwrap(),
+            vec![Permissions::ReadCollection.to_string()],
+        )?;
 
     Ok(())
 }
 
 async fn run_shared_scenario_async(client: &Client<Authenticated>) -> Result<(), ApiError> {
     assert_eq!(
-        client.classes().get(CLASS_ID).await?.resource().name,
+        client
+            .classes()
+            .get(ClassId::new(CLASS_ID).unwrap())
+            .await?
+            .resource()
+            .name,
         CLASS_NAME.to_string()
     );
     assert_eq!(
@@ -279,42 +322,59 @@ async fn run_shared_scenario_async(client: &Client<Authenticated>) -> Result<(),
         CLASS_ID
     );
     assert_eq!(
-        client.classes().get(CLASS_ID).await?.objects().await?.len(),
+        client
+            .classes()
+            .get(ClassId::new(CLASS_ID).unwrap())
+            .await?
+            .objects()
+            .await?
+            .len(),
         1
     );
     assert_eq!(
         client
             .classes()
-            .get(CLASS_ID)
+            .get(ClassId::new(CLASS_ID).unwrap())
             .await?
             .object_by_name(OBJECT_NAME)
             .await?
             .id(),
         OBJECT_ID
     );
-    client.classes().get(CLASS_ID).await?.delete().await?;
+    client
+        .classes()
+        .get(ClassId::new(CLASS_ID).unwrap())
+        .await?
+        .delete()
+        .await?;
 
     assert_eq!(
-        client.groups().get(GROUP_ID).await?.members().await?.len(),
+        client
+            .groups()
+            .get(GroupId::new(GROUP_ID).unwrap())
+            .await?
+            .members()
+            .await?
+            .len(),
         1
     );
     client
         .groups()
-        .get(GROUP_ID)
+        .get(GroupId::new(GROUP_ID).unwrap())
         .await?
-        .add_member(USER_ID)
+        .add_member(PrincipalId::new(USER_ID).unwrap())
         .await?;
     client
         .groups()
-        .get(GROUP_ID)
+        .get(GroupId::new(GROUP_ID).unwrap())
         .await?
-        .remove_member(USER_ID)
+        .remove_member(PrincipalId::new(USER_ID).unwrap())
         .await?;
 
     assert_eq!(
         client
             .collections()
-            .get(NAMESPACE_ID)
+            .get(CollectionId::new(NAMESPACE_ID).unwrap())
             .await?
             .permissions()
             .await?
@@ -323,15 +383,21 @@ async fn run_shared_scenario_async(client: &Client<Authenticated>) -> Result<(),
     );
     client
         .collections()
-        .get(NAMESPACE_ID)
+        .get(CollectionId::new(NAMESPACE_ID).unwrap())
         .await?
-        .replace_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])
+        .replace_permissions(
+            GroupId::new(GROUP_ID).unwrap(),
+            vec![Permissions::ReadCollection.to_string()],
+        )
         .await?;
     client
         .collections()
-        .get(NAMESPACE_ID)
+        .get(CollectionId::new(NAMESPACE_ID).unwrap())
         .await?
-        .grant_permissions(GROUP_ID, vec![Permissions::ReadCollection.to_string()])
+        .grant_permissions(
+            GroupId::new(GROUP_ID).unwrap(),
+            vec![Permissions::ReadCollection.to_string()],
+        )
         .await?;
 
     Ok(())

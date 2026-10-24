@@ -1,4 +1,8 @@
+use super::HubuumDateTime;
+use super::{PrincipalId, ResourceRevision, TokenId};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 use super::Permissions;
 use crate::{ApiError, ClassId, CollectionId, ObjectId};
@@ -137,9 +141,9 @@ mod tests {
         let scope = TokenScopeDetails::new(
             Some(vec![Permissions::ReadObject]),
             Some(vec![
-                TokenResourceScope::Collection(7.into()),
-                TokenResourceScope::Class(8.into()),
-                TokenResourceScope::Object(9.into()),
+                TokenResourceScope::Collection(crate::CollectionId::new(7).unwrap()),
+                TokenResourceScope::Class(crate::ClassId::new(8).unwrap()),
+                TokenResourceScope::Object(crate::ObjectId::new(9).unwrap()),
             ]),
         )
         .unwrap();
@@ -176,7 +180,9 @@ mod tests {
         ));
         assert!(matches!(
             TokenScopeDetails::resource_boundary(vec![
-                TokenResourceScope::Object(1.into());
+                TokenResourceScope::Object(
+                    crate::ObjectId::new(1).unwrap()
+                );
                 MAX_TOKEN_RESOURCE_SCOPES + 1
             ]),
             Err(ApiError::InvalidTokenScopes)
@@ -192,6 +198,362 @@ mod tests {
             serde_json::json!({"resources": []}),
         ] {
             assert!(serde_json::from_value::<TokenScopeDetails>(invalid).is_err());
+        }
+    }
+}
+
+/// Public, hash-free projection of a principal token (used for listing).
+#[derive(Debug, Serialize, Clone, PartialEq)]
+pub struct PrincipalTokenMetadata {
+    pub id: TokenId,
+    pub principal_id: PrincipalId,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Exact permission and resource boundaries. `None` means unscoped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<TokenScopeDetails>,
+    /// Compatibility projection for pre-v0.0.4 responses.
+    #[serde(skip_serializing)]
+    pub scoped: bool,
+    /// Compatibility projection of `scope.permissions`.
+    #[serde(skip_serializing)]
+    pub scopes: Option<Vec<Permissions>>,
+    pub issued: HubuumDateTime,
+    #[serde(default)]
+    pub expires_at: Option<HubuumDateTime>,
+    #[serde(default)]
+    pub last_used_at: Option<HubuumDateTime>,
+    #[serde(default)]
+    pub revoked_at: Option<HubuumDateTime>,
+    /// Whether this token can currently authenticate.
+    pub active: bool,
+    /// Whether this token's effective expiry has elapsed.
+    pub expired: bool,
+    pub revision: ResourceRevision,
+}
+
+/// Canonical token point response. `last_used_at` and derived lifecycle flags
+/// remain available from token lists because routine use does not advance the
+/// token revision.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PrincipalTokenPointResponse {
+    pub id: TokenId,
+    pub principal_id: PrincipalId,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub scope: Option<TokenScopeDetails>,
+    pub issued: HubuumDateTime,
+    #[serde(default)]
+    pub expires_at: Option<HubuumDateTime>,
+    #[serde(default)]
+    pub revoked_at: Option<HubuumDateTime>,
+    pub revision: ResourceRevision,
+}
+
+#[derive(Deserialize)]
+struct TokenScopeProjectionWire {
+    #[serde(default)]
+    scope: Option<TokenScopeDetails>,
+    #[serde(default)]
+    scoped: Option<bool>,
+    #[serde(default)]
+    scopes: Option<Vec<Permissions>>,
+}
+
+struct TokenScopeProjection {
+    scope: Option<TokenScopeDetails>,
+    scoped: bool,
+    scopes: Option<Vec<Permissions>>,
+}
+
+impl TokenScopeProjectionWire {
+    fn normalize(self) -> Result<TokenScopeProjection, crate::ApiError> {
+        let scope = match self.scope {
+            Some(scope) => Some(scope),
+            None => self
+                .scopes
+                .as_ref()
+                .map(|permissions| TokenScopeDetails::permission_boundary(permissions.clone()))
+                .transpose()?,
+        };
+        let scopes = scope
+            .as_ref()
+            .and_then(TokenScopeDetails::permissions)
+            .map(<[_]>::to_vec);
+        let scoped = match (scope.is_some(), self.scoped) {
+            (true, Some(false)) => return Err(crate::ApiError::InvalidTokenScopes),
+            (true, _) => true,
+            (false, Some(scoped)) => scoped,
+            (false, None) => false,
+        };
+
+        Ok(TokenScopeProjection {
+            scoped,
+            scope,
+            scopes,
+        })
+    }
+}
+
+impl<'de> Deserialize<'de> for PrincipalTokenMetadata {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Wire {
+            id: TokenId,
+            principal_id: PrincipalId,
+            #[serde(default)]
+            name: Option<String>,
+            #[serde(default)]
+            description: Option<String>,
+            #[serde(flatten)]
+            scope_projection: TokenScopeProjectionWire,
+            issued: HubuumDateTime,
+            #[serde(default)]
+            expires_at: Option<HubuumDateTime>,
+            #[serde(default)]
+            last_used_at: Option<HubuumDateTime>,
+            #[serde(default)]
+            revoked_at: Option<HubuumDateTime>,
+            active: bool,
+            expired: bool,
+            revision: ResourceRevision,
+        }
+
+        let wire = Wire::deserialize(deserializer)?;
+        let scope_projection = wire
+            .scope_projection
+            .normalize()
+            .map_err(serde::de::Error::custom)?;
+
+        Ok(Self {
+            id: wire.id,
+            principal_id: wire.principal_id,
+            name: wire.name,
+            description: wire.description,
+            scope: scope_projection.scope,
+            scoped: scope_projection.scoped,
+            scopes: scope_projection.scopes,
+            issued: wire.issued,
+            expires_at: wire.expires_at,
+            last_used_at: wire.last_used_at,
+            revoked_at: wire.revoked_at,
+            active: wire.active,
+            expired: wire.expired,
+            revision: wire.revision,
+        })
+    }
+}
+
+/// Metadata for the token presented on the current request (the caller's own
+/// token), including its scopes when scoped.
+#[derive(Debug, Serialize, Clone, PartialEq)]
+pub struct CurrentTokenMetadata {
+    pub id: TokenId,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Exact permission and resource boundaries. `None` means unscoped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<TokenScopeDetails>,
+    /// Compatibility projection for pre-v0.0.4 responses.
+    #[serde(skip_serializing)]
+    pub scoped: bool,
+    /// Compatibility projection of `scope.permissions`.
+    #[serde(skip_serializing)]
+    pub scopes: Option<Vec<Permissions>>,
+    pub issued: HubuumDateTime,
+    #[serde(default)]
+    pub expires_at: Option<HubuumDateTime>,
+    #[serde(default)]
+    pub last_used_at: Option<HubuumDateTime>,
+    pub revision: ResourceRevision,
+}
+
+impl<'de> Deserialize<'de> for CurrentTokenMetadata {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Wire {
+            id: TokenId,
+            #[serde(default)]
+            name: Option<String>,
+            #[serde(default)]
+            description: Option<String>,
+            #[serde(flatten)]
+            scope_projection: TokenScopeProjectionWire,
+            issued: HubuumDateTime,
+            #[serde(default)]
+            expires_at: Option<HubuumDateTime>,
+            #[serde(default)]
+            last_used_at: Option<HubuumDateTime>,
+            revision: ResourceRevision,
+        }
+
+        let wire = Wire::deserialize(deserializer)?;
+        let scope_projection = wire
+            .scope_projection
+            .normalize()
+            .map_err(serde::de::Error::custom)?;
+
+        Ok(Self {
+            id: wire.id,
+            name: wire.name,
+            description: wire.description,
+            scope: scope_projection.scope,
+            scoped: scope_projection.scoped,
+            scopes: scope_projection.scopes,
+            issued: wire.issued,
+            expires_at: wire.expires_at,
+            last_used_at: wire.last_used_at,
+            revision: wire.revision,
+        })
+    }
+}
+
+/// Request body for minting a new principal token.
+///
+/// Omit `scope` for an unscoped token. A present scope must narrow at least one
+/// dimension.
+#[derive(Debug, Deserialize, Clone, PartialEq, Default)]
+pub struct NewTokenRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<HubuumDateTime>,
+    #[serde(default)]
+    pub scope: Option<TokenScopeDetails>,
+    /// Compatibility input for callers using the pre-v0.0.4 field. It is
+    /// serialized as `scope.permissions`, never as the rejected flat field.
+    #[serde(skip)]
+    pub scopes: Option<Vec<Permissions>>,
+}
+
+/// Optional expiry override for a replacement token.
+///
+/// Renewal copies the source token's descriptive metadata and scope into a
+/// newly issued token. The source token is not modified or reactivated.
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Default)]
+pub struct RenewTokenRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<HubuumDateTime>,
+}
+
+fn naive_utc_expiry(expires_at: &Option<HubuumDateTime>) -> Option<NaiveDateTime> {
+    expires_at
+        .as_ref()
+        .map(|expires_at| expires_at.0.naive_utc())
+}
+
+impl Serialize for RenewTokenRequest {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(Serialize)]
+        struct Wire {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            expires_at: Option<NaiveDateTime>,
+        }
+
+        Wire {
+            expires_at: naive_utc_expiry(&self.expires_at),
+        }
+        .serialize(serializer)
+    }
+}
+
+impl Serialize for NewTokenRequest {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(Serialize)]
+        struct Wire<'a> {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            name: Option<&'a String>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            description: Option<&'a String>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            expires_at: Option<NaiveDateTime>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            scope: Option<&'a TokenScopeDetails>,
+        }
+
+        let scope = self.effective_scope().map_err(serde::ser::Error::custom)?;
+        Wire {
+            name: self.name.as_ref(),
+            description: self.description.as_ref(),
+            expires_at: naive_utc_expiry(&self.expires_at),
+            scope: scope.as_deref(),
+        }
+        .serialize(serializer)
+    }
+}
+
+impl NewTokenRequest {
+    /// An unscoped token with no metadata.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    pub fn expires_at(mut self, expires_at: HubuumDateTime) -> Self {
+        self.expires_at = Some(expires_at);
+        self
+    }
+
+    /// Set permission and/or resource boundaries for this token.
+    pub fn scope(mut self, scope: TokenScopeDetails) -> Self {
+        self.scope = Some(scope);
+        self
+    }
+
+    /// Restrict the token to a non-empty set of permissions.
+    ///
+    /// This compatibility builder emits the v0.0.4
+    /// `scope.permissions` wire shape.
+    pub fn scopes(mut self, scopes: Vec<Permissions>) -> Self {
+        self.scopes = Some(scopes);
+        self
+    }
+
+    pub(crate) fn validate(&self) -> Result<(), crate::ApiError> {
+        self.effective_scope().map(|_| ())
+    }
+
+    fn effective_scope(&self) -> Result<Option<Cow<'_, TokenScopeDetails>>, crate::ApiError> {
+        match (&self.scope, &self.scopes) {
+            (Some(_), Some(_)) => Err(crate::ApiError::InvalidTokenScopes),
+            (Some(scope), None) => {
+                scope.validate()?;
+                Ok(Some(Cow::Borrowed(scope)))
+            }
+            (None, Some(permissions)) => Ok(Some(Cow::Owned(
+                TokenScopeDetails::permission_boundary(permissions.clone())?,
+            ))),
+            (None, None) => Ok(None),
         }
     }
 }

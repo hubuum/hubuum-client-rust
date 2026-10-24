@@ -11,7 +11,7 @@ mod export;
 mod filter;
 mod historical;
 mod history;
-mod id;
+pub(crate) mod id;
 mod identity;
 mod import;
 mod json_path;
@@ -230,3 +230,16 @@ pub use historical::{
     HistoryPage, HistoryPageOptions, HistorySortField, HistoryTimelineOptions,
     ObjectHistoryOptions, RelationHistoryOptions,
 };
+
+mod permission_response;
+pub use permission_response::{
+    CollectionPermissionSet, CollectionPermissionsResponse, EffectiveGroupPermission, GroupGrant,
+    GroupPermissionsResult, GroupResult, PermissionResult, PrincipalCollectionPermissions,
+};
+pub use token::{
+    CurrentTokenMetadata, NewTokenRequest, PrincipalTokenMetadata, PrincipalTokenPointResponse,
+    RenewTokenRequest,
+};
+
+mod principal;
+pub use principal::{MeResponse, MembershipPrincipal, PrincipalMember};

@@ -1,7 +1,7 @@
 error[E0599]: no method named `related` found for struct `hubuum_client::blocking::Resource<hubuum_client::Class>` in the current scope
- --> tests/trybuild/related_filter_fail_wrong_resource.rs:7:30
+ --> tests/trybuild/related_filter_fail_wrong_resource.rs:8:30
   |
-7 |     let _ = client.classes().related(group);
+8 |     let _ = client.classes().related(group);
   |                              ^^^^^^^ method not found in `hubuum_client::blocking::Resource<hubuum_client::Class>`
   |
   = note: the method was found for `hubuum_client::blocking::Resource<hubuum_client::Object>`

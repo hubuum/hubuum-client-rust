@@ -6,6 +6,7 @@ use hubuum_client::{
     CredentialActivityPageOptions, CredentialOperation, NewTokenRequest, PrincipalId,
     ServiceAccountPost, blocking,
 };
+use hubuum_client::{ServiceAccountId, UserId};
 
 #[yare::parameterized(
     human = { false },
@@ -84,7 +85,11 @@ fn durable_credential_activity(service_account: bool) {
             .token_activity(owner, me.token.id, options)
             .unwrap_err();
         assert_eq!(denied.status().unwrap().as_u16(), 403);
-        let handle = harness.client.service_accounts().get(owner.get()).unwrap();
+        let handle = harness
+            .client
+            .service_accounts()
+            .get(ServiceAccountId::new(owner.get()).unwrap())
+            .unwrap();
         let before = handle.token(me.token.id).unwrap();
         consumer.me().unwrap();
         let after = handle.token(me.token.id).unwrap();
@@ -116,7 +121,11 @@ fn durable_credential_activity(service_account: bool) {
                 .creation,
             activity.creation
         );
-        let handle = harness.client.users().get(owner.get()).unwrap();
+        let handle = harness
+            .client
+            .users()
+            .get(UserId::new(owner.get()).unwrap())
+            .unwrap();
         let before = handle.token(me.token.id).unwrap();
         consumer.me().unwrap();
         let after = handle.token(me.token.id).unwrap();

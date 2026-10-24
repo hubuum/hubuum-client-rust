@@ -1,5 +1,8 @@
 #![cfg(all(feature = "async", feature = "blocking", feature = "typed-schemas"))]
 
+use hubuum_client::{
+    ClassId, CollectionId, GroupId, ObjectId, PrincipalId, RemoteTargetId, TaskId,
+};
 use hubuum_client::{StructuredSearchEvent, StructuredSearchRequest, StructuredSearchTarget};
 
 use std::sync::Arc;
@@ -186,8 +189,7 @@ fn blocking_low_level_url_params_are_opaque_path_segments() {
     let client = blocking_mock_client(transport.clone(), 4096);
 
     let objects: Vec<Object> = client
-        .get(
-            Object::default(),
+        .get::<Object, _>(
             vec![(
                 "class_id".into(),
                 r"1/../2?scope#frag%2F\tail".to_string().into(),
@@ -211,8 +213,7 @@ async fn async_low_level_url_params_are_opaque_path_segments() {
         .authenticate(Token::new("consumer-secret"));
 
     let objects: Vec<Object> = client
-        .get(
-            Object::default(),
+        .get::<Object, _>(
             vec![(
                 "class_id".into(),
                 r"1/../2?scope#frag%2F\tail".to_string().into(),
@@ -283,7 +284,10 @@ fn blocking_streaming_calls_use_custom_transport() {
     ));
     let client = blocking_mock_client(transport.clone(), STREAMING_EVENT_LIMIT);
 
-    let mut output = client.exports().output_stream(7).unwrap();
+    let mut output = client
+        .exports()
+        .output_stream(TaskId::new(7).unwrap())
+        .unwrap();
     assert_eq!(output.content_type, ExportContentType::TextCsv);
     assert_eq!(
         output.content_length,
@@ -327,7 +331,11 @@ async fn async_streaming_calls_use_custom_transport() {
         .unwrap()
         .authenticate(Token::new("consumer-secret"));
 
-    let output = client.exports().output_stream(7).await.unwrap();
+    let output = client
+        .exports()
+        .output_stream(TaskId::new(7).unwrap())
+        .await
+        .unwrap();
     assert_eq!(output.content_type, ExportContentType::TextCsv);
     assert_eq!(
         output.content_length,
@@ -707,18 +715,21 @@ fn blocking_point_etags_drive_conditional_updates_and_deletes() {
     enqueue_conditional_class_responses(&transport);
     let client = blocking_mock_client(transport.clone(), 4096);
 
-    let handle = client.classes().get(42).unwrap();
+    let handle = client.classes().get(ClassId::new(42).unwrap()).unwrap();
     let etag = handle.etag().unwrap().clone();
     assert_eq!(etag.as_str(), "\"hubuum-v1.class.42.1\"");
 
     client
         .classes()
-        .update(42)
+        .update(ClassId::new(42).unwrap())
         .description("updated")
         .if_match(etag.clone())
         .send()
         .unwrap();
-    client.classes().delete_if_match(42, &etag).unwrap();
+    client
+        .classes()
+        .delete_if_match(ClassId::new(42).unwrap(), &etag)
+        .unwrap();
 
     assert_conditional_class_requests(&transport);
 }
@@ -733,19 +744,27 @@ async fn async_point_etags_drive_conditional_updates_and_deletes() {
         .unwrap()
         .authenticate(Token::new("consumer-secret"));
 
-    let handle = client.classes().get(42).await.unwrap();
+    let handle = client
+        .classes()
+        .get(ClassId::new(42).unwrap())
+        .await
+        .unwrap();
     let etag = handle.etag().unwrap().clone();
     assert_eq!(etag.as_str(), "\"hubuum-v1.class.42.1\"");
 
     client
         .classes()
-        .update(42)
+        .update(ClassId::new(42).unwrap())
         .description("updated")
         .if_match(etag.clone())
         .send()
         .await
         .unwrap();
-    client.classes().delete_if_match(42, &etag).await.unwrap();
+    client
+        .classes()
+        .delete_if_match(ClassId::new(42).unwrap(), &etag)
+        .await
+        .unwrap();
 
     assert_conditional_class_requests(&transport);
 }
@@ -797,7 +816,7 @@ fn remote_target_json() -> serde_json::Value {
 
 fn new_remote_target() -> NewRemoteTarget {
     NewRemoteTarget {
-        collection_id: 7.into(),
+        collection_id: CollectionId::new(7).unwrap(),
         name: "webhook".to_string(),
         description: String::new(),
         method: RemoteHttpMethod::Post,
@@ -865,7 +884,7 @@ fn class_patch() -> ClassPatch {
     ClassPatch {
         name: None,
         description: Some("updated".into()),
-        collection_id: Some(7.into()),
+        collection_id: Some(CollectionId::new(7).unwrap()),
         json_schema: None,
         validate_schema: None,
     }
@@ -1338,7 +1357,7 @@ fn invalid_export_request() -> ExportRequest {
         missing_data_policy: None,
         query: None,
         scope: ExportScope {
-            class_id: Some(0.into()),
+            class_id: None,
             kind: ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
@@ -1348,16 +1367,13 @@ fn invalid_export_request() -> ExportRequest {
 }
 
 #[test]
-fn blocking_exports_reject_nonpositive_scope_ids_before_transport() {
+fn blocking_exports_reject_missing_scope_ids_before_transport() {
     let transport = MockTransport::default();
     let client = blocking_mock_client(transport.clone(), 4096);
 
     assert!(matches!(
         client.exports().submit(invalid_export_request()).send(),
-        Err(ApiError::InvalidExportScopeId {
-            field: "class_id",
-            value: 0
-        })
+        Err(ApiError::InvalidExportScope { .. })
     ));
     assert!(transport.requests().is_empty());
 }
@@ -1465,10 +1481,7 @@ async fn async_exports_reject_nonpositive_scope_ids_before_transport() {
             .submit(invalid_export_request())
             .send()
             .await,
-        Err(ApiError::InvalidExportScopeId {
-            field: "class_id",
-            value: 0
-        })
+        Err(ApiError::InvalidExportScope { .. })
     ));
     assert!(transport.requests().is_empty());
 }
@@ -1657,7 +1670,11 @@ fn principal_settings_support_get_replace_patch_and_reset() {
         .patch(&json!({ "dashboard": { "columns": 3 } }))
         .unwrap();
     assert_eq!(
-        client.principal_settings(42).get().unwrap().get("locale"),
+        client
+            .principal_settings(PrincipalId::new(42).unwrap())
+            .get()
+            .unwrap()
+            .get("locale"),
         Some(&json!("nb-NO"))
     );
     client.settings().reset().unwrap();
@@ -1696,9 +1713,12 @@ fn blocking_remote_invocations_reject_non_object_values_before_submission() {
     transport
         .push_response(TransportResponse::json(StatusCode::OK, &remote_target_json()).unwrap());
     let client = blocking_mock_client(transport.clone(), 1024);
-    let target = client.remote_targets().get(3).unwrap();
+    let target = client
+        .remote_targets()
+        .get(RemoteTargetId::new(3).unwrap())
+        .unwrap();
     let subject = RemoteInvocationSubject::Collection {
-        collection_id: 7.into(),
+        collection_id: CollectionId::new(7).unwrap(),
     };
 
     assert!(matches!(
@@ -1743,9 +1763,13 @@ async fn async_remote_invocations_reject_non_object_values_before_submission() {
         .build()
         .unwrap()
         .authenticate(Token::new("consumer-secret"));
-    let target = client.remote_targets().get(3).await.unwrap();
+    let target = client
+        .remote_targets()
+        .get(RemoteTargetId::new(3).unwrap())
+        .await
+        .unwrap();
     let subject = RemoteInvocationSubject::Collection {
-        collection_id: 7.into(),
+        collection_id: CollectionId::new(7).unwrap(),
     };
 
     assert!(matches!(
@@ -1807,7 +1831,7 @@ async fn async_principal_settings_use_the_same_typed_surface() {
         .authenticate(Token::new("consumer-secret"));
 
     let settings = client
-        .principal_settings(42)
+        .principal_settings(PrincipalId::new(42).unwrap())
         .patch(&json!({ "locale": "nb-NO" }))
         .await
         .unwrap();
@@ -1919,7 +1943,9 @@ fn object_data_patch_preserves_its_media_type_for_custom_transports() {
     }])
     .unwrap();
 
-    client.patch_object_data(42, 9, &patch).unwrap();
+    client
+        .patch_object_data(ClassId::new(42).unwrap(), ObjectId::new(9).unwrap(), &patch)
+        .unwrap();
 
     let request = transport.requests().pop().unwrap();
     assert_eq!(
@@ -2101,7 +2127,7 @@ fn scoped_create_requests_serialize_identity_scope() {
         identity_scope: Some("local".into()),
         name: "automation".into(),
         description: None,
-        owner_group_id: 8.into(),
+        owner_group_id: GroupId::new(8).unwrap(),
     };
 
     assert_eq!(
@@ -2618,7 +2644,10 @@ mod tracing_diagnostics {
         let capture = Capture::default();
         let client = blocking_mock_client(stream_transport(), 4096);
         tracing::dispatcher::with_default(&capture.dispatch(), || {
-            let mut stream = client.exports().output_stream(7).unwrap();
+            let mut stream = client
+                .exports()
+                .output_stream(TaskId::new(7).unwrap())
+                .unwrap();
             // A zero-length read does not mean EOF.
             assert_eq!(stream.read(&mut []).unwrap(), 0);
             assert_eq!(
@@ -2628,7 +2657,12 @@ mod tracing_diagnostics {
             let mut body = Vec::new();
             stream.read_to_end(&mut body).unwrap();
             drop(stream);
-            drop(client.exports().output_stream(7).unwrap());
+            drop(
+                client
+                    .exports()
+                    .output_stream(TaskId::new(7).unwrap())
+                    .unwrap(),
+            );
         });
         assert_stream_trace(&capture);
     }
@@ -2645,13 +2679,19 @@ mod tracing_diagnostics {
         async {
             client
                 .exports()
-                .output_stream(7)
+                .output_stream(TaskId::new(7).unwrap())
                 .await
                 .unwrap()
                 .try_collect::<Vec<_>>()
                 .await
                 .unwrap();
-            drop(client.exports().output_stream(7).await.unwrap());
+            drop(
+                client
+                    .exports()
+                    .output_stream(TaskId::new(7).unwrap())
+                    .await
+                    .unwrap(),
+            );
         }
         .with_subscriber(capture.dispatch())
         .await;
@@ -2779,4 +2819,46 @@ mod tracing_diagnostics {
             assert!(!records[0].fields.contains_key("http.response.status_code"));
         }
     }
+}
+
+#[rstest::rstest]
+fn incomplete_creation_rejects_missing_id_before_transport(
+    #[values(false, true)] asynchronous: bool,
+) {
+    let transport = MockTransport::default();
+    #[allow(deprecated)]
+    let error = if asynchronous {
+        let client =
+            hubuum_client::Client::builder(BaseUrl::new("https://example.invalid").unwrap())
+                .with_transport(Arc::new(transport.clone()))
+                .build()
+                .unwrap()
+                .authenticate(Token::new("consumer-secret"));
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(
+                client
+                    .classes()
+                    .create()
+                    .name("servers")
+                    .description("test")
+                    .send(),
+            )
+            .unwrap_err()
+    } else {
+        blocking_mock_client(transport.clone(), 4096)
+            .classes()
+            .create()
+            .name("servers")
+            .description("test")
+            .send()
+            .unwrap_err()
+    };
+    assert!(matches!(
+        error,
+        ApiError::MissingRequiredField {
+            field: "collection_id"
+        }
+    ));
+    assert!(transport.requests().is_empty());
 }

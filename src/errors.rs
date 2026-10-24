@@ -16,6 +16,10 @@ pub struct ApiErrorResponse {
 #[non_exhaustive]
 #[derive(Error)]
 pub enum ApiError {
+    #[error("{kind} must be a positive integer")]
+    InvalidResourceId { kind: &'static str },
+    #[error("Missing required request field: {field}")]
+    MissingRequiredField { field: &'static str },
     #[error("Session expired or refresh outcome uncertain; sign in again")]
     SessionExpired,
     #[error("Invalid interactive session response")]
@@ -231,6 +235,14 @@ pub enum ApiError {
 impl std::fmt::Debug for ApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::InvalidResourceId { kind } => f
+                .debug_struct("InvalidResourceId")
+                .field("kind", kind)
+                .finish(),
+            Self::MissingRequiredField { field } => f
+                .debug_struct("MissingRequiredField")
+                .field("field", field)
+                .finish(),
             Self::SessionExpired => f.write_str("SessionExpired"),
             Self::InvalidSessionResponse => f.write_str("InvalidSessionResponse"),
             Self::InvalidSessionClientId => f.write_str("InvalidSessionClientId"),

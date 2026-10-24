@@ -104,7 +104,9 @@ macro_rules! relations {
         let other = $send!($client.classes().create_raw(ClassPost {
             name: prefix.clone(),
             collection_id: $collection,
-            ..Default::default()
+            description: Default::default(),
+            json_schema: None,
+            validate_schema: None
         }))
         .unwrap();
         let other_handle = $send!($client.classes().get(other.id)).unwrap();
@@ -162,14 +164,16 @@ macro_rules! relations {
             name: format!("{prefix}-first"),
             collection_id: Some($collection),
             hubuum_class_id: Some($class_id),
-            ..Default::default()
+            description: Default::default(),
+            data: None
         }))
         .unwrap();
         let second = $send!($client.objects(other.id).create_raw(ObjectPost {
             name: format!("{prefix}-second"),
             collection_id: Some($collection),
             hubuum_class_id: Some(other.id),
-            ..Default::default()
+            description: Default::default(),
+            data: None
         }))
         .unwrap();
         let first = $send!($client.objects($class_id).get(first.id)).unwrap();

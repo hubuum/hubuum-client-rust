@@ -21,7 +21,8 @@ fn hydration_requires_access_to_the_root(asynchronous: bool) {
             name: unique_case_prefix("hydration-root"),
             collection_id: Some(collection),
             hubuum_class_id: Some(class),
-            ..Default::default()
+            description: Default::default(),
+            data: None,
         })
         .unwrap();
     let user =

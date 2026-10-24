@@ -1,3 +1,4 @@
+use crate::ApiError;
 use crate::{
     endpoints::Endpoint,
     resources::ResourceId,
@@ -7,69 +8,11 @@ use crate::{
     },
 };
 
-#[derive(
-    Default, Debug, serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq, Hash,
-)]
-#[serde(transparent)]
-pub struct EventSinkId(i32);
-
-impl EventSinkId {
-    pub fn new(value: i32) -> Self {
-        Self(value)
-    }
-
-    pub fn get(self) -> i32 {
-        self.0
-    }
-}
-
-impl std::fmt::Display for EventSinkId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::str::FromStr for EventSinkId {
-    type Err = <i32 as std::str::FromStr>::Err;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        value.parse::<i32>().map(Self)
-    }
-}
-
-impl From<i32> for EventSinkId {
-    fn from(value: i32) -> Self {
-        Self(value)
-    }
-}
-
-impl From<&EventSinkId> for EventSinkId {
-    fn from(value: &EventSinkId) -> Self {
-        *value
-    }
-}
-
-impl From<EventSinkId> for i32 {
-    fn from(value: EventSinkId) -> Self {
-        value.0
-    }
-}
-
-impl PartialEq<i32> for EventSinkId {
-    fn eq(&self, other: &i32) -> bool {
-        self.0 == *other
-    }
-}
-
-impl PartialEq<EventSinkId> for i32 {
-    fn eq(&self, other: &EventSinkId) -> bool {
-        *self == other.0
-    }
-}
+crate::types::id::define_id!(EventSinkId, i32);
 
 impl ResourceId for EventSinkId {
-    fn new(value: i32) -> Self {
-        Self(value)
+    fn new(value: i32) -> Result<Self, ApiError> {
+        Self::new(value)
     }
 
     fn get(self) -> i32 {
@@ -96,6 +39,10 @@ impl crate::resources::ApiResource for EventSink {
     type GetParams = EventSinkGet;
     type GetOutput = EventSink;
     type PostParams = NewEventSink;
+    type PostBuilder = Option<NewEventSink>;
+    fn finish_post(builder: Self::PostBuilder) -> Result<Self::PostParams, ApiError> {
+        builder.ok_or(ApiError::MissingRequiredField { field: "params" })
+    }
     type PostOutput = EventSink;
     type PatchParams = UpdateEventSink;
     type PatchOutput = EventSink;
@@ -175,6 +122,10 @@ impl crate::resources::ApiResource for CollectionEventSink {
     type GetParams = CollectionEventSinkGet;
     type GetOutput = CollectionEventSink;
     type PostParams = NewEventSink;
+    type PostBuilder = Option<NewEventSink>;
+    fn finish_post(builder: Self::PostBuilder) -> Result<Self::PostParams, ApiError> {
+        builder.ok_or(ApiError::MissingRequiredField { field: "params" })
+    }
     type PostOutput = CollectionEventSink;
     type PatchParams = UpdateEventSink;
     type PatchOutput = CollectionEventSink;

@@ -1,3 +1,4 @@
+use hubuum_client::UserId;
 use std::time::Duration;
 
 use e2e_client::{harness::E2EHarness, naming::unique_case_prefix};
@@ -174,7 +175,7 @@ fn credential_approvals_downstream_token_expiry() {
     let token = match harness
         .client
         .users()
-        .get(me.principal.principal_id.get())
+        .get(UserId::new(me.principal.principal_id.get()).unwrap())
         .unwrap()
         .tokens_create_token(request.clone())
     {

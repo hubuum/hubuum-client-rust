@@ -1,6 +1,11 @@
 #![cfg(all(feature = "async", feature = "blocking"))]
 
 use hubuum_client::{
+    ClassRelationId, CollectionId, ComputedFieldDefinitionId, EventDeliveryId, EventSinkId,
+    EventSubscriptionId, ExportTemplateId, GroupId, ObjectId, ObjectRelationId, PrincipalId,
+    RemoteTargetId, RestoreId, ServiceAccountId, TaskId, UserId,
+};
+use hubuum_client::{
     StructuredSearchEvent, StructuredSearchField, StructuredSearchFieldPredicate,
     StructuredSearchOperator, StructuredSearchRequest, StructuredSearchResult,
     StructuredSearchTarget,
@@ -21,7 +26,7 @@ use hubuum_client::types::{
     UpdateEventSubscription,
 };
 use hubuum_client::{
-    ApiError, BaseUrl, ClassGet, ClassPatch, ClassRelationCreateOptions, Client,
+    ApiError, BaseUrl, ClassGet, ClassId, ClassPatch, ClassRelationCreateOptions, Client,
     ComputedFieldSelector, Credentials, ExportResult, ObjectAggregateDimension,
     ObjectAggregateJsonPath, ObjectAggregateMeasure, ObjectAggregateMeasureField,
     ObjectAggregateMeasureOperation, ObjectAggregateSort, ObjectDataPatchDocument,
@@ -717,7 +722,7 @@ fn export_request() -> ExportRequest {
         missing_data_policy: None,
         query: Some("name__icontains=server".to_string()),
         scope: ExportScope {
-            class_id: Some(42.into()),
+            class_id: Some(ClassId::new(42).unwrap()),
             kind: ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
@@ -1509,7 +1514,7 @@ fn sync_delete_rejects_non_empty_response_body() {
 
     let err = client
         .classes()
-        .delete(1)
+        .delete(ClassId::new(1).unwrap())
         .expect_err("delete should reject non-empty response");
     match err {
         ApiError::DeserializationError(message) => {
@@ -1535,7 +1540,7 @@ async fn async_delete_rejects_non_empty_response_body() {
 
     let err = client
         .classes()
-        .delete(1)
+        .delete(ClassId::new(1).unwrap())
         .await
         .expect_err("delete should reject non-empty response");
     match err {
@@ -1633,7 +1638,7 @@ fn sync_object_get_by_name_preserves_class_scope() {
     let client = sync_client(&server);
 
     let object = client
-        .objects(42)
+        .objects(ClassId::new(42).unwrap())
         .get_by_name(object_name)
         .expect("scoped object lookup should succeed");
     assert_eq!(object.resource().name, object_name);
@@ -1656,7 +1661,7 @@ async fn async_object_get_by_name_preserves_class_scope() {
     let client = async_client(&server).await;
 
     let object = client
-        .objects(42)
+        .objects(ClassId::new(42).unwrap())
         .get_by_name(object_name)
         .await
         .expect("scoped object lookup should succeed");
@@ -1679,7 +1684,7 @@ async fn async_new_resource_get_alias_fetches_by_id() {
 
     let class = client
         .classes()
-        .get(42)
+        .get(ClassId::new(42).unwrap())
         .await
         .expect("class lookup should succeed");
     assert_eq!(class.resource().name, "class-by-id");
@@ -1704,7 +1709,7 @@ fn sync_class_create_fluent_builder_posts_resource() {
         .create_checked()
         .name("fluent-class")
         .description("Fluent class")
-        .collection_id(7)
+        .collection_id(CollectionId::new(7).unwrap())
         .send()
         .expect("create fluent builder should succeed");
 
@@ -1727,10 +1732,10 @@ async fn async_class_update_fluent_builder_patches_resource() {
 
     let class = client
         .classes()
-        .update(42)
+        .update(ClassId::new(42).unwrap())
         .name("updated-class")
         .description("Updated class")
-        .collection_id(7)
+        .collection_id(CollectionId::new(7).unwrap())
         .send()
         .await
         .expect("update fluent builder should succeed");
@@ -1884,7 +1889,10 @@ fn sync_handle_list_helpers_fetch_every_cursor_page() {
     mock_paginated_handle_lists(&server);
 
     let client = sync_client(&server);
-    let user = client.users().get(11).expect("user lookup should succeed");
+    let user = client
+        .users()
+        .get(UserId::new(11).unwrap())
+        .expect("user lookup should succeed");
     let groups = user.groups().expect("user groups should succeed");
     assert_eq!(groups.len(), 2);
     assert_eq!(groups[1].resource().id, 12);
@@ -1894,7 +1902,7 @@ fn sync_handle_list_helpers_fetch_every_cursor_page() {
 
     let group = client
         .groups()
-        .get(10)
+        .get(GroupId::new(10).unwrap())
         .expect("group lookup should succeed");
     let members = group.members().expect("group members should succeed");
     assert_eq!(members.len(), 2);
@@ -1902,7 +1910,7 @@ fn sync_handle_list_helpers_fetch_every_cursor_page() {
 
     let class = client
         .classes()
-        .get(42)
+        .get(ClassId::new(42).unwrap())
         .expect("class lookup should succeed");
     let objects = class.objects().expect("class objects should succeed");
     assert_eq!(objects.len(), 2);
@@ -1915,7 +1923,7 @@ fn sync_handle_list_helpers_fetch_every_cursor_page() {
 
     let collection = client
         .collections()
-        .get(7)
+        .get(CollectionId::new(7).unwrap())
         .expect("collection lookup should succeed");
     let permissions = collection
         .permissions()
@@ -1923,7 +1931,7 @@ fn sync_handle_list_helpers_fetch_every_cursor_page() {
     assert_eq!(permissions.len(), 2);
     assert_eq!(permissions[1].group_id, 12);
     let principal_permissions = collection
-        .principal_permissions(11)
+        .principal_permissions(PrincipalId::new(11).unwrap())
         .expect("principal permissions should succeed");
     assert_eq!(principal_permissions.len(), 2);
     assert_eq!(principal_permissions[1].permission.group_id, 12);
@@ -1938,7 +1946,7 @@ async fn async_handle_list_helpers_fetch_every_cursor_page() {
     let client = async_client(&server).await;
     let user = client
         .users()
-        .get(11)
+        .get(UserId::new(11).unwrap())
         .await
         .expect("user lookup should succeed");
     let groups = user.groups().await.expect("user groups should succeed");
@@ -1950,7 +1958,7 @@ async fn async_handle_list_helpers_fetch_every_cursor_page() {
 
     let group = client
         .groups()
-        .get(10)
+        .get(GroupId::new(10).unwrap())
         .await
         .expect("group lookup should succeed");
     let members = group.members().await.expect("group members should succeed");
@@ -1959,7 +1967,7 @@ async fn async_handle_list_helpers_fetch_every_cursor_page() {
 
     let class = client
         .classes()
-        .get(42)
+        .get(ClassId::new(42).unwrap())
         .await
         .expect("class lookup should succeed");
     let objects = class.objects().await.expect("class objects should succeed");
@@ -1974,7 +1982,7 @@ async fn async_handle_list_helpers_fetch_every_cursor_page() {
 
     let collection = client
         .collections()
-        .get(7)
+        .get(CollectionId::new(7).unwrap())
         .await
         .expect("collection lookup should succeed");
     let permissions = collection
@@ -1984,7 +1992,7 @@ async fn async_handle_list_helpers_fetch_every_cursor_page() {
     assert_eq!(permissions.len(), 2);
     assert_eq!(permissions[1].group_id, 12);
     let principal_permissions = collection
-        .principal_permissions(11)
+        .principal_permissions(PrincipalId::new(11).unwrap())
         .await
         .expect("principal permissions should succeed");
     assert_eq!(principal_permissions.len(), 2);
@@ -2341,7 +2349,9 @@ fn sync_supports_all_auth_logout_endpoints() {
     client
         .logout_token("revoked-token")
         .expect("logout_token should succeed");
-    client.logout_user(99).expect("logout_user should succeed");
+    client
+        .logout_user(UserId::new(99).unwrap())
+        .expect("logout_user should succeed");
     client.logout_all().expect("logout_all should succeed");
 
     logout.assert_calls(1);
@@ -2403,7 +2413,7 @@ async fn async_supports_all_auth_logout_endpoints() {
         .await
         .expect("logout_token should succeed");
     client
-        .logout_user(99)
+        .logout_user(UserId::new(99).unwrap())
         .await
         .expect("logout_user should succeed");
     client
@@ -2685,7 +2695,7 @@ fn sync_supports_user_group_and_token_endpoints() {
 
     let user = client
         .users()
-        .get(11)
+        .get(UserId::new(11).unwrap())
         .expect("user by id request should succeed");
     assert_eq!(user.resource().id, 11);
 
@@ -2699,7 +2709,7 @@ fn sync_supports_user_group_and_token_endpoints() {
     assert_eq!(tokens[0].id, 1);
 
     let direct_permissions = client
-        .principal_permissions(11)
+        .principal_permissions(PrincipalId::new(11).unwrap())
         .expect("principal permissions request should succeed");
     let handle_permissions = user
         .permissions()
@@ -2711,7 +2721,7 @@ fn sync_supports_user_group_and_token_endpoints() {
 
     let group = client
         .groups()
-        .get(10)
+        .get(GroupId::new(10).unwrap())
         .expect("group by id request should succeed");
     assert_eq!(group.resource().id, 10);
     assert_eq!(group.resource().groupname, "admins");
@@ -2778,7 +2788,7 @@ async fn async_supports_user_group_and_token_endpoints() {
 
     let user = client
         .users()
-        .get(11)
+        .get(UserId::new(11).unwrap())
         .await
         .expect("user by id request should succeed");
     assert_eq!(user.resource().id, 11);
@@ -2799,7 +2809,7 @@ async fn async_supports_user_group_and_token_endpoints() {
     assert_eq!(tokens[0].id, 1);
 
     let direct_permissions = client
-        .principal_permissions(11)
+        .principal_permissions(PrincipalId::new(11).unwrap())
         .await
         .expect("principal permissions request should succeed");
     let handle_permissions = user
@@ -2811,7 +2821,7 @@ async fn async_supports_user_group_and_token_endpoints() {
 
     let group = client
         .groups()
-        .get(10)
+        .get(GroupId::new(10).unwrap())
         .await
         .expect("group by id request should succeed");
     assert_eq!(group.resource().id, 10);
@@ -2942,7 +2952,10 @@ fn sync_handle_list_requests_support_sorting() {
 
     let client = sync_client(&server);
 
-    let user = client.users().get(11).expect("user lookup should succeed");
+    let user = client
+        .users()
+        .get(UserId::new(11).unwrap())
+        .expect("user lookup should succeed");
     let user_group_page = user
         .groups_request()
         .sort("groupname", SortDirection::Asc)
@@ -2961,7 +2974,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let group = client
         .groups()
-        .get(10)
+        .get(GroupId::new(10).unwrap())
         .expect("group lookup should succeed");
     let member_page = group
         .members_request()
@@ -2973,7 +2986,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let class = client
         .classes()
-        .get(42)
+        .get(ClassId::new(42).unwrap())
         .expect("class lookup should succeed");
     let object_page = class
         .objects_query()
@@ -2993,7 +3006,7 @@ fn sync_handle_list_requests_support_sorting() {
 
     let collection = client
         .collections()
-        .get(7)
+        .get(CollectionId::new(7).unwrap())
         .expect("collection lookup should succeed");
     let collection_permission_set = collection
         .permissions()
@@ -3001,7 +3014,7 @@ fn sync_handle_list_requests_support_sorting() {
     assert_eq!(collection_permission_set[0].group_id, 10);
 
     let collection_user_permission_page = collection
-        .principal_permissions_request(11)
+        .principal_permissions_request(PrincipalId::new(11).unwrap())
         .sort("group.groupname", SortDirection::Desc)
         .limit(1)
         .page()
@@ -3144,7 +3157,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let user = client
         .users()
-        .get(11)
+        .get(UserId::new(11).unwrap())
         .await
         .expect("user lookup should succeed");
     let user_group_page = user
@@ -3167,7 +3180,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let group = client
         .groups()
-        .get(10)
+        .get(GroupId::new(10).unwrap())
         .await
         .expect("group lookup should succeed");
     let member_page = group
@@ -3181,7 +3194,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let class = client
         .classes()
-        .get(42)
+        .get(ClassId::new(42).unwrap())
         .await
         .expect("class lookup should succeed");
     let object_page = class
@@ -3204,7 +3217,7 @@ async fn async_handle_list_requests_support_sorting() {
 
     let collection = client
         .collections()
-        .get(7)
+        .get(CollectionId::new(7).unwrap())
         .await
         .expect("collection lookup should succeed");
     let collection_permission_set = collection
@@ -3214,7 +3227,7 @@ async fn async_handle_list_requests_support_sorting() {
     assert_eq!(collection_permission_set[0].group_id, 10);
 
     let collection_user_permission_page = collection
-        .principal_permissions_request(11)
+        .principal_permissions_request(PrincipalId::new(11).unwrap())
         .sort("group.groupname", SortDirection::Desc)
         .limit(1)
         .page()
@@ -3335,7 +3348,7 @@ fn sync_supports_class_and_collection_permission_endpoints() {
 
     let class = client
         .classes()
-        .get(42)
+        .get(ClassId::new(42).unwrap())
         .expect("class lookup should succeed");
     let class_permission_rows = class
         .permissions()
@@ -3345,34 +3358,34 @@ fn sync_supports_class_and_collection_permission_endpoints() {
 
     let collection = client
         .collections()
-        .get(7)
+        .get(CollectionId::new(7).unwrap())
         .expect("collection lookup should succeed");
     let group_permission = collection
-        .group_permissions(10)
+        .group_permissions(GroupId::new(10).unwrap())
         .expect("collection group permissions should succeed");
     assert_eq!(group_permission[0].group_id, 10);
     assert_eq!(group_permission.revision().unwrap().get(), 1);
     collection
-        .revoke_permissions(10)
+        .revoke_permissions(GroupId::new(10).unwrap())
         .expect("revoke_permissions should succeed");
     assert!(
         collection
-            .has_group_permission(10, Permissions::ReadCollection)
+            .has_group_permission(GroupId::new(10).unwrap(), Permissions::ReadCollection)
             .expect("has_group_permission should succeed")
     );
     assert!(
         !collection
-            .has_group_permission(10, Permissions::DeleteCollection)
+            .has_group_permission(GroupId::new(10).unwrap(), Permissions::DeleteCollection)
             .expect("has_group_permission should map 404 to false")
     );
     collection
-        .grant_permission(10, Permissions::ReadCollection)
+        .grant_permission(GroupId::new(10).unwrap(), Permissions::ReadCollection)
         .expect("grant_permission should succeed");
     collection
-        .revoke_permission(10, Permissions::ReadCollection)
+        .revoke_permission(GroupId::new(10).unwrap(), Permissions::ReadCollection)
         .expect("revoke_permission should succeed");
     let user_permissions_rows = collection
-        .principal_permissions(11)
+        .principal_permissions(PrincipalId::new(11).unwrap())
         .expect("user_permissions should succeed");
     assert_eq!(user_permissions_rows.len(), 1);
     assert_eq!(user_permissions_rows[0].permission.group_id, 10);
@@ -3486,7 +3499,7 @@ async fn async_supports_class_and_collection_permission_endpoints() {
 
     let class = client
         .classes()
-        .get(42)
+        .get(ClassId::new(42).unwrap())
         .await
         .expect("class lookup should succeed");
     let class_permission_rows = class
@@ -3498,41 +3511,41 @@ async fn async_supports_class_and_collection_permission_endpoints() {
 
     let collection = client
         .collections()
-        .get(7)
+        .get(CollectionId::new(7).unwrap())
         .await
         .expect("collection lookup should succeed");
     let group_permission = collection
-        .group_permissions(10)
+        .group_permissions(GroupId::new(10).unwrap())
         .await
         .expect("collection group permissions should succeed");
     assert_eq!(group_permission[0].group_id, 10);
     assert_eq!(group_permission.revision().unwrap().get(), 1);
     collection
-        .revoke_permissions(10)
+        .revoke_permissions(GroupId::new(10).unwrap())
         .await
         .expect("revoke_permissions should succeed");
     assert!(
         collection
-            .has_group_permission(10, Permissions::ReadCollection)
+            .has_group_permission(GroupId::new(10).unwrap(), Permissions::ReadCollection)
             .await
             .expect("has_group_permission should succeed")
     );
     assert!(
         !collection
-            .has_group_permission(10, Permissions::DeleteCollection)
+            .has_group_permission(GroupId::new(10).unwrap(), Permissions::DeleteCollection)
             .await
             .expect("has_group_permission should map 404 to false")
     );
     collection
-        .grant_permission(10, Permissions::ReadCollection)
+        .grant_permission(GroupId::new(10).unwrap(), Permissions::ReadCollection)
         .await
         .expect("grant_permission should succeed");
     collection
-        .revoke_permission(10, Permissions::ReadCollection)
+        .revoke_permission(GroupId::new(10).unwrap(), Permissions::ReadCollection)
         .await
         .expect("revoke_permission should succeed");
     let user_permissions_rows = collection
-        .principal_permissions(11)
+        .principal_permissions(PrincipalId::new(11).unwrap())
         .await
         .expect("user_permissions should succeed");
     assert_eq!(user_permissions_rows.len(), 1);
@@ -3581,7 +3594,10 @@ fn sync_collection_permission_reads_support_treetop_wire_shapes() {
             .json_body(group_permission_json(7, 10, "admins"));
     });
 
-    let handle = sync_client(&server).collections().get(7).unwrap();
+    let handle = sync_client(&server)
+        .collections()
+        .get(CollectionId::new(7).unwrap())
+        .unwrap();
     let permissions = handle.permissions_revisioned().unwrap();
     assert!(permissions.etag().is_none());
     assert!(permissions.revision().is_none());
@@ -3589,7 +3605,7 @@ fn sync_collection_permission_reads_support_treetop_wire_shapes() {
     assert_eq!(permissions[1].group_id, 11);
     assert_eq!(permissions.expanded().unwrap()[0].group.groupname, "admins");
 
-    let group_permissions = handle.group_permissions(10).unwrap();
+    let group_permissions = handle.group_permissions(GroupId::new(10).unwrap()).unwrap();
     assert!(group_permissions.revision().is_none());
     assert_eq!(group_permissions[0].group_id, 10);
 
@@ -3633,7 +3649,7 @@ async fn async_collection_permission_reads_support_treetop_wire_shapes() {
     let handle = async_client(&server)
         .await
         .collections()
-        .get(7)
+        .get(CollectionId::new(7).unwrap())
         .await
         .unwrap();
     let permissions = handle.permissions_revisioned().await.unwrap();
@@ -3643,7 +3659,10 @@ async fn async_collection_permission_reads_support_treetop_wire_shapes() {
     assert_eq!(permissions[1].group_id, 11);
     assert_eq!(permissions.expanded().unwrap()[0].group.groupname, "admins");
 
-    let group_permissions = handle.group_permissions(10).await.unwrap();
+    let group_permissions = handle
+        .group_permissions(GroupId::new(10).unwrap())
+        .await
+        .unwrap();
     assert!(group_permissions.revision().is_none());
     assert_eq!(group_permissions[0].group_id, 10);
 
@@ -3706,29 +3725,48 @@ fn sync_collection_acl_mutations_accept_permission_set_etags() {
     let server = MockServer::start();
     mock_login(&server);
     mock_conditional_collection_permissions(&server);
-    let handle = sync_client(&server).collections().get(7).unwrap();
+    let handle = sync_client(&server)
+        .collections()
+        .get(CollectionId::new(7).unwrap())
+        .unwrap();
     let read = handle.permissions_revisioned().unwrap();
     let etag = read.etag().unwrap();
 
     assert_conditional_permission_result(
         &handle
-            .replace_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .replace_permissions_if_match(
+                GroupId::new(10).unwrap(),
+                vec!["ReadCollection".into()],
+                etag,
+            )
             .unwrap(),
     );
     assert_conditional_permission_result(
         &handle
-            .grant_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .grant_permissions_if_match(
+                GroupId::new(10).unwrap(),
+                vec!["ReadCollection".into()],
+                etag,
+            )
             .unwrap(),
     );
-    assert_conditional_permission_result(&handle.revoke_permissions_if_match(10, etag).unwrap());
     assert_conditional_permission_result(
         &handle
-            .grant_permission_if_match(10, Permissions::ReadCollection, etag)
+            .revoke_permissions_if_match(GroupId::new(10).unwrap(), etag)
             .unwrap(),
     );
     assert_conditional_permission_result(
         &handle
-            .revoke_permission_if_match(10, Permissions::ReadCollection, etag)
+            .grant_permission_if_match(GroupId::new(10).unwrap(), Permissions::ReadCollection, etag)
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .revoke_permission_if_match(
+                GroupId::new(10).unwrap(),
+                Permissions::ReadCollection,
+                etag,
+            )
             .unwrap(),
     );
 }
@@ -3741,7 +3779,7 @@ async fn async_collection_acl_mutations_accept_permission_set_etags() {
     let handle = async_client(&server)
         .await
         .collections()
-        .get(7)
+        .get(CollectionId::new(7).unwrap())
         .await
         .unwrap();
     let read = handle.permissions_revisioned().await.unwrap();
@@ -3749,28 +3787,43 @@ async fn async_collection_acl_mutations_accept_permission_set_etags() {
 
     assert_conditional_permission_result(
         &handle
-            .replace_permissions_if_match(10, vec!["ReadCollection".into()], etag)
+            .replace_permissions_if_match(
+                GroupId::new(10).unwrap(),
+                vec!["ReadCollection".into()],
+                etag,
+            )
             .await
             .unwrap(),
     );
     assert_conditional_permission_result(
         &handle
-            .grant_permissions_if_match(10, vec!["ReadCollection".into()], etag)
-            .await
-            .unwrap(),
-    );
-    assert_conditional_permission_result(
-        &handle.revoke_permissions_if_match(10, etag).await.unwrap(),
-    );
-    assert_conditional_permission_result(
-        &handle
-            .grant_permission_if_match(10, Permissions::ReadCollection, etag)
+            .grant_permissions_if_match(
+                GroupId::new(10).unwrap(),
+                vec!["ReadCollection".into()],
+                etag,
+            )
             .await
             .unwrap(),
     );
     assert_conditional_permission_result(
         &handle
-            .revoke_permission_if_match(10, Permissions::ReadCollection, etag)
+            .revoke_permissions_if_match(GroupId::new(10).unwrap(), etag)
+            .await
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .grant_permission_if_match(GroupId::new(10).unwrap(), Permissions::ReadCollection, etag)
+            .await
+            .unwrap(),
+    );
+    assert_conditional_permission_result(
+        &handle
+            .revoke_permission_if_match(
+                GroupId::new(10).unwrap(),
+                Permissions::ReadCollection,
+                etag,
+            )
             .await
             .unwrap(),
     );
@@ -3908,7 +3961,7 @@ fn sync_exports_and_templates_cover_new_server_surface() {
 
     let selected = client
         .export_templates()
-        .get(1)
+        .get(ExportTemplateId::new(1).unwrap())
         .expect("template select should succeed");
     assert_eq!(selected.resource().id, 1);
 
@@ -3929,7 +3982,7 @@ fn sync_exports_and_templates_cover_new_server_surface() {
     let created = client
         .export_templates()
         .create_checked()
-        .collection_id(7)
+        .collection_id(CollectionId::new(7).unwrap())
         .name("created-template")
         .description("Template")
         .content_type(ExportContentType::TextPlain)
@@ -3941,7 +3994,7 @@ fn sync_exports_and_templates_cover_new_server_surface() {
 
     let updated = client
         .export_templates()
-        .update(2)
+        .update(ExportTemplateId::new(2).unwrap())
         .name("updated-template")
         .send()
         .expect("template update should succeed");
@@ -3949,7 +4002,7 @@ fn sync_exports_and_templates_cover_new_server_surface() {
 
     client
         .export_templates()
-        .delete(2)
+        .delete(ExportTemplateId::new(2).unwrap())
         .expect("template delete should succeed");
 
     templates_page.assert_calls(1);
@@ -4113,7 +4166,7 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
 
     let collection = client
         .collections()
-        .get(7)
+        .get(CollectionId::new(7).unwrap())
         .expect("collection select should succeed");
     let group_page = collection
         .groups_with_permission(Permissions::ReadTemplate)
@@ -4125,7 +4178,7 @@ fn sync_meta_tasks_and_cursor_helpers_work() {
 
     let class = client
         .classes()
-        .get(42)
+        .get(ClassId::new(42).unwrap())
         .expect("class select should succeed");
     let related_page = class
         .related_classes()
@@ -4335,7 +4388,7 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let class = client
         .classes()
-        .get(42)
+        .get(ClassId::new(42).unwrap())
         .expect("class select should use by-id endpoint");
     let class_related_page = class
         .related_classes()
@@ -4373,13 +4426,13 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
     assert_eq!(class_graph.relations.len(), 1);
 
     let class_relation = class
-        .relation(55)
+        .relation(ClassRelationId::new(55).unwrap())
         .expect("class relation lookup should succeed");
     assert_eq!(class_relation.id(), 55);
 
     let created_class_relation = class
         .create_relation_with_options(
-            77,
+            ClassId::new(77).unwrap(),
             ClassRelationCreateOptions::default()
                 .with_forward_template_alias("targets")
                 .with_reverse_template_alias("sources")
@@ -4394,16 +4447,16 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
     );
 
     class
-        .delete_relation(55)
+        .delete_relation(ClassRelationId::new(55).unwrap())
         .expect("class relation delete should succeed");
 
     let object = client
-        .objects(42)
-        .get(9)
+        .objects(ClassId::new(42).unwrap())
+        .get(ObjectId::new(9).unwrap())
         .expect("object select should use by-id endpoint");
     let related_page = object
         .related_objects()
-        .ignore_classes([42, 99])
+        .ignore_classes([ClassId::new(42).unwrap(), ClassId::new(99).unwrap()])
         .ignore_self_class(false)
         .filter("depth", FilterOperator::Gte { is_negated: false }, 1)
         .limit(1)
@@ -4448,13 +4501,13 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
 
     let selected_class_relation = client
         .class_relation()
-        .get(56)
+        .get(ClassRelationId::new(56).unwrap())
         .expect("class relation select should use direct endpoint");
     assert_eq!(selected_class_relation.id(), 56);
 
     let selected_object_relation = client
         .object_relation()
-        .get(66)
+        .get(ObjectRelationId::new(66).unwrap())
         .expect("object relation select should use direct endpoint");
     assert_eq!(selected_object_relation.id(), 66);
 
@@ -4462,9 +4515,9 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
         .class_relation()
         .query()
         .from_hubuum_class_id()
-        .eq(42.into())
+        .eq(ClassId::new(42).unwrap())
         .to_hubuum_class_id()
-        .eq(77.into())
+        .eq(ClassId::new(77).unwrap())
         .one()
         .expect("class relation query should use server filter keys");
     assert_eq!(queried_class_relation.id, 55);
@@ -4473,11 +4526,11 @@ fn sync_relation_selects_and_scoped_relation_helpers_use_spec_paths() {
         .object_relation()
         .query()
         .from_hubuum_object_id()
-        .eq(9.into())
+        .eq(ObjectId::new(9).unwrap())
         .to_hubuum_object_id()
-        .eq(10.into())
+        .eq(ObjectId::new(10).unwrap())
         .class_relation_id()
-        .eq(55.into())
+        .eq(ClassRelationId::new(55).unwrap())
         .one()
         .expect("object relation query should use server filter keys");
     assert_eq!(queried_object_relation.id, 66);
@@ -4528,10 +4581,14 @@ async fn async_nested_class_relation_creation_sends_cardinality_limits() {
     });
 
     let client = async_client(&server).await;
-    let class = client.classes().get(42).await.unwrap();
+    let class = client
+        .classes()
+        .get(ClassId::new(42).unwrap())
+        .await
+        .unwrap();
     let relation = class
         .create_relation_with_options(
-            77,
+            ClassId::new(77).unwrap(),
             ClassRelationCreateOptions::default()
                 .with_from_max_relations(ObjectRelationLimit::new(1).unwrap()),
         )
@@ -4846,14 +4903,14 @@ async fn async_imports_and_tasks_support_submission_and_cursor_results() {
 
     let imported = client
         .imports()
-        .get(12)
+        .get(TaskId::new(12).unwrap())
         .await
         .expect("import get should succeed");
     assert_eq!(imported.id, 12);
 
     let result_page = client
         .imports()
-        .results(12)
+        .results(TaskId::new(12).unwrap())
         .limit(1)
         .cursor("cursor-1")
         .page()
@@ -4864,14 +4921,14 @@ async fn async_imports_and_tasks_support_submission_and_cursor_results() {
 
     let task = client
         .tasks()
-        .get(12)
+        .get(TaskId::new(12).unwrap())
         .await
         .expect("task get should succeed");
     assert_eq!(task.id, 12);
 
     let event_page = client
         .tasks()
-        .events(12)
+        .events(TaskId::new(12).unwrap())
         .limit(1)
         .page()
         .await
@@ -5051,20 +5108,26 @@ async fn async_full_collection_history_preserves_parent_ids() {
 
     let client = async_client(&server).await;
     let entries = client
-        .collection(7)
+        .collection(CollectionId::new(7).unwrap())
         .history_full()
         .limit(1)
         .list()
         .await
         .expect("full collection history should succeed");
-    assert_eq!(entries[0].parent_collection_id, Some(2.into()));
+    assert_eq!(
+        entries[0].parent_collection_id,
+        Some(CollectionId::new(2).unwrap())
+    );
 
     let at: HubuumDateTime = serde_json::from_str(r#""2024-01-01T00:00:00Z""#).unwrap();
     let entry = client
-        .collection_history_as_of_full(7, at)
+        .collection_history_as_of_full(CollectionId::new(7).unwrap(), at)
         .await
         .expect("full collection history as-of should succeed");
-    assert_eq!(entry.parent_collection_id, Some(2.into()));
+    assert_eq!(
+        entry.parent_collection_id,
+        Some(CollectionId::new(2).unwrap())
+    );
 
     history.assert_calls(1);
     as_of.assert_calls(1);
@@ -5095,17 +5158,23 @@ fn sync_full_collection_history_preserves_parent_ids() {
 
     let client = sync_client(&server);
     let entries = client
-        .collection_history_full(7)
+        .collection_history_full(CollectionId::new(7).unwrap())
         .limit(1)
         .list()
         .expect("full collection history should succeed");
-    assert_eq!(entries[0].parent_collection_id, Some(2.into()));
+    assert_eq!(
+        entries[0].parent_collection_id,
+        Some(CollectionId::new(2).unwrap())
+    );
 
     let at: HubuumDateTime = serde_json::from_str(r#""2024-01-01T00:00:00Z""#).unwrap();
     let entry = client
-        .collection_history_as_of_full(7, at)
+        .collection_history_as_of_full(CollectionId::new(7).unwrap(), at)
         .expect("full collection history as-of should succeed");
-    assert_eq!(entry.parent_collection_id, Some(2.into()));
+    assert_eq!(
+        entry.parent_collection_id,
+        Some(CollectionId::new(2).unwrap())
+    );
 
     history.assert_calls(1);
     as_of.assert_calls(1);
@@ -5235,8 +5304,8 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
         .entity_id(42)
         .action("updated")
         .actor_kind("human")
-        .initiator_user_id(3)
-        .collection_id(7)
+        .initiator_user_id(PrincipalId::new(3).unwrap())
+        .collection_id(CollectionId::new(7).unwrap())
         .limit(1)
         .sort("occurred_at", SortDirection::Desc)
         .page()
@@ -5248,12 +5317,12 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
             .as_ref()
             .and_then(|provenance| provenance.initiator.as_ref())
             .map(|initiator| initiator.principal_id),
-        Some(3.into())
+        Some(PrincipalId::new(3).unwrap())
     );
     assert_eq!(event_page.next_cursor.as_deref(), Some("events-next"));
 
     let user_event_list = client
-        .user_events(3)
+        .user_events(UserId::new(3).unwrap())
         .action("updated")
         .limit(1)
         .list()
@@ -5261,24 +5330,24 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
     assert_eq!(user_event_list[0].entity_type, "user");
 
     let group_event_list = client
-        .group_events(4)
-        .actor_user_id(3)
+        .group_events(GroupId::new(4).unwrap())
+        .actor_user_id(UserId::new(3).unwrap())
         .limit(1)
         .list()
         .expect("group events should succeed");
     assert_eq!(group_event_list[0].entity_type, "group");
 
     let history = client
-        .class_history(42)
+        .class_history(ClassId::new(42).unwrap())
         .limit(1)
         .list()
         .expect("class history should succeed");
     assert_eq!(history[0].history.history_id, 9001);
-    assert_eq!(history[0].history.task_id, Some(12.into()));
+    assert_eq!(history[0].history.task_id, Some(TaskId::new(12).unwrap()));
 
     let at: HubuumDateTime = serde_json::from_str(r#""2024-01-01T00:00:00Z""#).unwrap();
     let version = client
-        .class_history_as_of(42, at)
+        .class_history_as_of(ClassId::new(42).unwrap(), at)
         .expect("class history as-of should succeed");
     assert_eq!(version.name, "servers");
 
@@ -5294,18 +5363,19 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
     assert_eq!(sink.id, 5);
 
     let subscription = client
-        .event_subscriptions(7)
+        .event_subscriptions(CollectionId::new(7).unwrap())
         .create(NewEventSubscription {
-            sink_id: 5.into(),
+            sink_id: EventSinkId::new(5).unwrap(),
             name: "class-updates".to_string(),
             entity_types: vec!["class".to_string()],
             actions: vec!["updated".to_string()],
             enabled: Some(true),
             filter: Some(EventSubscriptionFilter {
-                initiator_user_ids: Some(vec![3.into()]),
+                initiator_user_ids: Some(vec![PrincipalId::new(3).unwrap()]),
                 ..Default::default()
             }),
-            ..Default::default()
+            description: None,
+            routing: None,
         })
         .expect("event subscription create should succeed");
     assert_eq!(subscription.id, 8);
@@ -5314,13 +5384,13 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
             .filter
             .as_ref()
             .and_then(|filter| filter.initiator_user_ids.as_deref()),
-        Some([3.into()].as_slice())
+        Some([PrincipalId::new(3).unwrap()].as_slice())
     );
 
     let updated = client
-        .event_subscriptions(7)
+        .event_subscriptions(CollectionId::new(7).unwrap())
         .update(
-            8,
+            EventSubscriptionId::new(8).unwrap(),
             UpdateEventSubscription {
                 enabled: Some(false),
                 ..Default::default()
@@ -5331,7 +5401,7 @@ fn sync_events_history_subscriptions_and_deliveries_use_backend_routes() {
 
     let delivery = client
         .event_deliveries()
-        .retry(99)
+        .retry(EventDeliveryId::new(99).unwrap())
         .expect("event delivery retry should succeed");
     assert_eq!(delivery.id, 99);
 
@@ -5445,7 +5515,7 @@ async fn async_scoped_events_and_delivery_health_use_backend_routes() {
 
     let client = async_client(&server).await;
     let events = client
-        .object_events(42, 9)
+        .object_events(ClassId::new(42).unwrap(), ObjectId::new(9).unwrap())
         .occurred_after("2024-01-01")
         .list()
         .await
@@ -5462,7 +5532,7 @@ async fn async_scoped_events_and_delivery_health_use_backend_routes() {
     assert_eq!(filtered_global_events[0].entity_type, "user");
 
     let user_event_list = client
-        .user_events(3)
+        .user_events(UserId::new(3).unwrap())
         .action("updated")
         .list()
         .await
@@ -5470,8 +5540,8 @@ async fn async_scoped_events_and_delivery_health_use_backend_routes() {
     assert_eq!(user_event_list[0].entity_type, "user");
 
     let group_event_list = client
-        .group_events(4)
-        .actor_user_id(3)
+        .group_events(GroupId::new(4).unwrap())
+        .actor_user_id(UserId::new(3).unwrap())
         .list()
         .await
         .expect("group events should succeed");
@@ -5573,7 +5643,7 @@ fn sync_service_account_create_and_disable() {
             identity_scope: None,
             name: "dns-sync".to_string(),
             description: Some("integration service account".to_string()),
-            owner_group_id: 10.into(),
+            owner_group_id: GroupId::new(10).unwrap(),
         })
         .expect("service account create should succeed");
     assert_eq!(created.id, 5);
@@ -5581,7 +5651,7 @@ fn sync_service_account_create_and_disable() {
 
     let sa = client
         .service_accounts()
-        .get(5)
+        .get(ServiceAccountId::new(5).unwrap())
         .expect("service account select should succeed");
     let permission_rows = sa
         .permissions()
@@ -5634,13 +5704,18 @@ fn sync_user_token_create_with_scopes_preserves_authoritative_expiry() {
     });
 
     let client = sync_client(&server);
-    let user = client.users().get(11).expect("user select should succeed");
+    let user = client
+        .users()
+        .get(UserId::new(11).unwrap())
+        .expect("user select should succeed");
     let issued = user
         .tokens_create_token(
             NewTokenRequest::new().name("ci").scope(
                 TokenScopeDetails::new(
                     Some(vec![Permissions::ReadClass]),
-                    Some(vec![TokenResourceScope::Collection(7.into())]),
+                    Some(vec![TokenResourceScope::Collection(
+                        CollectionId::new(7).unwrap(),
+                    )]),
                 )
                 .unwrap(),
             ),
@@ -5688,7 +5763,7 @@ async fn async_service_account_unscoped_token_create_returns_raw_token() {
     let client = async_client(&server).await;
     let service_account = client
         .service_accounts()
-        .get(5)
+        .get(ServiceAccountId::new(5).unwrap())
         .await
         .expect("service account select should succeed");
     let raw = service_account
@@ -5785,7 +5860,10 @@ fn sync_user_token_create_rejects_empty_scopes_before_request() {
     });
 
     let client = sync_client(&server);
-    let user = client.users().get(11).expect("user select should succeed");
+    let user = client
+        .users()
+        .get(UserId::new(11).unwrap())
+        .expect("user select should succeed");
     let error = user
         .tokens_create(NewTokenRequest::new().scopes(vec![]))
         .expect_err("empty scopes should be rejected");
@@ -5821,7 +5899,7 @@ async fn async_service_account_token_create_rejects_empty_scopes_before_request(
     let client = async_client(&server).await;
     let service_account = client
         .service_accounts()
-        .get(5)
+        .get(ServiceAccountId::new(5).unwrap())
         .await
         .expect("service account select should succeed");
     let error = service_account
@@ -5885,13 +5963,13 @@ fn sync_remote_target_invoke_returns_task() {
     let client = sync_client(&server);
     let target = client
         .remote_targets()
-        .get(3)
+        .get(RemoteTargetId::new(3).unwrap())
         .expect("remote target select should succeed");
     let task = target
         .invoke(RemoteTargetInvokeRequest::new(
             RemoteInvocationSubject::Object {
-                class_id: 1.into(),
-                object_id: 2.into(),
+                class_id: ClassId::new(1).unwrap(),
+                object_id: ObjectId::new(2).unwrap(),
             },
         ))
         .expect("invoke should succeed");
@@ -5955,7 +6033,9 @@ fn sync_me_returns_identity_and_token() {
             .and_then(hubuum_client::TokenScopeDetails::resources)
             .and_then(|resources| resources.first())
             .copied(),
-        Some(hubuum_client::TokenResourceScope::Collection(7.into()))
+        Some(hubuum_client::TokenResourceScope::Collection(
+            CollectionId::new(7).unwrap()
+        ))
     );
     assert_eq!(
         me_response.token.scopes.as_deref(),
@@ -6359,7 +6439,10 @@ async fn async_restore_status_is_available_without_bearer_authentication() {
 
     let client = Client::from_url(server.base_url()).expect("client should build");
     let response = client
-        .restore_status(9, &RestoreCapability::new("restore-secret"))
+        .restore_status(
+            RestoreId::new(9).unwrap(),
+            &RestoreCapability::new("restore-secret"),
+        )
         .await
         .expect("unauthenticated restore status should succeed");
     assert_eq!(response.id, 9);
@@ -6429,7 +6512,7 @@ async fn async_shared_computed_field_lifecycle_uses_class_scoped_routes() {
             .json_body(computation_state_json());
     });
     let client = async_client(&server).await;
-    let shared = client.computed_fields(42);
+    let shared = client.computed_fields(ClassId::new(42).unwrap());
     assert_eq!(shared.list().await.unwrap().definitions.len(), 1);
     assert_eq!(
         shared
@@ -6441,10 +6524,20 @@ async fn async_shared_computed_field_lifecycle_uses_class_scoped_routes() {
         7
     );
     shared
-        .update(7, ComputedFieldDefinitionPatch::new().label("Grand total"))
+        .update(
+            ComputedFieldDefinitionId::new(7).unwrap(),
+            ComputedFieldDefinitionPatch::new().label("Grand total"),
+        )
         .await
         .unwrap();
-    assert_eq!(shared.delete(7).await.unwrap().deleted_definition_id, 7);
+    assert_eq!(
+        shared
+            .delete(ComputedFieldDefinitionId::new(7).unwrap())
+            .await
+            .unwrap()
+            .deleted_definition_id,
+        7
+    );
     assert_eq!(
         shared
             .preview(ComputedFieldPreviewRequest::for_data(
@@ -6456,7 +6549,10 @@ async fn async_shared_computed_field_lifecycle_uses_class_scoped_routes() {
             .value,
         json!(12.5)
     );
-    assert_eq!(shared.rebuild().await.unwrap().evaluation_revision, 3);
+    assert_eq!(
+        shared.rebuild().await.unwrap().evaluation_revision,
+        hubuum_client::ComputationRevision::new(3).unwrap()
+    );
 
     for mock in [
         shared_list,
@@ -6489,8 +6585,8 @@ fn sync_conditional_shared_computed_field_delete_decodes_accepted_body() {
     let etag = hubuum_client::EntityTag::new("\"hubuum-v1.computed-field.7.1\"").unwrap();
 
     let response = client
-        .computed_fields(42)
-        .delete_if_match(7, &etag)
+        .computed_fields(ClassId::new(42).unwrap())
+        .delete_if_match(ComputedFieldDefinitionId::new(7).unwrap(), &etag)
         .unwrap();
 
     assert_eq!(response.deleted_definition_id.get(), 7);
@@ -6516,8 +6612,8 @@ async fn async_conditional_shared_computed_field_delete_decodes_accepted_body() 
     let etag = hubuum_client::EntityTag::new("\"hubuum-v1.computed-field.7.1\"").unwrap();
 
     let response = client
-        .computed_fields(42)
-        .delete_if_match(7, &etag)
+        .computed_fields(ClassId::new(42).unwrap())
+        .delete_if_match(ComputedFieldDefinitionId::new(7).unwrap(), &etag)
         .await
         .unwrap();
 
@@ -6564,27 +6660,41 @@ async fn async_personal_computed_field_lifecycle_uses_current_user_routes() {
 
     let client = async_client(&server).await;
     let personal = client.personal_computed_fields();
-    assert_eq!(personal.for_class(42).list().await.unwrap().len(), 1);
+    assert_eq!(
+        personal
+            .for_class(ClassId::new(42).unwrap())
+            .list()
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
     let created = personal
         .create(PersonalComputedFieldDefinitionRequest::new(
-            42,
+            ClassId::new(42).unwrap(),
             computed_request(),
         ))
         .await
         .unwrap();
     assert_eq!(created.id, 7);
     personal
-        .update(7, ComputedFieldDefinitionPatch::new().enabled(false))
+        .update(
+            ComputedFieldDefinitionId::new(7).unwrap(),
+            ComputedFieldDefinitionPatch::new().enabled(false),
+        )
         .await
         .unwrap();
-    personal.delete(7).await.unwrap();
+    personal
+        .delete(ComputedFieldDefinitionId::new(7).unwrap())
+        .await
+        .unwrap();
     let result = personal
         .preview(
             ComputedFieldPreviewRequest::for_data(
                 computed_request(),
                 json!({"subtotal": 10, "tax": 2.5}),
             )
-            .for_class(42),
+            .for_class(ClassId::new(42).unwrap()),
         )
         .await
         .unwrap();
@@ -6623,9 +6733,17 @@ async fn async_computed_object_reads_opt_into_computed_scopes(#[case] list: bool
 
     let client = async_client(&server).await;
     let object = if list {
-        client.computed_objects(42).list().await.unwrap().remove(0)
+        client
+            .computed_objects(ClassId::new(42).unwrap())
+            .list()
+            .await
+            .unwrap()
+            .remove(0)
     } else {
-        client.computed_object(42, 5).await.unwrap()
+        client
+            .computed_object(ClassId::new(42).unwrap(), ObjectId::new(5).unwrap())
+            .await
+            .unwrap()
     };
     assert_eq!(object.computed.shared.values["total"], json!(12.5));
     request.assert_calls(1);
@@ -6840,7 +6958,7 @@ async fn async_v003_natural_key_routes_cover_crud_relations_and_permissions() {
         .update(ClassPatch {
             name: Some("123".into()),
             description: Some("Class".into()),
-            collection_id: Some(7.into()),
+            collection_id: Some(CollectionId::new(7).unwrap()),
             json_schema: None,
             validate_schema: None,
         })
@@ -6981,7 +7099,7 @@ async fn async_object_aggregates_support_id_name_and_numeric_measures() {
 
     let client = async_client(&server).await;
     let page = client
-        .object_aggregates(42)
+        .object_aggregates(ClassId::new(42).unwrap())
         .group_by_all([
             ObjectAggregateDimension::Name,
             ObjectAggregateDimension::json_data(
@@ -7023,7 +7141,10 @@ async fn async_object_aggregates_support_id_name_and_numeric_measures() {
         value: json!("infra"),
     }])
     .unwrap();
-    client.patch_object_data(42, 9, &patch).await.unwrap();
+    client
+        .patch_object_data(ClassId::new(42).unwrap(), ObjectId::new(9).unwrap(), &patch)
+        .await
+        .unwrap();
 
     by_id.assert_calls(1);
     by_name.assert_calls(1);
@@ -7056,7 +7177,7 @@ fn sync_v004_object_aggregates_support_global_numeric_measures() {
 
     let client = sync_client(&server);
     let rows = client
-        .object_aggregates(42)
+        .object_aggregates(ClassId::new(42).unwrap())
         .aggregate(ObjectAggregateMeasure::new(
             ObjectAggregateMeasureOperation::Average,
             ObjectAggregateMeasureField::shared_computed("latency"),
@@ -7070,6 +7191,8 @@ fn sync_v004_object_aggregates_support_global_numeric_measures() {
 }
 
 mod schema_v015 {
+    use hubuum_client::{ClassId, ExportTemplateId, TaskId};
+
     use std::sync::Arc;
 
     use hubuum_client::{
@@ -7264,7 +7387,7 @@ mod schema_v015 {
 
     macro_rules! exercise {
         ($client:ident, $operation:ident, $send:ident) => {{
-            let schema = $client.class_schema(42);
+            let schema = $client.class_schema(ClassId::new(42).unwrap());
             let revision = SchemaRevision::new(2).unwrap();
             let page = SchemaPageOptions::default().after(7).unwrap().limit(10).unwrap();
             match $operation {
@@ -7278,19 +7401,19 @@ mod schema_v015 {
                 Operation::Abandon => assert_eq!($send!(schema.abandon(revision)).unwrap().revision, revision),
                 Operation::Activate => assert_eq!($send!(schema.activate(revision, SchemaActivationRequest {
                     expected_active_revision:SchemaRevision::INITIAL, policy:SchemaActivationPolicy::RejectIncompatible,
-                    impact_task_id:Some(71.into()),
-                })).unwrap().dependent_rebuild_task_id, Some(73.into())),
+                    impact_task_id:Some(TaskId::new(71).unwrap()),
+                })).unwrap().dependent_rebuild_task_id, Some(TaskId::new(73).unwrap())),
                 Operation::Impact => assert_eq!($send!(schema.impact(revision)).unwrap().task_id, 71),
                 Operation::Revalidate => assert_eq!($send!(schema.revalidate(revision)).unwrap().task_id, 71),
-                Operation::Work => assert_eq!($send!(schema.work(71)).unwrap().task_id, 71),
-                Operation::CancelWork => assert_eq!($send!(schema.cancel_work(71)).unwrap().task_id, 71),
-                Operation::GenerateReport => assert_eq!($send!(schema.generate_report(71, SchemaRepairReportRequest {
+                Operation::Work => assert_eq!($send!(schema.work(TaskId::new(71).unwrap())).unwrap().task_id, 71),
+                Operation::CancelWork => assert_eq!($send!(schema.cancel_work(TaskId::new(71).unwrap())).unwrap().task_id, 71),
+                Operation::GenerateReport => assert_eq!($send!(schema.generate_report(TaskId::new(71).unwrap(), SchemaRepairReportRequest {
                     object_url_template:SchemaObjectUrlTemplate::new("https://frontend.test/#/objects/{object_id}").unwrap(),
-                    template_id:Some(5.into()),
+                    template_id:Some(ExportTemplateId::new(5).unwrap()),
                 })).unwrap(), "<html>retained report</html>"),
-                Operation::Report => assert_eq!($send!(schema.report(71, true)).unwrap(), "<html>retained report</html>"),
+                Operation::Report => assert_eq!($send!(schema.report(TaskId::new(71).unwrap(), true)).unwrap(), "<html>retained report</html>"),
                 Operation::CancelTask => {
-                    let task = $send!($client.tasks().cancel(71, TaskCancelRequest {
+                    let task = $send!($client.tasks().cancel(TaskId::new(71).unwrap(), TaskCancelRequest {
                         expected_status:Some(TaskStatus::Queued), reason:Some(TaskCancellationReason::new("private cancellation reason").unwrap())
                     })).unwrap();
                     assert_eq!(task.kind, TaskKind::SchemaValidation);
@@ -7413,17 +7536,23 @@ mod schema_v015 {
         assert_eq!(
             client
                 .tasks()
-                .cancel(71, TaskCancelRequest::default())
+                .cancel(TaskId::new(71).unwrap(), TaskCancelRequest::default())
                 .unwrap_err()
                 .status(),
             Some(StatusCode::CONFLICT)
         );
         assert_eq!(
-            client.class_schema(42).work(71).unwrap_err().status(),
+            client
+                .class_schema(ClassId::new(42).unwrap())
+                .work(TaskId::new(71).unwrap())
+                .unwrap_err()
+                .status(),
             Some(StatusCode::PAYLOAD_TOO_LARGE)
         );
         assert!(matches!(
-            client.class_schema(42).report(71, true),
+            client
+                .class_schema(ClassId::new(42).unwrap())
+                .report(TaskId::new(71).unwrap(), true),
             Err(ApiError::ResponseTooLarge { limit: 256, .. })
         ));
     }
@@ -7439,24 +7568,37 @@ mod schema_v015 {
         assert_eq!(
             client
                 .tasks()
-                .cancel(71, TaskCancelRequest::default())
+                .cancel(TaskId::new(71).unwrap(), TaskCancelRequest::default())
                 .await
                 .unwrap_err()
                 .status(),
             Some(StatusCode::CONFLICT)
         );
         assert_eq!(
-            client.class_schema(42).work(71).await.unwrap_err().status(),
+            client
+                .class_schema(ClassId::new(42).unwrap())
+                .work(TaskId::new(71).unwrap())
+                .await
+                .unwrap_err()
+                .status(),
             Some(StatusCode::PAYLOAD_TOO_LARGE)
         );
         assert!(matches!(
-            client.class_schema(42).report(71, true).await,
+            client
+                .class_schema(ClassId::new(42).unwrap())
+                .report(TaskId::new(71).unwrap(), true)
+                .await,
             Err(ApiError::ResponseTooLarge { limit: 256, .. })
         ));
     }
 }
 
 mod task_discovery {
+    use hubuum_client::{
+        ClassId, ClassRelationId, CollectionId, ExportTemplateId, ObjectId, ObjectRelationId,
+        PrincipalId, RemoteTargetId,
+    };
+
     use std::{collections::BTreeMap, sync::Arc};
 
     use futures_util::TryStreamExt;
@@ -7480,11 +7622,11 @@ mod task_discovery {
             let q = $q;
             match $case {
                 "export" => q
-                    .class_id(42.into())
-                    .object_id(9.into())
+                    .class_id(ClassId::new(42).unwrap())
+                    .object_id(ObjectId::new(9).unwrap())
                     .kind(TaskKind::Export)
                     .export_scope_kind(ExportScopeKind::RelatedObjects)
-                    .export_template_id(5.into())
+                    .export_template_id(ExportTemplateId::new(5).unwrap())
                     .export_has_warnings(false)
                     .export_truncated(true)
                     .output_state(TaskOutputDiscoveryState::Available),
@@ -7498,19 +7640,23 @@ mod task_discovery {
                     .backup_include_history(false)
                     .output_state(TaskOutputDiscoveryState::Unknown),
                 "schema" => q
-                    .class_id(42.into())
+                    .class_id(ClassId::new(42).unwrap())
                     .schema_revision(SchemaRevision::new(3).unwrap())
                     .schema_work_kind(SchemaWorkKind::Impact)
                     .schema_work_status(SchemaWorkStatus::Complete),
                 "reindex" => q
                     .computation_revision(ComputationRevision::new(0).unwrap())
-                    .class_id(42.into()),
+                    .class_id(ClassId::new(42).unwrap()),
                 "remote" => q
-                    .collection_id(7.into())
-                    .remote_target_id(8.into())
+                    .collection_id(CollectionId::new(7).unwrap())
+                    .remote_target_id(RemoteTargetId::new(8).unwrap())
                     .remote_side_effect_state(TaskRemoteSideEffectState::PossiblySent),
-                "class_relation" => q.object_relation(4.into()).class_relation(3.into()),
-                "object_relation" => q.class_relation(3.into()).object_relation(4.into()),
+                "class_relation" => q
+                    .object_relation(ObjectRelationId::new(4).unwrap())
+                    .class_relation(ClassRelationId::new(3).unwrap()),
+                "object_relation" => q
+                    .class_relation(ClassRelationId::new(3).unwrap())
+                    .object_relation(ObjectRelationId::new(4).unwrap()),
                 "lifecycle" => q
                     .kind(TaskKind::Import)
                     .kinds([TaskKind::Export, TaskKind::Backup, TaskKind::Export])
@@ -7524,7 +7670,7 @@ mod task_discovery {
                     .cancel_requested(true)
                     .terminal_reason(TaskTerminalReason::DeadlineExceeded)
                     .trace_id(TaskTraceId::new("0123456789ABCDEF0123456789ABCDEF").unwrap())
-                    .submitted_by(2)
+                    .submitted_by(PrincipalId::new(2).unwrap())
                     .include_total(false)
                     .limit(3),
                 "timestamps" => q
@@ -7808,7 +7954,7 @@ mod task_discovery {
         let query = client
             .tasks()
             .query()
-            .class_id(42.into())
+            .class_id(ClassId::new(42).unwrap())
             .statuses([TaskStatus::Succeeded, TaskStatus::PartiallySucceeded])
             .output_state(TaskOutputDiscoveryState::Available);
         let tasks = match mode {
@@ -7841,7 +7987,7 @@ mod task_discovery {
         let query = client
             .tasks()
             .query()
-            .class_id(42.into())
+            .class_id(ClassId::new(42).unwrap())
             .statuses([TaskStatus::Succeeded, TaskStatus::PartiallySucceeded])
             .output_state(TaskOutputDiscoveryState::Available);
         let tasks = match mode {
@@ -7864,6 +8010,8 @@ mod task_discovery {
 }
 
 mod notification_compatibility {
+    use hubuum_client::EventDeliveryId;
+
     use hubuum_client::{
         BaseUrl, Client, EventDeliveryPurpose, MockTransport, Token, TransportResponse, blocking,
     };
@@ -7898,7 +8046,12 @@ mod notification_compatibility {
             let health = $send!($client.event_deliveries().health()).unwrap();
             assert_eq!(health.subscriptions[0].collection_id, None);
             assert_eq!(health.subscriptions[1].collection_id.unwrap().get(), 7);
-            let delivery = $send!($client.event_deliveries().get(1)).unwrap();
+            let delivery = $send!(
+                $client
+                    .event_deliveries()
+                    .get(EventDeliveryId::new(1).unwrap())
+            )
+            .unwrap();
             assert_eq!(delivery.purpose, EventDeliveryPurpose::Test);
             assert_eq!(
                 delivery.deferred_reason.as_deref(),
@@ -7944,6 +8097,8 @@ mod notification_compatibility {
 }
 
 mod collection_destinations {
+    use hubuum_client::{CollectionId, EventSinkId};
+
     use hubuum_client::{
         BaseUrl, Client, CollectionEventSinkGet, EventSinkKind, EventSinkRouting, MockTransport,
         NewEventSink, Token, TransportResponse, UpdateEventSink, blocking,
@@ -7972,19 +8127,19 @@ mod collection_destinations {
 
     macro_rules! verify {
         ($client:ident, $transport:ident, $send:ident) => {{
-            let sinks = $client.collection(7).event_sinks();
+            let sinks = $client.collection(CollectionId::new(7).unwrap()).event_sinks();
             let created = $send!(sinks.create_raw(NewEventSink { name: "notifications".into(), config: Some(json!({"destination_url":"https://example.test/private-token"})), ..Default::default() })).unwrap();
             assert_eq!(created.routing, EventSinkRouting::Fixed);
             let mut filters = CollectionEventSinkGet::default();
             filters.name = Some("notifications".into());
             filters.kind = Some(EventSinkKind::Webhook);
             assert_eq!($send!(sinks.query().params(filters).page()).unwrap().items.len(), 1);
-            assert_eq!($send!(sinks.get(5)).unwrap().id(), 5);
-            $send!(sinks.update_raw(5, UpdateEventSink { enabled: Some(false), ..Default::default() })).unwrap();
-            $send!(sinks.delete(5)).unwrap();
-            $send!($client.grant_event_sink(12, 7)).unwrap();
-            assert_eq!($send!($client.event_sink_collections(12)).unwrap()[0], 7);
-            $send!($client.revoke_event_sink(12, 7)).unwrap();
+            assert_eq!($send!(sinks.get(EventSinkId::new(5).unwrap())).unwrap().id(), 5);
+            $send!(sinks.update_raw(EventSinkId::new(5).unwrap(), UpdateEventSink { enabled: Some(false), ..Default::default() })).unwrap();
+            $send!(sinks.delete(EventSinkId::new(5).unwrap())).unwrap();
+            $send!($client.grant_event_sink(EventSinkId::new(12).unwrap(), CollectionId::new(7).unwrap())).unwrap();
+            assert_eq!($send!($client.event_sink_collections(EventSinkId::new(12).unwrap())).unwrap()[0], 7);
+            $send!($client.revoke_event_sink(EventSinkId::new(12).unwrap(), CollectionId::new(7).unwrap())).unwrap();
             let requests = $transport.requests();
             let paths: Vec<_> = requests.iter().map(|request| (request.method.as_str(), request.url.path())).collect();
             assert_eq!(paths, vec![
@@ -8168,6 +8323,8 @@ mod client_behavior {
 }
 
 mod typed_history {
+    use hubuum_client::{ClassId, HistoryId, ObjectId};
+
     use hubuum_client::types::SortDirection;
     use hubuum_client::{
         ApiError, BaseUrl, Client, HistoryDirection, HistoryPage, HistoryPageOptions,
@@ -8193,7 +8350,7 @@ mod typed_history {
     fn timeline() -> HistoryTimelineOptions {
         HistoryTimelineOptions::default()
             .page(page())
-            .anchor(9001.into())
+            .anchor(HistoryId::new(9001).unwrap())
             .unwrap()
             .direction(HistoryDirection::Newer)
     }
@@ -8290,45 +8447,84 @@ mod typed_history {
         ($client:ident, $send:ident, $case:expr) => {{
             let at = serde_json::from_value(json!(AT)).unwrap();
             match $case {
-                "class_timeline" => {
-                    array($send!($client.class_history_timeline(42.into(), timeline())).unwrap())
-                }
-                "object_timeline" => array(
-                    $send!($client.object_history_timeline(42.into(), 99.into(), timeline()))
+                "class_timeline" => array(
+                    $send!($client.class_history_timeline(ClassId::new(42).unwrap(), timeline()))
                         .unwrap(),
                 ),
+                "object_timeline" => array(
+                    $send!($client.object_history_timeline(
+                        ClassId::new(42).unwrap(),
+                        ObjectId::new(99).unwrap(),
+                        timeline()
+                    ))
+                    .unwrap(),
+                ),
                 "class_entry" => serde_json::to_value(
-                    $send!($client.class_history_entry(42.into(), 9001.into())).unwrap(),
+                    $send!($client.class_history_entry(
+                        ClassId::new(42).unwrap(),
+                        HistoryId::new(9001).unwrap()
+                    ))
+                    .unwrap(),
                 )
                 .unwrap(),
                 "object_entry" => serde_json::to_value(
-                    $send!($client.object_history_entry(42.into(), 99.into(), 9001.into()))
-                        .unwrap(),
+                    $send!($client.object_history_entry(
+                        ClassId::new(42).unwrap(),
+                        ObjectId::new(99).unwrap(),
+                        HistoryId::new(9001).unwrap()
+                    ))
+                    .unwrap(),
                 )
                 .unwrap(),
                 "name" => array(
-                    $send!($client.object_history_by_name(42.into(), NAME, objects())).unwrap(),
+                    $send!($client.object_history_by_name(
+                        ClassId::new(42).unwrap(),
+                        NAME,
+                        objects()
+                    ))
+                    .unwrap(),
                 ),
-                "population" => {
-                    envelope($send!($client.class_objects_as_of(42.into(), at, objects())).unwrap())
-                }
+                "population" => envelope(
+                    $send!($client.class_objects_as_of(ClassId::new(42).unwrap(), at, objects()))
+                        .unwrap(),
+                ),
                 "computed" => serde_json::to_value(
-                    $send!($client.object_computed_as_of(42.into(), 99.into(), at)).unwrap(),
+                    $send!($client.object_computed_as_of(
+                        ClassId::new(42).unwrap(),
+                        ObjectId::new(99).unwrap(),
+                        at
+                    ))
+                    .unwrap(),
                 )
                 .unwrap(),
                 "class_relations" => envelope(
-                    $send!($client.class_relation_history(42.into(), relations())).unwrap(),
+                    $send!($client.class_relation_history(ClassId::new(42).unwrap(), relations()))
+                        .unwrap(),
                 ),
                 "class_relations_as_of" => envelope(
-                    $send!($client.class_relations_as_of(42.into(), at, relations())).unwrap(),
+                    $send!($client.class_relations_as_of(
+                        ClassId::new(42).unwrap(),
+                        at,
+                        relations()
+                    ))
+                    .unwrap(),
                 ),
                 "object_relations" => envelope(
-                    $send!($client.object_relation_history(42.into(), 99.into(), relations()))
-                        .unwrap(),
+                    $send!($client.object_relation_history(
+                        ClassId::new(42).unwrap(),
+                        ObjectId::new(99).unwrap(),
+                        relations()
+                    ))
+                    .unwrap(),
                 ),
                 "object_relations_as_of" => envelope(
-                    $send!($client.object_relations_as_of(42.into(), 99.into(), at, relations()))
-                        .unwrap(),
+                    $send!($client.object_relations_as_of(
+                        ClassId::new(42).unwrap(),
+                        ObjectId::new(99).unwrap(),
+                        at,
+                        relations()
+                    ))
+                    .unwrap(),
                 ),
                 _ => unreachable!(),
             }
@@ -8456,32 +8652,12 @@ mod typed_history {
         );
     }
 
-    #[rstest::rstest]
-    fn history_rejects_invalid_ids_before_transport(#[values(false, true)] asynchronous: bool) {
-        let transport = MockTransport::default();
-        let base = BaseUrl::new("https://example.test").unwrap();
-        let error = if asynchronous {
-            let client = Client::builder(base)
-                .with_transport(Arc::new(transport.clone()))
-                .build()
-                .unwrap()
-                .authenticate(Token::new("token"));
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(client.object_history_entry(42.into(), 99.into(), 0.into()))
-                .unwrap_err()
-        } else {
-            let client = blocking::Client::builder(base)
-                .with_transport(Arc::new(transport.clone()))
-                .build()
-                .unwrap()
-                .authenticate(Token::new("token"));
-            client
-                .object_history_entry(42.into(), 99.into(), 0.into())
-                .unwrap_err()
-        };
-        assert!(matches!(error, ApiError::InvalidHistoryQuery { .. }));
-        assert!(transport.requests().is_empty());
+    #[test]
+    fn history_rejects_invalid_ids_at_construction() {
+        assert!(matches!(
+            HistoryId::new(0),
+            Err(ApiError::InvalidResourceId { kind: "HistoryId" })
+        ));
     }
 
     #[rstest::rstest]
@@ -8507,7 +8683,7 @@ mod typed_history {
             tokio::runtime::Runtime::new()
                 .unwrap()
                 .block_on(client.class_relations_as_of(
-                    42.into(),
+                    ClassId::new(42).unwrap(),
                     serde_json::from_value(json!(AT)).unwrap(),
                     RelationHistoryOptions::default(),
                 ))
@@ -8520,7 +8696,7 @@ mod typed_history {
                 .authenticate(Token::new("token"));
             client
                 .class_relations_as_of(
-                    42.into(),
+                    ClassId::new(42).unwrap(),
                     serde_json::from_value(json!(AT)).unwrap(),
                     RelationHistoryOptions::default(),
                 )

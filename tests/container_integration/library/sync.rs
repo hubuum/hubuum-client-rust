@@ -4,6 +4,7 @@ use hubuum_client::{
     LOCAL_PROVIDER_KIND, ObjectPatch, ObjectRelationPost, QueryFilter, Token, UserPatch, blocking,
     types::{FilterOperator, Permissions, SortDirection},
 };
+use hubuum_client::{GroupId, PrincipalId, UserId};
 use hubuum_client::{
     StructuredClassSelector, StructuredSearchEvent, StructuredSearchField,
     StructuredSearchFieldPredicate, StructuredSearchOperator, StructuredSearchRequest,
@@ -473,7 +474,7 @@ fn sync_collection_has_group_permission_returns_expected(
     let target_group_id = if existing_group {
         admin_group_id
     } else {
-        hubuum_client::GroupId::new(i32::MAX)
+        GroupId::new(i32::MAX).unwrap()
     };
     let has_permission = collection
         .has_group_permission(target_group_id, Permissions::ReadCollection)
@@ -861,7 +862,7 @@ fn sync_group_membership_add_remove_roundtrip() {
     assert!(
         members
             .iter()
-            .any(|member| member.principal_id == hubuum_client::PrincipalId::from(user_id))
+            .any(|member| member.principal_id == PrincipalId::from(user_id))
     );
 
     group
@@ -873,7 +874,7 @@ fn sync_group_membership_add_remove_roundtrip() {
     assert!(
         !members_after
             .iter()
-            .any(|member| member.principal_id == hubuum_client::PrincipalId::from(user_id))
+            .any(|member| member.principal_id == PrincipalId::from(user_id))
     );
 }
 
@@ -1462,7 +1463,10 @@ fn sync_credential_activity_and_authentication_config() {
     let harness = SyncHarness::start().expect("failed to bootstrap harness");
     let client = &harness.client;
     let me = client.me().unwrap();
-    let user = client.users().get(me.principal.principal_id.get()).unwrap();
+    let user = client
+        .users()
+        .get(UserId::new(me.principal.principal_id.get()).unwrap())
+        .unwrap();
     let activity = user
         .token_activity(me.token.id, Default::default())
         .unwrap();

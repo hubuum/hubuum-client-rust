@@ -324,7 +324,7 @@ impl ComputedFieldPreviewRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClassComputationState {
     pub class_id: ClassId,
-    pub evaluation_revision: i64,
+    pub evaluation_revision: crate::ComputationRevision,
     pub rebuild_status: String,
     pub active_task_id: Option<TaskId>,
     pub last_error: Option<String>,
@@ -371,7 +371,7 @@ pub struct ComputedScope {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct SharedComputedScope {
-    pub revision: i64,
+    pub revision: crate::ComputationRevision,
     pub materialization_stale: bool,
     pub values: BTreeMap<String, serde_json::Value>,
     pub errors: BTreeMap<String, ComputedFieldError>,
@@ -465,8 +465,9 @@ mod tests {
             },
             ComputedResultType::String,
         );
-        let preview = ComputedFieldPreviewRequest::for_object(definition, ObjectId::new(4))
-            .for_class(ClassId::new(2));
+        let preview =
+            ComputedFieldPreviewRequest::for_object(definition, ObjectId::new(4).unwrap())
+                .for_class(ClassId::new(2).unwrap());
         let value = serde_json::to_value(preview).unwrap();
         assert_eq!(value["class_id"], 2);
         assert_eq!(value["object_id"], 4);

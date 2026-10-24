@@ -1,3 +1,4 @@
+use crate::client::EndpointRequest;
 use std::borrow::Cow;
 
 #[cfg(feature = "async")]
@@ -408,14 +409,14 @@ pub(crate) fn principal_token_revoke_if_match_sync(
     token_id: impl Into<TokenId>,
     etag: &EntityTag,
 ) -> Result<(), ApiError> {
-    client.request_with_endpoint_raw_with_headers(
-        reqwest::Method::POST,
-        &Endpoint::PrincipalTokenRevoke,
-        principal_token_url_params(principal_id, token_id),
-        vec![],
-        SyncEmptyPostParams {},
-        &crate::client::if_match_headers(etag),
-    )?;
+    client.request_endpoint(EndpointRequest {
+        method: reqwest::Method::POST,
+        endpoint: &Endpoint::PrincipalTokenRevoke,
+        url_params: principal_token_url_params(principal_id, token_id),
+        query_params: vec![],
+        body: SyncEmptyPostParams {},
+        headers: &crate::client::if_match_headers(etag),
+    })?;
     Ok(())
 }
 
@@ -558,14 +559,14 @@ pub(crate) async fn principal_token_revoke_if_match_async(
     etag: &EntityTag,
 ) -> Result<(), ApiError> {
     client
-        .request_with_endpoint_raw_with_headers(
-            reqwest::Method::POST,
-            &Endpoint::PrincipalTokenRevoke,
-            principal_token_url_params(principal_id, token_id),
-            vec![],
-            AsyncEmptyPostParams {},
-            &crate::client::if_match_headers(etag),
-        )
+        .request_endpoint(EndpointRequest {
+            method: reqwest::Method::POST,
+            endpoint: &Endpoint::PrincipalTokenRevoke,
+            url_params: principal_token_url_params(principal_id, token_id),
+            query_params: vec![],
+            body: AsyncEmptyPostParams {},
+            headers: &crate::client::if_match_headers(etag),
+        })
         .await?;
     Ok(())
 }

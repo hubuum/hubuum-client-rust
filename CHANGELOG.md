@@ -6,6 +6,21 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** resource IDs reject zero and negative values in constructors,
+  parsing, and deserialization. Replace primitive conversions with `Id::new(value)?`
+  or `Id::try_from(value)?`; pass typed IDs to resource queries and relation
+  exclusions. ID-bearing resources and required-ID creation bodies no longer
+  implement `Default`. Use checked creation builders or explicit request fields.
+- **Breaking:** low-level resource requests select their resource with a type
+  parameter instead of a dummy default instance. Historical relation variants
+  now contain their matching typed endpoints. Computed response revisions use
+  `ComputationRevision`. See [migration instructions](docs/migration-0.19.md).
+- Task discovery validates typed filter state before serializing requests.
+  Async and blocking requests share preparation, header validation, and request
+  plans. Resource generation resolves each field type once for models and builders.
+
 ## [0.18.0] - 2026-10-23
 
 This release explicitly targets Hubuum server v0.0.20.

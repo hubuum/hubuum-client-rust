@@ -9,10 +9,14 @@ Dedicated typed helpers do not necessarily exist for every server operation.
 Authenticated relative routes remain available through `raw()` while typed
 coverage evolves.
 
+The unreleased 0.19.0 source retains the 0.0.20 target and immutable image.
+The typed-ID migration is documented in [the migration guide](docs/migration-0.19.md).
+
 ## Compatibility history
 
 | Client version | Server target | Tested server image | [Evidence](docs/compatibility-evidence.md#compatibility-history) |
 | --- | --- | --- | --- |
+| 0.19.0 (unreleased) | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Typed-ID refactor verification](docs/compatibility-evidence.md#client-0190-unreleased-refactor) on 2026-10-24: 107 library tests, 56 consumer cases, three native-resource phases, and four restore/recovery pairs. |
 | 0.18.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Pinned verification](docs/compatibility-evidence.md#client-0180-release) on 2026-10-23: 107 library tests, 56 consumer cases, three native-resource phases, and four restore/recovery pairs after the dependency refresh. |
 | 0.17.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Pinned verification](docs/compatibility-evidence.md#client-0170-release) on 2026-10-23: 105 library tests, 54 consumer cases, three native-resource phases, and four restore/recovery pairs after the dependency refresh. |
 | 0.16.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Pinned session, library/consumer, native-resource, and restore/recovery verification](docs/compatibility-evidence.md#v0020-target) on 2026-10-22. |
@@ -51,7 +55,7 @@ versioned Hubuum server v0.0.2 release.
 
 ## Before upgrading
 
-Client 0.18.0 targets server v0.0.20. Use fresh credential approvals for protected
+The unreleased client 0.19.0 targets server v0.0.20. Use fresh credential approvals for protected
 mutations, and review [known typed API gaps](openapi/known-gaps.md). The client
 accepts backup formats 6, 7, 8, 9, and 10; the server decides whether it can restore one.
 For older Rust releases, check the linked migration notes before upgrading:

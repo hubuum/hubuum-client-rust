@@ -1,3 +1,4 @@
+use hubuum_client::ClassId;
 use hubuum_client::{
     BaseUrl, ClassRelation, ClassRelationCreateOptions, Client, MockTransport, RelationLabel,
     Token, TransportResponse, blocking,
@@ -51,10 +52,12 @@ fn blocking_labels() {
         .build()
         .unwrap()
         .authenticate(Token::new("private_token"));
-    let class = client.classes().get(42).unwrap();
+    let class = client.classes().get(ClassId::new(42).unwrap()).unwrap();
     verify(
         &transport,
-        class.create_relation_with_options(77, options()).unwrap(),
+        class
+            .create_relation_with_options(ClassId::new(77).unwrap(), options())
+            .unwrap(),
     );
 }
 
@@ -66,11 +69,15 @@ async fn async_labels() {
         .build()
         .unwrap()
         .authenticate(Token::new("private_token"));
-    let class = client.classes().get(42).await.unwrap();
+    let class = client
+        .classes()
+        .get(ClassId::new(42).unwrap())
+        .await
+        .unwrap();
     verify(
         &transport,
         class
-            .create_relation_with_options(77, options())
+            .create_relation_with_options(ClassId::new(77).unwrap(), options())
             .await
             .unwrap(),
     );

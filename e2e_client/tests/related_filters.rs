@@ -11,8 +11,9 @@ macro_rules! workflow {
         let collection = $send!($client.collections().create_raw(CollectionPost {
             name: prefix.clone(),
             group_id: $group,
-            ..Default::default()
-        }))
+ description: Default::default(),
+ parent_collection_id: None
+}))
         .unwrap();
         let mut classes = Vec::new();
         for suffix in ["hosts", "middle", "rooms"] {
@@ -20,8 +21,10 @@ macro_rules! workflow {
                 $send!($client.classes().create_raw(ClassPost {
                     name: format!("{prefix}-{suffix}"),
                     collection_id: collection.id,
-                    ..Default::default()
-                }))
+ description: Default::default(),
+ json_schema: None,
+ validate_schema: None
+}))
                 .unwrap(),
             );
         }
@@ -43,8 +46,8 @@ macro_rules! workflow {
                     collection_id: Some(collection.id),
                     hubuum_class_id: Some(classes[class].id),
                     data: Some(json!({"role": role})),
-                    ..Default::default()
-                }))
+ description: Default::default()
+}))
                 .unwrap(),
             );
         }

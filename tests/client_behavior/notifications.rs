@@ -1,3 +1,4 @@
+use hubuum_client::{ClassId, EventSinkId, EventSubscriptionId, PrincipalId};
 use std::sync::Arc;
 
 use hubuum_client::{
@@ -39,24 +40,26 @@ macro_rules! workflow {
         let subscriptions = $client.system_event_subscriptions();
         let listed = $send!(subscriptions.list()).unwrap();
         assert!(!format!("{:?}", listed[0]).contains("private_routing"));
-        let fetched = $send!(subscriptions.get(7)).unwrap();
+        let fetched = $send!(subscriptions.get(EventSubscriptionId::new(7).unwrap())).unwrap();
         assert_eq!(
             fetched.filter.as_ref().unwrap().subject_is_admin,
             Some(true)
         );
         let filter = EventSubscriptionFilter {
-            subject_principal_ids: Some(vec![3.into()]),
+            subject_principal_ids: Some(vec![PrincipalId::new(3).unwrap()]),
             subject_identity_scopes: Some(vec!["local".into()]),
             subject_is_admin: Some(true),
             ..Default::default()
         };
         let created = $send!(subscriptions.create(NewEventSubscription {
-            sink_id: 9.into(),
+            sink_id: EventSinkId::new(9).unwrap(),
             name: "login alerts".into(),
             entity_types: vec!["authentication".into()],
             actions: vec!["succeeded".into()],
             filter: Some(filter.clone()),
-            ..Default::default()
+            description: None,
+            routing: None,
+            enabled: None
         }))
         .unwrap();
         $send!(subscriptions.update(
@@ -68,22 +71,24 @@ macro_rules! workflow {
         ))
         .unwrap();
         let input = EventNotificationRequest {
-            subscription_id: 7.into(),
+            subscription_id: EventSubscriptionId::new(7).unwrap(),
             event_id: "11111111-1111-4111-8111-111111111111".into(),
         };
-        let preview = $send!($client.preview_event_notification(9, input.clone())).unwrap();
+        let preview =
+            $send!($client.preview_event_notification(EventSinkId::new(9).unwrap(), input.clone()))
+                .unwrap();
         assert_eq!(preview.payload["text"], "private_payload");
         assert!(!format!("{preview:?}").contains("private_payload"));
-        $send!($client.test_event_notification(9, input)).unwrap();
+        $send!($client.test_event_notification(EventSinkId::new(9).unwrap(), input)).unwrap();
         $send!(
             $client
-                .class_events(42)
+                .class_events(ClassId::new(42).unwrap())
                 .include_relations(false)
                 .include_relations(true)
                 .all()
         )
         .unwrap();
-        $send!(subscriptions.delete(7)).unwrap();
+        $send!(subscriptions.delete(EventSubscriptionId::new(7).unwrap())).unwrap();
     }};
 }
 

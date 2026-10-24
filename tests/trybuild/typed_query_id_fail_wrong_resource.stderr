@@ -1,0 +1,22 @@
+error[E0308]: mismatched types
+ --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:5:38
+  |
+5 |     let _ = client.classes().id().eq(object);
+  |                                   -- ^^^^^^ expected `ClassId`, found `ObjectId`
+  |                                   |
+  |                                   arguments to this method are incorrect
+  |
+note: method defined here
+ --> src/client/shared/query.rs
+  |
+  |     pub fn eq(self, value: V) -> Q {
+  |            ^^
+
+error[E0308]: mismatched types
+ --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:7:28
+  |
+7 |     let _ = ClassGet { id: wrong_id, ..Default::default() };
+  |                            ^^^^^^^^ expected `Option<ClassId>`, found `Option<ObjectId>`
+  |
+  = note: expected enum `Option<ClassId>`
+             found enum `Option<ObjectId>`

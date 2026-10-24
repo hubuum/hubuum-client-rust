@@ -54,9 +54,8 @@ pub(crate) fn fetch_admin_ids(base_url: &str, token: &str) -> Result<(UserId, Gr
         .and_then(|entry| entry.get("id"))
         .and_then(Value::as_i64)
         .ok_or_else(|| "failed to extract admin user id".to_string())?;
-    let user_id = i32::try_from(user_id)
-        .map(UserId::new)
-        .map_err(|_| "admin user id is outside the i32 range".to_string())?;
+    let user_id =
+        i32::try_from(user_id).map_err(|_| "admin user id is outside the i32 range".to_string())?;
 
     let groups_response = http
         .get(format!(
@@ -81,8 +80,10 @@ pub(crate) fn fetch_admin_ids(base_url: &str, token: &str) -> Result<(UserId, Gr
         .and_then(Value::as_i64)
         .ok_or_else(|| "failed to extract admin group id".to_string())?;
     let group_id = i32::try_from(group_id)
-        .map(GroupId::new)
         .map_err(|_| "admin group id is outside the i32 range".to_string())?;
 
-    Ok((user_id, group_id))
+    Ok((
+        UserId::new(user_id).map_err(|error| error.to_string())?,
+        GroupId::new(group_id).map_err(|error| error.to_string())?,
+    ))
 }

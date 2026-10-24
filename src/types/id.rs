@@ -1,24 +1,18 @@
 macro_rules! define_id {
     ($name:ident, $inner:ty) => {
-        #[derive(
-            Debug,
-            Default,
-            Clone,
-            Copy,
-            PartialEq,
-            Eq,
-            PartialOrd,
-            Ord,
-            Hash,
-            serde::Serialize,
-            serde::Deserialize,
-        )]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize)]
         #[serde(transparent)]
         pub struct $name($inner);
 
         impl $name {
-            pub const fn new(value: $inner) -> Self {
-                Self(value)
+            pub const fn new(value: $inner) -> Result<Self, crate::ApiError> {
+                if value > 0 {
+                    Ok(Self(value))
+                } else {
+                    Err(crate::ApiError::InvalidResourceId {
+                        kind: stringify!($name),
+                    })
+                }
             }
 
             pub const fn get(self) -> $inner {
@@ -33,16 +27,30 @@ macro_rules! define_id {
         }
 
         impl std::str::FromStr for $name {
-            type Err = <$inner as std::str::FromStr>::Err;
+            type Err = crate::ApiError;
 
             fn from_str(value: &str) -> Result<Self, Self::Err> {
-                value.parse().map(Self)
+                Self::new(
+                    value
+                        .parse()
+                        .map_err(|_| crate::ApiError::InvalidResourceId {
+                            kind: stringify!($name),
+                        })?,
+                )
             }
         }
 
-        impl From<$inner> for $name {
-            fn from(value: $inner) -> Self {
-                Self(value)
+        impl TryFrom<$inner> for $name {
+            type Error = crate::ApiError;
+            fn try_from(value: $inner) -> Result<Self, Self::Error> {
+                Self::new(value)
+            }
+        }
+
+        impl<'de> serde::Deserialize<'de> for $name {
+            fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+                Self::new(<$inner as serde::Deserialize>::deserialize(deserializer)?)
+                    .map_err(serde::de::Error::custom)
             }
         }
 
@@ -85,3 +93,16 @@ define_id!(HistoryId, i64);
 define_id!(PermissionId, i32);
 define_id!(ComputedFieldDefinitionId, i32);
 define_id!(RestoreId, i64);
+
+pub(crate) use define_id;
+
+impl From<crate::UserId> for PrincipalId {
+    fn from(value: crate::UserId) -> Self {
+        Self(value.get())
+    }
+}
+impl From<crate::ServiceAccountId> for PrincipalId {
+    fn from(value: crate::ServiceAccountId) -> Self {
+        Self(value.get())
+    }
+}

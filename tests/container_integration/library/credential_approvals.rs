@@ -1,4 +1,5 @@
 use chrono::{Duration, Utc};
+use hubuum_client::UserId;
 use hubuum_client::{CredentialOperation, HubuumDateTime, NewTokenRequest, RenewTokenRequest};
 
 use crate::support::{
@@ -11,7 +12,12 @@ macro_rules! token_approval_lifecycle {
     ($client:ident, $password:expr, $send:ident) => {{
         let me = $send!($client.me()).unwrap();
         let principal_id = me.principal.principal_id;
-        let user = $send!($client.users().get(principal_id.get())).unwrap();
+        let user = $send!(
+            $client
+                .users()
+                .get(UserId::new(principal_id.get()).unwrap())
+        )
+        .unwrap();
         let token_name = unique_case_prefix("credential-approval");
         let request = NewTokenRequest::new()
             .name(token_name.clone())

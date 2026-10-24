@@ -153,7 +153,7 @@ fn sync_task_wait_polls_until_terminal() {
     let client = build_sync_client(&server).unwrap();
     let result = client
         .tasks()
-        .wait(9)
+        .wait(crate::TaskId::new(9).unwrap())
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
         .unwrap();
@@ -182,7 +182,7 @@ fn sync_task_wait_times_out() {
     let started = std::time::Instant::now();
     let err = client
         .tasks()
-        .wait(9)
+        .wait(crate::TaskId::new(9).unwrap())
         .poll_interval(std::time::Duration::from_secs(10))
         .timeout(Some(std::time::Duration::from_millis(20)))
         .send()
@@ -213,7 +213,7 @@ async fn async_task_wait_polls_until_terminal() {
     let client = build_async_client(&server).await.unwrap();
     let result = client
         .tasks()
-        .wait(9)
+        .wait(crate::TaskId::new(9).unwrap())
         .poll_interval(std::time::Duration::from_millis(1))
         .send()
         .await
@@ -241,7 +241,7 @@ async fn async_task_wait_times_out() {
     let started = std::time::Instant::now();
     let err = client
         .tasks()
-        .wait(9)
+        .wait(crate::TaskId::new(9).unwrap())
         .poll_interval(std::time::Duration::from_secs(10))
         .timeout(Some(std::time::Duration::from_millis(20)))
         .send()
@@ -275,7 +275,7 @@ fn sync_tasks_query_uses_raw_params() {
         .query()
         .kind(crate::types::TaskKind::Export)
         .status(crate::types::TaskStatus::Succeeded)
-        .submitted_by(3)
+        .submitted_by(crate::PrincipalId::new(3).unwrap())
         .list()
         .unwrap();
     listing.assert_calls(1);
@@ -301,7 +301,7 @@ async fn async_tasks_query_uses_raw_params() {
         .query()
         .kind(crate::types::TaskKind::Export)
         .status(crate::types::TaskStatus::Succeeded)
-        .submitted_by(3)
+        .submitted_by(crate::PrincipalId::new(3).unwrap())
         .list()
         .await
         .unwrap();
@@ -324,7 +324,7 @@ fn export_request_value() -> crate::types::ExportRequest {
         missing_data_policy: None,
         query: None,
         scope: crate::types::ExportScope {
-            class_id: Some(42.into()),
+            class_id: Some(crate::ClassId::new(42).unwrap()),
             kind: crate::types::ExportScopeKind::ObjectsInClass,
             object_id: None,
         },
@@ -416,7 +416,11 @@ fn sync_export_output_rendered_csv() {
             .body("id,name\n1,srv-01\n");
     });
     let client = build_sync_client(&server).unwrap();
-    match client.exports().output(11).unwrap() {
+    match client
+        .exports()
+        .output(crate::TaskId::new(11).unwrap())
+        .unwrap()
+    {
         crate::types::ExportResult::Rendered { content_type, body } => {
             assert_eq!(content_type, crate::types::ExportContentType::TextCsv);
             assert!(body.contains("srv-01"));
@@ -458,7 +462,7 @@ fn sync_export_run_failed_errors() {
         ApiError::TaskUnsuccessful {
             task_id,
             status: crate::types::TaskStatus::Failed,
-        } if *task_id == crate::types::TaskId::from(11)
+        } if *task_id == crate::types::TaskId::new(11).unwrap()
     ));
     assert!(!err.to_string().contains("task-summary-secret"));
     assert!(!format!("{err:?}").contains("task-summary-secret"));
@@ -514,7 +518,12 @@ async fn async_export_output_rendered_html() {
             .body("<p>html export</p>");
     });
     let client = build_async_client(&server).await.unwrap();
-    match client.exports().output(11).await.unwrap() {
+    match client
+        .exports()
+        .output(crate::TaskId::new(11).unwrap())
+        .await
+        .unwrap()
+    {
         crate::types::ExportResult::Rendered { content_type, body } => {
             assert_eq!(content_type, crate::types::ExportContentType::TextHtml);
             assert_eq!(body, "<p>html export</p>");
@@ -557,7 +566,7 @@ async fn async_export_run_failed_errors() {
         ApiError::TaskUnsuccessful {
             task_id,
             status: crate::types::TaskStatus::Cancelled,
-        } if *task_id == crate::types::TaskId::from(11)
+        } if *task_id == crate::types::TaskId::new(11).unwrap()
     ));
     assert!(!err.to_string().contains("task-summary-secret"));
     assert!(!format!("{err:?}").contains("task-summary-secret"));

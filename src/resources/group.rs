@@ -1,3 +1,4 @@
+use crate::client::EndpointRequest;
 use std::borrow::Cow;
 
 #[cfg(feature = "async")]
@@ -92,14 +93,14 @@ impl SyncHandle<Group> {
         principal_id: impl Into<PrincipalId>,
         etag: &EntityTag,
     ) -> Result<(), ApiError> {
-        self.client().request_with_endpoint_raw_with_headers(
-            reqwest::Method::DELETE,
-            &Endpoint::GroupMembersAddRemove,
-            group_member_url_params(self.id(), principal_id),
-            vec![],
-            SyncEmptyPostParams {},
-            &crate::client::if_match_headers(etag),
-        )?;
+        self.client().request_endpoint(EndpointRequest {
+            method: reqwest::Method::DELETE,
+            endpoint: &Endpoint::GroupMembersAddRemove,
+            url_params: group_member_url_params(self.id(), principal_id),
+            query_params: vec![],
+            body: SyncEmptyPostParams {},
+            headers: &crate::client::if_match_headers(etag),
+        })?;
         Ok(())
     }
 
@@ -180,14 +181,14 @@ impl AsyncHandle<Group> {
         etag: &EntityTag,
     ) -> Result<(), ApiError> {
         self.client()
-            .request_with_endpoint_raw_with_headers(
-                reqwest::Method::DELETE,
-                &Endpoint::GroupMembersAddRemove,
-                group_member_url_params(self.id(), principal_id),
-                vec![],
-                AsyncEmptyPostParams {},
-                &crate::client::if_match_headers(etag),
-            )
+            .request_endpoint(EndpointRequest {
+                method: reqwest::Method::DELETE,
+                endpoint: &Endpoint::GroupMembersAddRemove,
+                url_params: group_member_url_params(self.id(), principal_id),
+                query_params: vec![],
+                body: AsyncEmptyPostParams {},
+                headers: &crate::client::if_match_headers(etag),
+            })
             .await?;
         Ok(())
     }

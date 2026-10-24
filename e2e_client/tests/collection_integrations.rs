@@ -41,8 +41,10 @@ macro_rules! workflow {
             entity_types: vec!["object".into()],
             actions: vec!["updated".into()],
             enabled: Some(false),
-            ..Default::default()
-        }))
+ description: None,
+ routing: None,
+ filter: None
+}))
         .unwrap();
         $send!(subscriptions.delete(subscription.id)).unwrap();
         $send!(sinks.delete(sink.id)).unwrap();

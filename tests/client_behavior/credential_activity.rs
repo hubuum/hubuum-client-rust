@@ -1,3 +1,4 @@
+use hubuum_client::{PrincipalId, ServiceAccountId, TokenId, UserId};
 use std::sync::Arc;
 
 use hubuum_client::{
@@ -41,16 +42,16 @@ macro_rules! read_activity {
     ($client:ident, $finish:ident, $surface:expr, $options:expr) => {
         match $surface {
             "user" => $finish!(
-                $finish!($client.users().get(42))
+                $finish!($client.users().get(UserId::new(42).unwrap()))
                     .unwrap()
-                    .token_activity(9, $options)
+                    .token_activity(TokenId::new(9).unwrap(), $options)
             ),
             "service" => $finish!(
-                $finish!($client.service_accounts().get(42))
+                $finish!($client.service_accounts().get(ServiceAccountId::new(42).unwrap()))
                     .unwrap()
-                    .token_activity(9, $options)
+                    .token_activity(TokenId::new(9).unwrap(), $options)
             ),
-            _ => $finish!($client.token_activity(42, 9, $options)),
+            _ => $finish!($client.token_activity(PrincipalId::new(42).unwrap(), TokenId::new(9).unwrap(), $options)),
         }
     };
 }
@@ -155,7 +156,11 @@ async fn activity_preserves_management_errors_in_both_modes(#[case] status: Stat
         .unwrap()
         .authenticate(Token::new("token"));
     let error = client
-        .token_activity(42, 9, Default::default())
+        .token_activity(
+            PrincipalId::new(42).unwrap(),
+            TokenId::new(9).unwrap(),
+            Default::default(),
+        )
         .await
         .unwrap_err();
     assert!(error.is_status(status));
@@ -168,7 +173,11 @@ async fn activity_preserves_management_errors_in_both_modes(#[case] status: Stat
             .authenticate(Token::new("token"));
         assert!(
             client
-                .token_activity(42, 9, Default::default())
+                .token_activity(
+                    PrincipalId::new(42).unwrap(),
+                    TokenId::new(9).unwrap(),
+                    Default::default()
+                )
                 .unwrap_err()
                 .is_status(status)
         );

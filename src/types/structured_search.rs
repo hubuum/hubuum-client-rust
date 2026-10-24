@@ -287,7 +287,7 @@ fn invalid(reason: &'static str) -> ApiError {
 }
 
 impl StructuredClassSelector {
-    fn validate(&self) -> Result<(), ApiError> {
+    pub(crate) fn validate(&self) -> Result<(), ApiError> {
         if matches!(self, Self::Name { name } if name.trim().is_empty()) {
             return Err(invalid("class names must not be blank"));
         }
@@ -832,7 +832,7 @@ mod tests {
     fn structured_search_serializes_nested_dsl_and_round_trips() {
         let request = StructuredSearchRequest::new(StructuredSearchTarget::Object {
             class: Some(StructuredClassSelector::Id {
-                id: ClassId::new(7),
+                id: ClassId::new(7).unwrap(),
             }),
         })
         .filter(StructuredSearchExpression::And {
@@ -962,7 +962,7 @@ mod tests {
             .is_err()
         );
         let related = StructuredRelatedPredicate::new(StructuredClassSelector::Id {
-            id: ClassId::new(1),
+            id: ClassId::new(1).unwrap(),
         });
         request(StructuredSearchExpression::And {
             args: vec![related.clone().into(); 4],
@@ -1003,7 +1003,7 @@ mod tests {
     fn structured_search_checks_collection_bounds() {
         let field = StructuredSearchFieldPredicate::is_null(StructuredSearchField::Name);
         let mut related = StructuredRelatedPredicate::new(StructuredClassSelector::Id {
-            id: ClassId::new(1),
+            id: ClassId::new(1).unwrap(),
         });
         related.filters = vec![field; 16];
         let request = |related| {

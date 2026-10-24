@@ -1,7 +1,7 @@
 error[E0599]: no method named `hydrate_search` found for struct `hubuum_client::Client<Unauthenticated>` in the current scope
- --> tests/trybuild/hydration_fail_unauthenticated.rs:5:20
+ --> tests/trybuild/hydration_fail_unauthenticated.rs:6:20
   |
-5 |     let _ = client.hydrate_search(request);
+6 |     let _ = client.hydrate_search(request);
   |                    ^^^^^^^^^^^^^^ method not found in `hubuum_client::Client<Unauthenticated>`
   |
   = note: the method was found for `hubuum_client::Client<Authenticated>`

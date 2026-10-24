@@ -1,0 +1,8 @@
+error[E0308]: mismatched types
+ --> tests/trybuild/history_endpoint_fail_wrong_id.rs:7:14
+  |
+3 | fn class_id(value: HistoricalRelationValue) -> ClassId {
+  |                                                ------- expected `ClassId` because of return type
+...
+7 |         } => snapshot.id,
+  |              ^^^^^^^^^^^ expected `ClassId`, found `ObjectId`

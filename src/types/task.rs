@@ -64,7 +64,9 @@ pub enum TaskTerminalReason {
 }
 
 /// Nonnegative computation identity within a class, distinct from a resource revision.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 #[serde(try_from = "i64", into = "i64")]
 pub struct ComputationRevision(i64);
 

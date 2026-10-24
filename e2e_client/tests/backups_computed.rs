@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use e2e_client::harness::{E2EHarness, admin_context};
 use hubuum_client::{
-    BackupRequest, ComputationRevision, ComputedFieldDefinitionRequest, ComputedFieldOperation,
+    BackupRequest, ComputedFieldDefinitionRequest, ComputedFieldOperation,
     ComputedFieldPreviewRequest, ComputedResultType, PersonalComputedFieldDefinitionRequest,
     TaskOutputDiscoveryState, blocking,
 };
@@ -125,7 +125,7 @@ fn e2e_shared_and_personal_computed_fields_enrich_objects() {
         .computed_fields(class_id)
         .create(shared_request)
         .expect("shared computed field should create");
-    let revision = ComputationRevision::new(shared.state.evaluation_revision).unwrap();
+    let revision = shared.state.evaluation_revision;
     let tasks = harness
         .client
         .tasks()

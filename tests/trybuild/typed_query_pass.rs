@@ -19,9 +19,9 @@ fn query_contract(client: &blocking::Client<Authenticated>, since: HubuumDateTim
 
     let owner_path = JsonPath::new(["owner"]).expect("JSON path should be valid");
     let _ = client
-        .objects(42)
+        .objects(ClassId::new(42).unwrap())
         .hubuum_class_id()
-        .eq(42.into())
+        .eq(ClassId::new(42).unwrap())
         .data()
         .with_path(owner_path)
         .ne("legacy");

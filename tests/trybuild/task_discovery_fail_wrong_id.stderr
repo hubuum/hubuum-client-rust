@@ -7,7 +7,7 @@ error[E0308]: mismatched types
   |                            arguments to this method are incorrect
   |
 note: method defined here
- --> src/client/async.rs
+ --> src/client/async/tasks.rs
   |
   |     pub fn class_id(mut self, value: ClassId) -> Self {
   |            ^^^^^^^^
@@ -21,7 +21,7 @@ error[E0308]: mismatched types
   |                            arguments to this method are incorrect
   |
 note: method defined here
- --> src/client/sync.rs
+ --> src/client/sync/tasks.rs
   |
   |     pub fn schema_revision(mut self, value: SchemaRevision) -> Self {
   |            ^^^^^^^^^^^^^^^

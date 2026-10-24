@@ -2,14 +2,15 @@ use hubuum_client::{
     BaseUrl, Client, MockTransport, SearchHydrationRequest, SearchHydrationResponse,
     StructuredClassSelector, Token, TransportResponse, blocking,
 };
+use hubuum_client::{ClassId, ObjectId};
 use reqwest::{Method, StatusCode};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
 fn request() -> SearchHydrationRequest {
     SearchHydrationRequest::new(
-        42.into(),
-        9.into(),
+        ClassId::new(42).unwrap(),
+        ObjectId::new(9).unwrap(),
         StructuredClassSelector::Name {
             name: "private-target".into(),
         },

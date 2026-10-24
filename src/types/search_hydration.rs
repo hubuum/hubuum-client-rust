@@ -43,19 +43,11 @@ impl SearchHydrationRequest {
                 reason: "depth must be 1–10 and path limit 1–50",
             });
         }
-        if root_class_id.get() <= 0
-            || root_object_id.get() <= 0
-            || matches!(&class, StructuredClassSelector::Id { id } if id.get() <= 0)
-        {
-            return Err(ApiError::InvalidSearchHydration {
-                reason: "class and object IDs must be positive",
-            });
-        }
-        if matches!(&class, StructuredClassSelector::Name { name } if name.trim().is_empty()) {
-            return Err(ApiError::InvalidSearchHydration {
-                reason: "target class names must not be blank",
-            });
-        }
+        class
+            .validate()
+            .map_err(|_| ApiError::InvalidSearchHydration {
+                reason: "target class name must not be blank",
+            })?;
         Ok(Self {
             version: 1,
             root_class_id,
@@ -162,9 +154,11 @@ mod tests {
         #[case] valid: bool,
     ) {
         let request = SearchHydrationRequest::new(
-            1.into(),
-            2.into(),
-            StructuredClassSelector::Id { id: 3.into() },
+            crate::ClassId::new(1).unwrap(),
+            crate::ObjectId::new(2).unwrap(),
+            StructuredClassSelector::Id {
+                id: crate::ClassId::new(3).unwrap(),
+            },
             depth,
             limit,
         );
@@ -192,8 +186,8 @@ mod tests {
     #[test]
     fn request_roundtrips_and_redacts_class_names() {
         let request = SearchHydrationRequest::new(
-            1.into(),
-            2.into(),
+            crate::ClassId::new(1).unwrap(),
+            crate::ObjectId::new(2).unwrap(),
             StructuredClassSelector::Name {
                 name: "private-class".into(),
             },
