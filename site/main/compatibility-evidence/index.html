@@ -1249,6 +1249,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-0190-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.19.0 release
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#client-0190-unreleased-refactor" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1656,6 +1667,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-0190-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.19.0 release
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#client-0190-unreleased-refactor" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1897,6 +1919,12 @@ as an extension point for additional operations.</p>
 </thead>
 <tbody>
 <tr>
+<td>0.19.0</td>
+<td>0.0.20</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code></td>
+<td><a href="#client-0190-release">Complete release verification</a> on 2026-10-24: 107 library tests, 56 consumer cases, three native-resource phases, and four restore/recovery pairs with approval enforcement; 257 operations and 125 model mappings.</td>
+</tr>
+<tr>
 <td>0.17.0</td>
 <td>0.0.20</td>
 <td><code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code></td>
@@ -2119,6 +2147,33 @@ released artifact and reviewed contract as described below.</p>
 jobs separately compare the contract and run the integration suites against the
 server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.</p>
+<h2 id="client-0190-release">Client 0.19.0 release<a class="headerlink" href="#client-0190-release" title="Permanent link">&para;</a></h2>
+<p>Client 0.19.0 validates positive resource IDs and strengthens resource queries,
+creation builders, computed revisions, and historical relation endpoints.
+Existing callers must follow the <a href="../migration-0.19/">migration guide</a>.
+The release retains server v0.0.20, its immutable image
+<code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code>,
+the 257-operation snapshot, 125 wire-model mappings, Rust 1.88, and all public
+feature combinations. No server data migration is required for this client update.</p>
+<p>On 2026-10-24, <code>cargo update --verbose</code> and <code>cargo outdated --workspace</code> found
+no compatible dependency updates across all four workspace members. The lockfile
+and manifest constraints remain unchanged. The newer <code>generic-array</code> 0.14.9
+cannot resolve with the upstream <code>crypto-common</code> 0.1.7 requirement <code>=0.14.7</code>.</p>
+<p>After that dependency review, the canonical combined command passed with
+credential approval enforcement against the declared image:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+<p>The run passed 107 library tests, 56 ordinary consumer cases, three native-resource
+phases, and all four restore/recovery pairs. Both client modes covered rotating
+and persistent sessions, LDAP/LDAPS authentication, and restore recovery. Local
+containers used the host's rootless Podman SELinux adapter and the fully qualified
+PostgreSQL image name with the same pinned digest; fixture contents were unchanged.</p>
+<p>The complete non-container workspace suite passed 961 tests, with all 34 trybuild
+fixtures checked. Formatting, generated resource reconciliation, strict Clippy
+and rustdoc, all five public feature combinations, and Rust 1.88 across every
+workspace target and feature passed. Pinned OpenAPI validation and comparison,
+<code>cargo audit</code>, and <code>cargo deny check bans licenses sources</code> passed.</p>
 <h2 id="client-0190-unreleased-refactor">Client 0.19.0 unreleased refactor<a class="headerlink" href="#client-0190-unreleased-refactor" title="Permanent link">&para;</a></h2>
 <p>The unreleased 0.19.0 source retains server v0.0.20 and immutable image
 <code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code>.
@@ -2144,8 +2199,8 @@ the 257-operation snapshot, 125 wire-model mappings, Rust 1.88, and all public
 feature combinations.</p>
 <p>On 2026-10-23, the canonical combined command passed with credential approval
 enforcement against that image:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 <p>The run passed 107 library tests, 56 ordinary consumer cases (including four
 historical server-version gates), three native-resource phases, and all four
@@ -2178,7 +2233,7 @@ the 257-operation snapshot, and 125 wire-model mappings. The new typed APIs and
 persistent sessions are additive; existing 0.16.0 callers need no migration.</p>
 <p>On 2026-10-23, the canonical combined suite passed against that image with
 credential approval enforcement:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 <p>The run passed 105 library tests, 54 ordinary consumer cases (including four
 historical server-version gates), three native-resource phases, and all four
@@ -2214,7 +2269,7 @@ live testing and retained the fixture's 30-second access-token lifetime.</p>
 <p>On 2026-10-23, the canonical combined command passed against the declared server
 v0.0.20 image
 <code>ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./scripts/run-integration-tests.sh<span class="w"> </span>--with-e2e-client<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 <p>The run passed 105 library tests and 52 downstream consumer cases (including two
 real session-rotation tests and four legacy server-version gates), followed by
