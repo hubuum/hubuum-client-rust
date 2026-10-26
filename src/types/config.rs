@@ -132,6 +132,9 @@ pub struct TaskConfig {
     pub reindex_execution_timeout_seconds: u64,
     pub remote_call_execution_timeout_seconds: u64,
     pub schema_validation_execution_timeout_seconds: u64,
+    /// Absent on servers before 0.0.21.
+    #[serde(default)]
+    pub schema_profiling_execution_timeout_seconds: Option<u64>,
 }
 
 #[non_exhaustive]

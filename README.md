@@ -37,6 +37,7 @@ See [session migration](docs/client-setup.md#rotating-interactive-sessions),
 - **JSON workload analysis**: declare expected query patterns, inspect observations and native index coverage, and explicitly adopt suggestions with [typed query-usage APIs](docs/query-usage.md).
 - **Administrative recovery**: inspect redacted runtime configuration and stage, confirm, or inspect destructive restores with explicit capability handling.
 - **Computed fields**: manage shared class definitions and personal definitions, preview expressions, request rebuilds, and read enriched objects.
+- **Field discovery and schema suggestions**: inspect bounded, authorized data and computed fields with structured paths; generate a sampled candidate, review it, then stage it for whole-class impact analysis. See [the discovery workflow](docs/schema-evolution.md#discover-fields-and-suggest-a-policy).
 - **Schema evolution**: stage immutable policies, inspect impact diagnostics and retained HTML reports, activate policies explicitly, and revalidate objects. See [the schema guide](docs/schema-evolution.md).
 - **Task cancellation**: request durable cancellation and inspect deadlines, unattempted items, and possible remote side effects.
 - **Natural-key routing**: address classes and objects by exact names, including numeric-looking names, across CRUD, permissions, relations, and graph operations.

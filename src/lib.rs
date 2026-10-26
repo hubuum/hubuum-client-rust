@@ -189,3 +189,11 @@ pub use types::{
     HistoryPage, HistoryPageOptions, HistorySortField, HistoryTimelineOptions,
     ObjectHistoryOptions, RelationHistoryOptions,
 };
+
+#[cfg(feature = "async")]
+pub use client::{SchemaProfileRunOp, SchemaProfileSubmitOp};
+pub use types::{
+    ClassFieldInventory, DiscoveredField, FieldDiscoveryOptions, FieldDiscoveryTruncation,
+    FieldPathSegment, FieldSampleLimit, FieldSource, ObservedFieldType, ProfileSuggestionStatus,
+    SchemaProfilePreset, SchemaProfileReport, SchemaProfileRequest, SchemaProfileTaskDetails,
+};

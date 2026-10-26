@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(any(feature = "async", feature = "blocking"))]
+use crate::FieldDiscoveryOptions;
 
 pub(crate) fn schema_url_params(
     class_id: ClassId,
@@ -39,4 +41,13 @@ pub(crate) fn query_usage_url_params(
         params.push(("declaration_id".into(), id.to_string().into()));
     }
     params
+}
+
+#[cfg(any(feature = "async", feature = "blocking"))]
+pub(crate) fn field_discovery_filters(options: &FieldDiscoveryOptions) -> Vec<QueryFilter> {
+    vec![
+        QueryFilter::raw("limit", options.sample_limit().get().to_string()),
+        QueryFilter::raw("depth", options.depth().to_string()),
+        QueryFilter::raw("containers", options.containers().to_string()),
+    ]
 }

@@ -467,7 +467,10 @@
       "openapi_schema": "TaskConfig",
       "rust_file": "src/types/config.rs",
       "rust_type": "TaskConfig",
-      "direction": "response"
+      "direction": "response",
+      "requiredness_exceptions": {
+        "schema_profiling_execution_timeout_seconds": "Servers before 0.0.21 omit this setting; None preserves its absence without inventing a configured value."
+      }
     },
     {
       "openapi_schema": "BackupConfig",
@@ -864,6 +867,40 @@
       "openapi_schema": "HistoricalComputedValues",
       "rust_file": "src/types/historical.rs",
       "rust_type": "HistoricalComputedValues",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "ClassFieldInventory",
+      "rust_file": "src/types/field_discovery.rs",
+      "rust_type": "ClassFieldInventory",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "DiscoveredField",
+      "rust_file": "src/types/field_discovery.rs",
+      "rust_type": "DiscoveredField",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaProfileReport",
+      "rust_file": "src/types/schema_profiling.rs",
+      "rust_type": "SchemaProfileReport",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "SchemaProfileRequest",
+      "rust_file": "src/types/schema_profiling.rs",
+      "rust_type": "SchemaProfileRequest",
+      "direction": "request",
+      "requiredness_exceptions": {
+        "preset": "The validating request always serializes its effective value; the server supplies the same default when this property is omitted.",
+        "sample_limit": "The validating request always serializes its effective value; the server supplies the same default when this property is omitted."
+      }
+    },
+    {
+      "openapi_schema": "SchemaProfileTaskDetails",
+      "rust_file": "src/types/task.rs",
+      "rust_type": "SchemaProfileTaskDetails",
       "direction": "response"
     }
   ]
