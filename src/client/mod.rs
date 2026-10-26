@@ -22,7 +22,8 @@ pub mod transport;
 pub use self::r#async::{
     ApprovedCredentialOperation, ClassNameObjects, ClassNameScope, ClassQueryUsage, ClassSchema,
     Client, CollectionScope, CredentialApprovals, ExportOutputStream, ItemStream, ObjectNameScope,
-    PageStream, PrincipalSettingsScope, SystemEventSubscriptions, TypedClass,
+    PageStream, PrincipalSettingsScope, SchemaProfileRunOp, SchemaProfileSubmitOp,
+    SystemEventSubscriptions, TypedClass,
 };
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryJsonPathField, QueryNumericField, QueryTextField,
@@ -269,6 +270,22 @@ mod parity_contract {
                 std::mem::drop(
                     client.test_event_notification(crate::EventSinkId::new(1).unwrap(), request),
                 );
+            };
+            let _ = |client: &$module::Client<Authenticated>, id: ClassId| {
+                drop(client.class_fields(id, &crate::FieldDiscoveryOptions::default()));
+            };
+            let _ = $module::ClassNameScope::fields;
+            let _ = $module::Handle::<crate::Class>::fields;
+            let _ = $module::ClassSchema::profile;
+            let _ = $module::ClassSchema::suggest;
+            let _ = $module::ClassSchema::profile_report;
+            let _ = $module::SchemaProfileSubmitOp::send;
+            let _ = $module::SchemaProfileRunOp::send;
+            let _ = |op: $module::SchemaProfileSubmitOp| op.idempotency_key("profile-key");
+            let _ = |op: $module::SchemaProfileRunOp| {
+                op.idempotency_key("profile-key")
+                    .poll_interval(std::time::Duration::from_secs(1))
+                    .timeout(None)
             };
             let _ = $module::ClassSchema::get;
             let _ = $module::ClassSchema::revisions;

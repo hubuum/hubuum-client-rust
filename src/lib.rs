@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.19.0 targets Hubuum server v0.0.20. See the repository's
+//! Version 0.20.0 targets Hubuum server v0.0.21. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -45,7 +45,7 @@ pub mod types;
 mod endpoints;
 
 /// Hubuum server release targeted by this client release.
-pub const TARGET_SERVER_VERSION: &str = "0.0.20";
+pub const TARGET_SERVER_VERSION: &str = "0.0.21";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
@@ -188,4 +188,12 @@ pub use types::{
     HistoricalRelationships, HistoricalSharedComputedFields, HistoryDirection, HistoryMarker,
     HistoryPage, HistoryPageOptions, HistorySortField, HistoryTimelineOptions,
     ObjectHistoryOptions, RelationHistoryOptions,
+};
+
+#[cfg(feature = "async")]
+pub use client::{SchemaProfileRunOp, SchemaProfileSubmitOp};
+pub use types::{
+    ClassFieldInventory, DiscoveredField, FieldDiscoveryOptions, FieldDiscoveryTruncation,
+    FieldPathSegment, FieldSampleLimit, FieldSource, ObservedFieldType, ProfileSuggestionStatus,
+    SchemaProfilePreset, SchemaProfileReport, SchemaProfileRequest, SchemaProfileTaskDetails,
 };

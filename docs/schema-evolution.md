@@ -6,6 +6,83 @@ inspect its impact, then explicitly activate it. Both client modes expose the
 same operations through `client.class_schema(class_id)` or `class.schema()`.
 The examples below use the async client; remove `.await` for blocking calls.
 
+## Discover fields and suggest a policy
+
+Server v0.0.21 adds a bounded field inventory and asynchronous schema suggestions.
+Both async and blocking clients provide the same workflow:
+
+```rust
+use hubuum_client::{
+    FieldDiscoveryOptions, FieldSampleLimit, SchemaProfilePreset, SchemaProfileRequest,
+};
+
+let options = FieldDiscoveryOptions::default()
+    .with_sample_limit(FieldSampleLimit::new(100)?)
+    .with_depth(6)?
+    .with_containers(true);
+let fields = client.class_by_name("Servers").fields(&options).await?;
+// When a class ID is already known, this avoids a name lookup:
+let fields_by_id = client.class_fields(class_id, &options).await?;
+
+let schema = client.class_schema(class_id);
+let report = schema.suggest(SchemaProfileRequest::new(
+    SchemaProfilePreset::Balanced,
+    FieldSampleLimit::new(100)?,
+)).send().await?;
+// Review report.schema, report.findings, and report.truncation first.
+let staged = schema.stage(report.stage_request(true)?).await?;
+// Continue with whole-class impact analysis and explicit activation below.
+```
+
+Discovery uses one request for ordinary names or known IDs. The name helper
+safely resolves URL dot-segment names (`.` and `..`) before using the ID route.
+Limits are 1–250 objects, depth is 0–32, and container fields are optional.
+Counts describe the authorized sample, not the entire class. Preserve each
+field's `source` and structured `path`: literal `a.b` and nested `a` → `b` can
+share a display label. `FieldPathSegment::ArrayItem` is distinct from a property
+name. `example` is a bounded display preview, not a JSON value to parse or reuse.
+Shared and personal computed fields retain their own sources and error counts.
+Inspect `truncation` before treating a missing field as evidence of absence.
+
+Choose an inference preset for the raw object data:
+
+| Preset | Mixed unrelated types | Consistently present properties | Additional properties |
+| --- | --- | --- | --- |
+| `Strict` | Block the suggestion | Required | Denied |
+| `Balanced` (default) | Preserve as a union | Required | Allowed |
+| `Expansive` | Preserve as a union | Optional | Allowed |
+
+Discovery and profiling require `ReadClass`; the sample includes only objects
+the caller may read. Computed fields appear in discovery but do not contribute
+to the suggested raw-data schema. Observed nulls and missing properties remain
+distinct.
+
+A `Candidate` with `sample_valid == Some(true)` is suitable for review, but says
+nothing about objects outside the sample. `stage_request` rejects blocked,
+insufficient, invalid, or missing candidates. Staging still requires the existing
+permissions and never activates a policy; use impact analysis and
+`RejectIncompatible` activation to check the current population.
+
+For resumable or interactive flows, submit and retain the task ID:
+
+```rust
+let task = schema.profile(SchemaProfileRequest::default())
+    .idempotency_key("review-servers-2026-10")
+    .send().await?;
+client.tasks().wait(task.id).send().await?;
+let report = schema.profile_report(task.id).await?;
+```
+
+`TaskKind::SchemaProfiling` works with class and output-state task filters.
+When upgrading Rust callers that construct `TaskDetails` literals, add
+`schema_profiling: None` or use `..Default::default()` for optional details.
+A polling timeout does not cancel work; resume or cancel through the task API.
+The `suggest` convenience method only retrieves reports after full success.
+Reports remain available for 24 hours. HTTP 410 means the report expired and a
+new task is needed; HTTP 403 means its scope or current object permissions no
+longer permit access. A missing or unfinished report returns HTTP 404. Report
+schema, findings, previews, and structured property names are redacted in `Debug`.
+
 ## Stage, inspect, and activate
 
 ```rust
@@ -118,13 +195,12 @@ same token. Internal reindex and schema work require an unscoped administrator.
 
 ## Server upgrade
 
-Drain old workers, apply the v0.0.15 migrations (including schema findings,
-task control, and cursor indexes), then start matching API, worker,
-administrator, and restore-executor binaries with consistent limits. Schedule
-a quiet window for bounded index and constraint work. Existing enforced objects
-start pending; request revalidation. External authorization policies must grant
-the new `CancelTask` action. Restart in-progress string-sorted pagination on
-locale-collated databases after the server switches to byte ordering.
+For v0.0.21, drain old workers and apply the restore-chunk, computed-read-repair,
+schema-profiling, and computed-history deletion-lock migrations before starting
+matching API, worker, administrator, and restore-executor binaries. Schedule a
+quiet window for bounded migration scans and lock waits. Provide writable
+temporary storage for backup and restore spools, keep computed repair workers
+enabled, and update closed task-kind handling to accept `schema_profiling`.
 
 Review stored validated schemas before resuming writes: recursive/dynamic or
 anchored references, nested resource IDs, `unevaluatedProperties`, and
@@ -134,6 +210,6 @@ the configured budgets. The administrative configuration exposes the effective
 schema, task, and backup limits. External authorization traversal is capped at
 10,000 candidates.
 
-See the [v0.0.15 release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.15),
-[server validation limits](https://github.com/hubuum/hubuum/blob/v0.0.15/docs/json_schema_validation.md),
+See the [v0.0.21 release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.21),
+[server validation limits](https://github.com/hubuum/hubuum/blob/v0.0.21/docs/json_schema_validation.md),
 and [backup format compatibility](backups-and-computed-fields.md).

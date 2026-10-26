@@ -196,7 +196,9 @@ impl TaskQuery {
     }
 
     fn validate_kinds(&self) -> Result<(), ApiError> {
-        use TaskKind::{Backup, Export, Import, Reindex, RemoteCall, SchemaValidation};
+        use TaskKind::{
+            Backup, Export, Import, Reindex, RemoteCall, SchemaProfiling, SchemaValidation,
+        };
         let mut applicable = vec![
             Import,
             Export,
@@ -204,6 +206,7 @@ impl TaskQuery {
             Reindex,
             RemoteCall,
             SchemaValidation,
+            SchemaProfiling,
         ];
         let groups: &[(bool, &[TaskKind])] = &[
             (
@@ -236,10 +239,19 @@ impl TaskQuery {
                 &[Import],
             ),
             (self.backup_include_history.is_some(), &[Backup]),
-            (self.output_state.is_some(), &[Export, Backup]),
+            (
+                self.output_state.is_some(),
+                &[Export, Backup, SchemaProfiling],
+            ),
             (
                 self.class_id.is_some(),
-                &[SchemaValidation, Reindex, Export, RemoteCall],
+                &[
+                    SchemaValidation,
+                    Reindex,
+                    Export,
+                    RemoteCall,
+                    SchemaProfiling,
+                ],
             ),
             (self.object_id.is_some(), &[Export, RemoteCall]),
         ];

@@ -1128,6 +1128,8 @@ pub use request::*;
 mod resources;
 pub use resources::*;
 
+mod discovery;
+pub use discovery::*;
 mod schema;
 pub use schema::*;
 

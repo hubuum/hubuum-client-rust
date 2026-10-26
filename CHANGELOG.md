@@ -6,6 +6,31 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-26
+
+This release explicitly targets Hubuum server v0.0.21. Upgrade the server before
+using field discovery or schema suggestions.
+
+### Added
+
+- Bounded field discovery by class ID, exact name, or class handle in async and
+  blocking clients. Validated options preserve structured paths, sampled counts,
+  computed-field sources, previews, and truncation without downloading objects.
+- Typed schema profiling requests, task discovery, retained reports, and a
+  submit/wait/fetch suggestion helper. Reviewed candidates feed explicit staging;
+  whole-class impact analysis and activation remain separate actions. Failed,
+  cancelled, expired, and inaccessible work retains actionable errors.
+- Coverage of the server's profiling execution timeout in administrator settings.
+
+### Changed
+
+- **Breaking:** `TaskDetails` adds `schema_profiling`. Existing complete struct
+  literals must add `schema_profiling: None` or use `..Default::default()`;
+  exhaustive patterns must bind the new field or add `..`.
+  Existing deserialization and accessors continue to accept older responses.
+- Target Hubuum server v0.0.21 and its 261-operation contract. Refresh compatible
+  dependencies while retaining Rust 1.88 and the existing public feature sets.
+
 ## [0.19.0] - 2026-10-24
 
 This release explicitly targets Hubuum server v0.0.20.

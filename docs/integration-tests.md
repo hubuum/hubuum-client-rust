@@ -89,8 +89,8 @@ and blocking modes. These cases are mandatory for the v0.0.20 target and need
 no separate opt-in variable.
 
 Required CI runs integration tests against an immutable server image digest.
-For client 0.19.0, that image is Hubuum server v0.0.20 at
-`sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a`.
+For client 0.20.0, that image is Hubuum server v0.0.21 at
+`sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6`.
 Required CI sets `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`; set the
 same variable for local release verification so missing enforcement fails.
 A scheduled compatibility workflow separately runs against
@@ -140,8 +140,8 @@ compiles these tests but leaves them ignored.
 Computed-field definition mutations enqueue asynchronous rebuilds, including
 definition deletion. The history scenarios wait for all reindex tasks belonging
 to their unique class before removing the object and class. Superseded rebuilds
-may finish cancelled; other failures still fail the test. This avoids the
-v0.0.20 class-deletion/rebuild deadlock without retrying or ignoring HTTP 500s.
+may finish cancelled; other failures still fail the test. The explicit drain retains compatibility with older v0.0.20 servers without
+retrying or ignoring HTTP 500s. The v0.0.21 target fixes that server deadlock.
 
 ## Rotating-session contract
 

@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.20",
+  "api_version": "0.0.21",
   "openapi": "3.1.0",
-  "operation_count": 257,
+  "operation_count": 261,
   "operations": [
     {
       "method": "GET",
@@ -925,6 +925,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -1029,6 +1030,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -1443,6 +1445,77 @@
           "application/json"
         ],
         "412": []
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByNameByClassNameFields",
+      "parameters": [
+        "path:class_name",
+        "query:containers",
+        "query:depth",
+        "query:limit"
+      ],
+      "path": "/api/v1/classes/by-name/{class_name}/fields",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "ClassFieldInventory",
+        "DiscoveredField",
+        "FieldDiscoveryTruncation",
+        "FieldPathSegment",
+        "FieldSource"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/ClassFieldInventory"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
       },
       "security": [
         {
@@ -3180,6 +3253,77 @@
           "application/json"
         ],
         "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdFields",
+      "parameters": [
+        "path:class_id",
+        "query:containers",
+        "query:depth",
+        "query:limit"
+      ],
+      "path": "/api/v1/classes/{class_id}/fields",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "ClassFieldInventory",
+        "DiscoveredField",
+        "FieldDiscoveryTruncation",
+        "FieldPathSegment",
+        "FieldSource"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/ClassFieldInventory"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
           "application/json"
         ]
       },
@@ -4987,6 +5131,197 @@
           "application/json"
         ],
         "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1ClassesByClassIdSchemaProfiles",
+      "parameters": [
+        "path:class_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/profiles",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "ProfilePreset",
+        "SchemaProfileRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SchemaProfileRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "BackupTaskDetails",
+        "CollectionID",
+        "ExportMissingDataPolicy",
+        "ExportScopeKind",
+        "ExportTaskDetails",
+        "ExportTemplateID",
+        "HubuumClassID",
+        "HubuumClassRelationID",
+        "HubuumObjectID",
+        "HubuumObjectRelationID",
+        "ImportAtomicity",
+        "ImportCollisionPolicy",
+        "ImportPermissionPolicy",
+        "ImportTaskDetails",
+        "RebuildTaskDetails",
+        "RemoteCallTaskDetails",
+        "RemoteTargetID",
+        "RetainedBackupDetails",
+        "RetainedExportDetails",
+        "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
+        "SchemaRevision",
+        "SchemaTaskDetails",
+        "SchemaWorkKind",
+        "SchemaWorkStatus",
+        "TaskDetails",
+        "TaskDiscoveryTarget",
+        "TaskKind",
+        "TaskLinks",
+        "TaskOutputDiscoveryState",
+        "TaskProgress",
+        "TaskRemoteSideEffectState",
+        "TaskResponse",
+        "TaskStatus"
+      ],
+      "response_schemas": {
+        "202": {
+          "application/json": {
+            "$ref": "#/components/schemas/TaskResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "202": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1ClassesByClassIdSchemaProfilesByTaskId",
+      "parameters": [
+        "path:class_id",
+        "path:task_id"
+      ],
+      "path": "/api/v1/classes/{class_id}/schema/profiles/{task_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "FieldDiscoveryTruncation",
+        "ProfilePreset",
+        "ProfileSuggestionStatus",
+        "SchemaProfileReport",
+        "SchemaProfileRequest"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SchemaProfileReport"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "410": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ],
+        "410": [
           "application/json"
         ]
       },
@@ -10406,6 +10741,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -10673,6 +11009,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -10777,6 +11114,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -14109,6 +14447,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -14213,6 +14552,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -15452,6 +15792,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -16550,6 +16891,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -16633,6 +16975,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -16730,6 +17073,7 @@
         "RetainedBackupDetails",
         "RetainedExportDetails",
         "RetainedImportDetails",
+        "SchemaProfileTaskDetails",
         "SchemaRevision",
         "SchemaTaskDetails",
         "SchemaWorkKind",
@@ -16938,8 +17282,8 @@
       "security": []
     }
   ],
-  "path_count": 177,
-  "schema_count": 391,
+  "path_count": 181,
+  "schema_count": 401,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
@@ -16953,6 +17297,7 @@
     "BackupState",
     "BackupTaskDetails",
     "ClassComputationState",
+    "ClassFieldInventory",
     "ClassKey",
     "ClassSchemaResponse",
     "ClearRateLimitResponse",
@@ -16992,6 +17337,7 @@
     "CurrentTokenMetadata",
     "DatabaseConfig",
     "DbStateResponse",
+    "DiscoveredField",
     "EffectiveGroupPermission",
     "EventConfig",
     "EventDeliveryHealthResponse",
@@ -17041,6 +17387,9 @@
     "ExportTemplateKind",
     "ExportTemplateRunRequest",
     "ExportWarning",
+    "FieldDiscoveryTruncation",
+    "FieldPathSegment",
+    "FieldSource",
     "Group",
     "GroupGrant",
     "GroupKey",
@@ -17171,6 +17520,8 @@
     "PrincipalTokenMetadata",
     "PrincipalTokenPointResponse",
     "ProbeResponse",
+    "ProfilePreset",
+    "ProfileSuggestionStatus",
     "Provenance",
     "ProvenanceActor",
     "ProvenancePrincipal",
@@ -17247,6 +17598,9 @@
     "SchemaImpactResponse",
     "SchemaIssue",
     "SchemaObjectUrlTemplate",
+    "SchemaProfileReport",
+    "SchemaProfileRequest",
+    "SchemaProfileTaskDetails",
     "SchemaReference",
     "SchemaRepairReportRequest",
     "SchemaRevision",
@@ -17706,6 +18060,51 @@
         "evaluation_revision",
         "rebuild_status",
         "updated_at"
+      ],
+      "type": "object"
+    },
+    "ClassFieldInventory": {
+      "properties": {
+        "effective_sample_limit": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/components/schemas/DiscoveredField"
+          },
+          "type": "array"
+        },
+        "include_containers": {
+          "type": "boolean"
+        },
+        "max_depth": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sampled": {
+          "type": "boolean"
+        },
+        "sampled_objects": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncation": {
+          "items": {
+            "$ref": "#/components/schemas/FieldDiscoveryTruncation"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "effective_sample_limit",
+        "fields",
+        "include_containers",
+        "max_depth",
+        "sampled",
+        "sampled_objects",
+        "truncation"
       ],
       "type": "object"
     },
@@ -19064,6 +19463,61 @@
         "max_connections",
         "pending_acquisitions",
         "total_connections"
+      ],
+      "type": "object"
+    },
+    "DiscoveredField": {
+      "properties": {
+        "error_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "example": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "example_truncated": {
+          "type": "boolean"
+        },
+        "field": {
+          "type": "string"
+        },
+        "object_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "observation_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "items": {
+            "$ref": "#/components/schemas/FieldPathSegment"
+          },
+          "type": "array"
+        },
+        "source": {
+          "$ref": "#/components/schemas/FieldSource"
+        },
+        "types": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "error_count",
+        "example_truncated",
+        "field",
+        "object_count",
+        "observation_count",
+        "path",
+        "source",
+        "types"
       ],
       "type": "object"
     },
@@ -20774,6 +21228,62 @@
         "message"
       ],
       "type": "object"
+    },
+    "FieldDiscoveryTruncation": {
+      "enum": [
+        "sample_limit",
+        "candidate_limit",
+        "depth",
+        "work_limit",
+        "field_limit",
+        "path_limit",
+        "response_limit"
+      ],
+      "type": "string"
+    },
+    "FieldPathSegment": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "property"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "array_item"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "FieldSource": {
+      "enum": [
+        "data",
+        "shared_computed",
+        "personal_computed"
+      ],
+      "type": "string"
     },
     "Group": {
       "properties": {
@@ -26810,6 +27320,22 @@
       ],
       "type": "object"
     },
+    "ProfilePreset": {
+      "enum": [
+        "strict",
+        "balanced",
+        "expansive"
+      ],
+      "type": "string"
+    },
+    "ProfileSuggestionStatus": {
+      "enum": [
+        "candidate",
+        "blocked",
+        "insufficient"
+      ],
+      "type": "string"
+    },
     "Provenance": {
       "properties": {
         "actor": {
@@ -28971,6 +29497,99 @@
     "SchemaObjectUrlTemplate": {
       "type": "string"
     },
+    "SchemaProfileReport": {
+      "properties": {
+        "class_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "effective_sample_limit": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "findings": {
+          "items": {},
+          "type": "array"
+        },
+        "options": {
+          "$ref": "#/components/schemas/SchemaProfileRequest"
+        },
+        "profile": {},
+        "replay": {},
+        "sample_valid": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sampled": {
+          "type": "boolean"
+        },
+        "sampled_objects": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "schema": {},
+        "status": {
+          "$ref": "#/components/schemas/ProfileSuggestionStatus"
+        },
+        "truncation": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/FieldDiscoveryTruncation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "class_id",
+        "effective_sample_limit",
+        "findings",
+        "options",
+        "sampled",
+        "sampled_objects",
+        "status"
+      ],
+      "type": "object"
+    },
+    "SchemaProfileRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "preset": {
+          "$ref": "#/components/schemas/ProfilePreset"
+        },
+        "sample_limit": {
+          "maximum": 250,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "SchemaProfileTaskDetails": {
+      "properties": {
+        "class_id": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/HubuumClassID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
     "SchemaReference": {
       "properties": {
         "class_id": {
@@ -30606,6 +31225,11 @@
           "minimum": 0,
           "type": "integer"
         },
+        "schema_profiling_execution_timeout_seconds": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
         "schema_validation_execution_timeout_seconds": {
           "format": "int64",
           "minimum": 0,
@@ -30630,6 +31254,7 @@
         "reindex_execution_timeout_seconds",
         "remote_call_execution_timeout_seconds",
         "remote_call_max_active_per_user",
+        "schema_profiling_execution_timeout_seconds",
         "schema_validation_execution_timeout_seconds",
         "workers"
       ],
@@ -30682,6 +31307,16 @@
           "oneOf": [
             {
               "$ref": "#/components/schemas/RemoteCallTaskDetails"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_profiling": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/SchemaProfileTaskDetails"
             },
             {
               "type": "null"
@@ -30852,7 +31487,8 @@
         "backup",
         "reindex",
         "remote_call",
-        "schema_validation"
+        "schema_validation",
+        "schema_profiling"
       ],
       "type": "string"
     },
@@ -32199,5 +32835,5 @@
       "type": "object"
     }
   },
-  "spec_sha256": "c42315ba68dee89494da420331a80468897f89642f34ff2aa102de0fb58181d6"
+  "spec_sha256": "42c1966cd70a17ac3bf430f193bc372801d931757166f45eb8f40479b627c2e0"
 }

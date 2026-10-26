@@ -61,6 +61,8 @@ pub enum Endpoint {
     Classes,
     ClassesById,
     ClassesByName,
+    ClassFields,
+    ClassByNameFields,
     ClassByNameObjects,
     ClassByNameObjectAggregates,
     ClassByNamePermissions,
@@ -147,6 +149,8 @@ pub enum Endpoint {
     ClassQueryUsageById,
     ClassQueryUsageAnalysis,
     ClassSchema,
+    ClassSchemaProfiles,
+    ClassSchemaProfile,
     ClassSchemaObjects,
     ClassSchemaRevisions,
     ClassSchemaRevision,
@@ -416,6 +420,10 @@ impl Endpoint {
                 "/api/v1/classes/{class_id}/query-usage/{declaration_id}"
             }
             Endpoint::ClassQueryUsageAnalysis => "/api/v1/classes/{class_id}/query-usage/analysis",
+            Endpoint::ClassFields => "/api/v1/classes/{class_id}/fields",
+            Endpoint::ClassByNameFields => "/api/v1/classes/by-name/{class_name}/fields",
+            Endpoint::ClassSchemaProfiles => "/api/v1/classes/{class_id}/schema/profiles",
+            Endpoint::ClassSchemaProfile => "/api/v1/classes/{class_id}/schema/profiles/{task_id}",
             Endpoint::ClassSchema => "/api/v1/classes/{class_id}/schema",
             Endpoint::ClassSchemaObjects => "/api/v1/classes/{class_id}/schema/objects",
             Endpoint::ClassSchemaRevisions => "/api/v1/classes/{class_id}/schema/revisions",
@@ -539,7 +547,7 @@ mod test {
                 .collect::<std::collections::BTreeSet<_>>(),
             std::collections::BTreeSet::new()
         );
-        assert_eq!(contract["operation_count"], 257);
+        assert_eq!(contract["operation_count"], 261);
     }
     use std::str::FromStr;
     use yare::parameterized;

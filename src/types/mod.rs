@@ -8,6 +8,7 @@ mod credential_approval;
 mod datetime;
 mod event;
 mod export;
+mod field_discovery;
 mod filter;
 mod historical;
 mod history;
@@ -23,6 +24,7 @@ mod relation;
 mod remote;
 mod revision;
 mod schema;
+mod schema_profiling;
 mod search;
 mod search_hydration;
 mod session;
@@ -84,6 +86,10 @@ pub use export::{
     ExportScopeKind, ExportTemplateKind, ExportTemplateRunRequest, ExportWarning,
     ValidatedExportScope,
 };
+pub use field_discovery::{
+    ClassFieldInventory, DiscoveredField, FieldDiscoveryOptions, FieldDiscoveryTruncation,
+    FieldPathSegment, FieldSampleLimit, FieldSource, ObservedFieldType,
+};
 pub use filter::{FilterOperator, IntoQueryTuples, QueryFilter, SortDirection};
 pub use history::{
     ClassHistory, CollectionHistory, ExportTemplateHistory, FullCollectionHistory, HistoryMetadata,
@@ -144,6 +150,9 @@ pub use schema::{
     SchemaRevision, SchemaRevisionResponse, SchemaRevisionStatus, SchemaStageRequest,
     SchemaWorkKind, SchemaWorkResponse, SchemaWorkStatus,
 };
+pub use schema_profiling::{
+    ProfileSuggestionStatus, SchemaProfilePreset, SchemaProfileReport, SchemaProfileRequest,
+};
 #[cfg(any(feature = "async", feature = "blocking"))]
 pub(crate) use search::SearchSseDecoder;
 pub use search::{
@@ -168,9 +177,9 @@ pub use settings::{
 pub use task::{
     BackupTaskDetails, ComputationRevision, ExportTaskDetails, ImportTaskDetails,
     ImportTaskResultResponse, RebuildTaskDetails, RemoteCallTaskDetails, RetainedBackupDetails,
-    RetainedExportDetails, RetainedImportDetails, SchemaTaskDetails, TaskCancelRequest,
-    TaskCancellationReason, TaskDetails, TaskDiscoveryTarget, TaskEventResponse, TaskKind,
-    TaskLinks, TaskOutputDiscoveryState, TaskProgress, TaskQueueStateResponse,
+    RetainedExportDetails, RetainedImportDetails, SchemaProfileTaskDetails, SchemaTaskDetails,
+    TaskCancelRequest, TaskCancellationReason, TaskDetails, TaskDiscoveryTarget, TaskEventResponse,
+    TaskKind, TaskLinks, TaskOutputDiscoveryState, TaskProgress, TaskQueueStateResponse,
     TaskRemoteSideEffectState, TaskResponse, TaskStatus, TaskTerminalReason, TaskTraceId,
 };
 pub use token::{MAX_TOKEN_RESOURCE_SCOPES, TokenListState, TokenResourceScope, TokenScopeDetails};

@@ -231,6 +231,7 @@ pub enum TaskKind {
     RemoteCall,
     // Keep the existing fallback's numeric discriminant stable.
     SchemaValidation = 6,
+    SchemaProfiling = 7,
     #[serde(other)]
     Unknown = 5,
 }
@@ -395,6 +396,7 @@ pub struct TaskDetails {
     pub reindex: Option<RebuildTaskDetails>,
     pub remote_call: Option<RemoteCallTaskDetails>,
     pub schema_validation: Option<SchemaTaskDetails>,
+    pub schema_profiling: Option<SchemaProfileTaskDetails>,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -855,5 +857,22 @@ mod tests {
         );
         assert_eq!(event.message, "event-message-secret");
         assert_eq!(result.error.as_deref(), Some("result-error-secret"));
+    }
+}
+
+/// Retained profiling target and report route; poll task status before downloading.
+#[non_exhaustive]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SchemaProfileTaskDetails {
+    pub class_id: Option<ClassId>,
+    pub output_url: Option<String>,
+}
+
+impl std::fmt::Debug for SchemaProfileTaskDetails {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SchemaProfileTaskDetails")
+            .field("class_id", &self.class_id)
+            .field("output_url", &"[REDACTED]")
+            .finish()
     }
 }
