@@ -1249,6 +1249,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-0200-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.20.0 release
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#client-0190-release" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1667,6 +1678,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-0200-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.20.0 release
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#client-0190-release" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1904,8 +1926,8 @@
 a server release when its pinned OpenAPI contract comes from that server tag and
 the complete Docker-backed library and consumer integration suites pass against
 an immutable image for the same release.</p>
-<p>Client 0.17.0 provides typed helpers for every route in the pinned
-v0.0.20 contract. Authenticated relative routes remain available through <code>raw()</code>
+<p>Client 0.20.0 provides typed helpers for every route in the pinned
+v0.0.21 contract. Authenticated relative routes remain available through <code>raw()</code>
 as an extension point for additional operations.</p>
 <h2 id="compatibility-history">Compatibility history<a class="headerlink" href="#compatibility-history" title="Permanent link">&para;</a></h2>
 <table>
@@ -1918,6 +1940,12 @@ as an extension point for additional operations.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.20.0</td>
+<td>0.0.21</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6</code></td>
+<td><a href="#client-0200-release">Complete pinned verification</a>: 180 tests passed on 2026-10-26.</td>
+</tr>
 <tr>
 <td>0.19.0</td>
 <td>0.0.20</td>
@@ -2147,6 +2175,23 @@ released artifact and reviewed contract as described below.</p>
 jobs separately compare the contract and run the integration suites against the
 server's <code>main</code> branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.</p>
+<h2 id="client-0200-release">Client 0.20.0 release<a class="headerlink" href="#client-0200-release" title="Permanent link">&para;</a></h2>
+<p>The release targets Hubuum server v0.0.21, with 261 operations and 130 wire-model
+mappings. Field inventories preserve source and structured path identity, sample
+bounds, preview truncation, and per-type/object counts. Schema suggestions support
+all three presets, task resumption, review, explicit staging, impact, and activation
+in synchronous and asynchronous clients. Complete <code>TaskDetails</code> literals need the
+new <code>schema_profiling</code> field or a default tail.</p>
+<p>Immutable image: <code>ghcr.io/hubuum/hubuum-server@sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6</code>.
+On 2026-10-26, the canonical combined library and downstream-consumer wrapper
+passed all 180 tests across 43 batches against the published Linux AMD64 image,
+with credential approvals required. Coverage includes both client runtimes,
+LDAP/LDAPS, field discovery by ID and name, three suggestion presets, task
+resumption, explicit stage/impact/activation, native resources, and all four
+serialized full restore/recovery pairs. No tests were ignored in this run.
+Both image architectures identify server commit
+<code>19db1547936f9a3844544085243e6d64b8e318a0</code>. The pinned operation contract also
+matches the authoritative v0.0.21 tag.</p>
 <h2 id="client-0190-release">Client 0.19.0 release<a class="headerlink" href="#client-0190-release" title="Permanent link">&para;</a></h2>
 <p>Client 0.19.0 validates positive resource IDs and strengthens resource queries,
 creation builders, computed revisions, and historical relation endpoints.

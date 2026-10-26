@@ -635,6 +635,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0021-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.21 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0020-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1617,6 +1628,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0021-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.21 target
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0020-target" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1763,7 +1785,9 @@ an immutable image for the same release.</p>
 <p>Dedicated typed helpers do not necessarily exist for every server operation.
 Authenticated relative routes remain available through <code>raw()</code> while typed
 coverage evolves.</p>
-<p>Client 0.19.0 retains the 0.0.20 target and immutable image.
+<p>Client 0.20.0 targets server v0.0.21 and its immutable release image.
+Complete <code>TaskDetails</code> literals must add <code>schema_profiling: None</code> or use
+<code>..Default::default()</code>.
 The typed-ID migration is documented in <a href="../migration-0.19/">the migration guide</a>.</p>
 <h2 id="compatibility-history">Compatibility history<a class="headerlink" href="#compatibility-history" title="Permanent link">&para;</a></h2>
 <table>
@@ -1776,6 +1800,12 @@ The typed-ID migration is documented in <a href="../migration-0.19/">the migrati
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.20.0</td>
+<td>0.0.21</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6</code></td>
+<td>180 library, consumer, and recovery tests passed on 2026-10-26; see <a href="../compatibility-evidence/#client-0200-release">0.20 evidence</a>.</td>
+</tr>
 <tr>
 <td>0.19.0</td>
 <td>0.0.20</td>
@@ -1979,7 +2009,7 @@ The typed-ID migration is documented in <a href="../migration-0.19/">the migrati
 <p>The client version 0.0.2 row predates and is unrelated to the independently
 versioned Hubuum server v0.0.2 release.</p>
 <h2 id="before-upgrading">Before upgrading<a class="headerlink" href="#before-upgrading" title="Permanent link">&para;</a></h2>
-<p>Client 0.19.0 targets server v0.0.20. Use fresh credential approvals for protected
+<p>Client 0.20.0 targets server v0.0.21. Use fresh credential approvals for protected
 mutations, and review <a href="../known-gaps/">known typed API gaps</a>. The client
 accepts backup formats 6, 7, 8, 9, and 10; the server decides whether it can restore one.
 For older Rust releases, check the linked migration notes before upgrading:
@@ -1995,6 +2025,9 @@ migration commands from an older client release.</p>
 image identities, dates, suite results, and earlier compatibility limits.</p>
 <h2 id="forward-compatibility">Forward compatibility<a class="headerlink" href="#forward-compatibility" title="Permanent link">&para;</a></h2>
 <p>See <a href="../compatibility-evidence/#forward-compatibility">forward compatibility</a> in the historical evidence.</p>
+<h2 id="v0021-target">v0.0.21 target<a class="headerlink" href="#v0021-target" title="Permanent link">&para;</a></h2>
+<p>See <a href="../compatibility-evidence/#client-0200-release">0.20 release evidence</a> for
+discovery, suggestions, and the complete pinned library/consumer run.</p>
 <h2 id="v0020-target">v0.0.20 target<a class="headerlink" href="#v0020-target" title="Permanent link">&para;</a></h2>
 <p>See <a href="../compatibility-evidence/#v0020-target">v0.0.20 evidence</a> for source
 provenance, session migration, typed API limits, and pinned integration results.</p>

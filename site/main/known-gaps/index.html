@@ -79,7 +79,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#known-hubuum-server-v0020-openapi-gaps" class="md-skip">
+        <a href="#known-hubuum-server-v0021-openapi-gaps" class="md-skip">
           Skip to content
         </a>
       
@@ -1180,6 +1180,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0021-discovery-and-suggestions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.21 discovery and suggestions
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0020-coverage" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1562,6 +1573,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v0021-discovery-and-suggestions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        v0.0.21 discovery and suggestions
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#v0020-coverage" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1601,8 +1623,8 @@
   
 
 
-<h1 id="known-hubuum-server-v0020-openapi-gaps">Known Hubuum server v0.0.20 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0020-openapi-gaps" title="Permanent link">&para;</a></h1>
-<p>The pinned client contract records these limitations in the server v0.0.20
+<h1 id="known-hubuum-server-v0021-openapi-gaps">Known Hubuum server v0.0.21 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0021-openapi-gaps" title="Permanent link">&para;</a></h1>
+<p>The pinned client contract records these limitations in the server v0.0.21
 specification explicitly:</p>
 <ul>
 <li><code>GET /api/v1/search/stream</code> declares <code>text/event-stream</code> but does not
@@ -1650,13 +1672,10 @@ Rust wire models:</p>
   preserve that structured HTTP error. Required integration uses PostgreSQL.</li>
 <li>Server traversal, export, and template batch resource limits may reject work
   that previously fit older limits. The client preserves the server error;
-  callers must narrow queries or reduce traversal depth and template workloads.</li>
-<li>Server v0.0.20 can deadlock when class deletion overlaps a computed-field
-  rebuild, returning HTTP 500 or failing the rebuild. Definition creation,
-  updates, and deletion enqueue rebuilds. Before deleting the class, list its
-  reindex tasks and use <code>tasks().wait(task.id)</code> to wait for every task to reach
-  a terminal state, including superseded revisions. Waiting only for the most
-  recent task can leave an older worker running.</li>
+  callers must narrow queries or reduce traversal depth and template workloads.
+Server v0.0.21 fixes the class/collection-deletion deadlock with computed workers.
+When using the older v0.0.20 server, wait for every reindex task for a class to
+finish before deleting it, including superseded tasks.</li>
 </ul>
 <h2 id="related-object-filter-coverage">Related-object filter coverage<a class="headerlink" href="#related-object-filter-coverage" title="Permanent link">&para;</a></h2>
 <p>Class object lists support typed <code>related.&lt;alias&gt;</code> groups through
@@ -1665,7 +1684,7 @@ class-name queries. See <a href="../querying/#filtering-by-related-objects">rela
 for group semantics and bounds. Additional raw query parameters remain
 server-validated.</p>
 <h2 id="credential-approval-coverage">Credential approval coverage<a class="headerlink" href="#credential-approval-coverage" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.20 contract includes both approval endpoints and the approval
+<p>The pinned v0.0.21 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return <code>reauthentication_required</code>; applications
@@ -1695,15 +1714,22 @@ uses <code>collection_id: None</code>.</p>
 public clients, including typed pacing, filter serialization, nullable health,
 and test-delivery decoding.</p>
 <h2 id="collection-integrations">Collection integrations<a class="headerlink" href="#collection-integrations" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.20 snapshot includes all eight collection destination and
+<p>The pinned v0.0.21 snapshot includes all eight collection destination and
 administrator grant operations. Both client modes provide typed helpers, and
 <code>CollectionEventSink</code> preserves safe metadata while omitting configuration,
 URLs, and credentials. The canonical live suite requires delegated collection
 setup in both modes and exercises global sink use through an explicit collection
 grant. These APIs require <code>ManageEventSubscription</code> and <code>ReadAudit</code>; grants do
 not inherit to child collections.</p>
+<h2 id="v0021-discovery-and-suggestions">v0.0.21 discovery and suggestions<a class="headerlink" href="#v0021-discovery-and-suggestions" title="Permanent link">&para;</a></h2>
+<p>All four new discovery and profiling endpoints have matching typed helpers in
+both client modes. Inventories preserve structured paths, sources, counts, and
+sample bounds. Profiling helpers validate options, wait only for full task
+success, retrieve retained reports, and provide a guarded explicit staging
+request. Reports do not activate policies; whole-class impact remains required.
+The pinned contract now contains 261 operations and 130 wire-model mappings.</p>
 <h2 id="v0020-coverage">v0.0.20 coverage<a class="headerlink" href="#v0020-coverage" title="Permanent link">&para;</a></h2>
-<p>The pinned 257-operation contract includes the versioned session API. Both
+<p>The original 257-operation v0.0.20 contract introduced the versioned session API. Both
 client modes provide <code>login_session</code>, <code>session_providers</code>, automatic refresh,
 and session-aware logout. Legacy single-token login is only for older servers.</p>
 <p>All eleven newer history routes have typed helpers in both modes: class/object
