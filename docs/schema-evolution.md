@@ -44,7 +44,19 @@ name. `example` is a bounded display preview, not a JSON value to parse or reuse
 Shared and personal computed fields retain their own sources and error counts.
 Inspect `truncation` before treating a missing field as evidence of absence.
 
-The `Strict`, `Balanced`, and `Expansive` presets choose inference policy.
+Choose an inference preset for the raw object data:
+
+| Preset | Mixed unrelated types | Consistently present properties | Additional properties |
+| --- | --- | --- | --- |
+| `Strict` | Block the suggestion | Required | Denied |
+| `Balanced` (default) | Preserve as a union | Required | Allowed |
+| `Expansive` | Preserve as a union | Optional | Allowed |
+
+Discovery and profiling require `ReadClass`; the sample includes only objects
+the caller may read. Computed fields appear in discovery but do not contribute
+to the suggested raw-data schema. Observed nulls and missing properties remain
+distinct.
+
 A `Candidate` with `sample_valid == Some(true)` is suitable for review, but says
 nothing about objects outside the sample. `stage_request` rejects blocked,
 insufficient, invalid, or missing candidates. Staging still requires the existing
@@ -183,13 +195,12 @@ same token. Internal reindex and schema work require an unscoped administrator.
 
 ## Server upgrade
 
-Drain old workers, apply the v0.0.15 migrations (including schema findings,
-task control, and cursor indexes), then start matching API, worker,
-administrator, and restore-executor binaries with consistent limits. Schedule
-a quiet window for bounded index and constraint work. Existing enforced objects
-start pending; request revalidation. External authorization policies must grant
-the new `CancelTask` action. Restart in-progress string-sorted pagination on
-locale-collated databases after the server switches to byte ordering.
+For v0.0.21, drain old workers and apply the restore-chunk, computed-read-repair,
+schema-profiling, and computed-history deletion-lock migrations before starting
+matching API, worker, administrator, and restore-executor binaries. Schedule a
+quiet window for bounded migration scans and lock waits. Provide writable
+temporary storage for backup and restore spools, keep computed repair workers
+enabled, and update closed task-kind handling to accept `schema_profiling`.
 
 Review stored validated schemas before resuming writes: recursive/dynamic or
 anchored references, nested resource IDs, `unevaluatedProperties`, and
@@ -199,6 +210,6 @@ the configured budgets. The administrative configuration exposes the effective
 schema, task, and backup limits. External authorization traversal is capped at
 10,000 candidates.
 
-See the [v0.0.15 release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.15),
-[server validation limits](https://github.com/hubuum/hubuum/blob/v0.0.15/docs/json_schema_validation.md),
+See the [v0.0.21 release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.21),
+[server validation limits](https://github.com/hubuum/hubuum/blob/v0.0.21/docs/json_schema_validation.md),
 and [backup format compatibility](backups-and-computed-fields.md).
