@@ -6,6 +6,11 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-26
+
+This release explicitly targets Hubuum server v0.0.21. Upgrade the server before
+using field discovery or schema suggestions.
+
 ### Added
 
 - Bounded field discovery by class ID, exact name, or class handle in async and
@@ -20,7 +25,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 ### Changed
 
 - **Breaking:** `TaskDetails` adds `schema_profiling`. Existing complete struct
-  literals must add `schema_profiling: None` or use `..Default::default()`.
+  literals must add `schema_profiling: None` or use `..Default::default()`;
+  exhaustive patterns must bind the new field or add `..`.
   Existing deserialization and accessors continue to accept older responses.
 - Target Hubuum server v0.0.21 and its 261-operation contract. Refresh compatible
   dependencies while retaining Rust 1.88 and the existing public feature sets.

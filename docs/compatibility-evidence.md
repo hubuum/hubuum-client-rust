@@ -5,14 +5,15 @@ a server release when its pinned OpenAPI contract comes from that server tag and
 the complete Docker-backed library and consumer integration suites pass against
 an immutable image for the same release.
 
-Client 0.17.0 provides typed helpers for every route in the pinned
-v0.0.20 contract. Authenticated relative routes remain available through `raw()`
+Client 0.20.0 provides typed helpers for every route in the pinned
+v0.0.21 contract. Authenticated relative routes remain available through `raw()`
 as an extension point for additional operations.
 
 ## Compatibility history
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.20.0 | 0.0.21 | `ghcr.io/hubuum/hubuum-server@sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6` | [Complete pinned verification](#client-0200-release): 180 tests passed on 2026-10-26. |
 | 0.19.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Complete release verification](#client-0190-release) on 2026-10-24: 107 library tests, 56 consumer cases, three native-resource phases, and four restore/recovery pairs with approval enforcement; 257 operations and 125 model mappings. |
 | 0.17.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Complete release verification](#client-0170-release) on 2026-10-23: 105 library tests, 54 consumer cases, three native-resource phases, and four restore/recovery pairs with approval enforcement; 257 operations and 125 model mappings. |
 | 0.16.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | 99 library tests, 40 consumer cases including two real rotation tests and four historical version gates, three native-resource phases, and four full restore/recovery pairs passed with approval enforcement on 2026-10-22; 257 operations and 111 model mappings. |
@@ -87,6 +88,26 @@ Required CI is deterministic and stays pinned to the declared target. Scheduled
 jobs separately compare the contract and run the integration suites against the
 server's `main` branch. Those scheduled checks are early-warning signals; they
 do not change a published client's declared target.
+
+## Client 0.20.0 release
+
+The release targets Hubuum server v0.0.21, with 261 operations and 130 wire-model
+mappings. Field inventories preserve source and structured path identity, sample
+bounds, preview truncation, and per-type/object counts. Schema suggestions support
+all three presets, task resumption, review, explicit staging, impact, and activation
+in synchronous and asynchronous clients. Complete `TaskDetails` literals need the
+new `schema_profiling` field or a default tail.
+
+Immutable image: `ghcr.io/hubuum/hubuum-server@sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6`.
+On 2026-10-26, the canonical combined library and downstream-consumer wrapper
+passed all 180 tests across 43 batches against the published Linux AMD64 image,
+with credential approvals required. Coverage includes both client runtimes,
+LDAP/LDAPS, field discovery by ID and name, three suggestion presets, task
+resumption, explicit stage/impact/activation, native resources, and all four
+serialized full restore/recovery pairs. No tests were ignored in this run.
+Both image architectures identify server commit
+`19db1547936f9a3844544085243e6d64b8e318a0`. The pinned operation contract also
+matches the authoritative v0.0.21 tag.
 
 ## Client 0.19.0 release
 

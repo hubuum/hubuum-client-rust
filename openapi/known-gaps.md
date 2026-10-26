@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.20 OpenAPI gaps
+# Known Hubuum server v0.0.21 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.20
+The pinned client contract records these limitations in the server v0.0.21
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not
@@ -51,12 +51,9 @@ Rust wire models:
 - Server traversal, export, and template batch resource limits may reject work
   that previously fit older limits. The client preserves the server error;
   callers must narrow queries or reduce traversal depth and template workloads.
-- Server v0.0.20 can deadlock when class deletion overlaps a computed-field
-  rebuild, returning HTTP 500 or failing the rebuild. Definition creation,
-  updates, and deletion enqueue rebuilds. Before deleting the class, list its
-  reindex tasks and use `tasks().wait(task.id)` to wait for every task to reach
-  a terminal state, including superseded revisions. Waiting only for the most
-  recent task can leave an older worker running.
+Server v0.0.21 fixes the class/collection-deletion deadlock with computed workers.
+When using the older v0.0.20 server, wait for every reindex task for a class to
+finish before deleting it, including superseded tasks.
 
 ## Related-object filter coverage
 
@@ -68,7 +65,7 @@ server-validated.
 
 ## Credential approval coverage
 
-The pinned v0.0.20 contract includes both approval endpoints and the approval
+The pinned v0.0.21 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return `reauthentication_required`; applications
@@ -105,7 +102,7 @@ and test-delivery decoding.
 
 ## Collection integrations
 
-The pinned v0.0.20 snapshot includes all eight collection destination and
+The pinned v0.0.21 snapshot includes all eight collection destination and
 administrator grant operations. Both client modes provide typed helpers, and
 `CollectionEventSink` preserves safe metadata while omitting configuration,
 URLs, and credentials. The canonical live suite requires delegated collection
@@ -113,9 +110,18 @@ setup in both modes and exercises global sink use through an explicit collection
 grant. These APIs require `ManageEventSubscription` and `ReadAudit`; grants do
 not inherit to child collections.
 
+## v0.0.21 discovery and suggestions
+
+All four new discovery and profiling endpoints have matching typed helpers in
+both client modes. Inventories preserve structured paths, sources, counts, and
+sample bounds. Profiling helpers validate options, wait only for full task
+success, retrieve retained reports, and provide a guarded explicit staging
+request. Reports do not activate policies; whole-class impact remains required.
+The pinned contract now contains 261 operations and 130 wire-model mappings.
+
 ## v0.0.20 coverage
 
-The pinned 257-operation contract includes the versioned session API. Both
+The original 257-operation v0.0.20 contract introduced the versioned session API. Both
 client modes provide `login_session`, `session_providers`, automatic refresh,
 and session-aware logout. Legacy single-token login is only for older servers.
 

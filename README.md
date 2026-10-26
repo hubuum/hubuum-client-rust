@@ -4,19 +4,25 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.19.0 targets Hubuum server v0.0.20.
+`hubuum_client` 0.20.0 targets Hubuum server v0.0.21. Released October 26, 2026.
 The pinned image and verification evidence are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
-This release validates resource IDs and strengthens typed resource queries,
-creation builders, and historical relation endpoints in both client modes.
-**Upgrading from 0.18 or earlier requires Rust API changes:** use fallible ID
-constructors, pass typed IDs to queries, and replace default resource instances
-with checked builders or resource type parameters. See the
-[0.19 migration guide](docs/migration-0.19.md).
-Typed helpers cover the pinned 257-operation server contract. Rust 1.88 remains
-the minimum supported compiler; the server target, backup formats, and feature
-flags are unchanged. No server data migration is required for this client update.
+Discover raw and computed fields without downloading object payloads, generate a
+sampled schema suggestion, then review and explicitly stage it for whole-class
+impact analysis and activation. Both client modes support waiting, resuming by
+task ID, and handling expired reports. See the
+[discovery workflow](docs/schema-evolution.md#discover-fields-and-suggest-a-policy)
+and [release notes](https://github.com/hubuum/hubuum-client-rust/releases/tag/v0.20.0).
+
+**Upgrading from 0.19:** complete `TaskDetails` struct literals must add
+`schema_profiling: None` or use `..Default::default()`; exhaustive patterns need
+the new field or `..`. Upgrade the server to
+v0.0.21 before using discovery or suggestions; follow its migration and matching
+worker/restore-executor requirements. Typed helpers cover the 261-operation
+contract. Rust 1.88 and the public feature combinations remain unchanged.
+Upgrades from 0.18 or earlier also require the
+[0.19 typed-ID migration](docs/migration-0.19.md).
 
 **Upgrading from before 0.16.0:** migrate password login to `login_session`, handle
 the fallible `token()` snapshot, and upgrade the server and restore executor together.
@@ -57,7 +63,7 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.19.0"
+hubuum_client = "0.20.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -65,7 +71,7 @@ Async support is enabled by default. Blocking applications can opt into only the
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.19.0", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.20.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:
