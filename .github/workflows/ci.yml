@@ -158,6 +158,10 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: cargo check -p hubuum_client --locked ${{ matrix.flags }}
 
+      - name: Check Examples
+        if: needs.changes.outputs.code == 'true'
+        run: cargo check -p hubuum_client --locked --examples ${{ matrix.flags }}
+
   msrv:
     if: needs.changes.outputs.code == 'true'
     needs: changes
