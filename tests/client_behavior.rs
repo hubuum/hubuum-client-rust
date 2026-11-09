@@ -12,6 +12,7 @@ use hubuum_client::{
 };
 
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use futures_util::TryStreamExt;
 use httpmock::prelude::*;
@@ -35,7 +36,7 @@ use hubuum_client::{
 use serde_json::json;
 
 const USERNAME: &str = "tester";
-const PASSWORD: &str = "secret";
+static PASSWORD: LazyLock<String> = LazyLock::new(integration_support::clients::fixture_password);
 const TOKEN: &str = "integration-token";
 const PROMETHEUS_METRICS: &str = concat!(
     "# TYPE hubuum_http_requests_total counter\n",
@@ -1093,7 +1094,7 @@ fn mock_login(server: &MockServer) {
     server.mock(|when, then| {
         when.method(POST)
             .path("/api/v0/auth/login")
-            .json_body(json!({ "name": USERNAME, "password": PASSWORD }));
+            .json_body(json!({ "name": USERNAME, "password": PASSWORD.as_str() }));
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
@@ -1272,7 +1273,7 @@ fn sync_client_can_be_built_from_a_url_string_and_inspected() {
     let _http_client = client.http_client();
 
     let client = client
-        .login(Credentials::new(USERNAME, PASSWORD))
+        .login(Credentials::new(USERNAME, PASSWORD.as_str()))
         .expect("login should succeed");
     assert_eq!(client.token().unwrap().as_str(), TOKEN);
     assert!(!format!("{client:?}").contains(TOKEN));
@@ -1314,7 +1315,7 @@ fn sync_scoped_login_and_identity_filter_use_provider_scope() {
             .json_body(json!({
                 "identity_scope": "corp-directory",
                 "name": USERNAME,
-                "password": PASSWORD
+                "password": PASSWORD.as_str()
             }));
         then.status(200)
             .header("content-type", "application/json")
@@ -1345,7 +1346,11 @@ fn sync_scoped_login_and_identity_filter_use_provider_scope() {
 
     let client = blocking::Client::from_url(server.base_url())
         .unwrap()
-        .login(Credentials::scoped("corp-directory", USERNAME, PASSWORD))
+        .login(Credentials::scoped(
+            "corp-directory",
+            USERNAME,
+            PASSWORD.as_str(),
+        ))
         .unwrap();
     let matches = client
         .users()
@@ -4770,7 +4775,7 @@ fn sync_unified_search_bounds_each_sse_event() {
         .max_response_body_bytes(128)
         .build()
         .expect("sync client should build")
-        .login(Credentials::new(USERNAME, PASSWORD))
+        .login(Credentials::new(USERNAME, PASSWORD.as_str()))
         .expect("sync login should succeed");
 
     let mut events = client
@@ -4812,7 +4817,7 @@ async fn async_unified_search_bounds_each_sse_event() {
         .max_response_body_bytes(128)
         .build()
         .expect("async client should build")
-        .login(Credentials::new(USERNAME, PASSWORD))
+        .login(Credentials::new(USERNAME, PASSWORD.as_str()))
         .await
         .expect("async login should succeed");
 
