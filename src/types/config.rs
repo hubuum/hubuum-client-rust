@@ -67,6 +67,10 @@ pub struct RunningConfig {
     /// Servers before 0.0.19 do not collect workload observations.
     #[serde(default)]
     pub query_observations: QueryObservationConfig,
+    /// Redacted ownership, revisions, and replica state; absent before server 0.0.22.
+    /// Group names remain open so newer server settings are preserved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_settings: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 #[non_exhaustive]

@@ -5,14 +5,16 @@ a server release when its pinned OpenAPI contract comes from that server tag and
 the complete Docker-backed library and consumer integration suites pass against
 an immutable image for the same release.
 
-Client 0.20.0 provides typed helpers for every route in the pinned
-v0.0.21 contract. Authenticated relative routes remain available through `raw()`
-as an extension point for additional operations.
+Client 0.21.0 targets the released v0.0.22 contract. Typed runtime-settings
+helpers discover server-provided fields and explanations. Authenticated relative
+routes remain available through `raw()` as an extension point for additional
+operations; [known gaps](../openapi/known-gaps.md) describe typed coverage.
 
 ## Compatibility history
 
 | Client version | Server target | Tested server image | Evidence |
 | --- | --- | --- | --- |
+| 0.21.0 | 0.0.22 | `ghcr.io/hubuum/hubuum-server@sha256:71ff4090eac071f23ae59f7265dc07165939d42771a73d1d291defa023b4964b` | [Complete pinned verification](#client-0210-release): 181 test results passed on 2026-11-09. |
 | 0.20.0 | 0.0.21 | `ghcr.io/hubuum/hubuum-server@sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6` | [Complete pinned verification](#client-0200-release): 180 tests passed on 2026-10-26. |
 | 0.19.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Complete release verification](#client-0190-release) on 2026-10-24: 107 library tests, 56 consumer cases, three native-resource phases, and four restore/recovery pairs with approval enforcement; 257 operations and 125 model mappings. |
 | 0.17.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Complete release verification](#client-0170-release) on 2026-10-23: 105 library tests, 54 consumer cases, three native-resource phases, and four restore/recovery pairs with approval enforcement; 257 operations and 125 model mappings. |
@@ -49,6 +51,31 @@ as an extension point for additional operations.
 
 The client version 0.0.2 row predates and is unrelated to the independently
 versioned Hubuum server v0.0.2 release.
+
+## Client 0.21.0 release
+
+Client 0.21.0 targets the released Server v0.0.22 image:
+`ghcr.io/hubuum/hubuum-server@sha256:71ff4090eac071f23ae59f7265dc07165939d42771a73d1d291defa023b4964b`.
+Both Linux image architectures identify source revision
+`242285411044459c3ac73563d9338905f3b4f377` and version `v0.0.22`.
+The tagged OpenAPI document has SHA-256
+`4981b76ff4e4a96392f9a59e41e3c2e86b1d4b3d7049911b7565c224ba7ca2b7`;
+reconciliation covers 272 operations, 189 paths, and 134 model mappings.
+
+On 2026-11-09, the canonical combined wrapper passed 181 test results across
+44 result groups, with zero failures or ignored tests, using Docker and the
+published Linux ARM64 image. This includes the library suite, independent
+`e2e_client`, native-resource phases, and four complete restore/recovery pairs.
+Credential approval enforcement was required. Async and blocking runtime tests
+cover discovery and field help, partial updates, stale revisions, authorization,
+and exact restoration of original values and ownership.
+
+The release also passed the complete non-container suite, all-feature Clippy and
+Rustdoc with warnings denied, public feature combinations, Rust 1.88, generation
+and tagged-contract checks, clean package verification, and dependency policy.
+The pre-1.0 breaking bump to 0.21.0 passes SemVer verification. Replace the removed
+legacy query-observation methods, request type, and override field as described
+in [runtime settings](query-usage.md#runtime-settings-discovery).
 
 ## Forward compatibility
 

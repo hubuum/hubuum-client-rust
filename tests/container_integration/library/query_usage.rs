@@ -14,9 +14,13 @@ macro_rules! management {
     ($client:ident, $class_id:ident, $send:ident) => {{
         for error in
             [
-                $send!($client.query_observations()).unwrap_err(),
-                $send!($client.set_query_observations(
-                    hubuum_client::QueryObservationUpdateRequest { enabled: true }
+                $send!($client.runtime_settings_group("query_observations")).unwrap_err(),
+                $send!($client.patch_runtime_settings(
+                    "query_observations",
+                    hubuum_client::RuntimeSettingsPatch::new(
+                        hubuum_client::ResourceRevision::INITIAL,
+                        serde_json::from_value(serde_json::json!({"enabled": true})).unwrap(),
+                    ).unwrap(),
                 ))
                 .unwrap_err(),
             ]

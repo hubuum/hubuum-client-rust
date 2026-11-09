@@ -346,6 +346,7 @@ fn principal_permissions_json(
 
 fn running_config_json() -> serde_json::Value {
     json!({
+        "runtime_settings": {"future_group": {"revision": 7, "effective": {"future_option": true}}},
         "server": {
             "runtime_role": "api",
             "bind_ip": "127.0.0.1",
@@ -2509,6 +2510,10 @@ fn sync_supports_meta_endpoints() {
         .admin_config()
         .expect("admin_config request should succeed");
     assert_eq!(config.server.bind_port, 8080);
+    assert_eq!(
+        config.runtime_settings.as_ref().unwrap()["future_group"]["effective"]["future_option"],
+        true
+    );
     assert_eq!(config.database.backend, "postgresql");
     assert_eq!(
         config.authentication.previous_token_hash_key_ids,
@@ -2618,6 +2623,10 @@ async fn async_supports_meta_endpoints() {
         .await
         .expect("admin_config request should succeed");
     assert_eq!(config.server.bind_port, 8080);
+    assert_eq!(
+        config.runtime_settings.as_ref().unwrap()["future_group"]["effective"]["future_option"],
+        true
+    );
     assert_eq!(config.database.backend, "postgresql");
     assert_eq!(
         config.authentication.previous_token_hash_key_ids,

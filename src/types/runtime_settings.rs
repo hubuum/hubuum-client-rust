@@ -1,10 +1,10 @@
-//! Optional, discovered runtime configuration on newer Hubuum servers.
+//! Discovered runtime configuration on Hubuum server 0.0.22 and newer.
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use super::ResourceRevision;
+use super::{HubuumDateTime, PrincipalId, ResourceRevision};
 use crate::ApiError;
 
 /// The catalogue version describes the discovery protocol, not server releases.
@@ -37,6 +37,8 @@ pub struct RuntimeSettingsGroupState {
     pub group: String,
     pub source: String,
     pub revision: Option<ResourceRevision>,
+    pub changed_at: Option<HubuumDateTime>,
+    pub changed_by: Option<PrincipalId>,
     pub mutable: bool,
     pub restart_required: bool,
     pub takes_effect: String,

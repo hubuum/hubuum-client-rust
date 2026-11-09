@@ -9,7 +9,7 @@ The examples below use the async client; remove `.await` for blocking calls.
 ## Run the examples
 
 From a checkout of this repository, use an existing populated class on server
-v0.0.21 and set these environment variables:
+v0.0.22 and set these environment variables:
 
 ```sh
 export HUBUUM_URL='https://server.example.com'
@@ -247,7 +247,13 @@ same token. Internal reindex and schema work require an unscoped administrator.
 
 ## Server upgrade
 
-For v0.0.21, drain old workers and apply the restore-chunk, computed-read-repair,
+Upgrade to v0.0.22 before adopting client 0.21.0. Stop old writers, apply the
+server's migrations and role grants, then start matching API, worker,
+template-worker, administrator, and restore-executor binaries. Runtime settings
+replace the old query-observation override API, so all replicas must upgrade
+together. Review template fuel limits and rendered output for MiniJinja 3.1.
+
+Upgrades from before v0.0.21 also require the restore-chunk, computed-read-repair,
 schema-profiling, and computed-history deletion-lock migrations before starting
 matching API, worker, administrator, and restore-executor binaries. Schedule a
 quiet window for bounded migration scans and lock waits. Provide writable
@@ -262,6 +268,6 @@ the configured budgets. The administrative configuration exposes the effective
 schema, task, and backup limits. External authorization traversal is capped at
 10,000 candidates.
 
-See the [v0.0.21 release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.21),
-[server validation limits](https://github.com/hubuum/hubuum/blob/v0.0.21/docs/json_schema_validation.md),
+See the [v0.0.22 release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.22),
+[server validation limits](https://github.com/hubuum/hubuum/blob/v0.0.22/docs/json_schema_validation.md),
 and [backup format compatibility](backups-and-computed-fields.md).
