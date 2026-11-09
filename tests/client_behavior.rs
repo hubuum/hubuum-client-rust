@@ -8706,3 +8706,176 @@ mod typed_history {
         assert_eq!(error.status().unwrap().as_u16(), code);
     }
 }
+
+#[rstest::rstest]
+#[case(false)]
+#[case(true)]
+#[tokio::test]
+async fn runtime_settings_discover_and_patch_future_fields(#[case] blocking_mode: bool) {
+    let server = MockServer::start();
+    mock_login(&server);
+    let catalogue = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/admin/runtime-settings/schema");
+        then.status(200).json_body(json!({"schema_version":1,"groups":[{
+            "key":"future_policy","title":"Future policy","description":"Added later",
+            "schema":{"type":"object","properties":{"new_option":{"type":"integer","title":"New option","description":"Controls a future limit.","x-unit":"items","x-future":true},"mode":{"type":"string","enum":["fast"],"x-enum-descriptions":{"fast":"Prefer speed with more resource use."}}}},
+            "patch_supported":true,"requires_local_admin":false,"takes_effect":"next_request","read_only_reason":null
+        }]}));
+    });
+    let read = server.mock(|when, then| {
+        when.method(GET).path("/api/v1/admin/runtime-settings/future_policy");
+        then.status(200).json_body(json!({"group":"future_policy","revision":4,"source":"runtime","mutable":true,"restart_required":false,"takes_effect":"next_request","replica":{"status":"current"},"effective":{"new_option":5,"other_field":7},"runtime":null,"deployment":null,"constrained_by_ceiling":false}));
+    });
+    let patch = server.mock(|when, then| {
+        when.method(PATCH).path("/api/v1/admin/runtime-settings/future_policy")
+            .json_body(json!({"expected_revision":4,"changes":{"new_option":10}}));
+        then.status(200).json_body(json!({"group":"future_policy","committed_revision":5,"changed":true,"applied_by_responding_replica":false,"settings":{}}));
+    });
+    if blocking_mode {
+        let url = server.base_url();
+        tokio::task::spawn_blocking(move || {
+            let client = blocking::Client::from_url(url)
+                .unwrap()
+                .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
+                .unwrap();
+            let catalogue = client.runtime_settings_schema().unwrap();
+            let group = &catalogue.groups[0];
+            assert_eq!(
+                group.schema["properties"]["new_option"]["description"],
+                "Controls a future limit."
+            );
+            assert_eq!(
+                group.schema["properties"]["mode"]["x-enum-descriptions"]["fast"],
+                "Prefer speed with more resource use."
+            );
+            let state = client.runtime_settings_group(&group.key).unwrap();
+            let request = hubuum_client::RuntimeSettingsPatch::new(
+                state.revision.unwrap(),
+                serde_json::from_value(json!({"new_option":10})).unwrap(),
+            )
+            .unwrap();
+            let response = client.patch_runtime_settings(&group.key, request).unwrap();
+            assert_eq!(response.committed_revision.get(), 5);
+            assert!(!response.applied_by_responding_replica);
+        })
+        .await
+        .unwrap();
+    } else {
+        let client = async_client(&server).await;
+        let catalogue = client.runtime_settings_schema().await.unwrap();
+        let group = &catalogue.groups[0];
+        assert_eq!(
+            group.schema["properties"]["new_option"]["description"],
+            "Controls a future limit."
+        );
+        assert_eq!(
+            group.schema["properties"]["mode"]["x-enum-descriptions"]["fast"],
+            "Prefer speed with more resource use."
+        );
+        let state = client.runtime_settings_group(&group.key).await.unwrap();
+        let request = hubuum_client::RuntimeSettingsPatch::new(
+            state.revision.unwrap(),
+            serde_json::from_value(json!({"new_option":10})).unwrap(),
+        )
+        .unwrap();
+        let response = client
+            .patch_runtime_settings(&group.key, request)
+            .await
+            .unwrap();
+        assert_eq!(response.committed_revision.get(), 5);
+        assert!(!response.applied_by_responding_replica);
+    }
+    catalogue.assert_calls(1);
+    read.assert_calls(1);
+    patch.assert_calls(1);
+}
+
+#[rstest::rstest]
+#[case(false)]
+#[case(true)]
+#[tokio::test]
+async fn runtime_settings_conflicts_are_returned_without_retry(#[case] blocking_mode: bool) {
+    let server = MockServer::start();
+    mock_login(&server);
+    let patch = server.mock(|when, then| {
+        when.method(PATCH).path("/api/v1/admin/runtime-settings/pagination");
+        then.status(412).json_body(json!({"error":"RevisionConflict","message":"Refetch before editing","current_revision":5}));
+    });
+    let request = hubuum_client::RuntimeSettingsPatch::new(
+        hubuum_client::ResourceRevision::INITIAL,
+        serde_json::from_value(json!({"default_page_limit":10})).unwrap(),
+    )
+    .unwrap();
+    if blocking_mode {
+        let url = server.base_url();
+        tokio::task::spawn_blocking(move || {
+            let client = blocking::Client::from_url(url)
+                .unwrap()
+                .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
+                .unwrap();
+            assert!(
+                client
+                    .patch_runtime_settings("pagination", request)
+                    .is_err()
+            );
+        })
+        .await
+        .unwrap();
+    } else {
+        assert!(
+            async_client(&server)
+                .await
+                .patch_runtime_settings("pagination", request)
+                .await
+                .is_err()
+        );
+    }
+    patch.assert_calls(1);
+}
+
+#[rstest::rstest]
+#[case(false)]
+#[case(true)]
+#[tokio::test]
+async fn runtime_settings_release_reads_commit_response(#[case] blocking_mode: bool) {
+    let server = MockServer::start();
+    mock_login(&server);
+    let release = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1/admin/runtime-settings/pagination")
+            .query_param("expected_revision", "4");
+        then.status(200).json_body(json!({"group":"pagination","committed_revision":5,"changed":true,"applied_by_responding_replica":true,"settings":{}}));
+    });
+    let revision = hubuum_client::ResourceRevision::new(4).unwrap();
+    if blocking_mode {
+        let url = server.base_url();
+        tokio::task::spawn_blocking(move || {
+            let client = blocking::Client::from_url(url)
+                .unwrap()
+                .login(Credentials::new(USERNAME.to_string(), PASSWORD.to_string()))
+                .unwrap();
+            assert_eq!(
+                client
+                    .release_runtime_settings("pagination", revision)
+                    .unwrap()
+                    .committed_revision
+                    .get(),
+                5
+            );
+        })
+        .await
+        .unwrap();
+    } else {
+        assert_eq!(
+            async_client(&server)
+                .await
+                .release_runtime_settings("pagination", revision)
+                .await
+                .unwrap()
+                .committed_revision
+                .get(),
+            5
+        );
+    }
+    release.assert_calls(1);
+}

@@ -6,6 +6,8 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+- Discover runtime configuration groups and schemas, read requested/effective values, and send revision-checked partial edits or deployment resets through matching async and blocking APIs. This is an optional capability of newer servers; the pinned v0.0.21 target is unchanged.
+
 ## [0.20.0] - 2026-10-26
 
 This release explicitly targets Hubuum server v0.0.21. Upgrade the server before

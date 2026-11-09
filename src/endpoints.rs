@@ -26,6 +26,8 @@ pub enum Endpoint {
     ClientConfig,
     SearchHydration,
     AdminConfig,
+    RuntimeSettingsSchema,
+    RuntimeSettingsGroup,
     AdminQueryObservations,
     Backups,
     BackupByTaskId,
@@ -221,6 +223,8 @@ impl Endpoint {
             Endpoint::SearchHydration => "/api/v1/search/hydrate",
             Endpoint::AdminQueryObservations => "/api/v1/admin/query-observations",
             Endpoint::AdminConfig => "/api/v1/admin/config",
+            Endpoint::RuntimeSettingsSchema => "/api/v1/admin/runtime-settings/schema",
+            Endpoint::RuntimeSettingsGroup => "/api/v1/admin/runtime-settings/{group}",
             Endpoint::Backups => "/api/v1/backups",
             Endpoint::BackupByTaskId => "/api/v1/backups/{task_id}",
             Endpoint::BackupOutput => "/api/v1/backups/{task_id}/output",
@@ -520,9 +524,11 @@ mod test {
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();
 
-        // Legacy login remains available for older servers. Every pinned route
+        // Legacy login and optional forward-compatible discovery are explicitly listed. Every pinned route
         // has a centralized endpoint and a typed client helper.
         let legacy_paths = [
+            "/api/v1/admin/runtime-settings/schema",
+            "/api/v1/admin/runtime-settings/{group}",
             "/api/v0/auth/login",
             "/api/v0/auth/logout",
             "/api/v0/auth/logout/token",

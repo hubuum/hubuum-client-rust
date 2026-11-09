@@ -187,3 +187,72 @@ impl MetaLoginRateLimitOp {
         shared::decode_json_body(&raw.body)
     }
 }
+
+use crate::{
+    RuntimeSettingsCatalogue, RuntimeSettingsGroupState, RuntimeSettingsPatch,
+    RuntimeSettingsUpdateResponse,
+};
+
+impl Client<Authenticated> {
+    /// Discover runtime groups and JSON Schema on servers implementing discovery v1. A 404 means this optional capability is unavailable.
+    pub fn runtime_settings_schema(&self) -> Result<RuntimeSettingsCatalogue, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, RuntimeSettingsCatalogue>(
+            reqwest::Method::GET,
+            &Endpoint::RuntimeSettingsSchema,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .and_then(|value| {
+            value.ok_or_else(|| {
+                ApiError::EmptyResult("Runtime settings returned an empty result".into())
+            })
+        })
+    }
+    /// Read one discovered group, including requested values and replica application state.
+    pub fn runtime_settings_group(
+        &self,
+        group: &str,
+    ) -> Result<RuntimeSettingsGroupState, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, RuntimeSettingsGroupState>(
+            reqwest::Method::GET,
+            &Endpoint::RuntimeSettingsGroup,
+            vec![(Cow::Borrowed("group"), group.to_string().into())],
+            vec![],
+            EmptyPostParams,
+        )
+        .and_then(|value| {
+            value.ok_or_else(|| {
+                ApiError::EmptyResult("Runtime settings returned an empty result".into())
+            })
+        })
+    }
+    /// Commit only the edited fields. Return stale revisions to the caller; never automatically refetch and retry an edit.
+    pub fn patch_runtime_settings(
+        &self,
+        group: &str,
+        request: RuntimeSettingsPatch,
+    ) -> Result<RuntimeSettingsUpdateResponse, ApiError> {
+        let path = Endpoint::RuntimeSettingsGroup
+            .path()
+            .replace("{group}", &shared::encode_path_segment(group));
+        self.raw_with_encoded_segments(reqwest::Method::PATCH, path)
+            .json(&request)?
+            .send()
+    }
+    /// Return a group to deployment ownership as a new audited revision.
+    pub fn release_runtime_settings(
+        &self,
+        group: &str,
+        expected_revision: ResourceRevision,
+    ) -> Result<RuntimeSettingsUpdateResponse, ApiError> {
+        let path = Endpoint::RuntimeSettingsGroup
+            .path()
+            .replace("{group}", &shared::encode_path_segment(group));
+        let raw = self
+            .raw_with_encoded_segments(reqwest::Method::DELETE, path)
+            .query_param("expected_revision", expected_revision)
+            .execute()?;
+        shared::decode_json_body(&raw.body)
+    }
+}
