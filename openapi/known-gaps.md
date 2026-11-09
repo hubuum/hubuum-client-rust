@@ -165,3 +165,13 @@ both modes. These operations require an unscoped human administrator. The update
 commits a shared override; other replicas reconcile asynchronously. Configuration
 responses expose `runtime_override`; analysis snapshots omit it. Disabling
 collection retains existing observations and does not alter sampling or retention.
+
+## Optional forward-compatible runtime settings routes
+
+The client additionally supports `GET /api/v1/admin/runtime-settings/schema` and
+`GET`, `PATCH`, and `DELETE /api/v1/admin/runtime-settings/{group}` on newer
+servers. These are intentionally outside the pinned v0.0.21 operation snapshot.
+The shared partial-update envelope preserves unfamiliar fields and requires an
+expected revision. A `404` is an unavailable capability, not permission to use a
+legacy write. Authentication provider replacement still requires its specialized
+preflight API; generic PATCH does not support it.

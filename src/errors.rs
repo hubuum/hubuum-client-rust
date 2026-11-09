@@ -77,6 +77,10 @@ pub enum ApiError {
 
     #[error("Resource revision must be a positive 64-bit integer, got {0}")]
     InvalidResourceRevision(i64),
+    #[error(
+        "Runtime settings patches require nonempty, non-null changes without revision metadata"
+    )]
+    InvalidRuntimeSettingsPatch,
 
     #[error("Schema revision must be a positive 64-bit integer, got {0}")]
     InvalidSchemaRevision(i64),
@@ -334,6 +338,7 @@ impl std::fmt::Debug for ApiError {
                 .debug_struct("InvalidRemoteInvocationObject")
                 .field("field", field)
                 .finish(),
+            Self::InvalidRuntimeSettingsPatch => f.write_str("InvalidRuntimeSettingsPatch"),
             Self::InvalidRemoteTargetHeaders => f.write_str("InvalidRemoteTargetHeaders"),
             Self::InvalidRemoteTargetHeader { name } => f
                 .debug_struct("InvalidRemoteTargetHeader")

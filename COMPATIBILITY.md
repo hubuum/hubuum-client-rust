@@ -136,3 +136,27 @@ Upgrade the server and restore executor together using the
 Retain a pre-upgrade backup and matching binaries for rollback. See the
 [typed API gaps](openapi/known-gaps.md#v0020-coverage) before relying on newly
 introduced server fields or operations.
+
+## Optional runtime settings discovery
+
+The runtime settings helpers require a server implementing discovery version 1
+from server issue #568. They do not change this client's pinned v0.0.21 target.
+A discovery `404` means the optional capability is unavailable. Preserve that
+error; do not fall back to an unrevisioned write.
+
+Call `runtime_settings_schema()`, select a returned group key, then call
+`runtime_settings_group(key)`. Construct `RuntimeSettingsPatch` from the returned
+revision and only the edited fields. Group names and schemas are open-ended, so
+new fields of supported types do not require a client update. Clients rendering
+forms must reject unknown catalogue versions, ignore unfamiliar annotations, and
+leave unsupported field shapes read-only. Handle a stale revision by refetching
+for human review, without automatically replaying the edit. A committed response
+reports application by the responding replica separately from other replicas.
+Authentication retains its dedicated preflight workflow.
+
+The contract is implemented in [server PR #584](https://github.com/hubuum/hubuum/pull/584).
+Each field's `title`, `description`, `default`, bounds and `x-unit` are preserved
+in `RuntimeSettingsDescriptor::schema`. String enums may also carry
+`x-enum-descriptions`, mapping supported wire values to plain-text explanations.
+Use these server-provided labels and explanations in client help; unknown
+annotations are retained without requiring a client release.

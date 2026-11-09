@@ -23,6 +23,7 @@ mod query_usage;
 mod relation;
 mod remote;
 mod revision;
+mod runtime_settings;
 mod schema;
 mod schema_profiling;
 mod search;
@@ -139,6 +140,10 @@ pub use remote::{
     UpdateRemoteTarget,
 };
 pub use revision::{EntityTag, ResourceRevision, Revisioned};
+pub use runtime_settings::{
+    RuntimeSettingsCatalogue, RuntimeSettingsDescriptor, RuntimeSettingsGroupState,
+    RuntimeSettingsPatch, RuntimeSettingsUpdateResponse,
+};
 pub use schema::{
     ClassSchemaResponse, ComplianceStatus, ImportSchemaActivation, ObjectComplianceResponse,
     ObjectSchemaEvidence, SchemaActivationPolicy, SchemaActivationRequest,

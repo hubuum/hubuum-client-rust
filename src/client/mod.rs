@@ -350,6 +350,10 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::meta_db_full;
             let _ = $module::Client::<Authenticated>::meta_tasks;
             let _ = $module::Client::<Authenticated>::admin_config;
+            let _ = $module::Client::<Authenticated>::runtime_settings_schema;
+            let _ = $module::Client::<Authenticated>::runtime_settings_group;
+            let _ = $module::Client::<Authenticated>::patch_runtime_settings;
+            let _ = $module::Client::<Authenticated>::release_runtime_settings;
             let _ = $module::Client::<Authenticated>::metrics;
             let _ = $module::Client::<Authenticated>::me;
             let _ = $module::Client::<Authenticated>::me_groups;

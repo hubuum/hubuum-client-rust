@@ -139,6 +139,10 @@ pub use types::{
     UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
     UserParams, ValidatedExportScope,
 };
+pub use types::{
+    RuntimeSettingsCatalogue, RuntimeSettingsDescriptor, RuntimeSettingsGroupState,
+    RuntimeSettingsPatch, RuntimeSettingsUpdateResponse,
+};
 pub use types::{SessionClientId, SessionInfo};
 pub use types::{
     StructuredClassSelector, StructuredRelatedPredicate, StructuredSearchDoneEvent,
