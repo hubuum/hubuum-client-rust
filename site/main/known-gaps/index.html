@@ -79,7 +79,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#known-hubuum-server-v0021-openapi-gaps" class="md-skip">
+        <a href="#known-hubuum-server-v0022-openapi-gaps" class="md-skip">
           Skip to content
         </a>
       
@@ -1202,10 +1202,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-forward-compatible-runtime-settings-routes" class="md-nav__link">
+  <a href="#v0022-runtime-settings" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional forward-compatible runtime settings routes
+        v0.0.22 runtime settings
       </span>
     </span>
   </a>
@@ -1606,10 +1606,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-forward-compatible-runtime-settings-routes" class="md-nav__link">
+  <a href="#v0022-runtime-settings" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional forward-compatible runtime settings routes
+        v0.0.22 runtime settings
       </span>
     </span>
   </a>
@@ -1645,8 +1645,8 @@
   
 
 
-<h1 id="known-hubuum-server-v0021-openapi-gaps">Known Hubuum server v0.0.21 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0021-openapi-gaps" title="Permanent link">&para;</a></h1>
-<p>The pinned client contract records these limitations in the server v0.0.21
+<h1 id="known-hubuum-server-v0022-openapi-gaps">Known Hubuum server v0.0.22 OpenAPI gaps<a class="headerlink" href="#known-hubuum-server-v0022-openapi-gaps" title="Permanent link">&para;</a></h1>
+<p>The pinned client contract records these limitations in the server v0.0.22
 specification explicitly:</p>
 <ul>
 <li><code>GET /api/v1/search/stream</code> declares <code>text/event-stream</code> but does not
@@ -1706,7 +1706,7 @@ class-name queries. See <a href="../querying/#filtering-by-related-objects">rela
 for group semantics and bounds. Additional raw query parameters remain
 server-validated.</p>
 <h2 id="credential-approval-coverage">Credential approval coverage<a class="headerlink" href="#credential-approval-coverage" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.21 contract includes both approval endpoints and the approval
+<p>The pinned v0.0.22 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return <code>reauthentication_required</code>; applications
@@ -1736,7 +1736,7 @@ uses <code>collection_id: None</code>.</p>
 public clients, including typed pacing, filter serialization, nullable health,
 and test-delivery decoding.</p>
 <h2 id="collection-integrations">Collection integrations<a class="headerlink" href="#collection-integrations" title="Permanent link">&para;</a></h2>
-<p>The pinned v0.0.21 snapshot includes all eight collection destination and
+<p>The pinned v0.0.22 snapshot includes all eight collection destination and
 administrator grant operations. Both client modes provide typed helpers, and
 <code>CollectionEventSink</code> preserves safe metadata while omitting configuration,
 URLs, and credentials. The canonical live suite requires delegated collection
@@ -1749,7 +1749,7 @@ both client modes. Inventories preserve structured paths, sources, counts, and
 sample bounds. Profiling helpers validate options, wait only for full task
 success, retrieve retained reports, and provide a guarded explicit staging
 request. Reports do not activate policies; whole-class impact remains required.
-The pinned contract now contains 261 operations and 130 wire-model mappings.</p>
+That release introduced a 261-operation contract; the current snapshot has 272 operations.</p>
 <h2 id="v0020-coverage">v0.0.20 coverage<a class="headerlink" href="#v0020-coverage" title="Permanent link">&para;</a></h2>
 <p>The original 257-operation v0.0.20 contract introduced the versioned session API. Both
 client modes provide <code>login_session</code>, <code>session_providers</code>, automatic refresh,
@@ -1783,20 +1783,30 @@ or <code>with_reverse_label</code>. Labels describe the supplied source/target d
 the server sorts class IDs and swaps labels when necessary. Existing
 <code>ClassRelationPost</code> literals remain compatible; use the handle options for labels.
 Labels require 1–128 Unicode characters, no controls, and no surrounding whitespace.</p>
-<p>Observation management has typed <code>query_observations()</code> and
-<code>set_query_observations(QueryObservationUpdateRequest { enabled })</code> methods in
-both modes. These operations require an unscoped human administrator. The update
-commits a shared override; other replicas reconcile asynchronously. Configuration
-responses expose <code>runtime_override</code>; analysis snapshots omit it. Disabling
-collection retains existing observations and does not alter sampling or retention.</p>
-<h2 id="optional-forward-compatible-runtime-settings-routes">Optional forward-compatible runtime settings routes<a class="headerlink" href="#optional-forward-compatible-runtime-settings-routes" title="Permanent link">&para;</a></h2>
-<p>The client additionally supports <code>GET /api/v1/admin/runtime-settings/schema</code> and
-<code>GET</code>, <code>PATCH</code>, and <code>DELETE /api/v1/admin/runtime-settings/{group}</code> on newer
-servers. These are intentionally outside the pinned v0.0.21 operation snapshot.
-The shared partial-update envelope preserves unfamiliar fields and requires an
-expected revision. A <code>404</code> is an unavailable capability, not permission to use a
-legacy write. Authentication provider replacement still requires its specialized
-preflight API; generic PATCH does not support it.</p>
+<h2 id="v0022-runtime-settings">v0.0.22 runtime settings<a class="headerlink" href="#v0022-runtime-settings" title="Permanent link">&para;</a></h2>
+<p>The 272-operation server contract replaces the old query-observation control
+routes with audited runtime settings. Both client modes expose
+<code>runtime_settings_schema()</code>, <code>runtime_settings_group(group)</code>,
+<code>patch_runtime_settings(group, patch)</code>, and
+<code>release_runtime_settings(group, expected_revision)</code>. Group keys, JSON Schema
+fields, titles, descriptions, limits, and enum explanations remain open so clients
+can present new server options without regenerating the library.</p>
+<p>Use the revision read from the group for each edit. Partial updates preserve
+omitted fields, and stale revisions return an error for user review. A successful
+commit reports application by the responding replica, not cluster-wide agreement.
+<code>RunningConfig.runtime_settings</code> retains redacted ownership and revision reports,
+including unknown groups; older servers may omit it.</p>
+<p>The generic API replaces the dedicated query-observation read/write helpers and
+<code>runtime_override</code> field. Use the group's <code>source</code>, <code>revision</code>, <code>effective</code>, and
+<code>runtime</code> values instead. The combined live suite exercises discovery, partial
+edits, effective configuration, and restoration of deployment ownership in both
+client modes. A <code>404</code> means the capability is unavailable and must not trigger an
+unrevisioned fallback write.</p>
+<p>The complete snapshot and audit history, full-replacement PUT routes, and
+specialized authentication validation/preflight remain accessible through
+<code>raw()</code>. Generic PATCH cannot replace authentication providers; applications must
+implement that dedicated local-administrator workflow before offering those
+changes. These limitations apply to v0.0.22's newly added operations.</p>
 
 
 

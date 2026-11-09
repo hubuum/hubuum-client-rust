@@ -1238,6 +1238,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-0210-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.21.0 release
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#forward-compatibility" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1667,6 +1678,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#client-0210-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Client 0.21.0 release
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#forward-compatibility" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1926,9 +1948,10 @@
 a server release when its pinned OpenAPI contract comes from that server tag and
 the complete Docker-backed library and consumer integration suites pass against
 an immutable image for the same release.</p>
-<p>Client 0.20.0 provides typed helpers for every route in the pinned
-v0.0.21 contract. Authenticated relative routes remain available through <code>raw()</code>
-as an extension point for additional operations.</p>
+<p>Client 0.21.0 targets the released v0.0.22 contract. Typed runtime-settings
+helpers discover server-provided fields and explanations. Authenticated relative
+routes remain available through <code>raw()</code> as an extension point for additional
+operations; <a href="../known-gaps/">known gaps</a> describe typed coverage.</p>
 <h2 id="compatibility-history">Compatibility history<a class="headerlink" href="#compatibility-history" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1940,6 +1963,12 @@ as an extension point for additional operations.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.21.0</td>
+<td>0.0.22</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:71ff4090eac071f23ae59f7265dc07165939d42771a73d1d291defa023b4964b</code></td>
+<td><a href="#client-0210-release">Complete pinned verification</a>: 181 test results passed on 2026-11-09.</td>
+</tr>
 <tr>
 <td>0.20.0</td>
 <td>0.0.21</td>
@@ -2142,6 +2171,27 @@ as an extension point for additional operations.</p>
 </table>
 <p>The client version 0.0.2 row predates and is unrelated to the independently
 versioned Hubuum server v0.0.2 release.</p>
+<h2 id="client-0210-release">Client 0.21.0 release<a class="headerlink" href="#client-0210-release" title="Permanent link">&para;</a></h2>
+<p>Client 0.21.0 targets the released Server v0.0.22 image:
+<code>ghcr.io/hubuum/hubuum-server@sha256:71ff4090eac071f23ae59f7265dc07165939d42771a73d1d291defa023b4964b</code>.
+Both Linux image architectures identify source revision
+<code>242285411044459c3ac73563d9338905f3b4f377</code> and version <code>v0.0.22</code>.
+The tagged OpenAPI document has SHA-256
+<code>4981b76ff4e4a96392f9a59e41e3c2e86b1d4b3d7049911b7565c224ba7ca2b7</code>;
+reconciliation covers 272 operations, 189 paths, and 134 model mappings.</p>
+<p>On 2026-11-09, the canonical combined wrapper passed 181 test results across
+44 result groups, with zero failures or ignored tests, using Docker and the
+published Linux ARM64 image. This includes the library suite, independent
+<code>e2e_client</code>, native-resource phases, and four complete restore/recovery pairs.
+Credential approval enforcement was required. Async and blocking runtime tests
+cover discovery and field help, partial updates, stale revisions, authorization,
+and exact restoration of original values and ownership.</p>
+<p>The release also passed the complete non-container suite, all-feature Clippy and
+Rustdoc with warnings denied, public feature combinations, Rust 1.88, generation
+and tagged-contract checks, clean package verification, and dependency policy.
+The pre-1.0 breaking bump to 0.21.0 passes SemVer verification. Replace the removed
+legacy query-observation methods, request type, and override field as described
+in <a href="../query-usage/#runtime-settings-discovery">runtime settings</a>.</p>
 <h2 id="forward-compatibility">Forward compatibility<a class="headerlink" href="#forward-compatibility" title="Permanent link">&para;</a></h2>
 <p>Client 0.11.1 introduced the fresh credential approval API for servers incorporating
 <a href="https://github.com/hubuum/hubuum/pull/423">PR 423</a>. That release kept its declared

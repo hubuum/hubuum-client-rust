@@ -1609,7 +1609,7 @@ same operations through <code>client.class_schema(class_id)</code> or <code>clas
 The examples below use the async client; remove <code>.await</code> for blocking calls.</p>
 <h2 id="run-the-examples">Run the examples<a class="headerlink" href="#run-the-examples" title="Permanent link">&para;</a></h2>
 <p>From a checkout of this repository, use an existing populated class on server
-v0.0.21 and set these environment variables:</p>
+v0.0.22 and set these environment variables:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HUBUUM_URL</span><span class="o">=</span><span class="s1">'https://server.example.com'</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HUBUUM_CLASS_ID</span><span class="o">=</span><span class="s1">'123'</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">HUBUUM_TOKEN</span><span class="o">=</span><span class="s1">'&lt;personal-access-token&gt;'</span>
@@ -1828,7 +1828,12 @@ that a remote side effect was prevented. Owners and unscoped administrators can
 cancel authorized tasks; scoped tokens can cancel only work submitted using the
 same token. Internal reindex and schema work require an unscoped administrator.</p>
 <h2 id="server-upgrade">Server upgrade<a class="headerlink" href="#server-upgrade" title="Permanent link">&para;</a></h2>
-<p>For v0.0.21, drain old workers and apply the restore-chunk, computed-read-repair,
+<p>Upgrade to v0.0.22 before adopting client 0.21.0. Stop old writers, apply the
+server's migrations and role grants, then start matching API, worker,
+template-worker, administrator, and restore-executor binaries. Runtime settings
+replace the old query-observation override API, so all replicas must upgrade
+together. Review template fuel limits and rendered output for MiniJinja 3.1.</p>
+<p>Upgrades from before v0.0.21 also require the restore-chunk, computed-read-repair,
 schema-profiling, and computed-history deletion-lock migrations before starting
 matching API, worker, administrator, and restore-executor binaries. Schedule a
 quiet window for bounded migration scans and lock waits. Provide writable
@@ -1841,8 +1846,8 @@ explicit properties/items, and keep schemas, data, and regex complexity within
 the configured budgets. The administrative configuration exposes the effective
 schema, task, and backup limits. External authorization traversal is capped at
 10,000 candidates.</p>
-<p>See the <a href="https://github.com/hubuum/hubuum/releases/tag/v0.0.21">v0.0.21 release notes</a>,
-<a href="https://github.com/hubuum/hubuum/blob/v0.0.21/docs/json_schema_validation.md">server validation limits</a>,
+<p>See the <a href="https://github.com/hubuum/hubuum/releases/tag/v0.0.22">v0.0.22 release notes</a>,
+<a href="https://github.com/hubuum/hubuum/blob/v0.0.22/docs/json_schema_validation.md">server validation limits</a>,
 and <a href="../backups-and-computed-fields/">backup format compatibility</a>.</p>
 
 

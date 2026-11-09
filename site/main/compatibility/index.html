@@ -756,10 +756,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-runtime-settings-discovery" class="md-nav__link">
+  <a href="#runtime-settings-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional runtime settings discovery
+        Runtime settings discovery
       </span>
     </span>
   </a>
@@ -1760,10 +1760,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-runtime-settings-discovery" class="md-nav__link">
+  <a href="#runtime-settings-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Optional runtime settings discovery
+        Runtime settings discovery
       </span>
     </span>
   </a>
@@ -1807,9 +1807,9 @@ an immutable image for the same release.</p>
 <p>Dedicated typed helpers do not necessarily exist for every server operation.
 Authenticated relative routes remain available through <code>raw()</code> while typed
 coverage evolves.</p>
-<p>Client 0.20.0 targets server v0.0.21 and its immutable release image.
-Complete <code>TaskDetails</code> literals must add <code>schema_profiling: None</code> or use
-<code>..Default::default()</code>.
+<p>Client 0.21.0 targets server v0.0.22 and its immutable release image.
+Replace the removed query-observation settings methods with the
+<a href="../query-usage/#runtime-settings-discovery">revision-checked runtime-settings API</a>.
 The typed-ID migration is documented in <a href="../migration-0.19/">the migration guide</a>.</p>
 <h2 id="compatibility-history">Compatibility history<a class="headerlink" href="#compatibility-history" title="Permanent link">&para;</a></h2>
 <table>
@@ -1822,6 +1822,12 @@ The typed-ID migration is documented in <a href="../migration-0.19/">the migrati
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.21.0</td>
+<td>0.0.22</td>
+<td><code>ghcr.io/hubuum/hubuum-server@sha256:71ff4090eac071f23ae59f7265dc07165939d42771a73d1d291defa023b4964b</code></td>
+<td>181 library, consumer, and recovery test results passed on 2026-11-09; see <a href="../compatibility-evidence/#client-0210-release">0.21 evidence</a>.</td>
+</tr>
 <tr>
 <td>0.20.0</td>
 <td>0.0.21</td>
@@ -2031,7 +2037,7 @@ The typed-ID migration is documented in <a href="../migration-0.19/">the migrati
 <p>The client version 0.0.2 row predates and is unrelated to the independently
 versioned Hubuum server v0.0.2 release.</p>
 <h2 id="before-upgrading">Before upgrading<a class="headerlink" href="#before-upgrading" title="Permanent link">&para;</a></h2>
-<p>Client 0.20.0 targets server v0.0.21. Use fresh credential approvals for protected
+<p>Client 0.21.0 targets server v0.0.22. Use fresh credential approvals for protected
 mutations, and review <a href="../known-gaps/">known typed API gaps</a>. The client
 accepts backup formats 6, 7, 8, 9, and 10; the server decides whether it can restore one.
 For older Rust releases, check the linked migration notes before upgrading:
@@ -2081,11 +2087,11 @@ refresh credential. PAT injection remains supported and independent of sessions.
 Retain a pre-upgrade backup and matching binaries for rollback. See the
 <a href="../known-gaps/#v0020-coverage">typed API gaps</a> before relying on newly
 introduced server fields or operations.</p>
-<h2 id="optional-runtime-settings-discovery">Optional runtime settings discovery<a class="headerlink" href="#optional-runtime-settings-discovery" title="Permanent link">&para;</a></h2>
-<p>The runtime settings helpers require a server implementing discovery version 1
-from server issue #568. They do not change this client's pinned v0.0.21 target.
-A discovery <code>404</code> means the optional capability is unavailable. Preserve that
-error; do not fall back to an unrevisioned write.</p>
+<h2 id="runtime-settings-discovery">Runtime settings discovery<a class="headerlink" href="#runtime-settings-discovery" title="Permanent link">&para;</a></h2>
+<p>Server v0.0.22 implements discovery version 1. Runtime settings discovery is
+required by this client's pinned compatibility target. Older servers may return
+<code>404</code>; upgrade them before using runtime settings and do not fall back to an
+unrevisioned write.</p>
 <p>Call <code>runtime_settings_schema()</code>, select a returned group key, then call
 <code>runtime_settings_group(key)</code>. Construct <code>RuntimeSettingsPatch</code> from the returned
 revision and only the edited fields. Group names and schemas are open-ended, so

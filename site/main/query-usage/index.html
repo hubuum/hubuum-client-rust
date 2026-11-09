@@ -807,6 +807,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#runtime-settings-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Runtime settings discovery
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#prepare-and-clean-up-native-indexes" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1485,6 +1496,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#runtime-settings-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Runtime settings discovery
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#prepare-and-clean-up-native-indexes" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1606,10 +1628,38 @@ cleanup eligibility, adapter progress, rationales, and limitations.</p>
 bounded, value-free, and lost on restart. Durations cover the whole query,
 including other predicates and authorization. Missing observations or zero
 native scans do not prove a resource is unused.</p>
+<h2 id="runtime-settings-discovery">Runtime settings discovery<a class="headerlink" href="#runtime-settings-discovery" title="Permanent link">&para;</a></h2>
+<p>Server v0.0.22 exposes group names, field types, labels, descriptions, defaults,
+units, bounds, and enum-choice explanations through
+<code>client.runtime_settings_schema()</code>. Accept catalogue version 1, retain unknown
+annotations, and show unsupported field shapes read-only. The <code>schema</code> JSON
+value preserves <code>title</code>, <code>description</code>, <code>x-unit</code>, and <code>x-enum-descriptions</code> for
+client interfaces; labels and help do not need a client release when fields grow.</p>
+<p>Replace the removed query-observation settings methods with a group read and a
+revision-checked partial edit:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">use</span><span class="w"> </span><span class="n">hubuum_client</span><span class="p">::</span><span class="n">RuntimeSettingsPatch</span><span class="p">;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">use</span><span class="w"> </span><span class="n">serde_json</span><span class="p">::{</span><span class="n">Map</span><span class="p">,</span><span class="w"> </span><span class="n">json</span><span class="p">};</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"query_observations"</span><span class="p">;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kd">let</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="n">runtime_settings_group</span><span class="p">(</span><span class="n">group</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="kd">let</span><span class="w"> </span><span class="n">revision</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">state</span><span class="p">.</span><span class="n">revision</span><span class="p">.</span><span class="n">ok_or</span><span class="p">(</span><span class="s">"this replica has no current revision"</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="kd">let</span><span class="w"> </span><span class="n">changes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Map</span><span class="p">::</span><span class="n">from_iter</span><span class="p">([(</span><span class="s">"enabled"</span><span class="p">.</span><span class="n">to_owned</span><span class="p">(),</span><span class="w"> </span><span class="n">json</span><span class="o">!</span><span class="p">(</span><span class="kc">true</span><span class="p">))]);</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="kd">let</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="n">patch_runtime_settings</span><span class="p">(</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="n">group</span><span class="p">,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="n">RuntimeSettingsPatch</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">revision</span><span class="p">,</span><span class="w"> </span><span class="n">changes</span><span class="p">)</span><span class="o">?</span><span class="p">,</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+</code></pre></div>
+<p>The server preserves omitted fields and validates correlated limits atomically.
+On HTTP 412, refetch and review the edit; writes are not retried automatically.
+The update's <code>applied_by_responding_replica</code> does not acknowledge other replicas.
+Use <code>release_runtime_settings(group, revision)</code> only for an explicit reset to
+deployment ownership, using a newly read revision. Authentication settings retain
+their dedicated preflight workflow and are not writable through generic patches.
+The blocking client exposes the same methods without <code>.await</code>.</p>
 <h2 id="prepare-and-clean-up-native-indexes">Prepare and clean up native indexes<a class="headerlink" href="#prepare-and-clean-up-native-indexes" title="Permanent link">&para;</a></h2>
 <p>There is no HTTP operation for running the native executor. An operator runs
 the separate server tool with migration credentials and its configured owner role:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>hubuum-admin<span class="w"> </span>--reconcile-query-usage<span class="w"> </span>--database-role-mode<span class="w"> </span>split
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>hubuum-admin<span class="w"> </span>--reconcile-query-usage<span class="w"> </span>--database-role-mode<span class="w"> </span>split
 </code></pre></div>
 <p>The PostgreSQL executor prepares bounded shared hash indexes for supported text
 equality patterns and retries preparation and cleanup. Other declarations remain
