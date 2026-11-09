@@ -1201,6 +1201,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#optional-forward-compatible-runtime-settings-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Optional forward-compatible runtime settings routes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1594,6 +1605,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#optional-forward-compatible-runtime-settings-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Optional forward-compatible runtime settings routes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1767,6 +1789,14 @@ both modes. These operations require an unscoped human administrator. The update
 commits a shared override; other replicas reconcile asynchronously. Configuration
 responses expose <code>runtime_override</code>; analysis snapshots omit it. Disabling
 collection retains existing observations and does not alter sampling or retention.</p>
+<h2 id="optional-forward-compatible-runtime-settings-routes">Optional forward-compatible runtime settings routes<a class="headerlink" href="#optional-forward-compatible-runtime-settings-routes" title="Permanent link">&para;</a></h2>
+<p>The client additionally supports <code>GET /api/v1/admin/runtime-settings/schema</code> and
+<code>GET</code>, <code>PATCH</code>, and <code>DELETE /api/v1/admin/runtime-settings/{group}</code> on newer
+servers. These are intentionally outside the pinned v0.0.21 operation snapshot.
+The shared partial-update envelope preserves unfamiliar fields and requires an
+expected revision. A <code>404</code> is an unavailable capability, not permission to use a
+legacy write. Authentication provider replacement still requires its specialized
+preflight API; generic PATCH does not support it.</p>
 
 
 
