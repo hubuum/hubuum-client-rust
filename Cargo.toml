@@ -27,6 +27,22 @@ exclude = [
 server-version = "0.0.21"
 server-image = "ghcr.io/hubuum/hubuum-server@sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6"
 
+[[example]]
+name = "discover_fields"
+required-features = ["async"]
+
+[[example]]
+name = "discover_fields_blocking"
+required-features = ["blocking"]
+
+[[example]]
+name = "activate_schema"
+required-features = ["async"]
+
+[[example]]
+name = "activate_schema_blocking"
+required-features = ["blocking"]
+
 [features]
 default = ["async"]
 async = [

@@ -6,7 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
 - Discover runtime configuration groups and schemas, read requested/effective values, and send revision-checked partial edits or deployment resets through matching async and blocking APIs. This is an optional capability of newer servers; the pinned v0.0.21 target is unchanged.
+- Runnable async and blocking examples for field discovery, schema suggestion
+  review, and explicit activation after whole-class impact analysis. CI checks
+  the examples with each supported feature combination.
 
 ## [0.20.0] - 2026-10-26
 
