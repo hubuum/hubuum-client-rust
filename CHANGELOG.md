@@ -6,12 +6,32 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-09
+
+This release explicitly targets Hubuum server v0.0.22. Upgrade the server before
+using runtime-settings discovery or replacing legacy query-observation calls.
+
 ### Added
 
-- Discover runtime configuration groups and schemas, read requested/effective values, and send revision-checked partial edits or deployment resets through matching async and blocking APIs. This is an optional capability of newer servers; the pinned v0.0.21 target is unchanged.
+- Discover runtime configuration groups and schemas, read requested/effective values, and send revision-checked partial edits or deployment resets through matching async and blocking APIs. Groups, fields, titles, descriptions, limits, and enum explanations are supplied by the server.
 - Runnable async and blocking examples for field discovery, schema suggestion
   review, and explicit activation after whole-class impact analysis. CI checks
   the examples with each supported feature combination.
+
+### Changed
+
+- **Breaking:** remove `query_observations()`, `set_query_observations()`,
+  `QueryObservationUpdateRequest`, `Endpoint::AdminQueryObservations`, and
+  `QueryObservationSettings::runtime_override`, matching server v0.0.22. Use
+  `runtime_settings_group("query_observations")` and `patch_runtime_settings()`
+  with the revision read from that group; use `release_runtime_settings()` to
+  restore deployment ownership. Read revisions and ownership from runtime
+  settings instead of the removed override field.
+- Preserve redacted runtime-settings reports in `RunningConfig`, including
+  unfamiliar groups; group responses also expose change time and actor.
+- Target the server's 272-operation contract and retain Rust 1.88 and the
+  existing public feature combinations. The complete dependency graph remains
+  at the latest versions compatible with that MSRV and repository policy.
 
 ## [0.20.0] - 2026-10-26
 

@@ -4,23 +4,30 @@
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.
 
-`hubuum_client` 0.20.0 targets Hubuum server v0.0.21. Released October 26, 2026.
+`hubuum_client` 0.21.0 targets Hubuum server v0.0.22. Released November 9, 2026.
 The pinned image and verification evidence are recorded in
 [COMPATIBILITY.md](COMPATIBILITY.md).
 
-Discover raw and computed fields without downloading object payloads, generate a
-sampled schema suggestion, then review and explicitly stage it for whole-class
-impact analysis and activation. Both client modes support waiting, resuming by
-task ID, and handling expired reports. See the
-[discovery workflow](docs/schema-evolution.md#discover-fields-and-suggest-a-policy)
-and [release notes](https://github.com/hubuum/hubuum-client-rust/releases/tag/v0.20.0).
+Discover runtime configuration groups, field types, labels, help, limits, and
+enum-choice explanations from the server. Both client modes support group reads,
+revision-checked partial edits, and explicit resets to deployment configuration.
+See [runtime settings](docs/query-usage.md#runtime-settings-discovery) and
+[release notes](https://github.com/hubuum/hubuum-client-rust/releases/tag/v0.21.0).
+
+**Upgrading from 0.20:** upgrade the server to v0.0.22 first. Replace
+`query_observations()` and `set_query_observations()` with
+`runtime_settings_group("query_observations")` and `patch_runtime_settings()`;
+use the fetched revision for every edit. Read ownership from runtime settings
+instead of `QueryObservationSettings::runtime_override`. The pinned contract
+contains 272 operations; dedicated helpers and remaining gaps are documented in
+[typed API limitations](openapi/known-gaps.md).
 
 **Upgrading from 0.19:** complete `TaskDetails` struct literals must add
 `schema_profiling: None` or use `..Default::default()`; exhaustive patterns need
 the new field or `..`. Upgrade the server to
 v0.0.21 before using discovery or suggestions; follow its migration and matching
-worker/restore-executor requirements. Typed helpers cover the 261-operation
-contract. Rust 1.88 and the public feature combinations remain unchanged.
+worker/restore-executor requirements. Rust 1.88 and the public feature
+combinations remain unchanged.
 Upgrades from 0.18 or earlier also require the
 [0.19 typed-ID migration](docs/migration-0.19.md).
 
@@ -63,7 +70,7 @@ Add the dependency to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-hubuum_client = "0.20.0"
+hubuum_client = "0.21.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -71,7 +78,7 @@ Async support is enabled by default. Blocking applications can opt into only the
 
 ```toml
 [dependencies]
-hubuum_client = { version = "0.20.0", default-features = false, features = ["blocking"] }
+hubuum_client = { version = "0.21.0", default-features = false, features = ["blocking"] }
 ```
 
 If you need unreleased changes, point Cargo at the Git repository:

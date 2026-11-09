@@ -711,10 +711,7 @@
       "openapi_schema": "QueryObservationSettings",
       "rust_file": "src/types/query_usage.rs",
       "rust_type": "QueryObservationSettings",
-      "direction": "response",
-      "rust_only_fields": {
-        "runtime_override": "The public settings/config alias is retained for compatibility; only configuration responses carry the optional runtime override."
-      }
+      "direction": "response"
     },
     {
       "openapi_schema": "QueryObservationSnapshot",
@@ -834,12 +831,6 @@
       }
     },
     {
-      "openapi_schema": "QueryObservationUpdateRequest",
-      "rust_file": "src/types/query_usage.rs",
-      "rust_type": "QueryObservationUpdateRequest",
-      "direction": "request"
-    },
-    {
       "openapi_schema": "HistoricalClassObjects",
       "rust_file": "src/types/historical.rs",
       "rust_type": "HistoricalClassObjects",
@@ -902,6 +893,36 @@
       "rust_file": "src/types/task.rs",
       "rust_type": "SchemaProfileTaskDetails",
       "direction": "response"
+    },
+    {
+      "openapi_schema": "RuntimeSettingsCatalogue",
+      "rust_file": "src/types/runtime_settings.rs",
+      "rust_type": "RuntimeSettingsCatalogue",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RuntimeSettingsDescriptor",
+      "rust_file": "src/types/runtime_settings.rs",
+      "rust_type": "RuntimeSettingsDescriptor",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RuntimeSettingsGroupState",
+      "rust_file": "src/types/runtime_settings.rs",
+      "rust_type": "RuntimeSettingsGroupState",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RuntimeSettingsUpdateResponse",
+      "rust_file": "src/types/runtime_settings.rs",
+      "rust_type": "RuntimeSettingsUpdateResponse",
+      "direction": "response"
+    },
+    {
+      "openapi_schema": "RuntimeSettingsPatch",
+      "rust_file": "src/types/runtime_settings.rs",
+      "rust_type": "RuntimeSettingsPatch",
+      "direction": "request"
     }
   ]
 }

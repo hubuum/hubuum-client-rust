@@ -84,6 +84,40 @@ bounded, value-free, and lost on restart. Durations cover the whole query,
 including other predicates and authorization. Missing observations or zero
 native scans do not prove a resource is unused.
 
+## Runtime settings discovery
+
+Server v0.0.22 exposes group names, field types, labels, descriptions, defaults,
+units, bounds, and enum-choice explanations through
+`client.runtime_settings_schema()`. Accept catalogue version 1, retain unknown
+annotations, and show unsupported field shapes read-only. The `schema` JSON
+value preserves `title`, `description`, `x-unit`, and `x-enum-descriptions` for
+client interfaces; labels and help do not need a client release when fields grow.
+
+Replace the removed query-observation settings methods with a group read and a
+revision-checked partial edit:
+
+```rust
+use hubuum_client::RuntimeSettingsPatch;
+use serde_json::{Map, json};
+
+let group = "query_observations";
+let state = client.runtime_settings_group(group).await?;
+let revision = state.revision.ok_or("this replica has no current revision")?;
+let changes = Map::from_iter([("enabled".to_owned(), json!(true))]);
+let result = client.patch_runtime_settings(
+    group,
+    RuntimeSettingsPatch::new(revision, changes)?,
+).await?;
+```
+
+The server preserves omitted fields and validates correlated limits atomically.
+On HTTP 412, refetch and review the edit; writes are not retried automatically.
+The update's `applied_by_responding_replica` does not acknowledge other replicas.
+Use `release_runtime_settings(group, revision)` only for an explicit reset to
+deployment ownership, using a newly read revision. Authentication settings retain
+their dedicated preflight workflow and are not writable through generic patches.
+The blocking client exposes the same methods without `.await`.
+
 ## Prepare and clean up native indexes
 
 There is no HTTP operation for running the native executor. An operator runs

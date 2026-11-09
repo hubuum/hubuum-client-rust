@@ -78,42 +78,6 @@ impl Client<Authenticated> {
         })
     }
 
-    /// Read effective observation settings. Requires an unscoped human administrator.
-    pub fn query_observations(&self) -> Result<QueryObservationConfig, ApiError> {
-        self.request_with_endpoint::<EmptyPostParams, QueryObservationConfig>(
-            reqwest::Method::GET,
-            &Endpoint::AdminQueryObservations,
-            UrlParams::default(),
-            vec![],
-            EmptyPostParams,
-        )
-        .and_then(|value| {
-            value.ok_or_else(|| {
-                ApiError::EmptyResult("Query observation settings returned empty result".into())
-            })
-        })
-    }
-
-    /// Commit a shared collection override. Requires an unscoped human administrator.
-    /// Other replicas apply the override asynchronously; existing observations remain.
-    pub fn set_query_observations(
-        &self,
-        request: QueryObservationUpdateRequest,
-    ) -> Result<QueryObservationConfig, ApiError> {
-        self.request_with_endpoint::<QueryObservationUpdateRequest, QueryObservationConfig>(
-            reqwest::Method::PUT,
-            &Endpoint::AdminQueryObservations,
-            UrlParams::default(),
-            vec![],
-            request,
-        )
-        .and_then(|value| {
-            value.ok_or_else(|| {
-                ApiError::EmptyResult("Query observation settings returned empty result".into())
-            })
-        })
-    }
-
     pub fn meta_login_rate_limit(&self) -> MetaLoginRateLimitOp {
         MetaLoginRateLimitOp::new(self.clone())
     }
@@ -194,7 +158,7 @@ use crate::{
 };
 
 impl Client<Authenticated> {
-    /// Discover runtime groups and JSON Schema on servers implementing discovery v1. A 404 means this optional capability is unavailable.
+    /// Discover runtime groups and JSON Schema using discovery v1, required by the pinned server target.
     pub fn runtime_settings_schema(&self) -> Result<RuntimeSettingsCatalogue, ApiError> {
         self.request_with_endpoint::<EmptyPostParams, RuntimeSettingsCatalogue>(
             reqwest::Method::GET,

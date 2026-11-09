@@ -1,6 +1,6 @@
-# Known Hubuum server v0.0.21 OpenAPI gaps
+# Known Hubuum server v0.0.22 OpenAPI gaps
 
-The pinned client contract records these limitations in the server v0.0.21
+The pinned client contract records these limitations in the server v0.0.22
 specification explicitly:
 
 - `GET /api/v1/search/stream` declares `text/event-stream` but does not
@@ -65,7 +65,7 @@ server-validated.
 
 ## Credential approval coverage
 
-The pinned v0.0.21 contract includes both approval endpoints and the approval
+The pinned v0.0.22 contract includes both approval endpoints and the approval
 headers on all six protected operations. The existing typed approval API covers
 them, and required integration checks assert enforcement. Ordinary mutation calls
 retain their behavior and can return `reauthentication_required`; applications
@@ -102,7 +102,7 @@ and test-delivery decoding.
 
 ## Collection integrations
 
-The pinned v0.0.21 snapshot includes all eight collection destination and
+The pinned v0.0.22 snapshot includes all eight collection destination and
 administrator grant operations. Both client modes provide typed helpers, and
 `CollectionEventSink` preserves safe metadata while omitting configuration,
 URLs, and credentials. The canonical live suite requires delegated collection
@@ -117,7 +117,7 @@ both client modes. Inventories preserve structured paths, sources, counts, and
 sample bounds. Profiling helpers validate options, wait only for full task
 success, retrieve retained reports, and provide a guarded explicit staging
 request. Reports do not activate policies; whole-class impact remains required.
-The pinned contract now contains 261 operations and 130 wire-model mappings.
+That release introduced a 261-operation contract; the current snapshot has 272 operations.
 
 ## v0.0.20 coverage
 
@@ -159,19 +159,31 @@ the server sorts class IDs and swaps labels when necessary. Existing
 `ClassRelationPost` literals remain compatible; use the handle options for labels.
 Labels require 1–128 Unicode characters, no controls, and no surrounding whitespace.
 
-Observation management has typed `query_observations()` and
-`set_query_observations(QueryObservationUpdateRequest { enabled })` methods in
-both modes. These operations require an unscoped human administrator. The update
-commits a shared override; other replicas reconcile asynchronously. Configuration
-responses expose `runtime_override`; analysis snapshots omit it. Disabling
-collection retains existing observations and does not alter sampling or retention.
+## v0.0.22 runtime settings
 
-## Optional forward-compatible runtime settings routes
+The 272-operation server contract replaces the old query-observation control
+routes with audited runtime settings. Both client modes expose
+`runtime_settings_schema()`, `runtime_settings_group(group)`,
+`patch_runtime_settings(group, patch)`, and
+`release_runtime_settings(group, expected_revision)`. Group keys, JSON Schema
+fields, titles, descriptions, limits, and enum explanations remain open so clients
+can present new server options without regenerating the library.
 
-The client additionally supports `GET /api/v1/admin/runtime-settings/schema` and
-`GET`, `PATCH`, and `DELETE /api/v1/admin/runtime-settings/{group}` on newer
-servers. These are intentionally outside the pinned v0.0.21 operation snapshot.
-The shared partial-update envelope preserves unfamiliar fields and requires an
-expected revision. A `404` is an unavailable capability, not permission to use a
-legacy write. Authentication provider replacement still requires its specialized
-preflight API; generic PATCH does not support it.
+Use the revision read from the group for each edit. Partial updates preserve
+omitted fields, and stale revisions return an error for user review. A successful
+commit reports application by the responding replica, not cluster-wide agreement.
+`RunningConfig.runtime_settings` retains redacted ownership and revision reports,
+including unknown groups; older servers may omit it.
+
+The generic API replaces the dedicated query-observation read/write helpers and
+`runtime_override` field. Use the group's `source`, `revision`, `effective`, and
+`runtime` values instead. The combined live suite exercises discovery, partial
+edits, effective configuration, and restoration of deployment ownership in both
+client modes. A `404` means the capability is unavailable and must not trigger an
+unrevisioned fallback write.
+
+The complete snapshot and audit history, full-replacement PUT routes, and
+specialized authentication validation/preflight remain accessible through
+`raw()`. Generic PATCH cannot replace authentication providers; applications must
+implement that dedicated local-administrator workflow before offering those
+changes. These limitations apply to v0.0.22's newly added operations.

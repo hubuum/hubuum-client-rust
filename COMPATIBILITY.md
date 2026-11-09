@@ -9,15 +9,16 @@ Dedicated typed helpers do not necessarily exist for every server operation.
 Authenticated relative routes remain available through `raw()` while typed
 coverage evolves.
 
-Client 0.20.0 targets server v0.0.21 and its immutable release image.
-Complete `TaskDetails` literals must add `schema_profiling: None` or use
-`..Default::default()`.
+Client 0.21.0 targets server v0.0.22 and its immutable release image.
+Replace the removed query-observation settings methods with the
+[revision-checked runtime-settings API](docs/query-usage.md#runtime-settings-discovery).
 The typed-ID migration is documented in [the migration guide](docs/migration-0.19.md).
 
 ## Compatibility history
 
 | Client version | Server target | Tested server image | [Evidence](docs/compatibility-evidence.md#compatibility-history) |
 | --- | --- | --- | --- |
+| 0.21.0 | 0.0.22 | `ghcr.io/hubuum/hubuum-server@sha256:71ff4090eac071f23ae59f7265dc07165939d42771a73d1d291defa023b4964b` | 181 library, consumer, and recovery test results passed on 2026-11-09; see [0.21 evidence](docs/compatibility-evidence.md#client-0210-release). |
 | 0.20.0 | 0.0.21 | `ghcr.io/hubuum/hubuum-server@sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6` | 180 library, consumer, and recovery tests passed on 2026-10-26; see [0.20 evidence](docs/compatibility-evidence.md#client-0200-release). |
 | 0.19.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Pinned release verification](docs/compatibility-evidence.md#client-0190-release) on 2026-10-24: 107 library tests, 56 consumer cases, three native-resource phases, and four restore/recovery pairs after the dependency review. |
 | 0.18.0 | 0.0.20 | `ghcr.io/hubuum/hubuum-server@sha256:eaf59f8a4b4793030a78bc1637a8e2b9fad2f810b8621ff9a874dca534b9a23a` | [Pinned verification](docs/compatibility-evidence.md#client-0180-release) on 2026-10-23: 107 library tests, 56 consumer cases, three native-resource phases, and four restore/recovery pairs after the dependency refresh. |
@@ -58,7 +59,7 @@ versioned Hubuum server v0.0.2 release.
 
 ## Before upgrading
 
-Client 0.20.0 targets server v0.0.21. Use fresh credential approvals for protected
+Client 0.21.0 targets server v0.0.22. Use fresh credential approvals for protected
 mutations, and review [known typed API gaps](openapi/known-gaps.md). The client
 accepts backup formats 6, 7, 8, 9, and 10; the server decides whether it can restore one.
 For older Rust releases, check the linked migration notes before upgrading:
@@ -137,12 +138,12 @@ Retain a pre-upgrade backup and matching binaries for rollback. See the
 [typed API gaps](openapi/known-gaps.md#v0020-coverage) before relying on newly
 introduced server fields or operations.
 
-## Optional runtime settings discovery
+## Runtime settings discovery
 
-The runtime settings helpers require a server implementing discovery version 1
-from server issue #568. They do not change this client's pinned v0.0.21 target.
-A discovery `404` means the optional capability is unavailable. Preserve that
-error; do not fall back to an unrevisioned write.
+Server v0.0.22 implements discovery version 1. Runtime settings discovery is
+required by this client's pinned compatibility target. Older servers may return
+`404`; upgrade them before using runtime settings and do not fall back to an
+unrevisioned write.
 
 Call `runtime_settings_schema()`, select a returned group key, then call
 `runtime_settings_group(key)`. Construct `RuntimeSettingsPatch` from the returned
