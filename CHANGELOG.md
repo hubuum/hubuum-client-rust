@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Added
+
+- Runnable async and blocking examples for field discovery, schema suggestion
+  review, and explicit activation after whole-class impact analysis. CI checks
+  the examples with each supported feature combination.
+
 ## [0.20.0] - 2026-10-26
 
 This release explicitly targets Hubuum server v0.0.21. Upgrade the server before
