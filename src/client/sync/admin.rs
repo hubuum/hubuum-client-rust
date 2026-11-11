@@ -78,42 +78,6 @@ impl Client<Authenticated> {
         })
     }
 
-    /// Read effective observation settings. Requires an unscoped human administrator.
-    pub fn query_observations(&self) -> Result<QueryObservationConfig, ApiError> {
-        self.request_with_endpoint::<EmptyPostParams, QueryObservationConfig>(
-            reqwest::Method::GET,
-            &Endpoint::AdminQueryObservations,
-            UrlParams::default(),
-            vec![],
-            EmptyPostParams,
-        )
-        .and_then(|value| {
-            value.ok_or_else(|| {
-                ApiError::EmptyResult("Query observation settings returned empty result".into())
-            })
-        })
-    }
-
-    /// Commit a shared collection override. Requires an unscoped human administrator.
-    /// Other replicas apply the override asynchronously; existing observations remain.
-    pub fn set_query_observations(
-        &self,
-        request: QueryObservationUpdateRequest,
-    ) -> Result<QueryObservationConfig, ApiError> {
-        self.request_with_endpoint::<QueryObservationUpdateRequest, QueryObservationConfig>(
-            reqwest::Method::PUT,
-            &Endpoint::AdminQueryObservations,
-            UrlParams::default(),
-            vec![],
-            request,
-        )
-        .and_then(|value| {
-            value.ok_or_else(|| {
-                ApiError::EmptyResult("Query observation settings returned empty result".into())
-            })
-        })
-    }
-
     pub fn meta_login_rate_limit(&self) -> MetaLoginRateLimitOp {
         MetaLoginRateLimitOp::new(self.clone())
     }
@@ -184,6 +148,75 @@ impl MetaLoginRateLimitOp {
             self.query_params,
             EmptyPostParams,
         )?;
+        shared::decode_json_body(&raw.body)
+    }
+}
+
+use crate::{
+    RuntimeSettingsCatalogue, RuntimeSettingsGroupState, RuntimeSettingsPatch,
+    RuntimeSettingsUpdateResponse,
+};
+
+impl Client<Authenticated> {
+    /// Discover runtime groups and JSON Schema using discovery v1, required by the pinned server target.
+    pub fn runtime_settings_schema(&self) -> Result<RuntimeSettingsCatalogue, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, RuntimeSettingsCatalogue>(
+            reqwest::Method::GET,
+            &Endpoint::RuntimeSettingsSchema,
+            UrlParams::default(),
+            vec![],
+            EmptyPostParams,
+        )
+        .and_then(|value| {
+            value.ok_or_else(|| {
+                ApiError::EmptyResult("Runtime settings returned an empty result".into())
+            })
+        })
+    }
+    /// Read one discovered group, including requested values and replica application state.
+    pub fn runtime_settings_group(
+        &self,
+        group: &str,
+    ) -> Result<RuntimeSettingsGroupState, ApiError> {
+        self.request_with_endpoint::<EmptyPostParams, RuntimeSettingsGroupState>(
+            reqwest::Method::GET,
+            &Endpoint::RuntimeSettingsGroup,
+            vec![(Cow::Borrowed("group"), group.to_string().into())],
+            vec![],
+            EmptyPostParams,
+        )
+        .and_then(|value| {
+            value.ok_or_else(|| {
+                ApiError::EmptyResult("Runtime settings returned an empty result".into())
+            })
+        })
+    }
+    /// Commit only the edited fields. Return stale revisions to the caller; never automatically refetch and retry an edit.
+    pub fn patch_runtime_settings(
+        &self,
+        group: &str,
+        request: RuntimeSettingsPatch,
+    ) -> Result<RuntimeSettingsUpdateResponse, ApiError> {
+        let path = Endpoint::RuntimeSettingsGroup
+            .path()
+            .replace("{group}", &shared::encode_path_segment(group));
+        self.raw_with_encoded_segments(reqwest::Method::PATCH, path)
+            .json(&request)?
+            .send()
+    }
+    /// Return a group to deployment ownership as a new audited revision.
+    pub fn release_runtime_settings(
+        &self,
+        group: &str,
+        expected_revision: ResourceRevision,
+    ) -> Result<RuntimeSettingsUpdateResponse, ApiError> {
+        let path = Endpoint::RuntimeSettingsGroup
+            .path()
+            .replace("{group}", &shared::encode_path_segment(group));
+        let raw = self
+            .raw_with_encoded_segments(reqwest::Method::DELETE, path)
+            .query_param("expected_revision", expected_revision)
+            .execute()?;
         shared::decode_json_body(&raw.body)
     }
 }

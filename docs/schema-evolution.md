@@ -6,6 +6,58 @@ inspect its impact, then explicitly activate it. Both client modes expose the
 same operations through `client.class_schema(class_id)` or `class.schema()`.
 The examples below use the async client; remove `.await` for blocking calls.
 
+## Run the examples
+
+From a checkout of this repository, use an existing populated class on server
+v0.0.22 and set these environment variables:
+
+```sh
+export HUBUUM_URL='https://server.example.com'
+export HUBUUM_CLASS_ID='123'
+export HUBUUM_TOKEN='<personal-access-token>'
+```
+
+Discovery requires `ReadClass` and samples only objects the token can read. To
+complete the activation workflow, use an unscoped human administrator's token
+from the start so the same credentials can read the report and manage policies.
+Run either the [async discovery example](https://github.com/hubuum/hubuum-client-rust/blob/main/examples/discover_fields.rs)
+or its [blocking version](https://github.com/hubuum/hubuum-client-rust/blob/main/examples/discover_fields_blocking.rs):
+
+```sh
+cargo run --locked --example discover_fields
+cargo run --locked --no-default-features --features blocking --example discover_fields_blocking
+```
+
+Each run prints the field inventory, submits a profiling task, prints its ID,
+waits up to two minutes, and prints the retained suggestion as JSON for review.
+The output includes structured field paths and data previews. Inspect the schema,
+findings, sample validity, and truncation; the sample cannot establish whole-class
+compatibility. Profiling creates a task and report without changing the policy.
+
+After reviewing a successful candidate, keep the same class ID and set
+`HUBUUM_PROFILE_TASK_ID` to the ID printed by discovery. Run one of the following
+commands to stage the reviewed candidate, analyze the whole class, and activate
+it if the impact is complete and compatible:
+
+```sh
+export HUBUUM_PROFILE_TASK_ID='<task-id-from-discovery>'
+cargo run --locked --example activate_schema
+cargo run --locked --no-default-features --features blocking --example activate_schema_blocking
+```
+
+The [async activation example](https://github.com/hubuum/hubuum-client-rust/blob/main/examples/activate_schema.rs)
+and [blocking version](https://github.com/hubuum/hubuum-client-rust/blob/main/examples/activate_schema_blocking.rs)
+use `RejectIncompatible` and the active revision read before staging. They print
+the staged revision and impact task ID before waiting, then print impact details
+and the activation response, including any follow-up task IDs. A rejected or
+timed-out analysis leaves the revision staged. Inspect or abandon it through
+the schema API; a timeout stops polling without cancelling server work. After
+HTTP 409, review current state and run fresh impact analysis before retrying
+activation. Retained profiling reports expire after 24 hours (HTTP 410).
+
+CI compiles these examples for every supported feature combination, lints them,
+and checks them with Rust 1.88. Compilation does not run them against a server.
+
 ## Discover fields and suggest a policy
 
 Server v0.0.21 adds a bounded field inventory and asynchronous schema suggestions.
@@ -195,7 +247,13 @@ same token. Internal reindex and schema work require an unscoped administrator.
 
 ## Server upgrade
 
-For v0.0.21, drain old workers and apply the restore-chunk, computed-read-repair,
+Upgrade to v0.0.22 before adopting client 0.21.0. Stop old writers, apply the
+server's migrations and role grants, then start matching API, worker,
+template-worker, administrator, and restore-executor binaries. Runtime settings
+replace the old query-observation override API, so all replicas must upgrade
+together. Review template fuel limits and rendered output for MiniJinja 3.1.
+
+Upgrades from before v0.0.21 also require the restore-chunk, computed-read-repair,
 schema-profiling, and computed-history deletion-lock migrations before starting
 matching API, worker, administrator, and restore-executor binaries. Schedule a
 quiet window for bounded migration scans and lock waits. Provide writable
@@ -210,6 +268,6 @@ the configured budgets. The administrative configuration exposes the effective
 schema, task, and backup limits. External authorization traversal is capped at
 10,000 candidates.
 
-See the [v0.0.21 release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.21),
-[server validation limits](https://github.com/hubuum/hubuum/blob/v0.0.21/docs/json_schema_validation.md),
+See the [v0.0.22 release notes](https://github.com/hubuum/hubuum/releases/tag/v0.0.22),
+[server validation limits](https://github.com/hubuum/hubuum/blob/v0.0.22/docs/json_schema_validation.md),
 and [backup format compatibility](backups-and-computed-fields.md).

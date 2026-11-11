@@ -243,8 +243,6 @@ mod parity_contract {
                 $module::Client::<Authenticated>::class_schema;
             let _: fn(&$module::Client<Authenticated>, ClassId) -> $module::ClassQueryUsage =
                 $module::Client::<Authenticated>::class_query_usage;
-            let _ = $module::Client::<Authenticated>::query_observations;
-            let _ = $module::Client::<Authenticated>::set_query_observations;
             let _ = $module::ClassQueryUsage::class_id;
             let _ = $module::ClassQueryUsage::list;
             let _ = $module::ClassQueryUsage::create;
@@ -350,6 +348,10 @@ mod parity_contract {
             let _ = $module::Client::<Authenticated>::meta_db_full;
             let _ = $module::Client::<Authenticated>::meta_tasks;
             let _ = $module::Client::<Authenticated>::admin_config;
+            let _ = $module::Client::<Authenticated>::runtime_settings_schema;
+            let _ = $module::Client::<Authenticated>::runtime_settings_group;
+            let _ = $module::Client::<Authenticated>::patch_runtime_settings;
+            let _ = $module::Client::<Authenticated>::release_runtime_settings;
             let _ = $module::Client::<Authenticated>::metrics;
             let _ = $module::Client::<Authenticated>::me;
             let _ = $module::Client::<Authenticated>::me_groups;

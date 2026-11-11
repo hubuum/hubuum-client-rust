@@ -18,12 +18,51 @@ struct Snapshot {
     operations: Vec<Operation>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 struct Schema {
     #[serde(default)]
     properties: BTreeMap<String, serde_json::Value>,
     #[serde(default)]
     required: BTreeSet<String>,
+    #[serde(default, rename = "$ref")]
+    reference: Option<String>,
+    #[serde(default, rename = "allOf")]
+    all_of: Vec<Schema>,
+}
+
+impl Schema {
+    fn resolve_properties(
+        &self,
+        schemas: &BTreeMap<String, Self>,
+        visiting: &mut BTreeSet<String>,
+    ) -> Result<Self, DynError> {
+        let mut result = Self {
+            properties: self.properties.clone(),
+            required: self.required.clone(),
+            ..Self::default()
+        };
+        for part in &self.all_of {
+            let resolved = part.resolve_properties(schemas, visiting)?;
+            result.properties.extend(resolved.properties);
+            result.required.extend(resolved.required);
+        }
+        if let Some(reference) = &self.reference {
+            if !visiting.insert(reference.clone()) {
+                return Err(format!("cyclic OpenAPI object reference `{reference}`").into());
+            }
+            let name = reference
+                .strip_prefix("#/components/schemas/")
+                .ok_or_else(|| format!("unsupported OpenAPI object reference `{reference}`"))?;
+            let resolved = schemas
+                .get(name)
+                .ok_or_else(|| format!("unknown OpenAPI object reference `{reference}`"))?
+                .resolve_properties(schemas, visiting)?;
+            result.properties.extend(resolved.properties);
+            result.required.extend(resolved.required);
+            visiting.remove(reference);
+        }
+        Ok(result)
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -143,7 +182,8 @@ fn check_mapping(root: &Path, snapshot: &Snapshot, mapping: &ModelMapping) -> Re
     let schema = snapshot
         .schemas
         .get(&mapping.openapi_schema)
-        .ok_or_else(|| format!("unknown OpenAPI schema `{}`", mapping.openapi_schema))?;
+        .ok_or_else(|| format!("unknown OpenAPI schema `{}`", mapping.openapi_schema))?
+        .resolve_properties(&snapshot.schemas, &mut BTreeSet::new())?;
     if schema.properties.is_empty() {
         return Err(format!(
             "OpenAPI schema `{}` is not an object with properties",
@@ -408,7 +448,57 @@ const fn direction_name(direction: Direction) -> &'static str {
 mod tests {
     use std::{collections::BTreeSet, path::Path};
 
-    use super::{Direction, ModelContract, Snapshot, parse_fields, read_json};
+    use super::{Direction, ModelContract, Schema, Snapshot, parse_fields, read_json};
+
+    #[test]
+    fn all_of_includes_inherited_properties_and_requiredness() {
+        let schemas = serde_json::from_value(serde_json::json!({
+            "Ownership": {"properties": {"revision": {}}, "required": ["revision"]}
+        }))
+        .unwrap();
+        let schema: Schema = serde_json::from_value(serde_json::json!({
+            "$ref": "#/components/schemas/Ownership",
+            "allOf": [
+                {"$ref": "#/components/schemas/Ownership"},
+                {"properties": {"effective": {}, "deployment": {}}, "required": ["effective"]}
+            ]
+        }))
+        .unwrap();
+        let resolved = schema
+            .resolve_properties(&schemas, &mut BTreeSet::new())
+            .unwrap();
+        assert_eq!(
+            resolved
+                .properties
+                .keys()
+                .map(String::as_str)
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from(["deployment", "effective", "revision"])
+        );
+        assert_eq!(
+            resolved.required,
+            BTreeSet::from(["effective".into(), "revision".into()])
+        );
+    }
+
+    #[test]
+    fn cyclic_object_references_fail_without_recursing_forever() {
+        let schemas = serde_json::from_value(serde_json::json!({
+            "Cycle": {"allOf": [{"$ref": "#/components/schemas/Cycle"}]}
+        }))
+        .unwrap();
+        let schema: Schema = serde_json::from_value(serde_json::json!({
+            "$ref": "#/components/schemas/Cycle"
+        }))
+        .unwrap();
+        assert!(
+            schema
+                .resolve_properties(&schemas, &mut BTreeSet::new())
+                .unwrap_err()
+                .to_string()
+                .contains("cyclic")
+        );
+    }
 
     #[test]
     fn parses_wire_names_optionality_and_directional_skips() {
