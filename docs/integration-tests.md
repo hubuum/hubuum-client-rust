@@ -89,8 +89,8 @@ and blocking modes. These cases are mandatory for the v0.0.20 target and need
 no separate opt-in variable.
 
 Required CI runs integration tests against an immutable server image digest.
-For client 0.20.0, that image is Hubuum server v0.0.21 at
-`sha256:a5e1ad7a17281eefb4c1ed4da172a80bf815840f78bde6390d1e42bb2d51e0b6`.
+For client 0.21.0, that image is Hubuum server v0.0.22 at
+`sha256:71ff4090eac071f23ae59f7265dc07165939d42771a73d1d291defa023b4964b`.
 Required CI sets `HUBUUM_INTEGRATION_EXPECT_CREDENTIAL_APPROVALS=1`; set the
 same variable for local release verification so missing enforcement fails.
 A scheduled compatibility workflow separately runs against

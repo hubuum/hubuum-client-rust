@@ -26,7 +26,8 @@ pub enum Endpoint {
     ClientConfig,
     SearchHydration,
     AdminConfig,
-    AdminQueryObservations,
+    RuntimeSettingsSchema,
+    RuntimeSettingsGroup,
     Backups,
     BackupByTaskId,
     BackupOutput,
@@ -219,8 +220,9 @@ impl Endpoint {
             Endpoint::MetaTasks => "/api/v0/meta/tasks",
             Endpoint::ClientConfig => "/api/v1/config",
             Endpoint::SearchHydration => "/api/v1/search/hydrate",
-            Endpoint::AdminQueryObservations => "/api/v1/admin/query-observations",
             Endpoint::AdminConfig => "/api/v1/admin/config",
+            Endpoint::RuntimeSettingsSchema => "/api/v1/admin/runtime-settings/schema",
+            Endpoint::RuntimeSettingsGroup => "/api/v1/admin/runtime-settings/{group}",
             Endpoint::Backups => "/api/v1/backups",
             Endpoint::BackupByTaskId => "/api/v1/backups/{task_id}",
             Endpoint::BackupOutput => "/api/v1/backups/{task_id}/output",
@@ -520,8 +522,7 @@ mod test {
             .map(|endpoint| endpoint.path())
             .collect::<std::collections::BTreeSet<_>>();
 
-        // Legacy login remains available for older servers. Every pinned route
-        // has a centralized endpoint and a typed client helper.
+        // Legacy authentication routes remain explicitly outside the versioned snapshot.
         let legacy_paths = [
             "/api/v0/auth/login",
             "/api/v0/auth/logout",
@@ -545,9 +546,19 @@ mod test {
                 .difference(&client_paths)
                 .copied()
                 .collect::<std::collections::BTreeSet<_>>(),
-            std::collections::BTreeSet::new()
+            // Group DELETE routes use RuntimeSettingsGroup. The other specialized
+            // operations are documented raw() workflows in openapi/known-gaps.md.
+            std::collections::BTreeSet::from([
+                "/api/v1/admin/runtime-settings",
+                "/api/v1/admin/runtime-settings/authentication",
+                "/api/v1/admin/runtime-settings/authentication/preflight",
+                "/api/v1/admin/runtime-settings/authorization",
+                "/api/v1/admin/runtime-settings/history/{group}",
+                "/api/v1/admin/runtime-settings/pagination",
+                "/api/v1/admin/runtime-settings/query_observations",
+            ])
         );
-        assert_eq!(contract["operation_count"], 261);
+        assert_eq!(contract["operation_count"], 272);
     }
     use std::str::FromStr;
     use yare::parameterized;

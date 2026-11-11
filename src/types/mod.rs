@@ -23,6 +23,7 @@ mod query_usage;
 mod relation;
 mod remote;
 mod revision;
+mod runtime_settings;
 mod schema;
 mod schema_profiling;
 mod search;
@@ -125,12 +126,11 @@ pub use params::{ClassParams, CollectionPermissionsGrantParams, UserParams};
 pub use provenance::{Provenance, ProvenanceActor, ProvenancePrincipal};
 pub use query_usage::{
     QueryObservationConfig, QueryObservationSettings, QueryObservationSnapshot,
-    QueryObservationUpdateRequest, QueryPatternObservation, QueryUsageAdapterProgress,
-    QueryUsageAnalysisRequest, QueryUsageAnalysisResponse, QueryUsageAnalysisStatus,
-    QueryUsageAssessment, QueryUsageCompatibility, QueryUsageCreateRequest,
-    QueryUsageDeclarationId, QueryUsageOperation, QueryUsagePattern, QueryUsageReplaceRequest,
-    QueryUsageResource, QueryUsageResourceOwnership, QueryUsageResponse, QueryUsageSuggestion,
-    QueryUsageValueType,
+    QueryPatternObservation, QueryUsageAdapterProgress, QueryUsageAnalysisRequest,
+    QueryUsageAnalysisResponse, QueryUsageAnalysisStatus, QueryUsageAssessment,
+    QueryUsageCompatibility, QueryUsageCreateRequest, QueryUsageDeclarationId, QueryUsageOperation,
+    QueryUsagePattern, QueryUsageReplaceRequest, QueryUsageResource, QueryUsageResourceOwnership,
+    QueryUsageResponse, QueryUsageSuggestion, QueryUsageValueType,
 };
 pub use relation::{ObjectRelationLimit, RelationLabel};
 pub use remote::{
@@ -139,6 +139,10 @@ pub use remote::{
     UpdateRemoteTarget,
 };
 pub use revision::{EntityTag, ResourceRevision, Revisioned};
+pub use runtime_settings::{
+    RuntimeSettingsCatalogue, RuntimeSettingsDescriptor, RuntimeSettingsGroupState,
+    RuntimeSettingsPatch, RuntimeSettingsUpdateResponse,
+};
 pub use schema::{
     ClassSchemaResponse, ComplianceStatus, ImportSchemaActivation, ObjectComplianceResponse,
     ObjectSchemaEvidence, SchemaActivationPolicy, SchemaActivationRequest,

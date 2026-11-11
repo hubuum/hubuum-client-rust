@@ -325,7 +325,7 @@ pub async fn create_async_object(
     Ok((name, object.id))
 }
 
-fn fixture_password() -> String {
+pub fn fixture_password() -> String {
     let mut bytes = [0; 16];
     getrandom::fill(&mut bytes).expect("OS randomness is required for fixture passwords");
     format!("{:032x}", u128::from_ne_bytes(bytes))

@@ -1,7 +1,7 @@
 {
-  "api_version": "0.0.21",
+  "api_version": "0.0.22",
   "openapi": "3.1.0",
-  "operation_count": 261,
+  "operation_count": 272,
   "operations": [
     {
       "method": "GET",
@@ -347,6 +347,8 @@
       "response_schema_refs": [
         "ApiErrorResponse",
         "AuthenticationConfig",
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
         "BackupConfig",
         "ClientAllowlistStatus",
         "DatabaseConfig",
@@ -355,11 +357,25 @@
         "LoginRateLimitConfig",
         "NetworkConfig",
         "PaginationConfig",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
         "PermissionConfig",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
         "QueryObservationConfig",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
         "RemoteCallConfig",
+        "ResourceRevision",
         "RestoreConfig",
         "RunningConfig",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
         "SchemaValidationConfig",
         "SecretSourceConfig",
         "SecretStatus",
@@ -404,20 +420,35 @@
     },
     {
       "method": "GET",
-      "operation_id": "getApiV1AdminQueryObservations",
+      "operation_id": "getApiV1AdminRuntimeSettings",
       "parameters": [],
-      "path": "/api/v1/admin/query-observations",
+      "path": "/api/v1/admin/runtime-settings",
       "request_content": [],
       "request_schema_refs": [],
       "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
-        "QueryObservationConfig"
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource"
       ],
       "response_schemas": {
         "200": {
           "application/json": {
-            "$ref": "#/components/schemas/QueryObservationConfig"
+            "$ref": "#/components/schemas/RuntimeSettingsReport"
           }
         },
         "401": {
@@ -449,29 +480,397 @@
       ]
     },
     {
-      "method": "PUT",
-      "operation_id": "putApiV1AdminQueryObservations",
-      "parameters": [],
-      "path": "/api/v1/admin/query-observations",
-      "request_content": [
-        "application/json"
+      "method": "DELETE",
+      "operation_id": "deleteApiV1AdminRuntimeSettingsAuthentication",
+      "parameters": [
+        "query:expected_revision"
       ],
-      "request_schema_refs": [
-        "QueryObservationUpdateRequest"
-      ],
-      "request_schemas": {
-        "application/json": {
-          "$ref": "#/components/schemas/QueryObservationUpdateRequest"
-        }
-      },
+      "path": "/api/v1/admin/runtime-settings/authentication",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
       "response_schema_refs": [
         "ApiErrorResponse",
-        "QueryObservationConfig"
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
       ],
       "response_schemas": {
         "200": {
           "application/json": {
-            "$ref": "#/components/schemas/QueryObservationConfig"
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AdminRuntimeSettingsAuthenticationPreflight",
+      "parameters": [],
+      "path": "/api/v1/admin/runtime-settings/authentication/preflight",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "AuthenticationSettingsRequest",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderKind",
+        "RuntimeAuthenticationProviderRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/AuthenticationSettingsRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "503": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1AdminRuntimeSettingsAuthorization",
+      "parameters": [
+        "query:expected_revision"
+      ],
+      "path": "/api/v1/admin/runtime-settings/authorization",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "503": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1AdminRuntimeSettingsAuthorization",
+      "parameters": [],
+      "path": "/api/v1/admin/runtime-settings/authorization",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "AuthorizationSettingsRequest",
+        "ResourceRevision",
+        "RuntimeAuthorizationBackend"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/AuthorizationSettingsRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "503": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AdminRuntimeSettingsHistoryByGroup",
+      "parameters": [
+        "path:group",
+        "query:before_revision",
+        "query:limit"
+      ],
+      "path": "/api/v1/admin/runtime-settings/history/{group}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "PrincipalID",
+        "ResourceRevision",
+        "RuntimeSettingsChangeActor",
+        "RuntimeSettingsChangeResponse",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsHistoryResponse",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsValueResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsHistoryResponse"
           }
         },
         "400": {
@@ -501,6 +900,539 @@
           "application/json"
         ],
         "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1AdminRuntimeSettingsPagination",
+      "parameters": [
+        "query:expected_revision"
+      ],
+      "path": "/api/v1/admin/runtime-settings/pagination",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1AdminRuntimeSettingsPagination",
+      "parameters": [],
+      "path": "/api/v1/admin/runtime-settings/pagination",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "PaginationSettingsRequest",
+        "ResourceRevision"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/PaginationSettingsRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1AdminRuntimeSettingsQueryObservations",
+      "parameters": [
+        "query:expected_revision"
+      ],
+      "path": "/api/v1/admin/runtime-settings/query_observations",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "putApiV1AdminRuntimeSettingsQueryObservations",
+      "parameters": [],
+      "path": "/api/v1/admin/runtime-settings/query_observations",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "QueryObservationSettingsRequest",
+        "ResourceRevision"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/QueryObservationSettingsRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AdminRuntimeSettingsSchema",
+      "parameters": [],
+      "path": "/api/v1/admin/runtime-settings/schema",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "RuntimeSettingsCatalogue",
+        "RuntimeSettingsDescriptor",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsCatalogue"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AdminRuntimeSettingsByGroup",
+      "parameters": [
+        "path:group"
+      ],
+      "path": "/api/v1/admin/runtime-settings/{group}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "PrincipalID",
+        "ResourceRevision",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsGroupState",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsSource"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsGroupState"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1AdminRuntimeSettingsByGroup",
+      "parameters": [
+        "path:group"
+      ],
+      "path": "/api/v1/admin/runtime-settings/{group}",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "ResourceRevision",
+        "RuntimeSettingsPatch"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/RuntimeSettingsPatch"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationSettingsReport",
+        "AuthorizationSettingsReport",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
           "application/json"
         ]
       },
@@ -17282,13 +18214,17 @@
       "security": []
     }
   ],
-  "path_count": 181,
-  "schema_count": 401,
+  "path_count": 189,
+  "schema_count": 431,
   "schema_names": [
     "AddOperation",
     "ApiErrorResponse",
     "AuthProvidersResponse",
     "AuthenticationConfig",
+    "AuthenticationSettingsReport",
+    "AuthenticationSettingsRequest",
+    "AuthorizationSettingsReport",
+    "AuthorizationSettingsRequest",
     "BackupConfig",
     "BackupDocument",
     "BackupHistory",
@@ -17504,6 +18440,9 @@
     "ObjectSchemaEvidence",
     "ObjectsByClass",
     "PaginationConfig",
+    "PaginationPolicyValue",
+    "PaginationSettingsReport",
+    "PaginationSettingsRequest",
     "PatchOperation",
     "Permission",
     "PermissionConfig",
@@ -17525,10 +18464,13 @@
     "Provenance",
     "ProvenanceActor",
     "ProvenancePrincipal",
+    "QueryObservationCeilingsValue",
     "QueryObservationConfig",
+    "QueryObservationPolicyValue",
     "QueryObservationSettings",
+    "QueryObservationSettingsReport",
+    "QueryObservationSettingsRequest",
     "QueryObservationSnapshot",
-    "QueryObservationUpdateRequest",
     "QueryPatternObservation",
     "QueryUsageAdapterProgress",
     "QueryUsageAnalysisRequest",
@@ -17580,6 +18522,26 @@
     "RetainedExportDetails",
     "RetainedImportDetails",
     "RunningConfig",
+    "RuntimeAuthenticationProviderKind",
+    "RuntimeAuthenticationProviderRequest",
+    "RuntimeAuthenticationProviderStatus",
+    "RuntimeAuthorizationBackend",
+    "RuntimeSettingsApplicationStatus",
+    "RuntimeSettingsCatalogue",
+    "RuntimeSettingsChangeActor",
+    "RuntimeSettingsChangeResponse",
+    "RuntimeSettingsDescriptor",
+    "RuntimeSettingsEffect",
+    "RuntimeSettingsGroup",
+    "RuntimeSettingsGroupState",
+    "RuntimeSettingsHistoryResponse",
+    "RuntimeSettingsOwnership",
+    "RuntimeSettingsPatch",
+    "RuntimeSettingsReplicaStatus",
+    "RuntimeSettingsReport",
+    "RuntimeSettingsSource",
+    "RuntimeSettingsUpdateResponse",
+    "RuntimeSettingsValueResponse",
     "SchemaActivationPolicy",
     "SchemaActivationRequest",
     "SchemaActivationResponse",
@@ -17849,6 +18811,94 @@
         "token_retention_purge_batch_size",
         "token_retention_purge_enabled",
         "token_retention_purge_interval_seconds"
+      ],
+      "type": "object"
+    },
+    "AuthenticationSettingsReport": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "providers": {
+              "items": {
+                "$ref": "#/components/schemas/RuntimeAuthenticationProviderStatus"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "providers"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "AuthenticationSettingsRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "providers": {
+          "items": {
+            "$ref": "#/components/schemas/RuntimeAuthenticationProviderRequest"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "providers"
+      ],
+      "type": "object"
+    },
+    "AuthorizationSettingsReport": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "deployment_backend": {
+              "type": "string"
+            },
+            "effective_backend": {
+              "type": "string"
+            },
+            "runtime_backend": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "available",
+            "deployment_backend",
+            "effective_backend"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "AuthorizationSettingsRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "$ref": "#/components/schemas/RuntimeAuthorizationBackend"
+        },
+        "expected_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        }
+      },
+      "required": [
+        "backend",
+        "expected_revision"
       ],
       "type": "object"
     },
@@ -26553,6 +27603,78 @@
       ],
       "type": "object"
     },
+    "PaginationPolicyValue": {
+      "properties": {
+        "default_page_limit": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "default_page_limit"
+      ],
+      "type": "object"
+    },
+    "PaginationSettingsReport": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "constrained_by_ceiling": {
+              "type": "boolean"
+            },
+            "deployment": {
+              "$ref": "#/components/schemas/PaginationPolicyValue"
+            },
+            "effective": {
+              "$ref": "#/components/schemas/PaginationPolicyValue"
+            },
+            "max_page_limit": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "runtime": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PaginationPolicyValue"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "constrained_by_ceiling",
+            "deployment",
+            "effective",
+            "max_page_limit"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PaginationSettingsRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "default_page_limit": {
+          "format": "int64",
+          "maximum": 4294967295,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "expected_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        }
+      },
+      "required": [
+        "default_page_limit",
+        "expected_revision"
+      ],
+      "type": "object"
+    },
     "PatchOperation": {
       "oneOf": [
         {
@@ -27405,6 +28527,40 @@
       ],
       "type": "object"
     },
+    "QueryObservationCeilingsValue": {
+      "properties": {
+        "max_patterns": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_patterns_per_class": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_predicates_per_query": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_retention_seconds": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "min_sample_every": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_patterns",
+        "max_patterns_per_class",
+        "max_predicates_per_query",
+        "max_retention_seconds",
+        "min_sample_every"
+      ],
+      "type": "object"
+    },
     "QueryObservationConfig": {
       "properties": {
         "enabled": {
@@ -27427,11 +28583,43 @@
           "minimum": 0,
           "type": "integer"
         },
-        "runtime_override": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+        "sample_every": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "enabled",
+        "max_patterns",
+        "max_patterns_per_class",
+        "max_predicates_per_query",
+        "retention_seconds",
+        "sample_every"
+      ],
+      "type": "object"
+    },
+    "QueryObservationPolicyValue": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "max_patterns": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_patterns_per_class": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_predicates_per_query": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "retention_seconds": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
         },
         "sample_every": {
           "format": "int32",
@@ -27487,6 +28675,108 @@
       ],
       "type": "object"
     },
+    "QueryObservationSettingsReport": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "ceilings": {
+              "$ref": "#/components/schemas/QueryObservationCeilingsValue"
+            },
+            "collection_paused": {
+              "type": "boolean"
+            },
+            "constrained_by_ceiling": {
+              "type": "boolean"
+            },
+            "deployment": {
+              "$ref": "#/components/schemas/QueryObservationPolicyValue"
+            },
+            "effective": {
+              "$ref": "#/components/schemas/QueryObservationPolicyValue"
+            },
+            "runtime": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/QueryObservationPolicyValue"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "ceilings",
+            "collection_paused",
+            "constrained_by_ceiling",
+            "deployment",
+            "effective"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "QueryObservationSettingsRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "expected_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "max_patterns": {
+          "maximum": 16384,
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_patterns_per_class": {
+          "maximum": 128,
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_predicates_per_query": {
+          "maximum": 32,
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "retention_seconds": {
+          "format": "int32",
+          "maximum": 604800,
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sample_every": {
+          "format": "int32",
+          "maximum": 1000000,
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "expected_revision"
+      ],
+      "type": "object"
+    },
     "QueryObservationSnapshot": {
       "properties": {
         "capacity_drops": {
@@ -27522,18 +28812,6 @@
         "process_started_at",
         "settings",
         "source"
-      ],
-      "type": "object"
-    },
-    "QueryObservationUpdateRequest": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "enabled"
       ],
       "type": "object"
     },
@@ -28969,6 +30247,16 @@
         "restores": {
           "$ref": "#/components/schemas/RestoreConfig"
         },
+        "runtime_settings": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RuntimeSettingsReport"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_validation": {
           "$ref": "#/components/schemas/SchemaValidationConfig"
         },
@@ -29002,6 +30290,508 @@
         "server",
         "tasks",
         "tracing"
+      ],
+      "type": "object"
+    },
+    "RuntimeAuthenticationProviderKind": {
+      "enum": [
+        "ldap"
+      ],
+      "type": "string"
+    },
+    "RuntimeAuthenticationProviderRequest": {
+      "oneOf": [
+        {
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "kind": {
+              "$ref": "#/components/schemas/RuntimeAuthenticationProviderKind"
+            },
+            "name": {
+              "type": "string"
+            },
+            "source": {
+              "enum": [
+                "deployment"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "enabled",
+            "kind",
+            "name",
+            "source"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "adopt_deployment": {
+              "type": "boolean"
+            },
+            "configuration": {
+              "type": "object"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "kind": {
+              "$ref": "#/components/schemas/RuntimeAuthenticationProviderKind"
+            },
+            "name": {
+              "type": "string"
+            },
+            "source": {
+              "enum": [
+                "runtime"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "configuration",
+            "enabled",
+            "kind",
+            "name",
+            "source"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RuntimeAuthenticationProviderStatus": {
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "definition_mutable": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/components/schemas/RuntimeSettingsSource"
+        }
+      },
+      "required": [
+        "available",
+        "definition_mutable",
+        "enabled",
+        "name",
+        "source"
+      ],
+      "type": "object"
+    },
+    "RuntimeAuthorizationBackend": {
+      "enum": [
+        "local",
+        "treetop"
+      ],
+      "type": "string"
+    },
+    "RuntimeSettingsApplicationStatus": {
+      "enum": [
+        "not_loaded",
+        "current",
+        "stale"
+      ],
+      "type": "string"
+    },
+    "RuntimeSettingsCatalogue": {
+      "properties": {
+        "groups": {
+          "items": {
+            "$ref": "#/components/schemas/RuntimeSettingsDescriptor"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "groups",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsChangeActor": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "principal_id": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsChangeResponse": {
+      "properties": {
+        "actor": {
+          "$ref": "#/components/schemas/RuntimeSettingsChangeActor"
+        },
+        "changed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "correlation_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "current": {
+          "$ref": "#/components/schemas/RuntimeSettingsValueResponse"
+        },
+        "group": {
+          "$ref": "#/components/schemas/RuntimeSettingsGroup"
+        },
+        "previous": {
+          "$ref": "#/components/schemas/RuntimeSettingsValueResponse"
+        },
+        "request_id": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        }
+      },
+      "required": [
+        "actor",
+        "changed_at",
+        "current",
+        "group",
+        "previous",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsDescriptor": {
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "key": {
+          "$ref": "#/components/schemas/RuntimeSettingsGroup"
+        },
+        "patch_supported": {
+          "type": "boolean"
+        },
+        "read_only_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requires_local_admin": {
+          "type": "boolean"
+        },
+        "schema": {
+          "type": "object"
+        },
+        "takes_effect": {
+          "$ref": "#/components/schemas/RuntimeSettingsEffect"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "description",
+        "key",
+        "patch_supported",
+        "requires_local_admin",
+        "schema",
+        "takes_effect",
+        "title"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsEffect": {
+      "enum": [
+        "next_request",
+        "next_query"
+      ],
+      "type": "string"
+    },
+    "RuntimeSettingsGroup": {
+      "enum": [
+        "authentication",
+        "authorization",
+        "query_observations",
+        "pagination"
+      ],
+      "type": "string"
+    },
+    "RuntimeSettingsGroupState": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "constrained_by_ceiling": {
+              "type": "boolean"
+            },
+            "deployment": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "effective": {
+              "type": "object"
+            },
+            "group": {
+              "$ref": "#/components/schemas/RuntimeSettingsGroup"
+            },
+            "replica": {
+              "$ref": "#/components/schemas/RuntimeSettingsReplicaStatus"
+            },
+            "runtime": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "constrained_by_ceiling",
+            "effective",
+            "group",
+            "replica"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RuntimeSettingsHistoryResponse": {
+      "properties": {
+        "changes": {
+          "items": {
+            "$ref": "#/components/schemas/RuntimeSettingsChangeResponse"
+          },
+          "type": "array"
+        },
+        "next_before_revision": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ResourceRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "changes"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsOwnership": {
+      "properties": {
+        "changed_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "changed_by": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mutable": {
+          "type": "boolean"
+        },
+        "restart_required": {
+          "type": "boolean"
+        },
+        "revision": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ResourceRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "$ref": "#/components/schemas/RuntimeSettingsSource"
+        },
+        "takes_effect": {
+          "$ref": "#/components/schemas/RuntimeSettingsEffect"
+        }
+      },
+      "required": [
+        "mutable",
+        "restart_required",
+        "source",
+        "takes_effect"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "changes": {
+          "type": "object"
+        },
+        "expected_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        }
+      },
+      "required": [
+        "changes",
+        "expected_revision"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsReplicaStatus": {
+      "properties": {
+        "applied_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_refresh_attempt_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_refresh_failure_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reconcile_interval_seconds": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/components/schemas/RuntimeSettingsApplicationStatus"
+        }
+      },
+      "required": [
+        "reconcile_interval_seconds",
+        "status"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsReport": {
+      "properties": {
+        "authentication": {
+          "$ref": "#/components/schemas/AuthenticationSettingsReport"
+        },
+        "authorization": {
+          "$ref": "#/components/schemas/AuthorizationSettingsReport"
+        },
+        "pagination": {
+          "$ref": "#/components/schemas/PaginationSettingsReport"
+        },
+        "query_observations": {
+          "$ref": "#/components/schemas/QueryObservationSettingsReport"
+        },
+        "replica": {
+          "$ref": "#/components/schemas/RuntimeSettingsReplicaStatus"
+        }
+      },
+      "required": [
+        "authentication",
+        "authorization",
+        "pagination",
+        "query_observations",
+        "replica"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsSource": {
+      "enum": [
+        "deployment",
+        "runtime"
+      ],
+      "type": "string"
+    },
+    "RuntimeSettingsUpdateResponse": {
+      "properties": {
+        "applied_by_responding_replica": {
+          "type": "boolean"
+        },
+        "changed": {
+          "type": "boolean"
+        },
+        "committed_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "group": {
+          "$ref": "#/components/schemas/RuntimeSettingsGroup"
+        },
+        "settings": {
+          "$ref": "#/components/schemas/RuntimeSettingsReport"
+        }
+      },
+      "required": [
+        "applied_by_responding_replica",
+        "changed",
+        "committed_revision",
+        "group",
+        "settings"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsValueResponse": {
+      "properties": {
+        "source": {
+          "$ref": "#/components/schemas/RuntimeSettingsSource"
+        },
+        "value": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source"
       ],
       "type": "object"
     },
@@ -32835,5 +34625,5 @@
       "type": "object"
     }
   },
-  "spec_sha256": "42c1966cd70a17ac3bf430f193bc372801d931757166f45eb8f40479b627c2e0"
+  "spec_sha256": "7612ac1f0f2c756968abc425ab4fbf7251561db39507f3ae0bdceb8d92a66591"
 }

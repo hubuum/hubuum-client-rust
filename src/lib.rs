@@ -6,7 +6,7 @@
 
 //! A hubuum API client library.
 //!
-//! Version 0.20.0 targets Hubuum server v0.0.21. See the repository's
+//! Version 0.21.0 targets Hubuum server v0.0.22. See the repository's
 //! `COMPATIBILITY.md` for the tested image digest and compatibility history.
 //!
 //! async:
@@ -45,7 +45,7 @@ pub mod types;
 mod endpoints;
 
 /// Hubuum server release targeted by this client release.
-pub const TARGET_SERVER_VERSION: &str = "0.0.21";
+pub const TARGET_SERVER_VERSION: &str = "0.0.22";
 
 // Re-export commonly used items
 #[cfg(feature = "async")]
@@ -110,20 +110,20 @@ pub use types::{
     PrincipalKind, PrincipalSettings, PrincipalSettingsPatchDocument,
     PrincipalSettingsPatchOperation, PrincipalSettingsResponse, ProbeResponse, Provenance,
     ProvenanceActor, ProvenancePrincipal, QueryObservationConfig, QueryObservationSettings,
-    QueryObservationSnapshot, QueryObservationUpdateRequest, QueryPatternObservation,
-    QueryUsageAdapterProgress, QueryUsageAnalysisRequest, QueryUsageAnalysisResponse,
-    QueryUsageAnalysisStatus, QueryUsageAssessment, QueryUsageCompatibility,
-    QueryUsageCreateRequest, QueryUsageDeclarationId, QueryUsageOperation, QueryUsagePattern,
-    QueryUsageReplaceRequest, QueryUsageResource, QueryUsageResourceOwnership, QueryUsageResponse,
-    QueryUsageSuggestion, QueryUsageValueType, RESTORE_CONFIRMATION_PHRASE, RebuildTaskDetails,
-    RelationLabel, ReleaseRateLimitResponse, RemoteCallConfig, RemoteCallResultId,
-    RemoteCallTaskDetails, RemoteTargetHistory, ResourceRevision, RestoreCapability, RestoreConfig,
-    RestoreConfirmRequest, RestoreId, RestoreJobStatus, RestoreStageResponse, RestoreTimestamps,
-    RestoreValidationSummary, RetainedBackupDetails, RetainedExportDetails, RetainedImportDetails,
-    Revisioned, RunningConfig, RunningLoginRateLimitConfig, SamplingRatio, SchemaActivationPolicy,
-    SchemaActivationRequest, SchemaActivationResponse, SchemaActualValue, SchemaComplianceCounts,
-    SchemaCompliancePage, SchemaDiagnosticOmission, SchemaDiagnosticSnapshotResponse,
-    SchemaDiagnostics, SchemaExpectedValue, SchemaFailure, SchemaFailureGroup, SchemaImpactCounts,
+    QueryObservationSnapshot, QueryPatternObservation, QueryUsageAdapterProgress,
+    QueryUsageAnalysisRequest, QueryUsageAnalysisResponse, QueryUsageAnalysisStatus,
+    QueryUsageAssessment, QueryUsageCompatibility, QueryUsageCreateRequest,
+    QueryUsageDeclarationId, QueryUsageOperation, QueryUsagePattern, QueryUsageReplaceRequest,
+    QueryUsageResource, QueryUsageResourceOwnership, QueryUsageResponse, QueryUsageSuggestion,
+    QueryUsageValueType, RESTORE_CONFIRMATION_PHRASE, RebuildTaskDetails, RelationLabel,
+    ReleaseRateLimitResponse, RemoteCallConfig, RemoteCallResultId, RemoteCallTaskDetails,
+    RemoteTargetHistory, ResourceRevision, RestoreCapability, RestoreConfig, RestoreConfirmRequest,
+    RestoreId, RestoreJobStatus, RestoreStageResponse, RestoreTimestamps, RestoreValidationSummary,
+    RetainedBackupDetails, RetainedExportDetails, RetainedImportDetails, Revisioned, RunningConfig,
+    RunningLoginRateLimitConfig, SamplingRatio, SchemaActivationPolicy, SchemaActivationRequest,
+    SchemaActivationResponse, SchemaActualValue, SchemaComplianceCounts, SchemaCompliancePage,
+    SchemaDiagnosticOmission, SchemaDiagnosticSnapshotResponse, SchemaDiagnostics,
+    SchemaExpectedValue, SchemaFailure, SchemaFailureGroup, SchemaImpactCounts,
     SchemaImpactFindingResponse, SchemaImpactReadiness, SchemaImpactResponse, SchemaIssue,
     SchemaObjectUrlTemplate, SchemaPageOptions, SchemaReference, SchemaRepairReportRequest,
     SchemaRevision, SchemaRevisionResponse, SchemaRevisionStatus, SchemaStageRequest,
@@ -138,6 +138,10 @@ pub use types::{
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
     UnifiedSearchResults, UnifiedSearchStartedEvent, UpdateEventSink, UpdateEventSubscription,
     UserParams, ValidatedExportScope,
+};
+pub use types::{
+    RuntimeSettingsCatalogue, RuntimeSettingsDescriptor, RuntimeSettingsGroupState,
+    RuntimeSettingsPatch, RuntimeSettingsUpdateResponse,
 };
 pub use types::{SessionClientId, SessionInfo};
 pub use types::{

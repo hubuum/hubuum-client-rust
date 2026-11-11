@@ -17,7 +17,6 @@ use crate::{
     HistoryMarker, HistoryPage, HistoryTimelineOptions, ObjectHistoryOptions,
     RelationHistoryOptions,
 };
-use crate::{QueryObservationConfig, QueryObservationUpdateRequest};
 use crate::{SearchHydrationRequest, SearchHydrationResponse};
 use log::{debug, trace};
 use reqwest::blocking::Response;
