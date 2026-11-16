@@ -11,6 +11,23 @@ note: method defined here
   |
   |     pub fn eq(self, value: V) -> Q {
   |            ^^
+note: the `eq` call is resolved to the method in `hubuum_client::QueryNumericField<Q, V>`, shadowing the methods of the same name on `std::cmp::PartialEq`
+ --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:5:35
+  |
+5 |     let _ = client.classes().id().eq(object);
+  |                                   ^^ refers to `hubuum_client::QueryNumericField::<Q, V>::eq`
+  = note: additionally, there is 1 other available method that isn't in scope
+help: you might have meant to call one of the other methods; you can use the fully-qualified path to call one of them explicitly
+  |
+5 -     let _ = client.classes().id().eq(object);
+5 +     let _ = <_ as std::cmp::PartialEq<_>>::eq(&client.classes().id(), object);
+  |
+5 -     let _ = client.classes().id().eq(object);
+5 +     let _ = <_ as std::iter::Iterator>::eq::<_>(client.classes().id(), object);
+  |
+5 -     let _ = client.classes().id().eq(object);
+5 +     let _ = <_ as core::core_simd::masks::private_methods::PrivateMethods>::eq(client.classes().id(), object);
+  |
 
 error[E0308]: mismatched types
  --> tests/trybuild/typed_query_id_fail_wrong_resource.rs:7:28

@@ -1,0 +1,116 @@
+{
+  "sdk_source_commit": "173e34edb50e14990a0d59abccd90fcde73bd45f",
+  "consumer_sha256": "a39a62985a8c46de99295ff1f5fa21f8c2ed35c391d41513389b07403124c0c8",
+  "server_source_commit": "ad0c2c40bed5b0328f56f1327e10ffe7f9aac09a",
+  "server_image": {
+    "docker_image_id": "sha256:bf6ac41d8e8b927f5c5402b08709699f7f0c32af9d1266896ef52678eee76f37",
+    "manifest": "sha256:f7c920c410f0c5ef7b1eea2bf2e48c8d106dab9318567c103b48b3b78cad67ab",
+    "config": "sha256:d9592b8d01c7af44290088eb4f1922c0c00acf46662ba301ffe9e16d56ec4e3f",
+    "platform": "linux/arm64",
+    "source": "ad0c2c40bed5b0328f56f1327e10ffe7f9aac09a"
+  },
+  "openapi_sha256": "11f894bd8a45abc2f85e80a8ccc9c88062a62b2e1c4f6871d1658fada200b720",
+  "shared_fixture_sha256": "027eff028cb1c7252132f1f93225957f548ccb0dd839e2b7e5c291efb872c028",
+  "checks_passed": 60,
+  "profiles": {
+    "id_token": {
+      "report_sha256": "42a1e341111260a73953a3acf1ff6c6ac5864b77a79a8d44c543977ff88d9027",
+      "modes": {
+        "async": [
+          "local administrator session is available before external setup",
+          "candidate preview leaves six identity/session tables unchanged",
+          "runtime encrypted configuration, non-login preview and exact fresh-approved activation",
+          "browser login adopts ordinary rotating session and retains principal and family",
+          "OIDC exact-operation fresh approval retains originating credential",
+          "local logout revokes external session",
+          "OIDC exact-operation fresh approval retains originating credential",
+          "local logout revokes external session",
+          "repeat browser login resolves the same immutable principal",
+          "local recovery remains available after runtime activation"
+        ],
+        "blocking": [
+          "local administrator session is available before external setup",
+          "candidate preview leaves six identity/session tables unchanged",
+          "runtime encrypted configuration, non-login preview and exact fresh-approved activation",
+          "browser login adopts ordinary rotating session and retains principal and family",
+          "OIDC exact-operation fresh approval retains originating credential",
+          "local logout revokes external session",
+          "OIDC exact-operation fresh approval retains originating credential",
+          "local logout revokes external session",
+          "repeat browser login resolves the same immutable principal",
+          "local recovery remains available after runtime activation"
+        ]
+      }
+    },
+    "userinfo": {
+      "report_sha256": "3841de7d493302f81c1df1ce4b876e771e82703b20095151a4e2ee3061dd8e4f",
+      "modes": {
+        "async": [
+          "local administrator session is available before external setup",
+          "candidate preview leaves six identity/session tables unchanged",
+          "runtime encrypted configuration, non-login preview and exact fresh-approved activation",
+          "browser login adopts ordinary rotating session and retains principal and family",
+          "OIDC exact-operation fresh approval retains originating credential",
+          "local logout revokes external session",
+          "OIDC exact-operation fresh approval retains originating credential",
+          "local logout revokes external session",
+          "repeat browser login resolves the same immutable principal",
+          "local recovery remains available after runtime activation"
+        ],
+        "blocking": [
+          "local administrator session is available before external setup",
+          "candidate preview leaves six identity/session tables unchanged",
+          "runtime encrypted configuration, non-login preview and exact fresh-approved activation",
+          "browser login adopts ordinary rotating session and retains principal and family",
+          "OIDC exact-operation fresh approval retains originating credential",
+          "local logout revokes external session",
+          "OIDC exact-operation fresh approval retains originating credential",
+          "local logout revokes external session",
+          "repeat browser login resolves the same immutable principal",
+          "local recovery remains available after runtime activation"
+        ]
+      }
+    },
+    "oauth": {
+      "report_sha256": "e5eebea6e99f23e8e758713062bd2a30f1b0c27a0e07bf3a4173064582e45643",
+      "modes": {
+        "async": [
+          "local administrator session is available before external setup",
+          "candidate preview leaves six identity/session tables unchanged",
+          "runtime encrypted configuration, non-login preview and exact fresh-approved activation",
+          "browser login adopts ordinary rotating session and retains principal and family",
+          "OAuth fresh approval is explicitly unsupported",
+          "local logout revokes external session",
+          "OAuth fresh approval is explicitly unsupported",
+          "local logout revokes external session",
+          "repeat browser login resolves the same immutable principal",
+          "local recovery remains available after runtime activation"
+        ],
+        "blocking": [
+          "local administrator session is available before external setup",
+          "candidate preview leaves six identity/session tables unchanged",
+          "runtime encrypted configuration, non-login preview and exact fresh-approved activation",
+          "browser login adopts ordinary rotating session and retains principal and family",
+          "OAuth fresh approval is explicitly unsupported",
+          "local logout revokes external session",
+          "OAuth fresh approval is explicitly unsupported",
+          "local logout revokes external session",
+          "repeat browser login resolves the same immutable principal",
+          "local recovery remains available after runtime activation"
+        ]
+      }
+    }
+  },
+  "scope": "Independent public Rust SDK consumer; synthetic OAuth and real disposable Keycloak. Real GitHub/native CLI/BFF are not qualified by these results. CI/candidate acceptance is recorded separately in issue147.",
+  "qualified_code_trees": {
+    "src": "e8a35aeb991f22c16d3e4772ff04bfd69703ffb7",
+    "e2e_client": "b037045a8097ef052bec094c3254fdb84a11786e",
+    "examples": "1e7444587bd94972334263fd43b3f6970263f5fe",
+    "Cargo.toml": "dd7a0ffd638be130756039e8ae88610ebbc11cb7",
+    "Cargo.lock": "4fefb15abebc5ba64f49e0efa7e91aab45943305",
+    "scripts": "ed4e2ea50095177c96d3ac68d3dfd68d32ddf4b3",
+    "openapi": "5527908a0462f8f2796f4769d39cc44f2da7ffc4",
+    "tests/python": "a4cd4a9bc28b3878133f510205b936e9a1d957db",
+    "tests/fixtures": "33b616062e0c6e1ef9e5172d5cb844bd8b18e233"
+  }
+}

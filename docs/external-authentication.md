@@ -2,7 +2,7 @@
 
 These APIs belong to Project #6 on `project/auth-support` and require the
 accepted server candidate in
-[`authentication-project-source.json`](../openapi/authentication-project-source.json).
+[`authentication-project-source.json`](https://github.com/hubuum/hubuum-client-rust/blob/173e34edb50e14990a0d59abccd90fcde73bd45f/openapi/authentication-project-source.json).
 The released compatibility target remains server **v0.0.22**. New project methods
 do not establish support in that released image or authorize stable publication.
 
@@ -154,3 +154,9 @@ still needs separately authorized provider qualification. The required immutable
 v0.0.22 combined library/consumer run remains a separate compatibility gate.
 For manual browser login, see `browser_login` and `browser_login_blocking` examples;
 they print public verification instructions, validate identity and log out.
+
+The sanitized [qualification ledger](assets/authentication-qualification.json)
+records the actual clean SDK source, consumer checksum, pinned production image,
+three provider profiles, both client modes and all 60 successful checks.
+Candidate acceptance additionally requires the complete PR CI run and retained
+artifact verification; these live results alone do not close the ecosystem gate.
