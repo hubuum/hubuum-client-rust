@@ -431,6 +431,7 @@ container run -d \
     -e "HUBUUM_QUERY_OBSERVATIONS_ENABLED=true" \
     -e "HUBUUM_QUERY_OBSERVATIONS_SAMPLE_EVERY=1" \
     -e "HUBUUM_AUTH_CONFIG_PATH=/etc/hubuum/auth-providers.toml" \
+    -e "HUBUUM_AUTH_RUNTIME_ALLOW_PRIVATE_TARGETS=true" \
     -e "HUBUUM_DATABASE_URL=${DATABASE_URL}" \
     -e "DATABASE_URL=${DATABASE_URL}" \
     -e "SSL_CERT_FILE=/etc/hubuum/ldap-certs/ca.crt" \

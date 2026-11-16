@@ -609,6 +609,8 @@ impl StackResources {
             "-e".to_string(),
             "HUBUUM_AUTH_CONFIG_PATH=/etc/hubuum/auth-providers.toml".to_string(),
             "-e".to_string(),
+            "HUBUUM_AUTH_RUNTIME_ALLOW_PRIVATE_TARGETS=true".to_string(),
+            "-e".to_string(),
             format!("HUBUUM_DATABASE_URL={database_url}"),
             "-e".to_string(),
             format!("DATABASE_URL={database_url}"),

@@ -108,7 +108,6 @@
     "examples": "1e7444587bd94972334263fd43b3f6970263f5fe",
     "Cargo.toml": "dd7a0ffd638be130756039e8ae88610ebbc11cb7",
     "Cargo.lock": "4fefb15abebc5ba64f49e0efa7e91aab45943305",
-    "scripts": "ed4e2ea50095177c96d3ac68d3dfd68d32ddf4b3",
     "openapi": "5527908a0462f8f2796f4769d39cc44f2da7ffc4",
     "tests/python": "a4cd4a9bc28b3878133f510205b936e9a1d957db",
     "tests/fixtures": "33b616062e0c6e1ef9e5172d5cb844bd8b18e233"
