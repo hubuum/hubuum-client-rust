@@ -1,0 +1,31 @@
+error[E0107]: missing generics for struct `hubuum_client::Client`
+ --> tests/trybuild/authentication_fail_unauthenticated_admin.rs:3:30
+  |
+3 | async fn async_admin(client: Client, request: SecurityCandidateRequest) {
+  |                              ^^^^^^ expected 1 generic argument
+  |
+note: struct defined here, with 1 generic parameter: `S`
+ --> src/client/async.rs
+  |
+  | pub struct Client<S> {
+  |            ^^^^^^ -
+help: add missing generic argument
+  |
+3 | async fn async_admin(client: Client<S>, request: SecurityCandidateRequest) {
+  |                                    +++
+
+error[E0107]: missing generics for struct `hubuum_client::blocking::Client`
+ --> tests/trybuild/authentication_fail_unauthenticated_admin.rs:7:37
+  |
+7 | fn blocking_admin(client: blocking::Client, request: SecurityCandidateRequest) {
+  |                                     ^^^^^^ expected 1 generic argument
+  |
+note: struct defined here, with 1 generic parameter: `S`
+ --> src/client/sync.rs
+  |
+  | pub struct Client<S> {
+  |            ^^^^^^ -
+help: add missing generic argument
+  |
+7 | fn blocking_admin(client: blocking::Client<S>, request: SecurityCandidateRequest) {
+  |                                           +++

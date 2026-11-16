@@ -214,6 +214,8 @@ impl ClientBuilder {
 
     pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
         self.timeout = Some(timeout);
+        self.options.authentication_request_timeout =
+            timeout.min(std::time::Duration::from_secs(30));
         self
     }
 
@@ -974,6 +976,11 @@ pub use admin::*;
 
 mod authentication;
 pub use authentication::*;
+
+mod interactions;
+pub use interactions::*;
+
+mod security_candidates;
 
 mod computed;
 pub use computed::*;

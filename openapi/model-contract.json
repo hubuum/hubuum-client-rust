@@ -898,7 +898,10 @@
       "openapi_schema": "RuntimeSettingsCatalogue",
       "rust_file": "src/types/runtime_settings.rs",
       "rust_type": "RuntimeSettingsCatalogue",
-      "direction": "response"
+      "direction": "response",
+      "rust_only_fields": {
+        "security": "Optional Project #6 capabilities from authentication-project.json; absent on the declared v0.0.22 baseline and omitted when None. This does not change the release compatibility target."
+      }
     },
     {
       "openapi_schema": "RuntimeSettingsDescriptor",

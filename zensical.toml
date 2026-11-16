@@ -21,6 +21,7 @@ nav = [
     { "Historical views" = "history.md" },
     { "JSON query usage and analysis" = "query-usage.md" },
     { "Scoped authentication" = "scoped-auth.md" },
+    { "Project authentication" = "external-authentication.md" },
     { "Credential approvals" = "credential-approvals.md" },
     { "Principal settings" = "principal-settings.md" },
     { "Schema evolution" = "schema-evolution.md" },

@@ -764,12 +764,15 @@ impl CredentialApprovals {
         operation: CredentialOperation<T>,
     ) -> Result<ApprovedCredentialOperation<T>, ApiError> {
         operation.validate()?;
+        let client = Client {
+            runtime: self.client.runtime.clone(),
+            state: Authenticated::new(self.client.ready_token()?),
+        };
         let request = CredentialApprovalRequest {
             password: SecretString::from(password.into()),
             operation: &operation,
         };
-        let response = self
-            .client
+        let response = client
             .request_with_endpoint(
                 reqwest::Method::POST,
                 &Endpoint::CredentialApprovals,
@@ -781,7 +784,7 @@ impl CredentialApprovals {
                 ApiError::EmptyResult("Credential approval returned empty result".into())
             })?;
         Ok(ApprovedCredentialOperation {
-            client: self.client.clone(),
+            client,
             request: shared::ApprovedCredentialRequest::new(operation, response)?,
             output: PhantomData,
         })
@@ -847,16 +850,37 @@ impl<T: DeserializeOwned> ApprovedCredentialOperation<T> {
     /// Submit once using the original bearer and approved body.
     /// Only imports with an idempotency key participate in automatic write retries.
     pub fn send(self) -> Result<T, ApiError> {
-        let headers = self.request.headers();
-        let raw = self.client.request_endpoint(EndpointRequest {
-            method: self.request.method.clone(),
-            endpoint: &self.request.endpoint,
-            url_params: self.request.url_params,
-            query_params: vec![],
-            body: self.request.body,
-            headers: &headers,
-        })?;
-        shared::parse_response(&self.request.method, raw.status, raw.body)?.ok_or_else(|| {
+        let mut headers = self.request.headers();
+        let (status, body) = match self.request.endpoint {
+            shared::ApprovedEndpoint::Standard(endpoint) => {
+                let raw = self.client.request_endpoint(EndpointRequest {
+                    method: self.request.method.clone(),
+                    endpoint: &endpoint,
+                    url_params: self.request.url_params,
+                    query_params: vec![],
+                    body: self.request.body,
+                    headers: &headers,
+                })?;
+                (raw.status, raw.body)
+            }
+            shared::ApprovedEndpoint::SecurityCandidate(id) => {
+                let path = crate::endpoints::authentication::activate(&id);
+                let token = self.client.ready_token()?;
+                headers.push(("Authorization", format!("Bearer {}", token.as_str())));
+                let response = self.client.authentication_http(
+                    self.request.method.clone(),
+                    &path,
+                    &self.request.body,
+                    &headers,
+                )?;
+                let status = response.status;
+                let body =
+                    self.client
+                        .authentication_body(&self.request.method, &path, response)?;
+                (status, body)
+            }
+        };
+        shared::parse_response(&self.request.method, status, body)?.ok_or_else(|| {
             ApiError::EmptyResult("Approved credential operation returned empty result".into())
         })
     }

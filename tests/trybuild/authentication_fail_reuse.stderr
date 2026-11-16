@@ -1,0 +1,31 @@
+error[E0382]: use of moved value: `flow`
+ --> tests/trybuild/authentication_fail_reuse.rs:5:13
+  |
+3 | async fn async_reuse(flow: LoginInteraction) {
+  |                      ---- move occurs because `flow` has type `hubuum_client::AuthenticationInteraction<hubuum_client::LoginCompletion>`, which does not implement the `Copy` trait
+4 |     let _ = flow.complete().await;
+  |                  ---------- `flow` moved due to this method call
+5 |     let _ = flow.complete().await;
+  |             ^^^^ value used here after move
+  |
+note: `hubuum_client::AuthenticationInteraction::<hubuum_client::LoginCompletion>::complete` takes ownership of the receiver `self`, which moves `flow`
+ --> src/client/async/interactions.rs
+  |
+  |     pub async fn complete(self) -> Result<Client<Authenticated>, ApiError> {
+  |                           ^^^^
+
+error[E0382]: use of moved value: `flow`
+  --> tests/trybuild/authentication_fail_reuse.rs:10:13
+   |
+ 8 | fn blocking_reuse(flow: blocking::LoginInteraction) {
+   |                   ---- move occurs because `flow` has type `hubuum_client::blocking::AuthenticationInteraction<hubuum_client::blocking::LoginCompletion>`, which does not implement the `Copy` trait
+ 9 |     let _ = flow.complete();
+   |                  ---------- `flow` moved due to this method call
+10 |     let _ = flow.complete();
+   |             ^^^^ value used here after move
+   |
+note: `hubuum_client::blocking::AuthenticationInteraction::<hubuum_client::blocking::LoginCompletion>::complete` takes ownership of the receiver `self`, which moves `flow`
+  --> src/client/sync/interactions.rs
+   |
+   |     pub fn complete(self) -> Result<Client<Authenticated>, ApiError> {
+   |                     ^^^^

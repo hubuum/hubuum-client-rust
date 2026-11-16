@@ -33,6 +33,11 @@ enables query observations with one sample per request, and tears everything dow
 
 Provider coverage discovers the unauthenticated provider list, rejects invalid LDAP credentials, logs in real directory users through both async and blocking clients, verifies synchronized user and group metadata, and exercises settings replace, merge-patch, get, and reset operations as an external user. The fixture configuration lives at `tests/container_integration/fixtures/auth-providers.toml`.
 
+The disposable server explicitly allows private authentication targets so its
+screened LDAP connection can reach the isolated Docker directory. This bootstrap
+setting is required by project authentication images; production keeps its own
+egress policy and verified TLS. It does not enable a runtime bypass.
+
 Both suites share public-API fixture helpers in the unpublished
 `integration_support` workspace crate. Scenario assertions remain in each suite.
 Mutating tests use `itest-<case>-<run-id>-<sequence>` resource names, with a random

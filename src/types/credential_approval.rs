@@ -5,8 +5,10 @@ use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CredentialApprovalId, FullImportRequest, HubuumDateTime, PrincipalId, RestoreConfirmRequest,
-    RestoreId, RestoreStageResponse, TaskResponse, Token, TokenId,
+    CredentialApprovalId, FullImportRequest, HubuumDateTime, PrincipalId, ResourceRevision,
+    RestoreConfirmRequest, RestoreId, RestoreStageResponse, SecurityCandidateActivated,
+    SecurityCandidateActivation, SecurityCandidateId, SecuritySettingsGroup,
+    SecurityVerificationReceipt, TaskResponse, Token, TokenId,
 };
 use crate::{ApiError, NewTokenRequest, RenewTokenRequest, User, UserId, UserPatch, UserPost};
 
@@ -138,6 +140,20 @@ impl CredentialOperation<RestoreStageResponse> {
     }
 }
 
+impl CredentialOperation<SecurityCandidateActivated> {
+    /// Approve activation of the exact verified candidate and revision. The
+    /// protected receipt stays on the resulting mutation and out of the public
+    /// operation description sent for fresh authentication.
+    pub fn activate_security_candidate(activation: SecurityCandidateActivation) -> Self {
+        Self::new(CredentialOperationPayload::ActivateSecurityCandidate {
+            candidate_id: activation.candidate_id,
+            group: activation.group,
+            expected_revision: activation.expected_revision,
+            verification_receipt: activation.verification_receipt,
+        })
+    }
+}
+
 #[derive(Serialize)]
 pub(crate) struct CredentialUserUpdate {
     #[serde(flatten)]
@@ -149,6 +165,13 @@ pub(crate) struct CredentialUserUpdate {
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub(crate) enum CredentialOperationPayload {
+    ActivateSecurityCandidate {
+        candidate_id: SecurityCandidateId,
+        group: SecuritySettingsGroup,
+        expected_revision: ResourceRevision,
+        #[serde(skip)]
+        verification_receipt: SecurityVerificationReceipt,
+    },
     CreateToken {
         principal_id: PrincipalId,
         token: NewTokenRequest,

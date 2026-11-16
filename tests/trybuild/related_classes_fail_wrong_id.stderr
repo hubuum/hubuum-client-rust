@@ -9,8 +9,8 @@ error[E0271]: type mismatch resolving `<[ObjectId; 1] as IntoIterator>::Item == 
 note: required by a bound in `resources::object::<impl hubuum_client::blocking::CursorRequest<ObjectWithPath>>::ignore_classes`
  --> src/resources/object.rs
   |
+  | impl SyncCursorRequest<ObjectWithPath> {
   |     pub fn ignore_classes<I>(self, class_ids: I) -> Self
-  |            -------------- required by a bound in this associated function
   |     where
   |         I: IntoIterator<Item = ClassId>,
   |                         ^^^^^^^^^^^^^^ required by this bound in `resources::object::<impl CursorRequest<ObjectWithPath>>::ignore_classes`

@@ -1,5 +1,9 @@
 # Hubuum client library (Rust)
 
+Project #6 authentication work on `project/auth-support` is documented in
+[external authentication](docs/external-authentication.md). New methods require
+the separately pinned project server candidate; the released target stays unchanged.
+
 [Documentation](https://hubuum.github.io/hubuum-client-rust/) · [Hubuum ecosystem](https://hubuum.github.io/)
 
 A Rust client library for the Hubuum API. It provides synchronous and asynchronous clients, type-state authentication, typed resource IDs, fluent query builders, and task helpers for long-running operations such as imports and exports.

@@ -32,6 +32,14 @@ name = "discover_fields"
 required-features = ["async"]
 
 [[example]]
+name = "browser_login"
+required-features = ["async"]
+
+[[example]]
+name = "browser_login_blocking"
+required-features = ["blocking"]
+
+[[example]]
 name = "discover_fields_blocking"
 required-features = ["blocking"]
 

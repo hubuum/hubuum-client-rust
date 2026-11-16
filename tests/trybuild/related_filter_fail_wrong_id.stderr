@@ -11,3 +11,20 @@ note: method defined here
   |
   |     pub fn eq(self, value: V) -> Q {
   |            ^^
+note: the `eq` call is resolved to the method in `hubuum_client::QueryNumericField<Q, V>`, shadowing the methods of the same name on `std::cmp::PartialEq`
+ --> tests/trybuild/related_filter_fail_wrong_id.rs:5:24
+  |
+5 |     let _ = group.id().eq(ClassId::new(19).unwrap());
+  |                        ^^ refers to `hubuum_client::QueryNumericField::<Q, V>::eq`
+  = note: additionally, there is 1 other available method that isn't in scope
+help: you might have meant to call one of the other methods; you can use the fully-qualified path to call one of them explicitly
+  |
+5 -     let _ = group.id().eq(ClassId::new(19).unwrap());
+5 +     let _ = <_ as std::cmp::PartialEq<_>>::eq(&group.id(), ClassId::new(19).unwrap());
+  |
+5 -     let _ = group.id().eq(ClassId::new(19).unwrap());
+5 +     let _ = <_ as std::iter::Iterator>::eq::<_>(group.id(), ClassId::new(19).unwrap());
+  |
+5 -     let _ = group.id().eq(ClassId::new(19).unwrap());
+5 +     let _ = <_ as core::core_simd::masks::private_methods::PrivateMethods>::eq(group.id(), ClassId::new(19).unwrap());
+  |

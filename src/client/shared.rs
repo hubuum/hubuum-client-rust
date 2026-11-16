@@ -43,6 +43,7 @@ pub const DEFAULT_MAX_ERROR_BODY_BYTES: usize = 64 * 1024;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ClientOptions {
+    pub authentication_request_timeout: std::time::Duration,
     pub max_response_body_bytes: usize,
     pub max_error_body_bytes: usize,
     pub retry_policy: RetryPolicy,
@@ -54,6 +55,7 @@ impl Default for ClientOptions {
     fn default() -> Self {
         Self {
             max_response_body_bytes: DEFAULT_MAX_RESPONSE_BODY_BYTES,
+            authentication_request_timeout: std::time::Duration::from_secs(30),
             max_error_body_bytes: DEFAULT_MAX_ERROR_BODY_BYTES,
             retry_policy: RetryPolicy::default(),
             max_auto_pages: 10_000,
