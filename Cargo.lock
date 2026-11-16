@@ -291,6 +291,7 @@ dependencies = [
  "getrandom 0.4.3",
  "hubuum_client",
  "integration_support",
+ "reqwest",
  "serde_json",
  "tokio",
  "yare",

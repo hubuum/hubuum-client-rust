@@ -16,6 +16,13 @@ The typed-ID migration is documented in [the migration guide](docs/migration-0.1
 
 ## Compatibility history
 
+Project #6 uses the separate immutable pins in
+[the project contract](openapi/authentication-project-source.json). Its new
+authentication methods require that server candidate and do not imply support in
+the released v0.0.22 image. Released-baseline and project live-consumer qualification
+remain separate evidence. See [external authentication](docs/external-authentication.md)
+for migration and capability handling. This work does not publish stable packages.
+
 | Client version | Server target | Tested server image | [Evidence](docs/compatibility-evidence.md#compatibility-history) |
 | --- | --- | --- | --- |
 | 0.21.0 | 0.0.22 | `ghcr.io/hubuum/hubuum-server@sha256:71ff4090eac071f23ae59f7265dc07165939d42771a73d1d291defa023b4964b` | 181 library, consumer, and recovery test results passed on 2026-11-09; see [0.21 evidence](docs/compatibility-evidence.md#client-0210-release). |

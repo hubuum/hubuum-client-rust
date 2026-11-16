@@ -54,9 +54,11 @@ pub use client::AsyncTransport;
 pub use client::BlockingTransport;
 #[cfg(feature = "async")]
 pub use client::{
-    ApprovedCredentialOperation, ClassNameObjects, ClassNameScope, ClassQueryUsage, ClassSchema,
-    Client, CollectionScope, CredentialApprovals, ExportOutputStream, ItemStream, ObjectNameScope,
-    PageStream, SystemEventSubscriptions, TypedClass,
+    ApprovalCompletion, ApprovalInteraction, ApprovedCredentialOperation,
+    AuthenticationInteraction, ClassNameObjects, ClassNameScope, ClassQueryUsage, ClassSchema,
+    Client, CollectionScope, CredentialApprovals, ExportOutputStream, IssuedSessionCleanup,
+    ItemStream, LoginCompletion, LoginInteraction, ObjectNameScope, PageStream,
+    ProviderVerificationInteraction, SystemEventSubscriptions, TypedClass, VerificationCompletion,
 };
 pub use client::{
     Authenticated, IntoQueryFilters, MockTransport, Page, QueryBoolField, QueryJsonField,
@@ -140,8 +142,24 @@ pub use types::{
     UserParams, ValidatedExportScope,
 };
 pub use types::{
-    RuntimeSettingsCatalogue, RuntimeSettingsDescriptor, RuntimeSettingsGroupState,
-    RuntimeSettingsPatch, RuntimeSettingsUpdateResponse,
+    AuthenticationInteractionId, AuthenticationInteractionRequest, AuthenticationInteractionState,
+    AuthenticationInteractionStatus, AuthenticationMethod, AuthenticationMethods,
+    AuthenticationNext, AuthenticationProviderId, AuthenticationProviderKind,
+    PasswordInteractionMode, SecurityCandidateId, SecurityVerificationReceipt,
+};
+pub use types::{
+    AuthenticationProviderUpdate, LdapCandidateVerificationRequest, ProviderConfigurationInput,
+    ProviderCredentialInput, RuntimeAuthorizationBackend, RuntimeAuthorizationConnection,
+    SecurityCandidateActivated, SecurityCandidateActivation, SecurityCandidateCheck,
+    SecurityCandidateGroupPreview, SecurityCandidateProvider, SecurityCandidateReport,
+    SecurityCandidateRequest, SecurityCandidateState, SecurityCandidateVerification,
+    SecurityCandidateVerificationPreview, SecurityConfigurationSource, SecuritySettingsGroup,
+};
+pub use types::{
+    EffectiveAuthenticationSettings, RuntimeAuthenticationProviderState,
+    RuntimeSecurityCapabilities, RuntimeSettingsApplicationStatus, RuntimeSettingsCatalogue,
+    RuntimeSettingsDescriptor, RuntimeSettingsGroupState, RuntimeSettingsPatch,
+    RuntimeSettingsReplicaStatus, RuntimeSettingsUpdateResponse,
 };
 pub use types::{SessionClientId, SessionInfo};
 pub use types::{

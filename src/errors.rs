@@ -16,6 +16,20 @@ pub struct ApiErrorResponse {
 #[non_exhaustive]
 #[derive(Error)]
 pub enum ApiError {
+    #[error(
+        "Invalid security configuration; use the server's discovered schema and deployment bounds"
+    )]
+    InvalidSecurityConfiguration,
+    #[error("Candidate is not verified, has expired, or has no activation receipt")]
+    SecurityCandidateNotVerified,
+    #[error("Invalid or unsupported authentication interaction")]
+    InvalidAuthenticationInteraction,
+    #[error("Authentication interaction expired; begin a new interaction")]
+    AuthenticationInteractionExpired,
+    #[error("Authentication interaction terminated; begin a new interaction")]
+    AuthenticationInteractionTerminated,
+    #[error("Authentication polling interval has not elapsed")]
+    AuthenticationPollingTooEarly,
     #[error("{kind} must be a positive integer")]
     InvalidResourceId { kind: &'static str },
     #[error("Missing required request field: {field}")]
@@ -243,6 +257,18 @@ pub enum ApiError {
 impl std::fmt::Debug for ApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::InvalidSecurityConfiguration => f.write_str("InvalidSecurityConfiguration"),
+            Self::SecurityCandidateNotVerified => f.write_str("SecurityCandidateNotVerified"),
+            Self::InvalidAuthenticationInteraction => {
+                f.write_str("InvalidAuthenticationInteraction")
+            }
+            Self::AuthenticationInteractionExpired => {
+                f.write_str("AuthenticationInteractionExpired")
+            }
+            Self::AuthenticationPollingTooEarly => f.write_str("AuthenticationPollingTooEarly"),
+            Self::AuthenticationInteractionTerminated => {
+                f.write_str("AuthenticationInteractionTerminated")
+            }
             Self::InvalidResourceId { kind } => f
                 .debug_struct("InvalidResourceId")
                 .field("kind", kind)
@@ -510,6 +536,15 @@ impl ApiError {
         self.is_status(StatusCode::FORBIDDEN)
             && self.api_response().is_some_and(|response| {
                 response.reason.as_deref() == Some("reauthentication_required")
+            })
+    }
+
+    /// The selected provider explicitly cannot produce the requested evidence.
+    /// Never retry this operation with a weaker proof or another identity.
+    pub fn is_capability_unsupported(&self) -> bool {
+        self.is_status(StatusCode::UNPROCESSABLE_ENTITY)
+            && self.api_response().is_some_and(|response| {
+                response.reason.as_deref() == Some("capability_unsupported")
             })
     }
 

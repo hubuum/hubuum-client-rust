@@ -114,9 +114,19 @@ macro_rules! scenario {
         let id = SessionClientId::new("persistent-test").unwrap();
         assert!($finish!($client.resume_session(id.clone(), store.clone())).unwrap().is_none());
         let initial = pair();
-        push(&$transport, StatusCode::OK, initial.clone());
         let password = format!("fixture-{:032x}", fastrand::u128(..));
-        let original = $finish!($client.login_session_with_store(Credentials::new("alice", password.clone()), id.clone(), store.clone())).unwrap();
+        let original = if $case.starts_with("interaction_") {
+            push(&$transport, StatusCode::CREATED, json!({"id":"aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa",
+                "interaction_version":1,"redemption_secret":format!("hai1.{}","a".repeat(64)),
+                "expires_at":Utc::now()+chrono::Duration::minutes(5),"interval_seconds":5,"next":{"kind":"credentials"}}));
+            let flow=$finish!($client.begin_login_interaction(hubuum_client::AuthenticationInteractionRequest::new(
+                id.clone(),hubuum_client::AuthenticationProviderId::local()))).unwrap();
+            push(&$transport, StatusCode::OK, initial.clone());
+            $finish!(flow.complete_with_store(store.clone())).unwrap()
+        } else {
+            push(&$transport, StatusCode::OK, initial.clone());
+            $finish!($client.login_session_with_store(Credentials::new("alice", password.clone()), id.clone(), store.clone())).unwrap()
+        };
         let saved = store.value().unwrap();
         assert!(!saved.to_string().contains(&password));
         let debug = format!("{:?}", serde_json::from_value::<StoredSession>(saved.clone()).unwrap());
@@ -133,14 +143,14 @@ macro_rules! scenario {
             push(&$transport, StatusCode::OK, json!({}));
             let resumed = $finish!($client.resume_session(id.clone(), store.clone())).unwrap().unwrap();
             assert_eq!(resumed.token().unwrap().as_str(), "first-access");
-            if $case == "logout" {
+            if ["logout","interaction_logout"].contains(&$case) {
                 $transport.push_response(TransportResponse::empty(StatusCode::NO_CONTENT));
                 $finish!(resumed.logout()).unwrap();
                 assert!(store.value().is_none());
-            } else if $case == "binding" {
+            } else if ["binding","interaction_binding"].contains(&$case) {
                 let other = SessionClientId::new("different-client").unwrap();
                 assert!(matches!($finish!($client.resume_session(other, store.clone())), Err(ApiError::InvalidSessionResponse)));
-                assert_eq!($transport.requests().len(), 2);
+                assert_eq!($transport.requests().len(), 2 + usize::from($case.starts_with("interaction_")));
                 assert!(store.value().is_some());
             } else {
                 store.expire_access();
@@ -158,7 +168,7 @@ macro_rules! scenario {
                     }
                 }
                 let result = $finish!(resumed.raw(Method::GET, "/api/v1/iam/me").send::<Value>());
-                if $case == "rotate" {
+                if ["rotate","interaction_rotate"].contains(&$case) {
                     assert_eq!(result.unwrap(), json!({"ok":true}));
                     assert_eq!(store.value().unwrap()["pair"]["refresh_token"], "next-refresh");
                     assert_eq!(store.writes(), [true, false, true]);
@@ -177,14 +187,18 @@ macro_rules! scenario {
             }
         }
         let requests = $transport.requests();
-        assert_eq!(requests[0].url.path(), "/api/v1/auth/login");
-        assert_eq!(requests[1].url.path(), "/api/v1/auth/validate");
-        assert_eq!(requests.iter().filter(|r| r.url.path().ends_with("/refresh")).count(), usize::from(!["revoked", "logout", "binding"].contains(&$case)));
+        let interaction=$case.starts_with("interaction_");
+        assert_eq!(requests[0].url.path(), if interaction {"/api/v1/auth/interactions"} else {"/api/v1/auth/login"});
+        assert_eq!(requests[1+usize::from(interaction)].url.path(), "/api/v1/auth/validate");
+        assert_eq!(requests.iter().filter(|r| r.url.path().ends_with("/refresh")).count(), usize::from(!["revoked", "logout", "binding","interaction_logout","interaction_binding"].contains(&$case)));
     }};
 }
 
 #[rstest]
 #[case("rotate")]
+#[case("interaction_rotate")]
+#[case("interaction_binding")]
+#[case("interaction_logout")]
 #[case("revoked")]
 #[case("logout")]
 #[case("binding")]
@@ -204,6 +218,9 @@ fn blocking_persistent_sessions(#[case] case: &str) {
 
 #[rstest]
 #[case("rotate")]
+#[case("interaction_rotate")]
+#[case("interaction_binding")]
+#[case("interaction_logout")]
 #[case("revoked")]
 #[case("logout")]
 #[case("binding")]

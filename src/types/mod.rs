@@ -1,4 +1,5 @@
 mod auth;
+mod authentication;
 mod backup;
 mod baseurl;
 mod computed;
@@ -28,6 +29,7 @@ mod schema;
 mod schema_profiling;
 mod search;
 mod search_hydration;
+mod security_candidates;
 mod session;
 mod settings;
 mod structured_search;
@@ -38,7 +40,15 @@ mod typed_object;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
 
+#[cfg(any(feature = "async", feature = "blocking"))]
+pub(crate) use auth::serialize_secret;
 pub use auth::{AuthProvidersResponse, Credentials, LogoutTokenRequest, Token};
+pub use authentication::{
+    AuthenticationInteractionId, AuthenticationInteractionRequest, AuthenticationInteractionState,
+    AuthenticationInteractionStatus, AuthenticationMethod, AuthenticationMethods,
+    AuthenticationNext, AuthenticationProviderId, AuthenticationProviderKind,
+    PasswordInteractionMode, SecurityCandidateId, SecurityVerificationReceipt,
+};
 pub use backup::{
     BackupDocument, BackupHistory, BackupManifest, BackupRequest, BackupState,
     CURRENT_BACKUP_VERSION, RESTORE_CONFIRMATION_PHRASE, RestoreCapability, RestoreConfirmRequest,
@@ -140,8 +150,10 @@ pub use remote::{
 };
 pub use revision::{EntityTag, ResourceRevision, Revisioned};
 pub use runtime_settings::{
-    RuntimeSettingsCatalogue, RuntimeSettingsDescriptor, RuntimeSettingsGroupState,
-    RuntimeSettingsPatch, RuntimeSettingsUpdateResponse,
+    EffectiveAuthenticationSettings, RuntimeAuthenticationProviderState,
+    RuntimeSecurityCapabilities, RuntimeSettingsApplicationStatus, RuntimeSettingsCatalogue,
+    RuntimeSettingsDescriptor, RuntimeSettingsGroupState, RuntimeSettingsPatch,
+    RuntimeSettingsReplicaStatus, RuntimeSettingsUpdateResponse,
 };
 pub use schema::{
     ClassSchemaResponse, ComplianceStatus, ImportSchemaActivation, ObjectComplianceResponse,
@@ -163,6 +175,14 @@ pub use search::{
     UnifiedSearchBatchResponse, UnifiedSearchDoneEvent, UnifiedSearchErrorEvent,
     UnifiedSearchEvent, UnifiedSearchKind, UnifiedSearchNext, UnifiedSearchResponse,
     UnifiedSearchResults, UnifiedSearchStartedEvent,
+};
+pub use security_candidates::{
+    AuthenticationProviderUpdate, LdapCandidateVerificationRequest, ProviderConfigurationInput,
+    ProviderCredentialInput, RuntimeAuthorizationBackend, RuntimeAuthorizationConnection,
+    SecurityCandidateActivated, SecurityCandidateActivation, SecurityCandidateCheck,
+    SecurityCandidateGroupPreview, SecurityCandidateProvider, SecurityCandidateReport,
+    SecurityCandidateRequest, SecurityCandidateState, SecurityCandidateVerification,
+    SecurityCandidateVerificationPreview, SecurityConfigurationSource, SecuritySettingsGroup,
 };
 pub use session::{SessionClientId, SessionInfo};
 pub use structured_search::{

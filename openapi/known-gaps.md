@@ -32,6 +32,9 @@ Rust wire models:
   older server responses.
 - `RunningConfig.query_observations` defaults to disabled collection for servers
   before v0.0.19.
+- `RuntimeSettingsCatalogue.security` is an optional Project #6 capability block,
+  absent on v0.0.22 and separately pinned in `authentication-project.json`.
+  This additive field does not change the declared release compatibility target.
 - `Object.data` remains optional for compatibility and serializes an explicit
   null when absent.
 - `TaskResponse.unattempted_items` defaults to zero for older responses that

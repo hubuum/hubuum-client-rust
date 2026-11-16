@@ -20,9 +20,14 @@ pub(crate) fn credential_activity_request(
     )
 }
 
+pub(crate) enum ApprovedEndpoint {
+    Standard(Endpoint),
+    SecurityCandidate(crate::SecurityCandidateId),
+}
+
 pub(crate) struct ApprovedCredentialRequest {
     pub method: Method,
-    pub endpoint: Endpoint,
+    pub endpoint: ApprovedEndpoint,
     pub url_params: UrlParams,
     pub body: Value,
     pub response: CredentialApprovalResponse,
@@ -66,6 +71,17 @@ impl ApprovedCredentialRequest {
         };
         let param = |name: &'static str, id: String| (Cow::Borrowed(name), Cow::Owned(id));
         let (method, endpoint, url_params, body) = match operation.payload {
+            CredentialOperationPayload::ActivateSecurityCandidate {
+                candidate_id,
+                group: _,
+                expected_revision,
+                verification_receipt,
+            } => (
+                Method::POST,
+                ApprovedEndpoint::SecurityCandidate(candidate_id),
+                vec![],
+                serde_json::json!({"expected_revision":expected_revision,"verification_receipt":verification_receipt}),
+            ),
             CredentialOperationPayload::CreateToken {
                 principal_id,
                 mut token,
@@ -73,7 +89,7 @@ impl ApprovedCredentialRequest {
                 token.expires_at = Some(token_expiry()?);
                 (
                     Method::POST,
-                    Endpoint::PrincipalTokens,
+                    ApprovedEndpoint::Standard(Endpoint::PrincipalTokens),
                     vec![param("principal_id", principal_id.to_string())],
                     serde_json::to_value(token)?,
                 )
@@ -86,7 +102,7 @@ impl ApprovedCredentialRequest {
                 token.expires_at = Some(token_expiry()?);
                 (
                     Method::POST,
-                    Endpoint::PrincipalTokenRenew,
+                    ApprovedEndpoint::Standard(Endpoint::PrincipalTokenRenew),
                     vec![
                         param("principal_id", principal_id.to_string()),
                         param("token_id", token_id.to_string()),
@@ -96,19 +112,19 @@ impl ApprovedCredentialRequest {
             }
             CredentialOperationPayload::CreateUser { user } => (
                 Method::POST,
-                Endpoint::Users,
+                ApprovedEndpoint::Standard(Endpoint::Users),
                 vec![],
                 serde_json::to_value(user)?,
             ),
             CredentialOperationPayload::UpdateUser { user_id, user } => (
                 Method::PATCH,
-                Endpoint::Users,
+                ApprovedEndpoint::Standard(Endpoint::Users),
                 vec![param("patch_id", user_id.to_string())],
                 serde_json::to_value(user)?,
             ),
             CredentialOperationPayload::ImportCredentials { import } => (
                 Method::POST,
-                Endpoint::Imports,
+                ApprovedEndpoint::Standard(Endpoint::Imports),
                 vec![],
                 serde_json::to_value(import)?,
             ),
@@ -117,7 +133,7 @@ impl ApprovedCredentialRequest {
                 confirmation,
             } => (
                 Method::POST,
-                Endpoint::RestoreConfirm,
+                ApprovedEndpoint::Standard(Endpoint::RestoreConfirm),
                 vec![param("restore_id", restore_id.to_string())],
                 serde_json::to_value(confirmation)?,
             ),

@@ -96,7 +96,9 @@ jobs:
           RUSTDOCFLAGS: -D warnings
 
       - name: Validate Pinned OpenAPI Contract
-        run: python3 scripts/openapi-contract.py validate
+        run: |
+          python3 -I -S -m unittest discover -s tests/python/unit
+          python3 scripts/openapi-contract.py validate
 
       - name: Test GitHub Release Helpers
         run: ./scripts/test-github-release.sh
