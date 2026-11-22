@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Security
+
+- Require `url` 2.5.9 or later in the 2.x series to fix a stack overflow in
+  URL origin resolution.
+  [RustSec advisory RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592.html)
+
 ### Added
 
 - Project-only async/blocking external-authentication interactions, redacted
