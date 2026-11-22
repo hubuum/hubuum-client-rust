@@ -70,7 +70,7 @@ pub(crate) fn has_valid_idempotency_key<'a>(
     Ok(present)
 }
 
-pub(super) fn retry_after(headers: &HeaderMap) -> Option<std::time::Duration> {
+pub(crate) fn retry_after(headers: &HeaderMap) -> Option<std::time::Duration> {
     retry_after_at(headers, std::time::SystemTime::now())
 }
 

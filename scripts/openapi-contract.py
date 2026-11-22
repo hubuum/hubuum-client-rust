@@ -184,58 +184,105 @@ def encoded(value: dict) -> str:
     return json.dumps(value, indent=2, sort_keys=True) + "\n"
 
 
+def select_paths(snapshot: dict, prefixes: list[str]) -> dict:
+    if not prefixes:
+        return snapshot
+    operations = [operation for operation in snapshot["operations"]
+                  if any(operation["path"].startswith(prefix) for prefix in prefixes)]
+    if not operations:
+        raise ValueError("OpenAPI path prefixes selected no operations")
+    schemas = {name for operation in operations
+               for key in ("request_schema_refs", "response_schema_refs")
+               for name in operation[key]}
+    return {
+        **snapshot,
+        "path_prefixes": sorted(set(prefixes)),
+        "operations": operations,
+        "operation_count": len(operations),
+        "path_count": len({operation["path"] for operation in operations}),
+        "schemas": {name: schema for name, schema in snapshot["schemas"].items() if name in schemas},
+        "schema_names": sorted(schemas),
+        "schema_count": len(schemas),
+    }
+
+
+def validate_snapshot(snapshot_path: pathlib.Path) -> int:
+    snapshot = json.loads(snapshot_path.read_text())
+    operations = snapshot.get("operations", [])
+    unique = {(item["method"], item["path"]) for item in operations}
+    if len(unique) != snapshot.get("operation_count"):
+        print("OpenAPI snapshot has duplicate or missing operations", file=sys.stderr)
+        return 1
+    if len({item["path"] for item in operations}) != snapshot.get("path_count"):
+        print("OpenAPI snapshot path count is inconsistent", file=sys.stderr)
+        return 1
+    schemas = snapshot.get("schemas", {})
+    schema_names = snapshot.get("schema_names", [])
+    if sorted(schemas) != schema_names or len(schemas) != snapshot.get("schema_count"):
+        print("OpenAPI snapshot schema index is inconsistent", file=sys.stderr)
+        return 1
+    known_schemas = set(schema_names)
+    for operation in operations:
+        for key in ("request_schema_refs", "response_schema_refs"):
+            unknown = set(operation.get(key, [])) - known_schemas
+            if unknown:
+                print(
+                    f"OpenAPI operation {operation['method']} {operation['path']} "
+                    f"references unknown schemas: {sorted(unknown)}",
+                    file=sys.stderr,
+                )
+                return 1
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=("update", "check", "validate"))
     parser.add_argument("--spec", default=DEFAULT_SPEC)
+    parser.add_argument("--snapshot", type=pathlib.Path, default=SNAPSHOT)
+    parser.add_argument("--path-prefix", action="append", default=[])
     args = parser.parse_args()
+    snapshot_path = args.snapshot
 
     if args.mode == "validate":
-        snapshot = json.loads(SNAPSHOT.read_text())
-        operations = snapshot.get("operations", [])
-        unique = {(item["method"], item["path"]) for item in operations}
-        if len(unique) != snapshot.get("operation_count"):
-            print("OpenAPI snapshot has duplicate or missing operations", file=sys.stderr)
-            return 1
-        if len({item["path"] for item in operations}) != snapshot.get("path_count"):
-            print("OpenAPI snapshot path count is inconsistent", file=sys.stderr)
-            return 1
-        schemas = snapshot.get("schemas", {})
-        schema_names = snapshot.get("schema_names", [])
-        if sorted(schemas) != schema_names or len(schemas) != snapshot.get("schema_count"):
-            print("OpenAPI snapshot schema index is inconsistent", file=sys.stderr)
-            return 1
-        known_schemas = set(schema_names)
-        for operation in operations:
-            for key in ("request_schema_refs", "response_schema_refs"):
-                unknown = set(operation.get(key, [])) - known_schemas
-                if unknown:
-                    print(
-                        f"OpenAPI operation {operation['method']} {operation['path']} "
-                        f"references unknown schemas: {sorted(unknown)}",
-                        file=sys.stderr,
-                    )
-                    return 1
+        paths = [snapshot_path]
+        project = SNAPSHOT.with_name("authentication-project.json")
+        if snapshot_path.resolve() == SNAPSHOT.resolve() and project.exists():
+            paths.append(project)
+        for path in paths:
+            result = validate_snapshot(path)
+            if result:
+                return result
+        if project in paths:
+            source = json.loads(project.with_name("authentication-project-source.json").read_text())
+            fixture = ROOT / "tests" / "fixtures" / "authentication" / "fixtures.json"
+            if hashlib.sha256(fixture.read_bytes()).hexdigest() != source["source_fixture_sha256"]:
+                print("Shared authentication fixture checksum differs from its source pin", file=sys.stderr)
+                return 1
+            contract = json.loads(project.read_text())
+            if contract["spec_sha256"] != source["source_canonical_spec_sha256"]:
+                print("Project contract differs from its pinned canonical OpenAPI source", file=sys.stderr)
+                return 1
         return 0
 
-    current = normalize(load_spec(args.spec))
+    current = select_paths(normalize(load_spec(args.spec)), args.path_prefix)
     if args.mode == "update":
-        SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
-        SNAPSHOT.write_text(encoded(current))
+        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot_path.write_text(encoded(current))
         print(
             f"recorded {current['operation_count']} operations across "
             f"{current['path_count']} paths"
         )
         return 0
 
-    expected = json.loads(SNAPSHOT.read_text())
+    expected = json.loads(snapshot_path.read_text())
     if expected == current:
         print("OpenAPI operation contract is unchanged")
         return 0
     diff = difflib.unified_diff(
         encoded(expected).splitlines(),
         encoded(current).splitlines(),
-        fromfile=str(SNAPSHOT),
+        fromfile=str(snapshot_path),
         tofile=args.spec,
         lineterm="",
     )

@@ -4,7 +4,10 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use super::{HubuumDateTime, PrincipalId, ResourceRevision};
+use super::{
+    AuthenticationProviderId, AuthenticationProviderKind, HubuumDateTime, PrincipalId,
+    ResourceRevision, SecurityConfigurationSource,
+};
 use crate::ApiError;
 
 /// The catalogue version describes the discovery protocol, not server releases.
@@ -13,6 +16,131 @@ use crate::ApiError;
 pub struct RuntimeSettingsCatalogue {
     pub schema_version: u32,
     pub groups: Vec<RuntimeSettingsDescriptor>,
+    /// Absent on the declared released-server baseline. Its presence describes
+    /// external-authentication support on the accepted project candidate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security: Option<RuntimeSecurityCapabilities>,
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuntimeSecurityCapabilities {
+    pub candidate_endpoint: String,
+    pub configurable_provider_kinds: Vec<AuthenticationProviderKind>,
+    pub activatable_provider_kinds: Vec<AuthenticationProviderKind>,
+    pub deployment_locked_providers: Vec<String>,
+    pub private_targets_allowed: bool,
+    pub replacement_credentials_available: bool,
+    pub candidate_lifetime_seconds: i64,
+    pub ldap_verification_timeout_seconds: u64,
+    pub treetop_connect_timeout_ceiling_ms: u64,
+    pub treetop_request_timeout_ceiling_ms: u64,
+    pub trust_profiles: Vec<String>,
+}
+
+#[non_exhaustive]
+#[derive(Clone, Deserialize)]
+pub struct RuntimeAuthenticationProviderState {
+    pub provider_id: Option<AuthenticationProviderId>,
+    pub kind: AuthenticationProviderKind,
+    pub name: String,
+    pub source: SecurityConfigurationSource,
+    pub enabled: bool,
+    pub definition_mutable: bool,
+    pub runtime_definition: Option<Map<String, Value>>,
+    pub credential_configured: bool,
+    pub available: bool,
+}
+
+impl fmt::Debug for RuntimeAuthenticationProviderState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RuntimeAuthenticationProviderState")
+            .field("provider_id", &self.provider_id)
+            .field("kind", &self.kind)
+            .field("name", &self.name)
+            .field("source", &self.source)
+            .field("enabled", &self.enabled)
+            .field("definition_mutable", &self.definition_mutable)
+            .field("credential_configured", &self.credential_configured)
+            .field("runtime_definition", &"<redacted>")
+            .field("available", &self.available)
+            .finish()
+    }
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Deserialize)]
+pub struct RuntimeSettingsReplicaStatus {
+    pub status: RuntimeSettingsApplicationStatus,
+    pub reconcile_interval_seconds: u64,
+    pub applied_at: Option<HubuumDateTime>,
+    pub last_refresh_attempt_at: Option<HubuumDateTime>,
+    pub last_refresh_failure_at: Option<HubuumDateTime>,
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RuntimeSettingsApplicationStatus {
+    NotLoaded,
+    Current,
+    Stale,
+}
+
+/// Effective provider state, optimistic revision, deployment ownership and this
+/// replica's application status. Definitions are read-only, redacted reports;
+/// construct explicit provider updates for writes instead of copying this state.
+pub struct EffectiveAuthenticationSettings {
+    group: RuntimeSettingsGroupState,
+    providers: Vec<RuntimeAuthenticationProviderState>,
+    replica: RuntimeSettingsReplicaStatus,
+}
+
+impl EffectiveAuthenticationSettings {
+    #[cfg(any(feature = "async", feature = "blocking"))]
+    pub(crate) fn from_state(group: RuntimeSettingsGroupState) -> Result<Self, ApiError> {
+        if group.group != "authentication" {
+            return Err(ApiError::InvalidAuthenticationInteraction);
+        }
+        let providers = serde_json::from_value(
+            group
+                .effective
+                .get("providers")
+                .cloned()
+                .ok_or(ApiError::InvalidAuthenticationInteraction)?,
+        )
+        .map_err(|_| ApiError::InvalidAuthenticationInteraction)?;
+        let replica = serde_json::from_value(group.replica.clone())
+            .map_err(|_| ApiError::InvalidAuthenticationInteraction)?;
+        Ok(Self {
+            group,
+            providers,
+            replica,
+        })
+    }
+    pub fn group(&self) -> &RuntimeSettingsGroupState {
+        &self.group
+    }
+    pub fn providers(&self) -> &[RuntimeAuthenticationProviderState] {
+        &self.providers
+    }
+    pub fn replica(&self) -> &RuntimeSettingsReplicaStatus {
+        &self.replica
+    }
+    pub fn expected_revision(&self) -> ResourceRevision {
+        self.group.revision.unwrap_or(ResourceRevision::INITIAL)
+    }
+}
+
+impl fmt::Debug for EffectiveAuthenticationSettings {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EffectiveAuthenticationSettings")
+            .field("revision", &self.group.revision)
+            .field("source", &self.group.source)
+            .field("providers", &self.providers)
+            .field("replica", &self.replica)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Group names and JSON Schema fields are intentionally open-ended.

@@ -1,6 +1,46 @@
 use crate::types::BaseUrl;
 use strum::EnumIter;
 
+#[cfg(any(feature = "async", feature = "blocking"))]
+pub(crate) mod authentication {
+    use crate::{AuthenticationInteractionId, SecurityCandidateId};
+
+    pub const METHODS: &str = "api/v1/auth/methods";
+    pub const BEGIN: &str = "api/v1/auth/interactions";
+    pub const CANDIDATES: &str = "api/v1/admin/runtime-settings/security-candidates";
+
+    pub fn candidate(id: &SecurityCandidateId) -> String {
+        format!("{CANDIDATES}/{}", id.as_str())
+    }
+
+    pub fn activate(id: &SecurityCandidateId) -> String {
+        format!("{}/activate", candidate(id))
+    }
+    pub fn verify_ldap(id: &SecurityCandidateId) -> String {
+        format!("{}/verify-ldap", candidate(id))
+    }
+
+    pub enum InteractionAction {
+        Credentials,
+        Status,
+        Complete,
+        Cancel,
+        RevokeIssuedSession,
+    }
+
+    pub fn interaction(id: &AuthenticationInteractionId, action: InteractionAction) -> String {
+        let action = match action {
+            InteractionAction::Credentials => "credentials",
+            InteractionAction::Status => "status",
+            InteractionAction::Complete => "complete",
+            InteractionAction::Cancel => "cancel",
+            InteractionAction::RevokeIssuedSession => "issued-session/revoke",
+        };
+        // The validated canonical UUID cannot contain structural path bytes.
+        format!("api/v1/auth/interactions/{}/{action}", id.as_str())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum Endpoint {
     Login,

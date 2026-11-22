@@ -22,6 +22,8 @@ help: the trait `From<GroupId>` is not implemented for `ClassId`
 note: required by a bound in `hubuum_client::blocking::Resource::<T>::get`
  --> src/client/sync/resources.rs
   |
+  | impl<T> Resource<T>
+...
   |     pub fn get<I: Into<T::Id>>(&self, id: I) -> Result<Handle<T>, ApiError> {
   |                   ^^^^^^^^^^^ required by this bound in `Resource::<T>::get`
   = note: this error originates in the macro `crate::types::id::define_id` (in Nightly builds, run with -Z macro-backtrace for more info)

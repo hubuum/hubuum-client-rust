@@ -1,0 +1,6933 @@
+{
+  "api_version": "0.0.22",
+  "openapi": "3.1.0",
+  "operation_count": 32,
+  "operations": [
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AdminRuntimeSettingsSchema",
+      "parameters": [],
+      "path": "/api/v1/admin/runtime-settings/schema",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "RuntimeSettingsCatalogue",
+        "RuntimeSettingsDescriptor",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "SecurityConfigurationCapabilities"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsCatalogue"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AdminRuntimeSettingsSecurityCandidates",
+      "parameters": [],
+      "path": "/api/v1/admin/runtime-settings/security-candidates",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "AuthenticationEndpoint",
+        "AuthorizationConnection",
+        "BrowserProviderConfiguration",
+        "BrowserProviderKind",
+        "BrowserProviderRequest",
+        "MembershipClaimSource",
+        "MembershipKeyMode",
+        "OAuthProfile",
+        "OAuthProviderDefinition",
+        "OAuthSubjectType",
+        "OidcProviderDefinition",
+        "OidcSigningAlgorithm",
+        "ProviderAdmission",
+        "ProviderClientAuthentication",
+        "ProviderCredentialInput",
+        "ProviderMembership",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderKind",
+        "RuntimeAuthenticationProviderRequest",
+        "RuntimeAuthorizationBackend",
+        "SecurityCandidateProviderRequest",
+        "SecurityCandidateRequest",
+        "SecurityConfigurationSource"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SecurityCandidateRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "ResourceRevision",
+        "RuntimeSettingsGroup",
+        "SecurityCandidateCheck",
+        "SecurityCandidateProvider",
+        "SecurityCandidateReport",
+        "SecurityVerificationReceipt"
+      ],
+      "response_schemas": {
+        "201": {
+          "application/json": {
+            "$ref": "#/components/schemas/SecurityCandidateReport"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "503": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AdminRuntimeSettingsSecurityCandidatesById",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/admin/runtime-settings/security-candidates/{id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "ResourceRevision",
+        "RuntimeSettingsGroup",
+        "SecurityCandidateCheck",
+        "SecurityCandidateProvider",
+        "SecurityCandidateReport",
+        "SecurityVerificationReceipt"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SecurityCandidateReport"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AdminRuntimeSettingsSecurityCandidatesByIdActivate",
+      "parameters": [
+        "header:X-Hubuum-Credential-Approval",
+        "path:id"
+      ],
+      "path": "/api/v1/admin/runtime-settings/security-candidates/{id}/activate",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "ResourceRevision",
+        "SecurityCandidateActivationRequest",
+        "SecurityVerificationReceipt"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SecurityCandidateActivationRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "ResourceRevision",
+        "RuntimeSettingsGroup",
+        "SecurityCandidateActivated"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SecurityCandidateActivated"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "410": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "410": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AdminRuntimeSettingsSecurityCandidatesByIdVerifyLdap",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/admin/runtime-settings/security-candidates/{id}/verify-ldap",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "SecurityCandidateLdapVerification"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SecurityCandidateLdapVerification"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "ResourceRevision",
+        "RuntimeSettingsGroup",
+        "SecurityCandidateCheck",
+        "SecurityCandidateGroupPreview",
+        "SecurityCandidateLdapVerificationResponse",
+        "SecurityCandidateProvider",
+        "SecurityCandidateReport",
+        "SecurityCandidateVerificationPreview",
+        "SecurityVerificationReceipt"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SecurityCandidateLdapVerificationResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "410": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "410": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "deleteApiV1AdminRuntimeSettingsByGroup",
+      "parameters": [
+        "path:group",
+        "query:expected_revision"
+      ],
+      "path": "/api/v1/admin/runtime-settings/{group}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationEndpoint",
+        "AuthenticationSettingsReport",
+        "AuthorizationConnection",
+        "AuthorizationSettingsReport",
+        "ClientPaginationConfig",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimePolicyReport",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AdminRuntimeSettingsByGroup",
+      "parameters": [
+        "path:group"
+      ],
+      "path": "/api/v1/admin/runtime-settings/{group}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "PrincipalID",
+        "ResourceRevision",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsGroupState",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsSource"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsGroupState"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "patchApiV1AdminRuntimeSettingsByGroup",
+      "parameters": [
+        "path:group"
+      ],
+      "path": "/api/v1/admin/runtime-settings/{group}",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "ResourceRevision",
+        "RuntimeSettingsPatch"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/RuntimeSettingsPatch"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationEndpoint",
+        "AuthenticationSettingsReport",
+        "AuthorizationConnection",
+        "AuthorizationSettingsReport",
+        "ClientPaginationConfig",
+        "PaginationPolicyValue",
+        "PaginationSettingsReport",
+        "PrincipalID",
+        "QueryObservationCeilingsValue",
+        "QueryObservationPolicyValue",
+        "QueryObservationSettingsReport",
+        "ResourceRevision",
+        "RuntimeAuthenticationProviderStatus",
+        "RuntimePolicyReport",
+        "RuntimeSettingsApplicationStatus",
+        "RuntimeSettingsEffect",
+        "RuntimeSettingsGroup",
+        "RuntimeSettingsOwnership",
+        "RuntimeSettingsReplicaStatus",
+        "RuntimeSettingsReport",
+        "RuntimeSettingsSource",
+        "RuntimeSettingsUpdateResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/RuntimeSettingsUpdateResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "412": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "412": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AuthCallbacksByProviderId",
+      "parameters": [
+        "path:provider_id",
+        "query:code",
+        "query:error",
+        "query:iss",
+        "query:state"
+      ],
+      "path": "/api/v1/auth/callbacks/{provider_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [],
+      "response_schemas": {
+        "303": {},
+        "401": {}
+      },
+      "responses": {
+        "303": [],
+        "401": []
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractions",
+      "parameters": [],
+      "path": "/api/v1/auth/interactions",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "AuthenticationPurpose",
+        "ClassKey",
+        "CollectionID",
+        "CollectionKey",
+        "ComputedResultType",
+        "CredentialOperation",
+        "EventDeliveryPolicy",
+        "EventSinkKey",
+        "EventSinkKind",
+        "ExportContentType",
+        "ExportInclude",
+        "ExportIncludeRelatedDirection",
+        "ExportIncludeRelatedObject",
+        "ExportIncludeRelatedSort",
+        "ExportLimits",
+        "ExportMissingDataPolicy",
+        "ExportRelationContext",
+        "ExportScopeKind",
+        "ExportTemplateKind",
+        "GroupKey",
+        "HubuumClassID",
+        "HubuumObjectID",
+        "IdentityScopeKey",
+        "ImportAtomicity",
+        "ImportClassInput",
+        "ImportClassRelationInput",
+        "ImportCollectionInput",
+        "ImportCollectionPermissionInput",
+        "ImportCollisionPolicy",
+        "ImportComputedFieldInput",
+        "ImportComputedFieldVisibility",
+        "ImportEventSinkInput",
+        "ImportEventSubscriptionInput",
+        "ImportExportTemplateInput",
+        "ImportGraph",
+        "ImportGroupInput",
+        "ImportGroupMembershipInput",
+        "ImportIdentityScopeInput",
+        "ImportMembershipSourceInput",
+        "ImportMode",
+        "ImportObjectInput",
+        "ImportObjectRelationInput",
+        "ImportPermissionPolicy",
+        "ImportPrincipalInput",
+        "ImportPrincipalSubtype",
+        "ImportRemoteTargetInput",
+        "ImportRequest",
+        "ImportSchemaActivation",
+        "ImportWriteCondition",
+        "InteractionBeginRequest",
+        "InteractionDelivery",
+        "NewTokenRequest",
+        "NewUser",
+        "ObjectKey",
+        "ObjectRelationLimit",
+        "PasswordInteractionMode",
+        "Permissions",
+        "PrincipalID",
+        "PrincipalKey",
+        "RelationLabel",
+        "RemoteAuthConfig",
+        "RemoteHttpMethod",
+        "RemoteTargetSubjectType",
+        "RenewTokenRequest",
+        "ResourceRevision",
+        "RestoreConfirmRequest",
+        "RestoreJobID",
+        "RestoreTimestamps",
+        "RuntimeSettingsGroup",
+        "SchemaActivationPolicy",
+        "SchemaRevision",
+        "TaskID",
+        "TokenID",
+        "TokenResourceScope",
+        "TokenScopeDetails",
+        "UpdateUser",
+        "UserID"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/InteractionBeginRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "InteractionBegun",
+        "InteractionNext",
+        "InteractionSecret"
+      ],
+      "response_schemas": {
+        "201": {
+          "application/json": {
+            "$ref": "#/components/schemas/InteractionBegun"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "422": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "503": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "422": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {},
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AuthInteractionsBrowser",
+      "parameters": [],
+      "path": "/api/v1/auth/interactions/browser",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [],
+      "response_schemas": {
+        "200": {
+          "text/html": {
+            "type": "string"
+          }
+        },
+        "422": {}
+      },
+      "responses": {
+        "200": [
+          "text/html"
+        ],
+        "422": []
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractionsBrowser",
+      "parameters": [],
+      "path": "/api/v1/auth/interactions/browser",
+      "request_content": [
+        "application/x-www-form-urlencoded"
+      ],
+      "request_schema_refs": [
+        "CodeForm"
+      ],
+      "request_schemas": {
+        "application/x-www-form-urlencoded": {
+          "$ref": "#/components/schemas/CodeForm"
+        }
+      },
+      "response_schema_refs": [],
+      "response_schemas": {
+        "303": {},
+        "401": {}
+      },
+      "responses": {
+        "303": [],
+        "401": []
+      },
+      "security": []
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AuthInteractionsBrowserById",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/auth/interactions/browser/{id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [],
+      "response_schemas": {
+        "200": {
+          "text/html": {
+            "type": "string"
+          }
+        },
+        "401": {}
+      },
+      "responses": {
+        "200": [
+          "text/html"
+        ],
+        "401": []
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractionsBrowserByIdCredentials",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/auth/interactions/browser/{id}/credentials",
+      "request_content": [
+        "application/x-www-form-urlencoded"
+      ],
+      "request_schema_refs": [
+        "CredentialsForm"
+      ],
+      "request_schemas": {
+        "application/x-www-form-urlencoded": {
+          "$ref": "#/components/schemas/CredentialsForm"
+        }
+      },
+      "response_schema_refs": [],
+      "response_schemas": {
+        "303": {},
+        "401": {}
+      },
+      "responses": {
+        "303": [],
+        "401": []
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractionsBrowserByIdDecision",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/auth/interactions/browser/{id}/decision",
+      "request_content": [
+        "application/x-www-form-urlencoded"
+      ],
+      "request_schema_refs": [
+        "Decision",
+        "DecisionForm"
+      ],
+      "request_schemas": {
+        "application/x-www-form-urlencoded": {
+          "$ref": "#/components/schemas/DecisionForm"
+        }
+      },
+      "response_schema_refs": [],
+      "response_schemas": {
+        "200": {
+          "text/html": {
+            "type": "string"
+          }
+        },
+        "303": {},
+        "401": {}
+      },
+      "responses": {
+        "200": [
+          "text/html"
+        ],
+        "303": [],
+        "401": []
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractionsBrowserByIdProvider",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/auth/interactions/browser/{id}/provider",
+      "request_content": [
+        "application/x-www-form-urlencoded"
+      ],
+      "request_schema_refs": [
+        "ProviderForm"
+      ],
+      "request_schemas": {
+        "application/x-www-form-urlencoded": {
+          "$ref": "#/components/schemas/ProviderForm"
+        }
+      },
+      "response_schema_refs": [],
+      "response_schemas": {
+        "200": {
+          "text/html": {
+            "type": "string"
+          }
+        },
+        "401": {}
+      },
+      "responses": {
+        "200": [
+          "text/html"
+        ],
+        "401": []
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractionsByIdCancel",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/auth/interactions/{id}/cancel",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "InteractionClientRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/InteractionClientRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "204": {},
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "410": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "410": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "interaction_secret": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractionsByIdComplete",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/auth/interactions/{id}/complete",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "InteractionClientRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/InteractionClientRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CredentialApprovalRecord",
+        "CredentialApprovalResponse",
+        "CredentialApprovalSecret",
+        "InteractionCompleted",
+        "PrincipalID",
+        "RefreshToken",
+        "ResourceRevision",
+        "RestoreJobID",
+        "RuntimeSettingsGroup",
+        "SecurityCandidateCheck",
+        "SecurityCandidateGroupPreview",
+        "SecurityCandidateLdapVerificationResponse",
+        "SecurityCandidateProvider",
+        "SecurityCandidateReport",
+        "SecurityCandidateVerificationPreview",
+        "SecurityVerificationReceipt",
+        "SessionResponse",
+        "TokenID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/InteractionCompleted"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "410": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "410": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "interaction_secret": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractionsByIdCredentials",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/auth/interactions/{id}/credentials",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "InteractionCredentialsRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/InteractionCredentialsRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "InteractionStatus",
+        "InteractionStatusState"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/InteractionStatus"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "410": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "503": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "410": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "interaction_secret": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractionsByIdIssuedSessionRevoke",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/auth/interactions/{id}/issued-session/revoke",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "InteractionClientRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/InteractionClientRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse"
+      ],
+      "response_schemas": {
+        "204": {},
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "204": [],
+        "401": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "interaction_secret": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthInteractionsByIdStatus",
+      "parameters": [
+        "path:id"
+      ],
+      "path": "/api/v1/auth/interactions/{id}/status",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "InteractionClientRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/InteractionClientRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "InteractionStatus",
+        "InteractionStatusState"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/InteractionStatus"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "409": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "410": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "409": [
+          "application/json"
+        ],
+        "410": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "interaction_secret": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogin",
+      "parameters": [],
+      "path": "/api/v1/auth/login",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "SessionLoginRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SessionLoginRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "RefreshToken",
+        "SessionResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SessionResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogout",
+      "parameters": [],
+      "path": "/api/v1/auth/logout",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogoutToken",
+      "parameters": [],
+      "path": "/api/v1/auth/logout/token",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "LogoutTokenRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/LogoutTokenRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogoutUidByUserId",
+      "parameters": [
+        "path:user_id"
+      ],
+      "path": "/api/v1/auth/logout/uid/{user_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthLogoutAll",
+      "parameters": [],
+      "path": "/api/v1/auth/logout_all",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AuthMethods",
+      "parameters": [],
+      "path": "/api/v1/auth/methods",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthenticationMethod",
+        "AuthenticationMethods",
+        "PasswordInteractionMode",
+        "PasswordProviderKind"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/AuthenticationMethods"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "503": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AuthProviders",
+      "parameters": [],
+      "path": "/api/v1/auth/providers",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "AuthProvidersResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/AuthProvidersResponse"
+          }
+        },
+        "500": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "500": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1AuthRefresh",
+      "parameters": [],
+      "path": "/api/v1/auth/refresh",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "RefreshToken",
+        "SessionRefreshRequest"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/SessionRefreshRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "RefreshToken",
+        "SessionResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/SessionResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": []
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1AuthValidate",
+      "parameters": [],
+      "path": "/api/v1/auth/validate",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "MessageResponse"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/MessageResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "postApiV1IamCredentialApprovals",
+      "parameters": [],
+      "path": "/api/v1/iam/credential-approvals",
+      "request_content": [
+        "application/json"
+      ],
+      "request_schema_refs": [
+        "ClassKey",
+        "CollectionID",
+        "CollectionKey",
+        "ComputedResultType",
+        "CredentialApprovalRequest",
+        "CredentialOperation",
+        "EventDeliveryPolicy",
+        "EventSinkKey",
+        "EventSinkKind",
+        "ExportContentType",
+        "ExportInclude",
+        "ExportIncludeRelatedDirection",
+        "ExportIncludeRelatedObject",
+        "ExportIncludeRelatedSort",
+        "ExportLimits",
+        "ExportMissingDataPolicy",
+        "ExportRelationContext",
+        "ExportScopeKind",
+        "ExportTemplateKind",
+        "GroupKey",
+        "HubuumClassID",
+        "HubuumObjectID",
+        "IdentityScopeKey",
+        "ImportAtomicity",
+        "ImportClassInput",
+        "ImportClassRelationInput",
+        "ImportCollectionInput",
+        "ImportCollectionPermissionInput",
+        "ImportCollisionPolicy",
+        "ImportComputedFieldInput",
+        "ImportComputedFieldVisibility",
+        "ImportEventSinkInput",
+        "ImportEventSubscriptionInput",
+        "ImportExportTemplateInput",
+        "ImportGraph",
+        "ImportGroupInput",
+        "ImportGroupMembershipInput",
+        "ImportIdentityScopeInput",
+        "ImportMembershipSourceInput",
+        "ImportMode",
+        "ImportObjectInput",
+        "ImportObjectRelationInput",
+        "ImportPermissionPolicy",
+        "ImportPrincipalInput",
+        "ImportPrincipalSubtype",
+        "ImportRemoteTargetInput",
+        "ImportRequest",
+        "ImportSchemaActivation",
+        "ImportWriteCondition",
+        "NewTokenRequest",
+        "NewUser",
+        "ObjectKey",
+        "ObjectRelationLimit",
+        "Permissions",
+        "PrincipalID",
+        "PrincipalKey",
+        "RelationLabel",
+        "RemoteAuthConfig",
+        "RemoteHttpMethod",
+        "RemoteTargetSubjectType",
+        "RenewTokenRequest",
+        "ResourceRevision",
+        "RestoreConfirmRequest",
+        "RestoreJobID",
+        "RestoreTimestamps",
+        "RuntimeSettingsGroup",
+        "SchemaActivationPolicy",
+        "SchemaRevision",
+        "TaskID",
+        "TokenID",
+        "TokenResourceScope",
+        "TokenScopeDetails",
+        "UpdateUser",
+        "UserID"
+      ],
+      "request_schemas": {
+        "application/json": {
+          "$ref": "#/components/schemas/CredentialApprovalRequest"
+        }
+      },
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CredentialApprovalRecord",
+        "CredentialApprovalResponse",
+        "CredentialApprovalSecret",
+        "PrincipalID",
+        "RestoreJobID",
+        "TokenID"
+      ],
+      "response_schemas": {
+        "201": {
+          "application/json": {
+            "$ref": "#/components/schemas/CredentialApprovalResponse"
+          }
+        },
+        "400": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "403": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "429": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "503": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "201": [
+          "application/json"
+        ],
+        "400": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "403": [
+          "application/json"
+        ],
+        "429": [
+          "application/json"
+        ],
+        "503": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "getApiV1IamCredentialApprovalsByApprovalId",
+      "parameters": [
+        "path:approval_id"
+      ],
+      "path": "/api/v1/iam/credential-approvals/{approval_id}",
+      "request_content": [],
+      "request_schema_refs": [],
+      "request_schemas": {},
+      "response_schema_refs": [
+        "ApiErrorResponse",
+        "CredentialApprovalRecord",
+        "PrincipalID",
+        "RestoreJobID",
+        "TokenID"
+      ],
+      "response_schemas": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/CredentialApprovalRecord"
+          }
+        },
+        "401": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        },
+        "404": {
+          "application/json": {
+            "$ref": "#/components/schemas/ApiErrorResponse"
+          }
+        }
+      },
+      "responses": {
+        "200": [
+          "application/json"
+        ],
+        "401": [
+          "application/json"
+        ],
+        "404": [
+          "application/json"
+        ]
+      },
+      "security": [
+        {
+          "bearer_auth": []
+        }
+      ]
+    }
+  ],
+  "path_count": 29,
+  "path_prefixes": [
+    "/api/v1/admin/runtime-settings/schema",
+    "/api/v1/admin/runtime-settings/security-candidates",
+    "/api/v1/admin/runtime-settings/{group}",
+    "/api/v1/auth/",
+    "/api/v1/iam/credential-approvals"
+  ],
+  "schema_count": 159,
+  "schema_names": [
+    "ApiErrorResponse",
+    "AuthProvidersResponse",
+    "AuthenticationEndpoint",
+    "AuthenticationMethod",
+    "AuthenticationMethods",
+    "AuthenticationPurpose",
+    "AuthenticationSettingsReport",
+    "AuthorizationConnection",
+    "AuthorizationSettingsReport",
+    "BrowserProviderConfiguration",
+    "BrowserProviderKind",
+    "BrowserProviderRequest",
+    "ClassKey",
+    "ClientPaginationConfig",
+    "CodeForm",
+    "CollectionID",
+    "CollectionKey",
+    "ComputedResultType",
+    "CredentialApprovalRecord",
+    "CredentialApprovalRequest",
+    "CredentialApprovalResponse",
+    "CredentialApprovalSecret",
+    "CredentialOperation",
+    "CredentialsForm",
+    "Decision",
+    "DecisionForm",
+    "EventDeliveryPolicy",
+    "EventSinkKey",
+    "EventSinkKind",
+    "ExportContentType",
+    "ExportInclude",
+    "ExportIncludeRelatedDirection",
+    "ExportIncludeRelatedObject",
+    "ExportIncludeRelatedSort",
+    "ExportLimits",
+    "ExportMissingDataPolicy",
+    "ExportRelationContext",
+    "ExportScopeKind",
+    "ExportTemplateKind",
+    "GroupKey",
+    "HubuumClassID",
+    "HubuumObjectID",
+    "IdentityScopeKey",
+    "ImportAtomicity",
+    "ImportClassInput",
+    "ImportClassRelationInput",
+    "ImportCollectionInput",
+    "ImportCollectionPermissionInput",
+    "ImportCollisionPolicy",
+    "ImportComputedFieldInput",
+    "ImportComputedFieldVisibility",
+    "ImportEventSinkInput",
+    "ImportEventSubscriptionInput",
+    "ImportExportTemplateInput",
+    "ImportGraph",
+    "ImportGroupInput",
+    "ImportGroupMembershipInput",
+    "ImportIdentityScopeInput",
+    "ImportMembershipSourceInput",
+    "ImportMode",
+    "ImportObjectInput",
+    "ImportObjectRelationInput",
+    "ImportPermissionPolicy",
+    "ImportPrincipalInput",
+    "ImportPrincipalSubtype",
+    "ImportRemoteTargetInput",
+    "ImportRequest",
+    "ImportSchemaActivation",
+    "ImportWriteCondition",
+    "InteractionBeginRequest",
+    "InteractionBegun",
+    "InteractionClientRequest",
+    "InteractionCompleted",
+    "InteractionCredentialsRequest",
+    "InteractionDelivery",
+    "InteractionNext",
+    "InteractionSecret",
+    "InteractionStatus",
+    "InteractionStatusState",
+    "LogoutTokenRequest",
+    "MembershipClaimSource",
+    "MembershipKeyMode",
+    "MessageResponse",
+    "NewTokenRequest",
+    "NewUser",
+    "OAuthProfile",
+    "OAuthProviderDefinition",
+    "OAuthSubjectType",
+    "ObjectKey",
+    "ObjectRelationLimit",
+    "OidcProviderDefinition",
+    "OidcSigningAlgorithm",
+    "PaginationPolicyValue",
+    "PaginationSettingsReport",
+    "PasswordInteractionMode",
+    "PasswordProviderKind",
+    "Permissions",
+    "PrincipalID",
+    "PrincipalKey",
+    "ProviderAdmission",
+    "ProviderClientAuthentication",
+    "ProviderCredentialInput",
+    "ProviderForm",
+    "ProviderMembership",
+    "QueryObservationCeilingsValue",
+    "QueryObservationPolicyValue",
+    "QueryObservationSettingsReport",
+    "RefreshToken",
+    "RelationLabel",
+    "RemoteAuthConfig",
+    "RemoteHttpMethod",
+    "RemoteTargetSubjectType",
+    "RenewTokenRequest",
+    "ResourceRevision",
+    "RestoreConfirmRequest",
+    "RestoreJobID",
+    "RestoreTimestamps",
+    "RuntimeAuthenticationProviderKind",
+    "RuntimeAuthenticationProviderRequest",
+    "RuntimeAuthenticationProviderStatus",
+    "RuntimeAuthorizationBackend",
+    "RuntimePolicyReport",
+    "RuntimeSettingsApplicationStatus",
+    "RuntimeSettingsCatalogue",
+    "RuntimeSettingsDescriptor",
+    "RuntimeSettingsEffect",
+    "RuntimeSettingsGroup",
+    "RuntimeSettingsGroupState",
+    "RuntimeSettingsOwnership",
+    "RuntimeSettingsPatch",
+    "RuntimeSettingsReplicaStatus",
+    "RuntimeSettingsReport",
+    "RuntimeSettingsSource",
+    "RuntimeSettingsUpdateResponse",
+    "SchemaActivationPolicy",
+    "SchemaRevision",
+    "SecurityCandidateActivated",
+    "SecurityCandidateActivationRequest",
+    "SecurityCandidateCheck",
+    "SecurityCandidateGroupPreview",
+    "SecurityCandidateLdapVerification",
+    "SecurityCandidateLdapVerificationResponse",
+    "SecurityCandidateProvider",
+    "SecurityCandidateProviderRequest",
+    "SecurityCandidateReport",
+    "SecurityCandidateRequest",
+    "SecurityCandidateVerificationPreview",
+    "SecurityConfigurationCapabilities",
+    "SecurityConfigurationSource",
+    "SecurityVerificationReceipt",
+    "SessionLoginRequest",
+    "SessionRefreshRequest",
+    "SessionResponse",
+    "TaskID",
+    "TokenID",
+    "TokenResourceScope",
+    "TokenScopeDetails",
+    "UpdateUser",
+    "UserID"
+  ],
+  "schemas": {
+    "ApiErrorResponse": {
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "error",
+        "message"
+      ],
+      "type": "object"
+    },
+    "AuthProvidersResponse": {
+      "properties": {
+        "providers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "providers"
+      ],
+      "type": "object"
+    },
+    "AuthenticationEndpoint": {
+      "format": "uri",
+      "maxLength": 2048,
+      "type": "string"
+    },
+    "AuthenticationMethod": {
+      "properties": {
+        "browser_available": {
+          "type": "boolean"
+        },
+        "fresh_authentication": {
+          "type": "boolean"
+        },
+        "interaction": {
+          "$ref": "#/components/schemas/PasswordInteractionMode"
+        },
+        "kind": {
+          "$ref": "#/components/schemas/PasswordProviderKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "provider_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "browser_available",
+        "fresh_authentication",
+        "interaction",
+        "kind",
+        "name",
+        "provider_id"
+      ],
+      "type": "object"
+    },
+    "AuthenticationMethods": {
+      "properties": {
+        "interaction_version": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "methods": {
+          "items": {
+            "$ref": "#/components/schemas/AuthenticationMethod"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "interaction_version",
+        "methods"
+      ],
+      "type": "object"
+    },
+    "AuthenticationPurpose": {
+      "enum": [
+        "login",
+        "credential_approval",
+        "provider_verification"
+      ],
+      "type": "string"
+    },
+    "AuthenticationSettingsReport": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "providers": {
+              "items": {
+                "$ref": "#/components/schemas/RuntimeAuthenticationProviderStatus"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "providers"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "AuthorizationConnection": {
+      "properties": {
+        "connect_timeout_ms": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "request_timeout_ms": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trust_profile_id": {
+          "type": "string"
+        },
+        "url": {
+          "$ref": "#/components/schemas/AuthenticationEndpoint"
+        }
+      },
+      "required": [
+        "connect_timeout_ms",
+        "request_timeout_ms",
+        "trust_profile_id",
+        "url"
+      ],
+      "type": "object"
+    },
+    "AuthorizationSettingsReport": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "deployment_backend": {
+              "type": "string"
+            },
+            "effective_backend": {
+              "type": "string"
+            },
+            "runtime_backend": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "runtime_connection": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/AuthorizationConnection"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "available",
+            "deployment_backend",
+            "effective_backend"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "BrowserProviderConfiguration": {
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/OidcProviderDefinition"
+            },
+            {
+              "properties": {
+                "credential": {
+                  "$ref": "#/components/schemas/ProviderCredentialInput"
+                }
+              },
+              "required": [
+                "credential"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/OAuthProviderDefinition"
+            },
+            {
+              "properties": {
+                "credential": {
+                  "$ref": "#/components/schemas/ProviderCredentialInput"
+                }
+              },
+              "required": [
+                "credential"
+              ],
+              "type": "object"
+            }
+          ]
+        }
+      ]
+    },
+    "BrowserProviderKind": {
+      "enum": [
+        "oidc",
+        "oauth"
+      ],
+      "type": "string"
+    },
+    "BrowserProviderRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "adopt_deployment": {
+          "type": "boolean"
+        },
+        "configuration": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/BrowserProviderConfiguration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "kind": {
+          "$ref": "#/components/schemas/BrowserProviderKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "provider_id": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/components/schemas/SecurityConfigurationSource"
+        }
+      },
+      "required": [
+        "enabled",
+        "kind",
+        "name",
+        "source"
+      ],
+      "type": "object"
+    },
+    "ClassKey": {
+      "properties": {
+        "collection_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/CollectionKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ClientPaginationConfig": {
+      "properties": {
+        "default_page_limit": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_page_limit": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "default_page_limit",
+        "max_page_limit"
+      ],
+      "type": "object"
+    },
+    "CodeForm": {
+      "additionalProperties": false,
+      "properties": {
+        "csrf": {
+          "type": "string"
+        },
+        "user_code": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "csrf",
+        "user_code"
+      ],
+      "type": "object"
+    },
+    "CollectionID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "CollectionKey": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ComputedResultType": {
+      "enum": [
+        "string",
+        "number",
+        "integer",
+        "boolean",
+        "object",
+        "array"
+      ],
+      "type": "string"
+    },
+    "CredentialApprovalRecord": {
+      "properties": {
+        "actor_id": {
+          "$ref": "#/components/schemas/PrincipalID"
+        },
+        "authenticated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "consumed_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "invalidated_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "type": "string"
+        },
+        "restore_job_id": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreJobID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "security_candidate_id": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target_id": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "token_id": {
+          "$ref": "#/components/schemas/TokenID"
+        }
+      },
+      "required": [
+        "actor_id",
+        "authenticated_at",
+        "expires_at",
+        "id",
+        "operation",
+        "token_id"
+      ],
+      "type": "object"
+    },
+    "CredentialApprovalRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "$ref": "#/components/schemas/CredentialOperation"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "password"
+      ],
+      "type": "object"
+    },
+    "CredentialApprovalResponse": {
+      "properties": {
+        "approval": {
+          "$ref": "#/components/schemas/CredentialApprovalSecret"
+        },
+        "record": {
+          "$ref": "#/components/schemas/CredentialApprovalRecord"
+        },
+        "token_expires_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "approval",
+        "record"
+      ],
+      "type": "object"
+    },
+    "CredentialApprovalSecret": {
+      "pattern": "^hca1\\.[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "CredentialOperation": {
+      "oneOf": [
+        {
+          "properties": {
+            "candidate_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "expected_revision": {
+              "$ref": "#/components/schemas/ResourceRevision"
+            },
+            "group": {
+              "$ref": "#/components/schemas/RuntimeSettingsGroup"
+            },
+            "kind": {
+              "enum": [
+                "activate_security_candidate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "candidate_id",
+            "expected_revision",
+            "group",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "import": {
+              "$ref": "#/components/schemas/ImportRequest"
+            },
+            "kind": {
+              "enum": [
+                "import_credentials"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "import",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confirmation": {
+              "$ref": "#/components/schemas/RestoreConfirmRequest"
+            },
+            "kind": {
+              "enum": [
+                "confirm_restore"
+              ],
+              "type": "string"
+            },
+            "restore_id": {
+              "$ref": "#/components/schemas/RestoreJobID"
+            }
+          },
+          "required": [
+            "confirmation",
+            "kind",
+            "restore_id"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "create_token"
+              ],
+              "type": "string"
+            },
+            "principal_id": {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            "token": {
+              "$ref": "#/components/schemas/NewTokenRequest"
+            }
+          },
+          "required": [
+            "kind",
+            "principal_id",
+            "token"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "renew_token"
+              ],
+              "type": "string"
+            },
+            "principal_id": {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            "token": {
+              "$ref": "#/components/schemas/RenewTokenRequest"
+            },
+            "token_id": {
+              "$ref": "#/components/schemas/TokenID"
+            }
+          },
+          "required": [
+            "kind",
+            "principal_id",
+            "token",
+            "token_id"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "create_user"
+              ],
+              "type": "string"
+            },
+            "user": {
+              "$ref": "#/components/schemas/NewUser"
+            }
+          },
+          "required": [
+            "kind",
+            "user"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "update_user"
+              ],
+              "type": "string"
+            },
+            "user": {
+              "$ref": "#/components/schemas/UpdateUser"
+            },
+            "user_id": {
+              "$ref": "#/components/schemas/UserID"
+            }
+          },
+          "required": [
+            "kind",
+            "user",
+            "user_id"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "CredentialsForm": {
+      "additionalProperties": false,
+      "properties": {
+        "csrf": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "csrf",
+        "name",
+        "password"
+      ],
+      "type": "object"
+    },
+    "Decision": {
+      "enum": [
+        "approve",
+        "deny"
+      ],
+      "type": "string"
+    },
+    "DecisionForm": {
+      "additionalProperties": false,
+      "properties": {
+        "csrf": {
+          "type": "string"
+        },
+        "decision": {
+          "$ref": "#/components/schemas/Decision"
+        }
+      },
+      "required": [
+        "csrf",
+        "decision"
+      ],
+      "type": "object"
+    },
+    "EventDeliveryPolicy": {
+      "properties": {
+        "min_interval_ms": {
+          "format": "int64",
+          "maximum": 86400000,
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "EventSinkKey": {
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "EventSinkKind": {
+      "enum": [
+        "webhook",
+        "amqp",
+        "valkey_stream",
+        "email"
+      ],
+      "type": "string"
+    },
+    "ExportContentType": {
+      "enum": [
+        "application/json",
+        "text/plain",
+        "text/html",
+        "text/csv"
+      ],
+      "type": "string"
+    },
+    "ExportInclude": {
+      "properties": {
+        "related_objects": {
+          "additionalProperties": {
+            "$ref": "#/components/schemas/ExportIncludeRelatedObject"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ExportIncludeRelatedDirection": {
+      "enum": [
+        "any",
+        "outgoing",
+        "incoming"
+      ],
+      "type": "string"
+    },
+    "ExportIncludeRelatedObject": {
+      "properties": {
+        "class_id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "class_relation_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "direction": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ExportIncludeRelatedDirection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_depth": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sort": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ExportIncludeRelatedSort"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "class_id"
+      ],
+      "type": "object"
+    },
+    "ExportIncludeRelatedSort": {
+      "enum": [
+        "path",
+        "name",
+        "created_at"
+      ],
+      "type": "string"
+    },
+    "ExportLimits": {
+      "properties": {
+        "max_items": {
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_output_bytes": {
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ExportMissingDataPolicy": {
+      "enum": [
+        "strict",
+        "null",
+        "omit"
+      ],
+      "type": "string"
+    },
+    "ExportRelationContext": {
+      "additionalProperties": false,
+      "properties": {
+        "depth": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ExportScopeKind": {
+      "enum": [
+        "collections",
+        "classes",
+        "objects_in_class",
+        "class_relations",
+        "object_relations",
+        "related_objects"
+      ],
+      "type": "string"
+    },
+    "ExportTemplateKind": {
+      "enum": [
+        "export",
+        "fragment"
+      ],
+      "type": "string"
+    },
+    "GroupKey": {
+      "properties": {
+        "groupname": {
+          "type": "string"
+        },
+        "identity_scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "groupname"
+      ],
+      "type": "object"
+    },
+    "HubuumClassID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "HubuumObjectID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "IdentityScopeKey": {
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ImportAtomicity": {
+      "enum": [
+        "strict",
+        "best_effort"
+      ],
+      "type": "string"
+    },
+    "ImportClassInput": {
+      "properties": {
+        "collection_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/CollectionKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "json_schema": {},
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schema_activation": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportSchemaActivation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validate_schema": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "description",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ImportClassRelationInput": {
+      "properties": {
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "forward_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "forward_template_alias": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from_class_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ClassKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "from_class_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from_max_relations": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ObjectRelationLimit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reverse_label": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RelationLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reverse_template_alias": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_class_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ClassKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_class_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to_max_relations": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ObjectRelationLimit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ImportCollectionInput": {
+      "properties": {
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent_collection_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/CollectionKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_collection_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "description",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ImportCollectionPermissionInput": {
+      "properties": {
+        "collection_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/CollectionKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_key": {
+          "$ref": "#/components/schemas/GroupKey"
+        },
+        "permissions": {
+          "items": {
+            "$ref": "#/components/schemas/Permissions"
+          },
+          "type": "array"
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "replace_existing": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "group_key",
+        "permissions"
+      ],
+      "type": "object"
+    },
+    "ImportCollisionPolicy": {
+      "enum": [
+        "abort",
+        "overwrite"
+      ],
+      "type": "string"
+    },
+    "ImportComputedFieldInput": {
+      "properties": {
+        "class_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ClassKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "class_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "object"
+        },
+        "owner_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/PrincipalKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "owner_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "result_type": {
+          "$ref": "#/components/schemas/ComputedResultType"
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visibility": {
+          "$ref": "#/components/schemas/ImportComputedFieldVisibility"
+        }
+      },
+      "required": [
+        "enabled",
+        "key",
+        "label",
+        "operation",
+        "result_type",
+        "visibility"
+      ],
+      "type": "object"
+    },
+    "ImportComputedFieldVisibility": {
+      "enum": [
+        "shared",
+        "personal"
+      ],
+      "type": "string"
+    },
+    "ImportEventSinkInput": {
+      "properties": {
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "config": {},
+        "delivery_policy": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/EventDeliveryPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "kind": {
+          "$ref": "#/components/schemas/EventSinkKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "secret_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ImportEventSubscriptionInput": {
+      "properties": {
+        "actions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "collection_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/CollectionKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "entity_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "filter": {},
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "routing": {},
+        "sink_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/EventSinkKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sink_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "actions",
+        "description",
+        "enabled",
+        "entity_types",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ImportExportTemplateInput": {
+      "properties": {
+        "class_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ClassKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "class_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "collection_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/CollectionKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_type": {
+          "$ref": "#/components/schemas/ExportContentType"
+        },
+        "default_limits": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ExportLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "default_missing_data_policy": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ExportMissingDataPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "default_query": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "include": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ExportInclude"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "$ref": "#/components/schemas/ExportTemplateKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "relation_context": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ExportRelationContext"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scope_kind": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ExportScopeKind"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "template": {
+          "type": "string"
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "content_type",
+        "description",
+        "kind",
+        "name",
+        "template"
+      ],
+      "type": "object"
+    },
+    "ImportGraph": {
+      "properties": {
+        "class_relations": {
+          "items": {
+            "$ref": "#/components/schemas/ImportClassRelationInput"
+          },
+          "type": "array"
+        },
+        "classes": {
+          "items": {
+            "$ref": "#/components/schemas/ImportClassInput"
+          },
+          "type": "array"
+        },
+        "collection_permissions": {
+          "items": {
+            "$ref": "#/components/schemas/ImportCollectionPermissionInput"
+          },
+          "type": "array"
+        },
+        "collections": {
+          "items": {
+            "$ref": "#/components/schemas/ImportCollectionInput"
+          },
+          "type": "array"
+        },
+        "computed_fields": {
+          "items": {
+            "$ref": "#/components/schemas/ImportComputedFieldInput"
+          },
+          "type": "array"
+        },
+        "event_sinks": {
+          "items": {
+            "$ref": "#/components/schemas/ImportEventSinkInput"
+          },
+          "type": "array"
+        },
+        "event_subscriptions": {
+          "items": {
+            "$ref": "#/components/schemas/ImportEventSubscriptionInput"
+          },
+          "type": "array"
+        },
+        "export_templates": {
+          "items": {
+            "$ref": "#/components/schemas/ImportExportTemplateInput"
+          },
+          "type": "array"
+        },
+        "group_memberships": {
+          "items": {
+            "$ref": "#/components/schemas/ImportGroupMembershipInput"
+          },
+          "type": "array"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/components/schemas/ImportGroupInput"
+          },
+          "type": "array"
+        },
+        "identity_scopes": {
+          "items": {
+            "$ref": "#/components/schemas/ImportIdentityScopeInput"
+          },
+          "type": "array"
+        },
+        "object_relations": {
+          "items": {
+            "$ref": "#/components/schemas/ImportObjectRelationInput"
+          },
+          "type": "array"
+        },
+        "objects": {
+          "items": {
+            "$ref": "#/components/schemas/ImportObjectInput"
+          },
+          "type": "array"
+        },
+        "principals": {
+          "items": {
+            "$ref": "#/components/schemas/ImportPrincipalInput"
+          },
+          "type": "array"
+        },
+        "remote_targets": {
+          "items": {
+            "$ref": "#/components/schemas/ImportRemoteTargetInput"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ImportGroupInput": {
+      "properties": {
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "external_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "groupname": {
+          "type": "string"
+        },
+        "identity_scope_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/IdentityScopeKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "identity_scope_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_sync_attempted_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_sync_success_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "managed_by": {
+          "type": "string"
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "description",
+        "groupname",
+        "managed_by"
+      ],
+      "type": "object"
+    },
+    "ImportGroupMembershipInput": {
+      "properties": {
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/GroupKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "principal_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/PrincipalKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "principal_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/components/schemas/ImportMembershipSourceInput"
+          },
+          "type": "array"
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ImportIdentityScopeInput": {
+      "properties": {
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "provider_kind": {
+          "type": "string"
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "provider_kind"
+      ],
+      "type": "object"
+    },
+    "ImportMembershipSourceInput": {
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "source_key": {
+          "type": "string"
+        },
+        "source_scope_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/IdentityScopeKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_scope_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "source_key"
+      ],
+      "type": "object"
+    },
+    "ImportMode": {
+      "properties": {
+        "atomicity": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportAtomicity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collision_policy": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportCollisionPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "permission_policy": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportPermissionPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ImportObjectInput": {
+      "properties": {
+        "class_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ClassKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "class_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data": {},
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "data",
+        "description",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ImportObjectRelationInput": {
+      "properties": {
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "from_object_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ObjectKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "from_object_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_object_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ObjectKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_object_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ImportPermissionPolicy": {
+      "enum": [
+        "abort",
+        "continue"
+      ],
+      "type": "string"
+    },
+    "ImportPrincipalInput": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/ImportPrincipalSubtype"
+        },
+        {
+          "properties": {
+            "condition": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ImportWriteCondition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "external_subject": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "identity_scope_key": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/IdentityScopeKey"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "identity_scope_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_sync_attempted_at": {
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_sync_success_at": {
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "provider_managed": {
+              "type": "boolean"
+            },
+            "ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "settings": {},
+            "timestamps": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/RestoreTimestamps"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "provider_managed"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ImportPrincipalSubtype": {
+      "oneOf": [
+        {
+          "properties": {
+            "anonymized_at": {
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "human"
+              ],
+              "type": "string"
+            },
+            "password": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "password_hash": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "proper_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "created_by_key": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PrincipalKey"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "created_by_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": {
+              "type": "string"
+            },
+            "disabled_at": {
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "service_account"
+              ],
+              "type": "string"
+            },
+            "owner_group_key": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/GroupKey"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "owner_group_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "description",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ImportRemoteTargetInput": {
+      "properties": {
+        "allowed_subject_types": {
+          "items": {
+            "$ref": "#/components/schemas/RemoteTargetSubjectType"
+          },
+          "type": "array"
+        },
+        "auth_config": {
+          "$ref": "#/components/schemas/RemoteAuthConfig"
+        },
+        "body_template": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "class_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ClassKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "class_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "collection_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/CollectionKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "condition": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportWriteCondition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "headers_template": {},
+        "method": {
+          "$ref": "#/components/schemas/RemoteHttpMethod"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timeout_ms": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "timestamps": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/RestoreTimestamps"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url_template": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "allowed_subject_types",
+        "description",
+        "enabled",
+        "method",
+        "name",
+        "timeout_ms",
+        "url_template"
+      ],
+      "type": "object"
+    },
+    "ImportRequest": {
+      "properties": {
+        "dry_run": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "graph": {
+          "$ref": "#/components/schemas/ImportGraph"
+        },
+        "mode": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ImportMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "graph",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ImportSchemaActivation": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_active_revision": {
+          "$ref": "#/components/schemas/SchemaRevision"
+        },
+        "impact_task_id": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/TaskID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "policy": {
+          "$ref": "#/components/schemas/SchemaActivationPolicy"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/SchemaRevision"
+        }
+      },
+      "required": [
+        "expected_active_revision",
+        "policy",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "ImportWriteCondition": {
+      "oneOf": [
+        {
+          "properties": {
+            "mode": {
+              "enum": [
+                "create_only"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "mode": {
+              "enum": [
+                "overwrite"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "expected_revision": {
+              "$ref": "#/components/schemas/ResourceRevision"
+            },
+            "mode": {
+              "enum": [
+                "if_revision"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "expected_revision",
+            "mode"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "InteractionBeginRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "client_id": {
+          "pattern": "^[A-Za-z0-9_.:-]{1,128}$",
+          "type": "string"
+        },
+        "delivery": {
+          "$ref": "#/components/schemas/InteractionDelivery"
+        },
+        "interaction_mode": {
+          "$ref": "#/components/schemas/PasswordInteractionMode"
+        },
+        "operation": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/CredentialOperation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider_id": {
+          "pattern": "^(local|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+          "type": "string"
+        },
+        "purpose": {
+          "$ref": "#/components/schemas/AuthenticationPurpose"
+        },
+        "return_nonce": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "return_target_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "client_id",
+        "delivery",
+        "provider_id",
+        "purpose"
+      ],
+      "type": "object"
+    },
+    "InteractionBegun": {
+      "properties": {
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "interaction_version": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "interval_seconds": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/components/schemas/InteractionNext"
+        },
+        "redemption_secret": {
+          "$ref": "#/components/schemas/InteractionSecret"
+        }
+      },
+      "required": [
+        "expires_at",
+        "id",
+        "interaction_version",
+        "interval_seconds",
+        "next",
+        "redemption_secret"
+      ],
+      "type": "object"
+    },
+    "InteractionClientRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "client_id": {
+          "pattern": "^[A-Za-z0-9_.:-]{1,128}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "client_id"
+      ],
+      "type": "object"
+    },
+    "InteractionCompleted": {
+      "oneOf": [
+        {
+          "$ref": "#/components/schemas/SessionResponse"
+        },
+        {
+          "$ref": "#/components/schemas/CredentialApprovalResponse"
+        },
+        {
+          "$ref": "#/components/schemas/SecurityCandidateLdapVerificationResponse"
+        }
+      ]
+    },
+    "InteractionCredentialsRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "client_id": {
+          "pattern": "^[A-Za-z0-9_.:-]{1,128}$",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        },
+        "password": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "client_id",
+        "name",
+        "password"
+      ],
+      "type": "object"
+    },
+    "InteractionDelivery": {
+      "enum": [
+        "poll",
+        "bff"
+      ],
+      "type": "string"
+    },
+    "InteractionNext": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "credentials"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "browser"
+              ],
+              "type": "string"
+            },
+            "user_code": {
+              "type": "string"
+            },
+            "verification_uri": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "user_code",
+            "verification_uri"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "InteractionSecret": {
+      "pattern": "^hai1\\.[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "InteractionStatus": {
+      "properties": {
+        "approval_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "state": {
+          "$ref": "#/components/schemas/InteractionStatusState"
+        }
+      },
+      "required": [
+        "expires_at",
+        "id",
+        "state"
+      ],
+      "type": "object"
+    },
+    "InteractionStatusState": {
+      "enum": [
+        "pending",
+        "ready",
+        "denied",
+        "expired",
+        "cancelled",
+        "consumed",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "LogoutTokenRequest": {
+      "properties": {
+        "token": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "token"
+      ],
+      "type": "object"
+    },
+    "MembershipClaimSource": {
+      "enum": [
+        "id_token",
+        "userinfo",
+        "profile"
+      ],
+      "type": "string"
+    },
+    "MembershipKeyMode": {
+      "enum": [
+        "full_path",
+        "immutable_id"
+      ],
+      "type": "string"
+    },
+    "MessageResponse": {
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ],
+      "type": "object"
+    },
+    "NewTokenRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expires_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/TokenScopeDetails"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "NewUser": {
+      "properties": {
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "identity_scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "password": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        },
+        "proper_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "password"
+      ],
+      "type": "object"
+    },
+    "OAuthProfile": {
+      "enum": [
+        "github",
+        "json_user"
+      ],
+      "type": "string"
+    },
+    "OAuthProviderDefinition": {
+      "properties": {
+        "admission": {
+          "$ref": "#/components/schemas/ProviderAdmission"
+        },
+        "authorization_endpoint": {
+          "$ref": "#/components/schemas/AuthenticationEndpoint"
+        },
+        "client_authentication": {
+          "$ref": "#/components/schemas/ProviderClientAuthentication"
+        },
+        "client_id": {
+          "type": "string"
+        },
+        "membership": {
+          "$ref": "#/components/schemas/ProviderMembership"
+        },
+        "name_pointer": {
+          "type": "string"
+        },
+        "profile": {
+          "$ref": "#/components/schemas/OAuthProfile"
+        },
+        "profile_endpoint": {
+          "$ref": "#/components/schemas/AuthenticationEndpoint"
+        },
+        "profile_headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "scopes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "subject_pointer": {
+          "type": "string"
+        },
+        "subject_type": {
+          "$ref": "#/components/schemas/OAuthSubjectType"
+        },
+        "token_endpoint": {
+          "$ref": "#/components/schemas/AuthenticationEndpoint"
+        }
+      },
+      "required": [
+        "admission",
+        "authorization_endpoint",
+        "client_authentication",
+        "client_id",
+        "membership",
+        "name_pointer",
+        "profile",
+        "profile_endpoint",
+        "scopes",
+        "subject_pointer",
+        "subject_type",
+        "token_endpoint"
+      ],
+      "type": "object"
+    },
+    "OAuthSubjectType": {
+      "enum": [
+        "string",
+        "integer"
+      ],
+      "type": "string"
+    },
+    "ObjectKey": {
+      "properties": {
+        "class_key": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ClassKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "class_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ObjectRelationLimit": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "OidcProviderDefinition": {
+      "properties": {
+        "admission": {
+          "$ref": "#/components/schemas/ProviderAdmission"
+        },
+        "client_authentication": {
+          "$ref": "#/components/schemas/ProviderClientAuthentication"
+        },
+        "client_id": {
+          "type": "string"
+        },
+        "issuer": {
+          "$ref": "#/components/schemas/AuthenticationEndpoint"
+        },
+        "membership": {
+          "$ref": "#/components/schemas/ProviderMembership"
+        },
+        "retain_refresh_tokens": {
+          "type": "boolean"
+        },
+        "scopes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "signing_algorithms": {
+          "items": {
+            "$ref": "#/components/schemas/OidcSigningAlgorithm"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "admission",
+        "client_authentication",
+        "client_id",
+        "issuer",
+        "membership",
+        "scopes",
+        "signing_algorithms"
+      ],
+      "type": "object"
+    },
+    "OidcSigningAlgorithm": {
+      "enum": [
+        "RS256",
+        "ES256"
+      ],
+      "type": "string"
+    },
+    "PaginationPolicyValue": {
+      "properties": {
+        "default_page_limit": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_page_limit": {
+          "format": "int64",
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "default_page_limit"
+      ],
+      "type": "object"
+    },
+    "PaginationSettingsReport": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "constrained_by_ceiling": {
+              "type": "boolean"
+            },
+            "deployment": {
+              "$ref": "#/components/schemas/ClientPaginationConfig"
+            },
+            "effective": {
+              "$ref": "#/components/schemas/ClientPaginationConfig"
+            },
+            "max_page_limit": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "runtime": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PaginationPolicyValue"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "constrained_by_ceiling",
+            "deployment",
+            "effective",
+            "max_page_limit"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PasswordInteractionMode": {
+      "enum": [
+        "credentials",
+        "browser"
+      ],
+      "type": "string"
+    },
+    "PasswordProviderKind": {
+      "enum": [
+        "local",
+        "ldap",
+        "oidc",
+        "oauth"
+      ],
+      "type": "string"
+    },
+    "Permissions": {
+      "enum": [
+        "ReadCollection",
+        "UpdateCollection",
+        "DeleteCollection",
+        "DelegateCollection",
+        "CreateClass",
+        "ReadClass",
+        "UpdateClass",
+        "DeleteClass",
+        "CreateObject",
+        "ReadObject",
+        "UpdateObject",
+        "DeleteObject",
+        "CreateClassRelation",
+        "ReadClassRelation",
+        "UpdateClassRelation",
+        "DeleteClassRelation",
+        "CreateObjectRelation",
+        "ReadObjectRelation",
+        "UpdateObjectRelation",
+        "DeleteObjectRelation",
+        "ReadTemplate",
+        "CreateTemplate",
+        "UpdateTemplate",
+        "DeleteTemplate",
+        "ReadRemoteTarget",
+        "CreateRemoteTarget",
+        "UpdateRemoteTarget",
+        "DeleteRemoteTarget",
+        "ExecuteRemoteTarget",
+        "ReadAudit",
+        "ManageEventSubscription"
+      ],
+      "type": "string"
+    },
+    "PrincipalID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "PrincipalKey": {
+      "properties": {
+        "identity_scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ProviderAdmission": {
+      "oneOf": [
+        {
+          "properties": {
+            "mode": {
+              "enum": [
+                "existing_only"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "mode": {
+              "enum": [
+                "provision_without_grants"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "mode": {
+              "enum": [
+                "subject_allowlist"
+              ],
+              "type": "string"
+            },
+            "subjects": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "mode",
+            "subjects"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ProviderClientAuthentication": {
+      "enum": [
+        "client_secret_basic",
+        "client_secret_post"
+      ],
+      "type": "string"
+    },
+    "ProviderCredentialInput": {
+      "oneOf": [
+        {
+          "properties": {
+            "action": {
+              "enum": [
+                "keep"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "enum": [
+                "clear"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "enum": [
+                "reference"
+              ],
+              "type": "string"
+            },
+            "alias": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "alias"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "enum": [
+                "replace"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string",
+              "writeOnly": true
+            }
+          },
+          "required": [
+            "action",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ProviderForm": {
+      "additionalProperties": false,
+      "properties": {
+        "csrf": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "csrf"
+      ],
+      "type": "object"
+    },
+    "ProviderMembership": {
+      "oneOf": [
+        {
+          "properties": {
+            "max_stale_seconds": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "mode": {
+              "enum": [
+                "local_only"
+              ],
+              "type": "string"
+            },
+            "refresh_interval_seconds": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "max_stale_seconds",
+            "mode",
+            "refresh_interval_seconds"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "claim_pointer": {
+              "type": "string"
+            },
+            "claim_source": {
+              "$ref": "#/components/schemas/MembershipClaimSource"
+            },
+            "key_mode": {
+              "$ref": "#/components/schemas/MembershipKeyMode"
+            },
+            "max_stale_seconds": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "mode": {
+              "enum": [
+                "provider_groups"
+              ],
+              "type": "string"
+            },
+            "refresh_interval_seconds": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "claim_pointer",
+            "claim_source",
+            "key_mode",
+            "max_stale_seconds",
+            "mode",
+            "refresh_interval_seconds"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "QueryObservationCeilingsValue": {
+      "properties": {
+        "max_patterns": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_patterns_per_class": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_predicates_per_query": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_retention_seconds": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "min_sample_every": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_patterns",
+        "max_patterns_per_class",
+        "max_predicates_per_query",
+        "max_retention_seconds",
+        "min_sample_every"
+      ],
+      "type": "object"
+    },
+    "QueryObservationPolicyValue": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "max_patterns": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_patterns_per_class": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_predicates_per_query": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "retention_seconds": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sample_every": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "enabled",
+        "max_patterns",
+        "max_patterns_per_class",
+        "max_predicates_per_query",
+        "retention_seconds",
+        "sample_every"
+      ],
+      "type": "object"
+    },
+    "QueryObservationSettingsReport": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "ceilings": {
+              "$ref": "#/components/schemas/QueryObservationCeilingsValue"
+            },
+            "collection_paused": {
+              "type": "boolean"
+            },
+            "constrained_by_ceiling": {
+              "type": "boolean"
+            },
+            "deployment": {
+              "$ref": "#/components/schemas/QueryObservationPolicyValue"
+            },
+            "effective": {
+              "$ref": "#/components/schemas/QueryObservationPolicyValue"
+            },
+            "runtime": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/QueryObservationPolicyValue"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "ceilings",
+            "collection_paused",
+            "constrained_by_ceiling",
+            "deployment",
+            "effective"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RefreshToken": {
+      "type": "string"
+    },
+    "RelationLabel": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "RemoteAuthConfig": {
+      "oneOf": [
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "none"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "secret": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "bearer_secret"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "secret",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "secret": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "basic_secret"
+              ],
+              "type": "string"
+            },
+            "username": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "secret",
+            "type",
+            "username"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "header": {
+              "type": "string"
+            },
+            "secret": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "api_key_secret"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "header",
+            "secret",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RemoteHttpMethod": {
+      "enum": [
+        "get",
+        "post",
+        "patch",
+        "delete"
+      ],
+      "type": "string"
+    },
+    "RemoteTargetSubjectType": {
+      "enum": [
+        "collection",
+        "class",
+        "object",
+        "class_relation",
+        "object_relation"
+      ],
+      "type": "string"
+    },
+    "RenewTokenRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expires_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ResourceRevision": {
+      "format": "int64",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RestoreConfirmRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmation": {
+          "type": "string"
+        },
+        "restore_capability": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "confirmation",
+        "restore_capability",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "RestoreJobID": {
+      "format": "int64",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RestoreTimestamps": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "created_at",
+        "updated_at"
+      ],
+      "type": "object"
+    },
+    "RuntimeAuthenticationProviderKind": {
+      "enum": [
+        "ldap"
+      ],
+      "type": "string"
+    },
+    "RuntimeAuthenticationProviderRequest": {
+      "oneOf": [
+        {
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "kind": {
+              "$ref": "#/components/schemas/RuntimeAuthenticationProviderKind"
+            },
+            "name": {
+              "type": "string"
+            },
+            "provider_id": {
+              "format": "uuid",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source": {
+              "enum": [
+                "deployment"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "enabled",
+            "kind",
+            "name",
+            "source"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "adopt_deployment": {
+              "type": "boolean"
+            },
+            "configuration": {
+              "type": "object"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "kind": {
+              "$ref": "#/components/schemas/RuntimeAuthenticationProviderKind"
+            },
+            "name": {
+              "type": "string"
+            },
+            "provider_id": {
+              "format": "uuid",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source": {
+              "enum": [
+                "runtime"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "configuration",
+            "enabled",
+            "kind",
+            "name",
+            "source"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RuntimeAuthenticationProviderStatus": {
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "credential_configured": {
+          "type": "boolean"
+        },
+        "definition_mutable": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "provider_id": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runtime_definition": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/components/schemas/RuntimeSettingsSource"
+        }
+      },
+      "required": [
+        "available",
+        "credential_configured",
+        "definition_mutable",
+        "enabled",
+        "kind",
+        "name",
+        "source"
+      ],
+      "type": "object"
+    },
+    "RuntimeAuthorizationBackend": {
+      "enum": [
+        "local",
+        "treetop"
+      ],
+      "type": "string"
+    },
+    "RuntimePolicyReport": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "constrained_by_ceiling": {
+              "type": "boolean"
+            },
+            "deployment": {
+              "type": "object"
+            },
+            "effective": {
+              "type": "object"
+            },
+            "runtime": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "constrained_by_ceiling",
+            "deployment",
+            "effective"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RuntimeSettingsApplicationStatus": {
+      "enum": [
+        "not_loaded",
+        "current",
+        "stale"
+      ],
+      "type": "string"
+    },
+    "RuntimeSettingsCatalogue": {
+      "properties": {
+        "groups": {
+          "items": {
+            "$ref": "#/components/schemas/RuntimeSettingsDescriptor"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "format": "int32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "security": {
+          "$ref": "#/components/schemas/SecurityConfigurationCapabilities"
+        }
+      },
+      "required": [
+        "groups",
+        "schema_version",
+        "security"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsDescriptor": {
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "key": {
+          "$ref": "#/components/schemas/RuntimeSettingsGroup"
+        },
+        "patch_supported": {
+          "type": "boolean"
+        },
+        "read_only_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requires_local_admin": {
+          "type": "boolean"
+        },
+        "schema": {
+          "type": "object"
+        },
+        "takes_effect": {
+          "$ref": "#/components/schemas/RuntimeSettingsEffect"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "description",
+        "key",
+        "patch_supported",
+        "requires_local_admin",
+        "schema",
+        "takes_effect",
+        "title"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsEffect": {
+      "enum": [
+        "next_request",
+        "next_query",
+        "next_operation",
+        "on_reconciliation"
+      ],
+      "type": "string"
+    },
+    "RuntimeSettingsGroup": {
+      "enum": [
+        "authentication",
+        "authorization",
+        "query_observations",
+        "pagination",
+        "observability",
+        "network",
+        "query_limits",
+        "tasks",
+        "remote_calls",
+        "tokens",
+        "login_rate_limit",
+        "events",
+        "exports",
+        "backups",
+        "restores"
+      ],
+      "type": "string"
+    },
+    "RuntimeSettingsGroupState": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeSettingsOwnership"
+        },
+        {
+          "properties": {
+            "constrained_by_ceiling": {
+              "type": "boolean"
+            },
+            "deployment": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "effective": {
+              "type": "object"
+            },
+            "group": {
+              "$ref": "#/components/schemas/RuntimeSettingsGroup"
+            },
+            "replica": {
+              "$ref": "#/components/schemas/RuntimeSettingsReplicaStatus"
+            },
+            "runtime": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "constrained_by_ceiling",
+            "effective",
+            "group",
+            "replica"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RuntimeSettingsOwnership": {
+      "properties": {
+        "changed_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "changed_by": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/PrincipalID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mutable": {
+          "type": "boolean"
+        },
+        "restart_required": {
+          "type": "boolean"
+        },
+        "revision": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/ResourceRevision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "$ref": "#/components/schemas/RuntimeSettingsSource"
+        },
+        "takes_effect": {
+          "$ref": "#/components/schemas/RuntimeSettingsEffect"
+        }
+      },
+      "required": [
+        "mutable",
+        "restart_required",
+        "source",
+        "takes_effect"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "changes": {
+          "type": "object"
+        },
+        "expected_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        }
+      },
+      "required": [
+        "changes",
+        "expected_revision"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsReplicaStatus": {
+      "properties": {
+        "applied_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_refresh_attempt_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_refresh_failure_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reconcile_interval_seconds": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/components/schemas/RuntimeSettingsApplicationStatus"
+        }
+      },
+      "required": [
+        "reconcile_interval_seconds",
+        "status"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsReport": {
+      "properties": {
+        "authentication": {
+          "$ref": "#/components/schemas/AuthenticationSettingsReport"
+        },
+        "authorization": {
+          "$ref": "#/components/schemas/AuthorizationSettingsReport"
+        },
+        "pagination": {
+          "$ref": "#/components/schemas/PaginationSettingsReport"
+        },
+        "policies": {
+          "additionalProperties": {
+            "$ref": "#/components/schemas/RuntimePolicyReport"
+          },
+          "type": "object"
+        },
+        "query_observations": {
+          "$ref": "#/components/schemas/QueryObservationSettingsReport"
+        },
+        "replica": {
+          "$ref": "#/components/schemas/RuntimeSettingsReplicaStatus"
+        }
+      },
+      "required": [
+        "authentication",
+        "authorization",
+        "pagination",
+        "policies",
+        "query_observations",
+        "replica"
+      ],
+      "type": "object"
+    },
+    "RuntimeSettingsSource": {
+      "enum": [
+        "deployment",
+        "runtime"
+      ],
+      "type": "string"
+    },
+    "RuntimeSettingsUpdateResponse": {
+      "properties": {
+        "applied_by_responding_replica": {
+          "type": "boolean"
+        },
+        "changed": {
+          "type": "boolean"
+        },
+        "committed_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "group": {
+          "$ref": "#/components/schemas/RuntimeSettingsGroup"
+        },
+        "settings": {
+          "$ref": "#/components/schemas/RuntimeSettingsReport"
+        }
+      },
+      "required": [
+        "applied_by_responding_replica",
+        "changed",
+        "committed_revision",
+        "group",
+        "settings"
+      ],
+      "type": "object"
+    },
+    "SchemaActivationPolicy": {
+      "enum": [
+        "reject_incompatible",
+        "allow_pending"
+      ],
+      "type": "string"
+    },
+    "SchemaRevision": {
+      "format": "int64",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "SecurityCandidateActivated": {
+      "properties": {
+        "changed": {
+          "type": "boolean"
+        },
+        "group": {
+          "$ref": "#/components/schemas/RuntimeSettingsGroup"
+        },
+        "revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        }
+      },
+      "required": [
+        "changed",
+        "group",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "SecurityCandidateActivationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "verification_receipt": {
+          "$ref": "#/components/schemas/SecurityVerificationReceipt"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "verification_receipt"
+      ],
+      "type": "object"
+    },
+    "SecurityCandidateCheck": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "provider_id": {
+          "format": "uuid",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "reason",
+        "status"
+      ],
+      "type": "object"
+    },
+    "SecurityCandidateGroupPreview": {
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "name"
+      ],
+      "type": "object"
+    },
+    "SecurityCandidateLdapVerification": {
+      "additionalProperties": false,
+      "properties": {
+        "password": {
+          "type": "string",
+          "writeOnly": true
+        },
+        "provider_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "password",
+        "provider_id",
+        "username"
+      ],
+      "type": "object"
+    },
+    "SecurityCandidateLdapVerificationResponse": {
+      "properties": {
+        "candidate": {
+          "$ref": "#/components/schemas/SecurityCandidateReport"
+        },
+        "verification": {
+          "$ref": "#/components/schemas/SecurityCandidateVerificationPreview"
+        }
+      },
+      "required": [
+        "candidate",
+        "verification"
+      ],
+      "type": "object"
+    },
+    "SecurityCandidateProvider": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "provider_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "provider_id"
+      ],
+      "type": "object"
+    },
+    "SecurityCandidateProviderRequest": {
+      "oneOf": [
+        {
+          "$ref": "#/components/schemas/RuntimeAuthenticationProviderRequest"
+        },
+        {
+          "$ref": "#/components/schemas/BrowserProviderRequest"
+        }
+      ]
+    },
+    "SecurityCandidateReport": {
+      "properties": {
+        "base_revision": {
+          "$ref": "#/components/schemas/ResourceRevision"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/components/schemas/SecurityCandidateCheck"
+          },
+          "type": "array"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "group": {
+          "$ref": "#/components/schemas/RuntimeSettingsGroup"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "providers": {
+          "items": {
+            "$ref": "#/components/schemas/SecurityCandidateProvider"
+          },
+          "type": "array"
+        },
+        "state": {
+          "type": "string"
+        },
+        "verification_receipt": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/SecurityVerificationReceipt"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "base_revision",
+        "checks",
+        "expires_at",
+        "group",
+        "id",
+        "providers",
+        "state"
+      ],
+      "type": "object"
+    },
+    "SecurityCandidateRequest": {
+      "oneOf": [
+        {
+          "properties": {
+            "expected_revision": {
+              "$ref": "#/components/schemas/ResourceRevision"
+            },
+            "group": {
+              "enum": [
+                "authentication"
+              ],
+              "type": "string"
+            },
+            "providers": {
+              "items": {
+                "$ref": "#/components/schemas/SecurityCandidateProviderRequest"
+              },
+              "type": "array"
+            },
+            "release_ownership": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "expected_revision",
+            "group"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "backend": {
+              "$ref": "#/components/schemas/RuntimeAuthorizationBackend"
+            },
+            "connection": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/AuthorizationConnection"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "expected_revision": {
+              "$ref": "#/components/schemas/ResourceRevision"
+            },
+            "group": {
+              "enum": [
+                "authorization"
+              ],
+              "type": "string"
+            },
+            "release_ownership": {
+              "type": "boolean"
+            },
+            "source": {
+              "$ref": "#/components/schemas/SecurityConfigurationSource"
+            }
+          },
+          "required": [
+            "backend",
+            "expected_revision",
+            "group",
+            "source"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SecurityCandidateVerificationPreview": {
+      "properties": {
+        "admitted": {
+          "type": "boolean"
+        },
+        "candidate_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/components/schemas/SecurityCandidateGroupPreview"
+          },
+          "type": "array"
+        },
+        "issued_session": {
+          "type": "boolean"
+        },
+        "membership": {
+          "type": "string"
+        },
+        "provider_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "provisioned": {
+          "type": "boolean"
+        },
+        "subject": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "admitted",
+        "candidate_id",
+        "groups",
+        "issued_session",
+        "membership",
+        "provider_id",
+        "provisioned",
+        "subject"
+      ],
+      "type": "object"
+    },
+    "SecurityConfigurationCapabilities": {
+      "properties": {
+        "activatable_provider_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "candidate_endpoint": {
+          "type": "string"
+        },
+        "candidate_lifetime_seconds": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "configurable_provider_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "deployment_locked_providers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ldap_verification_timeout_seconds": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "private_targets_allowed": {
+          "type": "boolean"
+        },
+        "replacement_credentials_available": {
+          "type": "boolean"
+        },
+        "treetop_connect_timeout_ceiling_ms": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "treetop_request_timeout_ceiling_ms": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trust_profiles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "activatable_provider_kinds",
+        "candidate_endpoint",
+        "candidate_lifetime_seconds",
+        "configurable_provider_kinds",
+        "deployment_locked_providers",
+        "ldap_verification_timeout_seconds",
+        "private_targets_allowed",
+        "replacement_credentials_available",
+        "treetop_connect_timeout_ceiling_ms",
+        "treetop_request_timeout_ceiling_ms",
+        "trust_profiles"
+      ],
+      "type": "object"
+    },
+    "SecurityConfigurationSource": {
+      "enum": [
+        "deployment",
+        "runtime"
+      ],
+      "type": "string"
+    },
+    "SecurityVerificationReceipt": {
+      "pattern": "^hcv1\\.[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "SessionLoginRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "client_id": {
+          "type": "string"
+        },
+        "identity_scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "client_id",
+        "name",
+        "password"
+      ],
+      "type": "object"
+    },
+    "SessionRefreshRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "client_id": {
+          "type": "string"
+        },
+        "refresh_token": {
+          "$ref": "#/components/schemas/RefreshToken"
+        }
+      },
+      "required": [
+        "client_id",
+        "refresh_token"
+      ],
+      "type": "object"
+    },
+    "SessionResponse": {
+      "properties": {
+        "absolute_expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "access_expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "access_token": {
+          "type": "string"
+        },
+        "refresh_expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "refresh_token": {
+          "$ref": "#/components/schemas/RefreshToken"
+        },
+        "session_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "token_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "absolute_expires_at",
+        "access_expires_at",
+        "access_token",
+        "refresh_expires_at",
+        "refresh_token",
+        "session_id",
+        "token_type"
+      ],
+      "type": "object"
+    },
+    "TaskID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "TokenID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "TokenResourceScope": {
+      "oneOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/components/schemas/CollectionID"
+            },
+            "kind": {
+              "enum": [
+                "collection"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/components/schemas/HubuumClassID"
+            },
+            "kind": {
+              "enum": [
+                "class"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/components/schemas/HubuumObjectID"
+            },
+            "kind": {
+              "enum": [
+                "object"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "TokenScopeDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "permissions": {
+          "items": {
+            "$ref": "#/components/schemas/Permissions"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resources": {
+          "items": {
+            "$ref": "#/components/schemas/TokenResourceScope"
+          },
+          "maxItems": 1000,
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "UpdateUser": {
+      "properties": {
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "password": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "proper_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "UserID": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "spec_sha256": "839c32e8742fe28ba02cb367dcb8fdc8eb35cf971f13f964941f85b488d715e1"
+}

@@ -7,6 +7,8 @@ pub mod r#async;
 #[cfg(any(feature = "async", feature = "blocking"))]
 mod diagnostics;
 #[cfg(any(feature = "async", feature = "blocking"))]
+mod interactions;
+#[cfg(any(feature = "async", feature = "blocking"))]
 mod sessions;
 #[cfg(any(feature = "async", feature = "blocking"))]
 pub use sessions::{SessionStore, SessionStoreGuard, StoredSession};
@@ -20,10 +22,12 @@ pub mod transport;
 
 #[cfg(feature = "async")]
 pub use self::r#async::{
-    ApprovedCredentialOperation, ClassNameObjects, ClassNameScope, ClassQueryUsage, ClassSchema,
-    Client, CollectionScope, CredentialApprovals, ExportOutputStream, ItemStream, ObjectNameScope,
-    PageStream, PrincipalSettingsScope, SchemaProfileRunOp, SchemaProfileSubmitOp,
-    SystemEventSubscriptions, TypedClass,
+    ApprovalCompletion, ApprovalInteraction, ApprovedCredentialOperation,
+    AuthenticationInteraction, ClassNameObjects, ClassNameScope, ClassQueryUsage, ClassSchema,
+    Client, CollectionScope, CredentialApprovals, ExportOutputStream, IssuedSessionCleanup,
+    ItemStream, LoginCompletion, LoginInteraction, ObjectNameScope, PageStream,
+    PrincipalSettingsScope, ProviderVerificationInteraction, SchemaProfileRunOp,
+    SchemaProfileSubmitOp, SystemEventSubscriptions, TypedClass, VerificationCompletion,
 };
 pub use self::shared::{
     Page, QueryBoolField, QueryJsonField, QueryJsonPathField, QueryNumericField, QueryTextField,
@@ -193,6 +197,23 @@ mod parity_contract {
             let _ = $module::Client::<Unauthenticated>::base_url;
             let _ = $module::Client::<Unauthenticated>::http_client;
             let _ = $module::Client::<Unauthenticated>::auth_providers;
+            let _ = $module::Client::<Unauthenticated>::authentication_methods;
+            let _ = $module::Client::<Unauthenticated>::begin_login_interaction;
+            let _ = $module::Client::<Authenticated>::begin_provider_verification_interaction;
+            let _ = $module::Client::<Authenticated>::begin_credential_approval_interaction::<
+                crate::Token,
+            >;
+            let _ = $module::Client::<Authenticated>::create_security_candidate;
+            let _ = $module::Client::<Authenticated>::security_candidate;
+            let _ = $module::Client::<Authenticated>::verify_ldap_security_candidate;
+            let _ = $module::Client::<Authenticated>::effective_authentication_settings;
+            let _ = $module::LoginInteraction::complete;
+            let _ = $module::LoginInteraction::complete_with_store;
+            let _ = $module::LoginInteraction::poll;
+            let _ = $module::LoginInteraction::cancel;
+            let _ = $module::IssuedSessionCleanup::revoke;
+            let _ = $module::ProviderVerificationInteraction::complete;
+            let _ = $module::ApprovalInteraction::<crate::Token>::complete;
             let _ = $module::Client::<Unauthenticated>::config;
             let _ = $module::Client::<Unauthenticated>::healthz;
             let _ = $module::Client::<Unauthenticated>::readyz;

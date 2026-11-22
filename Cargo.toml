@@ -32,6 +32,14 @@ name = "discover_fields"
 required-features = ["async"]
 
 [[example]]
+name = "browser_login"
+required-features = ["async"]
+
+[[example]]
+name = "browser_login_blocking"
+required-features = ["blocking"]
+
+[[example]]
 name = "discover_fields_blocking"
 required-features = ["blocking"]
 
@@ -65,7 +73,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 chrono = { version = "0.4", features = ["serde"] }
-url = "2"
+url = "2.5.9"
 serde_urlencoded = "0.7"
 log = "0.4"
 tracing = { version = "0.1", default-features = false, features = ["std"] }

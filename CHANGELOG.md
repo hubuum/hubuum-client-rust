@@ -6,6 +6,28 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
+### Security
+
+- Require `url` 2.5.9 or later in the 2.x series to fix a stack overflow in
+  URL origin resolution.
+  [RustSec advisory RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592.html)
+
+### Added
+
+- Project-only async/blocking external-authentication interactions, redacted
+  proofs, bounded polling, cancellation, exact-family cleanup and ordinary
+  rotating session/store adoption. Hubuum owns upstream protocol exchange.
+- Runtime LDAP/OIDC/OAuth candidate administration with typed credential actions,
+  verified activation receipts, revisions, locks and replica status. See
+  [external authentication](docs/external-authentication.md). The released server
+  v0.0.22 target stays unchanged; new methods require the pinned project candidate.
+
+### Fixed
+
+- Fresh approvals keep their original bearer through the exact mutation instead
+  of refreshing onto another credential. Obtain a new approval after replacement
+  or expiry.
+
 ## [0.21.0] - 2026-11-09
 
 This release explicitly targets Hubuum server v0.0.22. Upgrade the server before

@@ -437,5 +437,8 @@ async fn shared_scenario_runs_with_async_client() {
 }
 
 mod shared_scenarios {
+    mod authentication_corpus;
     mod credential_approvals;
+    mod interactions;
+    mod security_candidates;
 }
