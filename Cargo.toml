@@ -88,6 +88,6 @@ integration_support = { path = "integration_support" }
 tokio = { version = "1", features = ["full"] }
 yare = "3"
 httpmock = "0.9"
-rstest = "0.28"
+rstest = "0.29"
 trybuild = "1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"] }
